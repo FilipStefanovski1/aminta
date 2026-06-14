@@ -64,7 +64,7 @@ const PLANS: Plan[] = [
       "Founder Recognition",
     ],
     cta: "Become a Founder",
-    ctaHref: "#",
+    ctaHref: "https://calendly.com/filipstefanovskee/filip-stefanovski-aminta-founder",
   },
 ];
 
@@ -122,6 +122,7 @@ export default function Pricing() {
 
                 <a
                   href={plan.ctaHref}
+                  {...(plan.ctaHref.startsWith("http") ? { target: "_blank", rel: "noopener noreferrer" } : {})}
                   className={`mt-6 block text-center rounded-xl py-3 font-semibold transition ${
                     plan.highlight
                       ? "btn-shine bg-accent text-black hover:opacity-90"
