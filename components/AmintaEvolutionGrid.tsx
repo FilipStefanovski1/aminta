@@ -2,445 +2,382 @@ import Reveal from "./Reveal";
 import DemonMascot from "./DemonMascot";
 import type { DemonSkin } from "./demon-data";
 
+// ─── Types ───────────────────────────────────────────────────────────────────
+
 interface EvolutionStage {
   lv: number;
   name: string;
   color: string;
-  skin?: DemonSkin;
-  locked: boolean;
+  skin: DemonSkin;
 }
 
+interface RarityDef {
+  label: string;
+  color: string;
+  border: string;
+  bg: string;
+}
+
+// ─── Data ─────────────────────────────────────────────────────────────────────
+
 const STAGES: EvolutionStage[] = [
-  {
-    lv: 1,
-    name: "Dormant Aminta",
-    color: "#6dbfa0",
-    skin: { body: "#2d3a48", horn: "#1a2230", eye: "#6dbfa0" },
-    locked: false,
-  },
-  {
-    lv: 2,
-    name: "Curious Aminta",
-    color: "#74f7b5",
-    skin: { body: "#1a5e48", horn: "#0f3d30", eye: "#74f7b5" },
-    locked: false,
-  },
-  {
-    lv: 3,
-    name: "Happy Aminta",
-    color: "#40e898",
-    skin: { body: "#169962", horn: "#0d6642", eye: "#9dffd0" },
-    locked: false,
-  },
-  {
-    lv: 4,
-    name: "Excited Aminta",
-    color: "#00c8a8",
-    skin: { body: "#0cb889", horn: "#087d5e", eye: "#c8fff0" },
-    locked: false,
-  },
-  {
-    lv: 5,
-    name: "Mischievous Aminta",
-    color: "#00e0c0",
-    skin: { body: "#06d0a8", horn: "#04906e", eye: "#ffffff" },
-    locked: false,
-  },
-  {
-    lv: 6,
-    name: "Confident Aminta",
-    color: "#00dcc0",
-    skin: { body: "#00dcc0", horn: "#009e88", eye: "#ffffff" },
-    locked: false,
-  },
-  { lv: 7, name: "???", color: "#74f7b5", locked: true },
-  { lv: 8, name: "???", color: "#a0ffd6", locked: true },
-  { lv: 9, name: "???", color: "#f5d060", locked: true },
+  { lv: 1, name: "Dormant Aminta",     color: "#8ca0b0", skin: { body: "#2d3a48", horn: "#1a2230", eye: "#6dbfa0" } },
+  { lv: 2, name: "Curious Aminta",     color: "#74f7b5", skin: { body: "#1a5e48", horn: "#0f3d30", eye: "#74f7b5" } },
+  { lv: 3, name: "Happy Aminta",       color: "#40e898", skin: { body: "#169962", horn: "#0d6642", eye: "#9dffd0" } },
+  { lv: 4, name: "Excited Aminta",     color: "#00c8a8", skin: { body: "#0cb889", horn: "#087d5e", eye: "#c8fff0" } },
+  { lv: 5, name: "Mischievous Aminta", color: "#00e0c0", skin: { body: "#06d0a8", horn: "#04906e", eye: "#ffffff" } },
+  { lv: 6, name: "Confident Aminta",   color: "#40b0ff", skin: { body: "#00dcc0", horn: "#009e88", eye: "#ffffff" } },
+  { lv: 7, name: "Guardian Aminta",    color: "#74f7b5", skin: { body: "#c4f8ea", horn: "#74f7b5", eye: "#0a2a20" } },
+  { lv: 8, name: "Mythic Aminta",      color: "#c0a0ff", skin: { body: "#e8fff8", horn: "#a0ffd6", eye: "#082018" } },
+  { lv: 9, name: "Ascended Aminta",    color: "#f5d060", skin: { body: "#fffff0", horn: "#f5d060", eye: "#806000" } },
 ];
 
-// SVG scene decorations — all in grayscale, rendered inside an <svg> parent
-function sceneElements(lv: number) {
+function rarityFor(lv: number): RarityDef {
+  if (lv <= 2) return { label: "COMMON",    color: "#8ca0b0", border: "#1e2530", bg: "rgba(140,160,176,0.08)" };
+  if (lv <= 4) return { label: "UNCOMMON",  color: "#74f7b5", border: "#1a3a28", bg: "rgba(116,247,181,0.08)" };
+  if (lv <= 6) return { label: "RARE",      color: "#40b0ff", border: "#1a3050", bg: "rgba(64,176,255,0.08)"  };
+  if (lv <= 8) return { label: "EPIC",      color: "#c0a0ff", border: "#30206a", bg: "rgba(192,160,255,0.08)" };
+  return              { label: "LEGENDARY", color: "#f5d060", border: "#504010", bg: "rgba(245,208,96,0.09)"  };
+}
+
+const BG: Record<number, string> = {
+  1: "linear-gradient(180deg,#1a2030 0%,#0d1520 65%,#0a0e15 100%)",
+  2: "linear-gradient(180deg,#0a1820 0%,#0d2018 60%,#080e0a 100%)",
+  3: "linear-gradient(180deg,#0a1a0a 0%,#0d200f 55%,#081008 100%)",
+  4: "linear-gradient(180deg,#2a0f3d 0%,#1a0828 60%,#12051e 100%)",
+  5: "linear-gradient(180deg,#180820 0%,#100518 60%,#08040f 100%)",
+  6: "linear-gradient(180deg,#050d18 0%,#0a1828 60%,#020810 100%)",
+  7: "linear-gradient(180deg,#0a0c18 0%,#0f0d20 55%,#070610 100%)",
+  8: "linear-gradient(180deg,#08040f 0%,#100818 60%,#06030a 100%)",
+  9: "linear-gradient(180deg,#18140a 0%,#120f04 55%,#0a0804 100%)",
+};
+
+// ─── Scene backgrounds ────────────────────────────────────────────────────────
+
+function SceneElements({ lv }: { lv: number }) {
   switch (lv) {
-    case 1: // Dormant — night / moon
-      return (
-        <>
-          {/* crescent moon */}
-          <circle cx="168" cy="22" r="13" fill="#2a2a2a" />
-          <circle cx="174" cy="16" r="11" fill="#0d0d0d" />
-          {/* stars */}
-          <rect x="22" y="10" width="2" height="2" fill="#3a3a3a" />
-          <rect x="65" y="6" width="2" height="2" fill="#333" />
-          <rect x="102" y="16" width="2" height="2" fill="#3a3a3a" />
-          <rect x="135" y="9" width="2" height="2" fill="#2a2a2a" />
-          <rect x="48" y="28" width="2" height="2" fill="#2a2a2a" />
-          <rect x="90" y="32" width="2" height="2" fill="#333" />
-          {/* ground */}
-          <rect x="0" y="100" width="200" height="20" fill="#161616" />
-          <rect x="0" y="98" width="200" height="2" fill="#252525" />
-          {/* rocks */}
-          <rect x="18" y="93" width="10" height="5" fill="#1e1e1e" />
-          <rect x="22" y="91" width="6" height="2" fill="#1e1e1e" />
-          <rect x="155" y="92" width="14" height="6" fill="#1e1e1e" />
-          <rect x="159" y="90" width="8" height="2" fill="#1e1e1e" />
-        </>
-      );
-    case 2: // Hungry — outdoor / sun
-      return (
-        <>
-          {/* sun */}
-          <circle cx="168" cy="20" r="9" fill="#2a2a2a" />
-          <rect x="165" y="4" width="3" height="8" fill="#222" />
-          <rect x="165" y="28" width="3" height="8" fill="#222" />
-          <rect x="152" y="17" width="8" height="3" fill="#222" />
-          <rect x="180" y="17" width="8" height="3" fill="#222" />
-          <rect x="156" y="8" width="3" height="3" fill="#222" />
-          <rect x="180" y="8" width="3" height="3" fill="#222" />
-          <rect x="156" y="28" width="3" height="3" fill="#222" />
-          <rect x="180" y="28" width="3" height="3" fill="#222" />
-          {/* tree — left */}
-          <rect x="28" y="68" width="8" height="32" fill="#1e1e1e" />
-          <rect x="16" y="46" width="32" height="26" fill="#222" />
-          <rect x="12" y="56" width="40" height="16" fill="#1e1e1e" />
-          {/* small tree — far left */}
-          <rect x="148" y="78" width="6" height="22" fill="#1e1e1e" />
-          <rect x="140" y="60" width="22" height="20" fill="#222" />
-          {/* ground */}
-          <rect x="0" y="100" width="200" height="20" fill="#161616" />
-          <rect x="0" y="98" width="200" height="2" fill="#252525" />
-          {/* grass tufts */}
-          <rect x="60" y="96" width="2" height="4" fill="#1e1e1e" />
-          <rect x="64" y="95" width="2" height="5" fill="#1e1e1e" />
-          <rect x="120" y="96" width="2" height="4" fill="#1e1e1e" />
-          <rect x="124" y="95" width="2" height="5" fill="#1e1e1e" />
-        </>
-      );
-    case 3: // Restless — speed / energy
-      return (
-        <>
-          {/* speed lines left */}
-          <rect x="0" y="38" width="55" height="3" fill="#2a2a2a" />
-          <rect x="0" y="48" width="38" height="2" fill="#222" />
-          <rect x="0" y="57" width="48" height="3" fill="#2a2a2a" />
-          <rect x="0" y="66" width="30" height="2" fill="#222" />
-          {/* speed lines right */}
-          <rect x="150" y="42" width="50" height="3" fill="#222" />
-          <rect x="165" y="54" width="35" height="2" fill="#1e1e1e" />
-          {/* lightning bolt center */}
-          <polygon points="108,8 96,48 112,44 100,82" fill="#2a2a2a" />
-          {/* ground with cracks */}
-          <rect x="0" y="100" width="200" height="20" fill="#161616" />
-          <rect x="0" y="98" width="200" height="2" fill="#252525" />
-          <polygon points="40,100 48,114 44,100" fill="#111" />
-          <polygon points="130,100 138,112 134,100" fill="#111" />
-          <polygon points="75,100 80,110 77,100" fill="#111" />
-        </>
-      );
-    case 4: // Awakened — mystical / crystals
-      return (
-        <>
-          {/* crystals floating */}
-          <rect x="22" y="28" width="14" height="14" fill="#222" transform="rotate(45 29 35)" />
-          <rect x="163" y="36" width="12" height="12" fill="#1e1e1e" transform="rotate(45 169 42)" />
-          <rect x="138" y="16" width="9" height="9" fill="#222" transform="rotate(45 142 20)" />
-          {/* star crosses */}
-          <rect x="72" y="12" width="2" height="10" fill="#333" />
-          <rect x="68" y="16" width="10" height="2" fill="#333" />
-          <rect x="152" y="58" width="2" height="10" fill="#2a2a2a" />
-          <rect x="148" y="62" width="10" height="2" fill="#2a2a2a" />
-          <rect x="42" y="55" width="2" height="8" fill="#222" />
-          <rect x="39" y="58" width="8" height="2" fill="#222" />
-          {/* mystic circle on ground */}
-          <circle cx="100" cy="96" r="28" fill="none" stroke="#222" strokeWidth="2" />
-          <circle cx="100" cy="96" r="20" fill="none" stroke="#1a1a1a" strokeWidth="1" />
-          {/* ground */}
-          <rect x="0" y="100" width="200" height="20" fill="#161616" />
-        </>
-      );
-    case 5: // Infernal — mountains / embers
-      return (
-        <>
-          {/* mountains */}
-          <polygon points="0,120 42,52 84,120" fill="#191919" />
-          <polygon points="42,120 96,34 150,120" fill="#141414" />
-          <polygon points="116,120 166,48 200,120" fill="#191919" />
-          {/* mountain highlights */}
-          <polygon points="84,120 96,34 108,120" fill="#1e1e1e" />
-          {/* ember sparks */}
-          <rect x="52" y="22" width="3" height="3" fill="#2a2a2a" />
-          <rect x="82" y="14" width="3" height="3" fill="#333" />
-          <rect x="118" y="26" width="3" height="3" fill="#2a2a2a" />
-          <rect x="148" y="18" width="2" height="2" fill="#333" />
-          <rect x="30" y="44" width="2" height="2" fill="#2a2a2a" />
-          <rect x="168" y="32" width="2" height="2" fill="#2a2a2a" />
-          <rect x="64" y="8" width="2" height="2" fill="#222" />
-          <rect x="136" y="10" width="2" height="2" fill="#222" />
-        </>
-      );
-    case 6: // Aura — radiant rings
-      return (
-        <>
-          {/* concentric rings */}
-          <circle cx="100" cy="72" r="18" fill="none" stroke="#2a2a2a" strokeWidth="2" />
-          <circle cx="100" cy="72" r="32" fill="none" stroke="#1e1e1e" strokeWidth="2" />
-          <circle cx="100" cy="72" r="48" fill="none" stroke="#181818" strokeWidth="2" />
-          <circle cx="100" cy="72" r="62" fill="none" stroke="#141414" strokeWidth="2" />
-          {/* starburst top-right */}
-          <rect x="163" y="10" width="2" height="14" fill="#2a2a2a" />
-          <rect x="156" y="16" width="16" height="2" fill="#2a2a2a" />
-          <rect x="159" y="12" width="2" height="2" fill="#333" />
-          <rect x="173" y="12" width="2" height="2" fill="#333" />
-          <rect x="159" y="24" width="2" height="2" fill="#333" />
-          <rect x="173" y="24" width="2" height="2" fill="#333" />
-          {/* sparkle dots */}
-          <rect x="28" y="18" width="2" height="2" fill="#333" />
-          <rect x="22" y="44" width="2" height="2" fill="#2a2a2a" />
-          <rect x="178" y="50" width="2" height="2" fill="#2a2a2a" />
-          <rect x="80" y="8" width="2" height="2" fill="#333" />
-          {/* ground */}
-          <rect x="0" y="100" width="200" height="20" fill="#161616" />
-          <rect x="0" y="98" width="200" height="2" fill="#1e1e1e" />
-        </>
-      );
-    case 7: // Locked — city skyline
-      return (
-        <>
-          {/* skyline buildings */}
-          <rect x="0" y="72" width="16" height="48" fill="#161616" />
-          <rect x="20" y="52" width="22" height="68" fill="#121212" />
-          <rect x="26" y="48" width="10" height="6" fill="#161616" />
-          <rect x="46" y="64" width="14" height="56" fill="#161616" />
-          <rect x="63" y="40" width="26" height="80" fill="#121212" />
-          <rect x="70" y="34" width="12" height="8" fill="#161616" />
-          <rect x="92" y="68" width="20" height="52" fill="#161616" />
-          <rect x="116" y="46" width="24" height="74" fill="#121212" />
-          <rect x="121" y="40" width="14" height="8" fill="#161616" />
-          <rect x="144" y="66" width="16" height="54" fill="#161616" />
-          <rect x="163" y="36" width="22" height="84" fill="#121212" />
-          <rect x="168" y="30" width="12" height="8" fill="#161616" />
-          <rect x="188" y="58" width="12" height="62" fill="#161616" />
-          {/* windows (lit) */}
-          <rect x="23" y="56" width="4" height="4" fill="#1e1e1e" />
-          <rect x="30" y="56" width="4" height="4" fill="#1e1e1e" />
-          <rect x="66" y="44" width="5" height="5" fill="#1e1e1e" />
-          <rect x="74" y="44" width="5" height="5" fill="#1e1e1e" />
-          <rect x="119" y="50" width="5" height="5" fill="#1e1e1e" />
-          <rect x="128" y="50" width="5" height="5" fill="#1e1e1e" />
-          {/* moon */}
-          <circle cx="48" cy="22" r="10" fill="#222" />
-          <circle cx="54" cy="17" r="8" fill="#0d0d0d" />
-          {/* stars */}
-          <rect x="100" y="12" width="2" height="2" fill="#2a2a2a" />
-          <rect x="140" y="8" width="2" height="2" fill="#222" />
-          <rect x="10" y="20" width="2" height="2" fill="#2a2a2a" />
-        </>
-      );
-    case 8: // Locked — dungeon / throne room
-      return (
-        <>
-          {/* stone floor */}
-          <rect x="0" y="100" width="200" height="20" fill="#131313" />
-          <rect x="0" y="98" width="200" height="2" fill="#1e1e1e" />
-          <rect x="0" y="100" width="200" height="1" fill="#1e1e1e" />
-          {/* floor tiles */}
-          {[0, 40, 80, 120, 160].map((x) => (
-            <rect key={x} x={x} y="100" width="1" height="20" fill="#1a1a1a" />
-          ))}
-          {/* pillars */}
-          <rect x="14" y="10" width="18" height="90" fill="#161616" />
-          <rect x="10" y="6" width="26" height="8" fill="#1e1e1e" />
-          <rect x="10" y="88" width="26" height="8" fill="#1e1e1e" />
-          <rect x="168" y="10" width="18" height="90" fill="#161616" />
-          <rect x="164" y="6" width="26" height="8" fill="#1e1e1e" />
-          <rect x="164" y="88" width="26" height="8" fill="#1e1e1e" />
-          {/* hanging banners */}
-          <rect x="42" y="0" width="22" height="38" fill="#161616" />
-          <polygon points="42,38 53,50 64,38" fill="#161616" />
-          <rect x="136" y="0" width="22" height="38" fill="#161616" />
-          <polygon points="136,38 147,50 158,38" fill="#161616" />
-          {/* crown center top */}
-          <rect x="82" y="4" width="36" height="16" fill="#141414" />
-          <rect x="78" y="0" width="8" height="10" fill="#141414" />
-          <rect x="96" y="0" width="8" height="12" fill="#141414" />
-          <rect x="114" y="0" width="8" height="10" fill="#141414" />
-          {/* torch flames */}
-          <rect x="38" y="50" width="4" height="12" fill="#1a1a1a" />
-          <polygon points="38,50 40,40 42,50" fill="#222" />
-          <rect x="158" y="50" width="4" height="12" fill="#1a1a1a" />
-          <polygon points="158,50 160,40 162,50" fill="#222" />
-        </>
-      );
-    case 9: // Locked — cosmic / celestial
-      return (
-        <>
-          {/* large planet left */}
-          <circle cx="38" cy="34" r="22" fill="#161616" stroke="#1e1e1e" strokeWidth="2" />
-          <ellipse cx="38" cy="34" rx="34" ry="9" fill="none" stroke="#1e1e1e" strokeWidth="2" />
-          {/* small planet right */}
-          <circle cx="172" cy="22" r="12" fill="#141414" stroke="#1a1a1a" strokeWidth="2" />
-          {/* comet */}
-          <circle cx="74" cy="16" r="4" fill="#222" />
-          <polygon points="78,16 78,14 136,48 136,50" fill="#1a1a1a" />
-          {/* stars scattered */}
-          <rect x="96" y="8" width="2" height="2" fill="#2a2a2a" />
-          <rect x="148" y="14" width="2" height="2" fill="#333" />
-          <rect x="120" y="30" width="2" height="2" fill="#2a2a2a" />
-          <rect x="160" y="44" width="2" height="2" fill="#2a2a2a" />
-          <rect x="60" y="38" width="2" height="2" fill="#222" />
-          <rect x="180" y="58" width="2" height="2" fill="#222" />
-          {/* staircase bottom center */}
-          <rect x="62" y="108" width="76" height="12" fill="#161616" />
-          <rect x="72" y="97" width="56" height="11" fill="#141414" />
-          <rect x="82" y="88" width="36" height="9" fill="#161616" />
-          <rect x="90" y="80" width="20" height="8" fill="#141414" />
-          <rect x="96" y="73" width="8" height="7" fill="#161616" />
-          {/* clouds/mist */}
-          <rect x="0" y="106" width="200" height="14" fill="#0d0d0d" />
-          <rect x="0" y="100" width="50" height="8" fill="#111" />
-          <rect x="150" y="100" width="50" height="8" fill="#111" />
-        </>
-      );
+    case 1:
+      return (<>
+        <circle cx="168" cy="22" r="13" fill="#c8d8e8" opacity={0.9}/>
+        <circle cx="174" cy="16" r="11" fill="#0d1117"/>
+        <circle cx="22"  cy="10" r="1"   fill="#c8d8e8" opacity={0.7}/>
+        <circle cx="65"  cy="7"  r="1"   fill="#c8d8e8" opacity={0.5}/>
+        <circle cx="102" cy="16" r="1.5" fill="#c8d8e8" opacity={0.6}/>
+        <circle cx="135" cy="9"  r="1"   fill="#a8c0d0" opacity={0.8}/>
+        <circle cx="48"  cy="28" r="1"   fill="#c8d8e8" opacity={0.4}/>
+        <rect x="0" y="100" width="200" height="20" fill="#0a0e15"/>
+        <rect x="0" y="98"  width="200" height="3"  fill="#142018"/>
+        <ellipse cx="24"  cy="100" rx="14" ry="6" fill="#0f1c10"/>
+        <ellipse cx="170" cy="100" rx="18" ry="7" fill="#0f1c10"/>
+      </>);
+    case 2:
+      return (<>
+        <circle cx="32" cy="18" r="12" fill="#c8e0d8" opacity={0.85}/>
+        <circle cx="25" cy="13" r="10" fill="#0a1520"/>
+        <polygon points="0,106 18,52 36,106"     fill="#0d2a14"/>
+        <polygon points="168,106 184,46 200,106" fill="#0d2a14"/>
+        <polygon points="4,106 20,60 36,106"     fill="#112e18"/>
+        <rect x="0" y="106" width="200" height="14" fill="#080e0a"/>
+        <rect x="0" y="103" width="200" height="4"  fill="#142814"/>
+        <circle cx="70"  cy="72" r="1.5" fill="#74f7b5" opacity={0.9}/>
+        <circle cx="110" cy="60" r="1.5" fill="#74f7b5" opacity={0.7}/>
+        <circle cx="140" cy="82" r="1"   fill="#40e898" opacity={0.8}/>
+        <circle cx="55"  cy="86" r="1"   fill="#74f7b5" opacity={0.6}/>
+      </>);
+    case 3:
+      return (<>
+        <circle cx="30"  cy="14" r="1.5" fill="#74f7b5" opacity={0.9}/>
+        <circle cx="62"  cy="8"  r="1"   fill="#a8ffd2" opacity={0.7}/>
+        <circle cx="92"  cy="20" r="1.5" fill="#74f7b5" opacity={0.8}/>
+        <circle cx="150" cy="11" r="1"   fill="#40e898" opacity={0.9}/>
+        <circle cx="176" cy="25" r="1.5" fill="#74f7b5" opacity={0.6}/>
+        <polygon points="0,106 18,44 36,106"     fill="#0d3d10"/>
+        <polygon points="168,106 184,40 200,106" fill="#0d3d10"/>
+        <rect x="0" y="106" width="200" height="14" fill="#060e06"/>
+        <rect x="0" y="103" width="200" height="4"  fill="#142814"/>
+        <rect x="48" y="96" width="6" height="10" fill="#2d1a0a"/>
+        <ellipse cx="51" cy="96" rx="11" ry="5" fill="#8b2020"/>
+        <rect x="50" y="93" width="3" height="3" fill="#ff8080" opacity={0.4}/>
+        <rect x="130" y="98" width="5" height="8" fill="#2d1a0a"/>
+        <ellipse cx="132" cy="98" rx="8" ry="4" fill="#6b1818"/>
+        <ellipse cx="90" cy="108" rx="16" ry="4" fill="#74f7b5" opacity={0.07}/>
+      </>);
+    case 4:
+      return (<>
+        <circle cx="165" cy="18" r="10" fill="#d8c8f0" opacity={0.7}/>
+        <circle cx="171" cy="13" r="8"  fill="#1a0a2a"/>
+        <circle cx="20"  cy="8"  r="1.5" fill="#d8c8f0" opacity={0.7}/>
+        <circle cx="50"  cy="14" r="1"   fill="#e0d0ff" opacity={0.8}/>
+        <circle cx="80"  cy="6"  r="1.5" fill="#d8c8f0" opacity={0.5}/>
+        <circle cx="110" cy="18" r="1"   fill="#e0d0ff" opacity={0.9}/>
+        <circle cx="140" cy="10" r="1.5" fill="#d8c8f0" opacity={0.6}/>
+        <polygon points="0,120 35,48 70,120"    fill="#200840"/>
+        <polygon points="38,120 80,30 122,120"  fill="#1a0638"/>
+        <polygon points="100,120 145,42 190,120" fill="#200840"/>
+        <polygon points="60,120 80,30 100,120"  fill="#280a48"/>
+        <rect x="87" y="22" width="1" height="6" fill="#d8c8f0" opacity={0.4}/>
+        <rect x="84" y="25" width="7" height="1" fill="#d8c8f0" opacity={0.4}/>
+        <rect x="57" y="38" width="1" height="4" fill="#c8a8e8" opacity={0.5}/>
+        <rect x="55" y="40" width="5" height="1" fill="#c8a8e8" opacity={0.5}/>
+      </>);
+    case 5:
+      return (<>
+        <circle cx="148" cy="16" r="11" fill="#c8b8e8" opacity={0.7}/>
+        <circle cx="154" cy="11" r="9"  fill="#100a20"/>
+        <circle cx="18"  cy="8"  r="1"   fill="#e0d4ff" opacity={0.9}/>
+        <circle cx="60"  cy="14" r="1.5" fill="#d4c8f8" opacity={0.6}/>
+        <circle cx="88"  cy="6"  r="1"   fill="#e0d4ff"/>
+        <circle cx="180" cy="20" r="1"   fill="#d4c8f8" opacity={0.8}/>
+        <rect x="0"   y="68" width="18" height="52" fill="#0f0820"/>
+        <rect x="20"  y="50" width="24" height="70" fill="#0a0618"/>
+        <rect x="26"  y="44" width="12" height="8"  fill="#0f0820"/>
+        <rect x="68"  y="36" width="28" height="84" fill="#0a0618"/>
+        <rect x="74"  y="30" width="16" height="8"  fill="#0f0820"/>
+        <rect x="100" y="64" width="22" height="56" fill="#0f0820"/>
+        <rect x="126" y="42" width="26" height="78" fill="#0a0618"/>
+        <rect x="176" y="32" width="24" height="88" fill="#0a0618"/>
+        <rect x="23" y="56" width="5" height="5" fill="#4a1a78" opacity={0.9}/>
+        <rect x="31" y="56" width="5" height="5" fill="#3a1460" opacity={0.7}/>
+        <rect x="71" y="40" width="6" height="5" fill="#4a1a78" opacity={0.9}/>
+        <rect x="80" y="40" width="6" height="5" fill="#6020a0" opacity={0.7}/>
+        <rect x="129" y="46" width="6" height="5" fill="#4a1a78" opacity={0.9}/>
+        <rect x="138" y="46" width="6" height="5" fill="#5020a0" opacity={0.7}/>
+        <rect x="0" y="105" width="200" height="15" fill="#080614"/>
+      </>);
+    case 6:
+      return (<>
+        <circle cx="20"  cy="12" r="1"   fill="#80c8ff" opacity={0.8}/>
+        <circle cx="55"  cy="8"  r="1.5" fill="#60a8ff" opacity={0.6}/>
+        <circle cx="85"  cy="18" r="1"   fill="#80c8ff" opacity={0.7}/>
+        <circle cx="170" cy="10" r="1.5" fill="#60a8ff" opacity={0.9}/>
+        <circle cx="190" cy="22" r="1"   fill="#80c8ff" opacity={0.6}/>
+        <polygon points="0,106 16,60 32,106"     fill="#040c08"/>
+        <polygon points="172,106 186,55 200,106" fill="#040c08"/>
+        <ellipse cx="100" cy="107" rx="48" ry="8" fill="none" stroke="#0080ff" strokeWidth="1.5" opacity={0.9}/>
+        <ellipse cx="100" cy="107" rx="36" ry="6" fill="none" stroke="#40a0ff" strokeWidth="1"   opacity={0.6}/>
+        <ellipse cx="100" cy="107" rx="24" ry="4" fill="none" stroke="#80c0ff" strokeWidth="0.8" opacity={0.4}/>
+        <rect x="45"  y="50" width="2"  height="12" fill="#0060c0" opacity={0.35}/>
+        <rect x="38"  y="57" width="16" height="2"  fill="#0060c0" opacity={0.35}/>
+        <rect x="152" y="48" width="2"  height="12" fill="#0060c0" opacity={0.35}/>
+        <rect x="145" y="55" width="16" height="2"  fill="#0060c0" opacity={0.35}/>
+        <circle cx="65"  cy="60" r="1.5" fill="#40a0ff" opacity={0.8}/>
+        <circle cx="140" cy="55" r="1.5" fill="#60b0ff" opacity={0.7}/>
+        <circle cx="78"  cy="40" r="1"   fill="#80c8ff" opacity={0.9}/>
+        <circle cx="128" cy="45" r="1"   fill="#40a0ff" opacity={0.6}/>
+        <rect x="0" y="108" width="200" height="12" fill="#020a14"/>
+      </>);
+    case 7:
+      return (<>
+        <circle cx="30" cy="22" r="12" fill="#c0b890" opacity={0.7}/>
+        <circle cx="24" cy="17" r="10" fill="#08080f"/>
+        <circle cx="80"  cy="8"  r="1.5" fill="#c8c0a0" opacity={0.7}/>
+        <circle cx="130" cy="14" r="1"   fill="#d0c8a8" opacity={0.8}/>
+        <circle cx="160" cy="6"  r="1.5" fill="#c8c0a0" opacity={0.5}/>
+        <circle cx="190" cy="20" r="1"   fill="#d0c8a8" opacity={0.7}/>
+        <rect x="10"  y="10" width="22" height="90" fill="#1a1408"/>
+        <rect x="6"   y="6"  width="30" height="8"  fill="#2a2010"/>
+        <rect x="6"   y="90" width="30" height="10" fill="#2a2010"/>
+        <rect x="8"   y="14" width="5"  height="76" fill="#221c0a"/>
+        <rect x="27"  y="14" width="5"  height="76" fill="#221c0a"/>
+        <rect x="168" y="10" width="22" height="90" fill="#1a1408"/>
+        <rect x="164" y="6"  width="30" height="8"  fill="#2a2010"/>
+        <rect x="164" y="90" width="30" height="10" fill="#2a2010"/>
+        <rect x="166" y="14" width="5"  height="76" fill="#221c0a"/>
+        <rect x="185" y="14" width="5"  height="76" fill="#221c0a"/>
+        <ellipse cx="100" cy="107" rx="44" ry="7" fill="none" stroke="#a07010" strokeWidth="2"   opacity={0.9}/>
+        <ellipse cx="100" cy="107" rx="34" ry="5" fill="none" stroke="#c09020" strokeWidth="1.5" opacity={0.7}/>
+        <ellipse cx="100" cy="107" rx="22" ry="3" fill="none" stroke="#f0c840" strokeWidth="1"   opacity={0.5}/>
+        <rect x="0" y="108" width="200" height="12" fill="#0a0804"/>
+      </>);
+    case 8:
+      return (<>
+        <circle cx="35" cy="30" r="18" fill="#2a1040"/>
+        <ellipse cx="35" cy="30" rx="30" ry="7" fill="none" stroke="#6a2a90" strokeWidth="2"   opacity={0.9}/>
+        <ellipse cx="35" cy="30" rx="30" ry="7" fill="none" stroke="#8a40b0" strokeWidth="1"   opacity={0.4}/>
+        <circle cx="172" cy="20" r="10" fill="#1a0830"/>
+        <circle cx="80"  cy="10" r="1"   fill="#e0d0ff" opacity={0.9}/>
+        <circle cx="110" cy="6"  r="1.5" fill="#ffffff"  opacity={0.8}/>
+        <circle cx="140" cy="15" r="1"   fill="#e0d0ff" opacity={0.7}/>
+        <circle cx="60"  cy="22" r="1"   fill="#ffffff"  opacity={0.6}/>
+        <circle cx="158" cy="38" r="1.5" fill="#c0a0ff" opacity={0.8}/>
+        <circle cx="188" cy="44" r="1"   fill="#e0d0ff" opacity={0.7}/>
+        <circle cx="100" cy="98" r="30" fill="none" stroke="#6a20a0" strokeWidth="1.5" opacity={0.7}/>
+        <circle cx="100" cy="98" r="22" fill="none" stroke="#8a30c0" strokeWidth="1"   opacity={0.5}/>
+        <circle cx="100" cy="98" r="14" fill="none" stroke="#aa40e0" strokeWidth="0.8" opacity={0.4}/>
+        <ellipse cx="120" cy="40" rx="30" ry="10" fill="#4a0880" opacity={0.12}/>
+        <circle cx="150" cy="55" r="3" fill="#c0a0ff" opacity={0.8}/>
+        <polygon points="153,55 153,53 192,38 192,40" fill="#8060c0" opacity={0.4}/>
+        <rect x="0" y="110" width="200" height="10" fill="#050010"/>
+      </>);
+    case 9:
+      return (<>
+        <polygon points="88,0 112,0 132,60 68,60"   fill="#f5d060" opacity={0.04}/>
+        <polygon points="95,0 105,0 118,50 82,50"   fill="#f5d060" opacity={0.07}/>
+        <circle cx="50"  cy="10" r="1.5" fill="#f0e090" opacity={0.8}/>
+        <circle cx="80"  cy="6"  r="1"   fill="#fff8d0" opacity={0.9}/>
+        <circle cx="120" cy="14" r="1.5" fill="#f0e090" opacity={0.7}/>
+        <circle cx="160" cy="8"  r="1"   fill="#fff8d0" opacity={0.8}/>
+        <circle cx="185" cy="18" r="1"   fill="#f0e090" opacity={0.6}/>
+        <rect x="8"   y="8"  width="22" height="92" fill="#1a1404"/>
+        <rect x="4"   y="4"  width="30" height="10" fill="#2a2008"/>
+        <rect x="4"   y="88" width="30" height="10" fill="#2a2008"/>
+        <rect x="6"   y="14" width="5"  height="74" fill="#221c06"/>
+        <rect x="25"  y="14" width="5"  height="74" fill="#221c06"/>
+        <rect x="170" y="8"  width="22" height="92" fill="#1a1404"/>
+        <rect x="166" y="4"  width="30" height="10" fill="#2a2008"/>
+        <rect x="166" y="88" width="30" height="10" fill="#2a2008"/>
+        <rect x="169" y="14" width="5"  height="74" fill="#221c06"/>
+        <rect x="188" y="14" width="5"  height="74" fill="#221c06"/>
+        <circle cx="100" cy="90" r="50" fill="none" stroke="#a07010" strokeWidth="2"   opacity={0.7}/>
+        <circle cx="100" cy="90" r="40" fill="none" stroke="#c09020" strokeWidth="1.5" opacity={0.5}/>
+        <circle cx="100" cy="90" r="30" fill="none" stroke="#e0b030" strokeWidth="1"   opacity={0.4}/>
+        <ellipse cx="100" cy="112" rx="55" ry="6" fill="#2a2008" opacity={0.35}/>
+        <rect x="0" y="112" width="200" height="8" fill="#0c0a02"/>
+      </>);
     default:
       return null;
   }
 }
 
+// ─── Card ─────────────────────────────────────────────────────────────────────
+
 function EvolutionCard({ stage, index }: { stage: EvolutionStage; index: number }) {
+  const rarity = rarityFor(stage.lv);
+  const isHolo = stage.lv >= 6;
+
   return (
     <Reveal delay={index * 55}>
       <div
-        className="relative overflow-hidden"
+        className="relative overflow-hidden group cursor-default"
         style={{
-          background: "#0d0d0d",
-          border: "3px solid #000",
-          boxShadow: stage.locked
-            ? "3px 3px 0 #000"
-            : `3px 3px 0 #000, 0 0 28px ${stage.color}1a`,
+          border: `2px solid ${rarity.border}`,
+          boxShadow: `3px 3px 0 #000, 0 0 28px ${stage.color}14`,
+          background: "#050505",
         }}
       >
-        {/* Scene area */}
-        <div className="relative overflow-hidden" style={{ height: 176, background: "#0d0d0d" }}>
-          {/* pixel grid overlay */}
-          <div className="absolute inset-0 grid-bg opacity-25" />
+        {/* Holographic sweep on hover (RARE+) */}
+        {isHolo && (
+          <div
+            className="absolute inset-0 z-30 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+            style={{
+              background: "linear-gradient(105deg,transparent 20%,rgba(255,255,255,0.06) 50%,transparent 80%)",
+              backgroundSize: "200% 100%",
+              animation: "holoSweep 2.4s linear infinite",
+            }}
+          />
+        )}
 
-          {/* scene SVG */}
+        {/* Top-left: token ID */}
+        <div
+          className="absolute top-2 left-2 z-20 font-pixel text-[7px] px-1.5 py-0.5"
+          style={{ background: "rgba(0,0,0,0.6)", color: "#3a4a58", border: "1px solid #111" }}
+        >
+          #{String(stage.lv).padStart(4, "0")}
+        </div>
+
+        {/* Top-right: rarity badge */}
+        <div
+          className="absolute top-2 right-2 z-20 font-pixel text-[7px] px-1.5 py-0.5"
+          style={{
+            background: rarity.bg,
+            color: rarity.color,
+            border: `1px solid ${rarity.color}55`,
+            letterSpacing: "0.08em",
+          }}
+        >
+          {rarity.label}
+        </div>
+
+        {/* Scene */}
+        <div className="relative overflow-hidden" style={{ height: 176, background: BG[stage.lv] }}>
+          <div className="absolute inset-0 grid-bg opacity-10" />
+
           <svg
             viewBox="0 0 200 120"
             className="absolute inset-0 w-full h-full pixelated"
             preserveAspectRatio="xMidYMid slice"
             aria-hidden
           >
-            {sceneElements(stage.lv)}
+            <SceneElements lv={stage.lv} />
           </svg>
 
-          {/* ambient glow behind sprite */}
-          {!stage.locked && (
-            <div
-              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full pointer-events-none"
-              style={{
-                width: 96,
-                height: 96,
-                background: stage.color,
-                filter: "blur(44px)",
-                opacity: 0.22,
-              }}
-            />
-          )}
+          {/* Ambient glow */}
+          <div
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full pointer-events-none"
+            style={{ width: 96, height: 96, background: stage.color, filter: "blur(44px)", opacity: 0.2 }}
+          />
 
-          {/* demon sprite or question mark */}
+          {/* Sprite */}
           <div className="absolute inset-x-0 bottom-0 flex justify-center pb-1">
-            {stage.locked ? (
-              <span
-                className="font-pixel select-none"
-                style={{
-                  fontSize: 62,
-                  lineHeight: 1,
-                  color: stage.color,
-                  filter: `drop-shadow(0 0 10px ${stage.color}55)`,
-                  opacity: 0.7,
-                }}
-              >
-                ?
-              </span>
-            ) : (
-              stage.skin && (
-                <div
-                  style={{
-                    filter: `drop-shadow(0 0 14px ${stage.color}bb)`,
-                  }}
-                >
-                  <DemonMascot skin={stage.skin} size={82} />
-                </div>
-              )
-            )}
+            <div style={{ filter: `drop-shadow(0 0 14px ${stage.color}cc)` }}>
+              <DemonMascot skin={stage.skin} size={82} />
+            </div>
           </div>
         </div>
 
-        {/* Card label */}
+        {/* Card footer */}
         <div
-          className="px-4 py-3"
-          style={{ background: "#080808", borderTop: "3px solid #000" }}
+          className="px-3 py-3"
+          style={{ background: "#040404", borderTop: `2px solid ${rarity.border}` }}
         >
-          <p className="font-pixel text-[10px] text-muted">LV.{stage.lv}</p>
-          <p
-            className="mt-0.5 font-pixel text-sm"
-            style={{ color: stage.locked ? "#2e2e2e" : stage.color }}
-          >
-            {stage.name}
-          </p>
-          {stage.locked && (
-            <p className="font-pixel text-[9px] mt-0.5" style={{ color: "#1e1e1e" }}>
-              LOCKED
+          <div className="flex items-center justify-between mb-0.5">
+            <p className="font-pixel text-[8px]" style={{ color: "#2a3540" }}>LV.{stage.lv}</p>
+            <p className="font-pixel text-[7px]" style={{ color: rarity.color, opacity: 0.85 }}>
+              ◈ {rarity.label}
             </p>
-          )}
+          </div>
+          <p className="font-pixel text-[11px]" style={{ color: stage.color }}>{stage.name}</p>
+          <p className="mt-1 font-pixel text-[7px]" style={{ color: "#1e2830" }}>
+            SUPPLY 999 · SEASON 1
+          </p>
         </div>
       </div>
     </Reveal>
   );
 }
 
+// ─── Section ──────────────────────────────────────────────────────────────────
+
 export default function AmintaEvolutionGrid() {
   return (
     <section className="relative py-20 md:py-28 overflow-hidden">
       <div className="absolute inset-0 grid-bg opacity-30" />
 
+      <style>{`
+        @keyframes holoSweep {
+          0%   { background-position: -100% center; }
+          100% { background-position: 200% center; }
+        }
+      `}</style>
+
       <div className="relative mx-auto max-w-7xl px-5">
         <Reveal className="text-center max-w-2xl mx-auto">
-          <p className="font-pixel text-xs text-accent uppercase tracking-widest">Evolution</p>
+          <p className="font-pixel text-[9px] text-accent uppercase tracking-[0.3em]">
+            GENESIS COLLECTION · SEASON 1
+          </p>
           <h2 className="mt-4 font-pixel text-2xl sm:text-3xl text-white leading-snug">
-            Meet Aminta
+            Collect Every Form
           </h2>
           <p className="mt-4 text-muted">
-            Every post feeds Aminta. Every reply gives XP. Level up your sidekick as you grow on X.
+            Feed Aminta. Earn XP. Unlock all 9 evolutions.{" "}
+            <span className="text-accent">Your companion grows when you do.</span>
           </p>
         </Reveal>
 
-        {/* 3×3 evolution grid */}
         <div className="mt-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {STAGES.map((stage, i) => (
             <EvolutionCard key={stage.lv} stage={stage} index={i} />
           ))}
         </div>
 
-        {/* XP panel */}
         <Reveal className="mt-12">
           <div
             className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 px-6 py-5"
-            style={{
-              background: "#080808",
-              border: "3px solid #111",
-              boxShadow: "3px 3px 0 #000",
-            }}
+            style={{ background: "#040404", border: "2px solid #0e1418", boxShadow: "3px 3px 0 #000" }}
           >
-            <span className="font-pixel text-xs text-accent">POST: +50XP</span>
-            <span className="font-pixel text-xs" style={{ color: "#8aa0b4" }}>
-              REPLY: +25XP
-            </span>
-            <span
-              className="font-pixel text-xs"
-              style={{ color: "#f5d060" }}
-            >
-              REACH LV.9: ASCENDED
-            </span>
+            <span className="font-pixel text-xs text-accent">POST: +50 XP</span>
+            <span className="font-pixel text-xs" style={{ color: "#4a6070" }}>REPLY: +25 XP</span>
+            <span className="font-pixel text-xs" style={{ color: "#f5d060" }}>◈ REACH LV.9 → ASCENDED</span>
           </div>
         </Reveal>
       </div>
