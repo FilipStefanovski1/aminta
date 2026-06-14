@@ -27,16 +27,8 @@ export default function Home() {
         <HowItWorks />
         <MarqueeWall />
         <Pricing />
-        <FAQ />
         <OnboardingCTA />
-        <div className="flex items-center justify-center gap-8 py-12 flex-wrap">
-          <AmintaSprite level={1} mood="sleeping" size={80} />
-          <AmintaSprite level={2} mood="happy" size={80} />
-          <AmintaSprite level={3} mood="happy" size={80} />
-          <AmintaSprite level={5} mood="excited" size={80} />
-          <AmintaSprite level={6} mood="proud" size={80} />
-          <AmintaSprite level={9} mood="mischievous" size={80} />
-        </div>
+        <FAQ />
       </main>
       <Footer />
     </>

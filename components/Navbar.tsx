@@ -15,6 +15,7 @@ type DemonStageDetail = { active: boolean; color?: string };
 export default function Navbar() {
   const [open, setOpen] = useState(false);
   const [demonColor, setDemonColor] = useState<string | null>(null);
+  const [visible, setVisible] = useState(false);
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -25,6 +26,13 @@ export default function Navbar() {
     return () => window.removeEventListener("demon-stage", handler);
   }, []);
 
+  useEffect(() => {
+    const onScroll = () => setVisible(window.scrollY > 10);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   const bgColor = demonColor ?? "#74f7b5";
 
   return (
@@ -32,7 +40,9 @@ export default function Navbar() {
       className="fixed top-0 inset-x-0 z-50 border-b-4 border-black"
       style={{
         backgroundColor: bgColor,
-        transition: "background-color 0.5s ease",
+        transition: "background-color 0.5s ease, transform 0.3s ease, opacity 0.3s ease",
+        transform: visible ? "translateY(0)" : "translateY(-100%)",
+        opacity: visible ? 1 : 0,
       }}
     >
       <nav className="mx-auto max-w-7xl h-20 px-5 flex items-center">
