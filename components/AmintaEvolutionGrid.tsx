@@ -1,5 +1,5 @@
 import Reveal from "./Reveal";
-import DemonMascot from "./DemonMascot";
+import AmintaSprite from "./AmintaSprite";
 import type { DemonSkin } from "./demon-data";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -41,12 +41,12 @@ function rarityFor(lv: number): RarityDef {
 }
 
 const BG: Record<number, string> = {
-  1: "linear-gradient(180deg,#1a2030 0%,#0d1520 65%,#0a0e15 100%)",
-  2: "linear-gradient(180deg,#0a1820 0%,#0d2018 60%,#080e0a 100%)",
-  3: "linear-gradient(180deg,#0a1a0a 0%,#0d200f 55%,#081008 100%)",
-  4: "linear-gradient(180deg,#2a0f3d 0%,#1a0828 60%,#12051e 100%)",
-  5: "linear-gradient(180deg,#180820 0%,#100518 60%,#08040f 100%)",
-  6: "linear-gradient(180deg,#050d18 0%,#0a1828 60%,#020810 100%)",
+  1: "linear-gradient(rgba(5,5,5,0.40),rgba(5,5,5,0.40)), url('/backgrounds/Lvl1.png') center/cover no-repeat",
+  2: "linear-gradient(rgba(5,5,5,0.40),rgba(5,5,5,0.40)), url('/backgrounds/Lvl2.png') center/cover no-repeat",
+  3: "linear-gradient(rgba(5,5,5,0.40),rgba(5,5,5,0.40)), url('/backgrounds/Lvl3.png') center/cover no-repeat",
+  4: "linear-gradient(rgba(5,5,5,0.40),rgba(5,5,5,0.40)), url('/backgrounds/Lvl4.png') center/cover no-repeat",
+  5: "linear-gradient(rgba(5,5,5,0.40),rgba(5,5,5,0.40)), url('/backgrounds/Lvl5.png') center/cover no-repeat",
+  6: "linear-gradient(rgba(5,5,5,0.40),rgba(5,5,5,0.40)), url('/backgrounds/Lvl6.png') center/cover no-repeat",
   7: "linear-gradient(180deg,#0a0c18 0%,#0f0d20 55%,#070610 100%)",
   8: "linear-gradient(180deg,#08040f 0%,#100818 60%,#06030a 100%)",
   9: "linear-gradient(180deg,#18140a 0%,#120f04 55%,#0a0804 100%)",
@@ -288,8 +288,8 @@ function EvolutionCard({ stage, index }: { stage: EvolutionStage; index: number 
           {rarity.label}
         </div>
 
-        {/* Scene */}
-        <div className="relative overflow-hidden" style={{ height: 176, background: BG[stage.lv] }}>
+        {/* Scene (outzoomed) */}
+        <div className="relative overflow-hidden" style={{ height: 150, background: BG[stage.lv] }}>
           <div className="absolute inset-0 grid-bg opacity-10" />
 
           <svg
@@ -297,6 +297,7 @@ function EvolutionCard({ stage, index }: { stage: EvolutionStage; index: number 
             className="absolute inset-0 w-full h-full pixelated"
             preserveAspectRatio="xMidYMid slice"
             aria-hidden
+            style={{ transform: 'scale(0.92)', transformOrigin: '50% 50%' }}
           >
             <SceneElements lv={stage.lv} />
           </svg>
@@ -304,13 +305,13 @@ function EvolutionCard({ stage, index }: { stage: EvolutionStage; index: number 
           {/* Ambient glow */}
           <div
             className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full pointer-events-none"
-            style={{ width: 96, height: 96, background: stage.color, filter: "blur(44px)", opacity: 0.2 }}
+            style={{ width: 96, height: 96, background: stage.color, filter: "blur(44px)", opacity: 0.16 }}
           />
 
-          {/* Sprite */}
+          {/* Sprite (outzoomed & using AmintaSprite with floating + facial features) */}
           <div className="absolute inset-x-0 bottom-0 flex justify-center pb-1">
-            <div style={{ filter: `drop-shadow(0 0 14px ${stage.color}cc)` }}>
-              <DemonMascot skin={stage.skin} size={82} />
+            <div style={{ transform: 'scale(0.86)', transformOrigin: '50% 100%' }}>
+              <AmintaSprite level={stage.lv} size={72} interactive={false} />
             </div>
           </div>
         </div>
