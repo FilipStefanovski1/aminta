@@ -1,7 +1,6 @@
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
 import ThreeModes from "@/components/ThreeModes";
-import ProductDemo from "@/components/ProductDemo";
 import ScrollDemonProgress from "@/components/ScrollDemonProgress";
 import AmintaEvolutionGrid from "@/components/AmintaEvolutionGrid";
 import Features from "@/components/Features";
@@ -10,7 +9,6 @@ import MarqueeWall from "@/components/MarqueeWall";
 import Pricing from "@/components/Pricing";
 import FAQ from "@/components/FAQ";
 import OnboardingCTA from "@/components/OnboardingCTA";
-import AmintaSprite from "@/components/AmintaSprite";
 import Footer from "@/components/Footer";
 
 export default function Home() {
@@ -20,7 +18,6 @@ export default function Home() {
       <main className="flex-1">
         <Hero />
         <ThreeModes />
-        <ProductDemo />
         <ScrollDemonProgress />
         <AmintaEvolutionGrid />
         <Features />
