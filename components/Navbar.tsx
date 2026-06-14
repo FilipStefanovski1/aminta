@@ -35,19 +35,21 @@ export default function Navbar() {
         transition: "background-color 0.5s ease",
       }}
     >
-      <nav className="mx-auto max-w-7xl h-20 px-5 flex items-center justify-between gap-4">
-        {/* left: pixel Aminta icon */}
-        <a href="#top" aria-label="Aminta" className="flex items-center shrink-0">
-          <svg width="34" height="28" viewBox="0 0 16 13" className="pixelated">
-            <rect x="2" y="0" width="2" height="3" fill="#0a0a0a" />
-            <rect x="12" y="0" width="2" height="3" fill="#0a0a0a" />
-            <rect x="3" y="3" width="10" height="9" fill="#0a0a0a" />
-            <rect x="4" y="6" width="2" height="2" fill="#74f7b5" />
-            <rect x="10" y="6" width="2" height="2" fill="#74f7b5" />
-          </svg>
-        </a>
+      <nav className="mx-auto max-w-7xl h-20 px-5 flex items-center">
+        {/* left: pixel Aminta icon — flex-1 so it matches right side width */}
+        <div className="flex-1 flex items-center">
+          <a href="#top" aria-label="Aminta" className="flex items-center shrink-0">
+            <svg width="34" height="28" viewBox="0 0 16 13" className="pixelated">
+              <rect x="2" y="0" width="2" height="3" fill="#0a0a0a" />
+              <rect x="12" y="0" width="2" height="3" fill="#0a0a0a" />
+              <rect x="3" y="3" width="10" height="9" fill="#0a0a0a" />
+              <rect x="4" y="6" width="2" height="2" fill="#74f7b5" />
+              <rect x="10" y="6" width="2" height="2" fill="#74f7b5" />
+            </svg>
+          </a>
+        </div>
 
-        {/* center: bracketed links */}
+        {/* center: bracketed links — truly centered */}
         <div className="hidden lg:flex items-center gap-4 xl:gap-6 flex-nowrap">
           {LINKS.map((l) => (
             <a
@@ -60,22 +62,24 @@ export default function Navbar() {
           ))}
         </div>
 
-        {/* right: CTA */}
-        <a
-          href="#pricing"
-          className="hidden lg:inline-flex shrink-0 font-pixel text-sm xl:text-base text-black whitespace-nowrap nav-cta"
-        >
-          Get Aminta
-        </a>
+        {/* right: CTA — flex-1 so it mirrors left side width */}
+        <div className="flex-1 flex items-center justify-end">
+          <a
+            href="#pricing"
+            className="hidden lg:inline-flex shrink-0 font-pixel text-sm xl:text-base text-black whitespace-nowrap nav-cta"
+          >
+            Get Aminta
+          </a>
 
-        {/* mobile toggle */}
-        <button
-          aria-label="Toggle menu"
-          onClick={() => setOpen((v) => !v)}
-          className="lg:hidden font-pixel text-base text-black"
-        >
-          {open ? "[ X ]" : "[ = ]"}
-        </button>
+          {/* mobile toggle */}
+          <button
+            aria-label="Toggle menu"
+            onClick={() => setOpen((v) => !v)}
+            className="lg:hidden font-pixel text-base text-black"
+          >
+            {open ? "[ X ]" : "[ = ]"}
+          </button>
+        </div>
       </nav>
 
       {/* mobile / tablet menu */}
