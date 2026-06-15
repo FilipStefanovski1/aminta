@@ -82,10 +82,10 @@ const CARDS: WallCard[] = [
     id: "xp1",
     kind: "xp",
     name: "Jha Sundaram",
-    role: "Indie founder",
+    role: "Head of Design @ Playground AI | Founder @ ETHBelgium",
     company: "Signalway",
     review: "Every post earns XP. Every reply feeds Aminta. It keeps me in motion.",
-    avatar: "/testimonials/jha-sundaram.jpg",
+    avatar: "/testimonials/JhaSundaram.png",
     tag: "POST +50 XP · REPLY +25 XP",
   },
   {
