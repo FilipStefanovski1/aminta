@@ -7,7 +7,6 @@ import { LEVELS } from "./demon-data";
 interface Feature {
   title: string;
   desc: string;
-  xp?: string;
   accent: string;
   icon: React.ReactNode;
   feedback: string;
@@ -17,7 +16,6 @@ const FEATURES: Feature[] = [
   {
     title: "Tweet Generator",
     desc: "Type a topic. Get a post in your voice. No blank-box paralysis — just output.",
-    xp: "+50 XP",
     accent: "text-accent",
     feedback: "Aminta gains 50 XP.",
     icon: (
@@ -27,7 +25,6 @@ const FEATURES: Feature[] = [
   {
     title: "Reply Generator",
     desc: "Pull any tweet, fire back an in-voice reply that adds something. Every reply feeds the demon.",
-    xp: "+25 XP",
     accent: "text-accent",
     feedback: "Reply sent. Demon feeds.",
     icon: (
@@ -37,9 +34,8 @@ const FEATURES: Feature[] = [
   {
     title: "Tweet Polisher",
     desc: "Rough draft in, sharp banger out. Keeps your voice — just tighter. Refine the post, refine the demon.",
-    xp: "+15 XP",
     accent: "text-accent",
-    feedback: "Voice refined. +15 XP earned.",
+    feedback: "Voice refined.",
     icon: (
       <path d="m12 3 2.2 5 5.3.4-4 3.5 1.2 5.2L12 19.7 7.3 22.6l1.2-5.2-4-3.5 5.3-.4L12 3Z" strokeWidth="2" strokeLinejoin="round" />
     ),
@@ -124,11 +120,6 @@ export default function Features() {
                       {f.icon}
                     </svg>
                   </span>
-                  {f.xp && (
-                    <span className="font-pixel text-[10px] rounded-md border border-accent/40 bg-accent/10 text-accent px-2 py-1">
-                      {f.xp}
-                    </span>
-                  )}
                 </div>
                 <h3 className="mt-5 font-pixel text-sm text-white">{f.title}</h3>
                 <p className="mt-3 text-sm text-muted leading-relaxed">{f.desc}</p>

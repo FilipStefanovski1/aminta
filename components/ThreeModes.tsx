@@ -164,18 +164,6 @@ export default function ThreeModes() {
           ))}
         </div>
 
-        {/* XP strip */}
-        <Reveal delay={280}>
-          <div className="mt-14 flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
-            {XP_ITEMS.map((item, i) => (
-              <span key={item.label} className="flex items-center gap-1.5 text-xs text-muted">
-                {i > 0 && <span className="text-muted/30 hidden sm:inline">·</span>}
-                <span className="font-pixel text-[10px] text-accent">{item.xp}</span>
-                <span>— {item.label}</span>
-              </span>
-            ))}
-          </div>
-        </Reveal>
       </div>
     </section>
   );

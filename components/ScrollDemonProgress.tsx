@@ -176,9 +176,6 @@ function DemonStatic() {
         </div>
         <p className="mt-2 font-pixel text-xs text-white">3000 / 3000 XP</p>
         <p className="mt-4 text-sm text-accent font-medium">Demon fed. Streak secured.</p>
-        <div className="mt-8">
-          <RewardLegend />
-        </div>
       </div>
     </section>
   );
@@ -363,9 +360,6 @@ function DemonAnimated() {
               )}
             </div>
 
-            <div className="mt-5">
-              <RewardLegend />
-            </div>
           </div>
         </div>
       </div>

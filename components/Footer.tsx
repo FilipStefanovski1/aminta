@@ -90,8 +90,19 @@ export default function Footer() {
         ))}
       </div>
 
+      {/* Legal links */}
+      <div className="mt-14 flex items-center justify-center gap-5">
+        <a href="/privacy" className="text-xs text-[#444] hover:text-[#74f7b5] transition-colors">
+          Privacy Policy
+        </a>
+        <span style={{ color: "#222" }}>·</span>
+        <a href="/terms" className="text-xs text-[#444] hover:text-[#74f7b5] transition-colors">
+          Terms of Service
+        </a>
+      </div>
+
       {/* Copyright */}
-      <p className="mt-14 text-xs" style={{ color: "#333" }}>
+      <p className="mt-4 text-xs" style={{ color: "#333" }}>
         © 2026 Aminta. All rights reserved.
       </p>
     </footer>
