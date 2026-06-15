@@ -33,7 +33,7 @@ export default function OnboardingCTA() {
 
             {/* Secondary */}
             <a
-              href="mailto:your-email@example.com"
+              href="mailto:hello@amintaapp.com"
               className="inline-flex items-center gap-2.5 rounded-xl border-2 border-line px-7 py-3.5 font-semibold text-white transition hover:border-accent/50 hover:text-accent active:scale-95"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>

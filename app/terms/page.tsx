@@ -398,7 +398,7 @@ export default function TermsPage() {
             </p>
             <p>
               Refund requests should be sent to{" "}
-              <span className="font-mono text-[#74f7b5]">[CONTACT@AMINTA.APP]</span>. We evaluate
+              <span className="font-mono text-[#74f7b5]">hello@amintaapp.com</span>. We evaluate
               all requests on a case-by-case basis.
             </p>
           </Section>
@@ -564,7 +564,7 @@ export default function TermsPage() {
                 to online purchases:{" "}
                 <span className="text-[#74f7b5] font-mono text-sm">ec.europa.eu/consumers/odr</span>.
                 Our contact email for ODR purposes is{" "}
-                <span className="font-mono text-[#74f7b5]">[CONTACT@AMINTA.APP]</span>.
+                <span className="font-mono text-[#74f7b5]">hello@amintaapp.com</span>.
               </p>
             </Sub>
 
@@ -587,7 +587,7 @@ export default function TermsPage() {
               <p>Country of establishment: Belgium</p>
               <p>
                 Email:{" "}
-                <span className="font-mono text-[#74f7b5]">[CONTACT@AMINTA.APP]</span>
+                <span className="font-mono text-[#74f7b5]">hello@amintaapp.com</span>
                 <span className="text-[#555] text-xs ml-2">← replace before publishing</span>
               </p>
               <p className="text-[#555] text-xs pt-1">
