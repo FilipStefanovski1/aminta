@@ -158,10 +158,9 @@ function DemonStatic() {
       ref={ref}
       id="feed-aminta"
       style={accentVars(stage)}
-      className="relative py-24 scroll-mt-20 overflow-hidden"
+      className="py-24 scroll-mt-20 overflow-hidden"
     >
-      <div className="absolute inset-0 grid-bg opacity-100" />
-      <div className="relative mx-auto max-w-2xl px-5 text-center">
+      <div className="mx-auto max-w-2xl px-5 text-center">
         <h2 className="mt-3 font-pixel text-2xl text-white">{HEADLINE}</h2>
         <p className="mt-4 text-sm text-muted leading-relaxed">{DESC}</p>
         <div
@@ -290,8 +289,6 @@ function DemonAnimated() {
         }
         className="sticky top-0 h-screen overflow-hidden flex flex-col items-center justify-center px-5"
       >
-        <div className="absolute inset-0 grid-bg opacity-100" />
-
         <div className="relative z-10 w-full max-w-3xl mx-auto text-center">
           <h2 className="mt-3 font-pixel text-2xl sm:text-3xl text-white">{HEADLINE}</h2>
           <p className="mt-4 mx-auto max-w-xl text-sm sm:text-base text-muted leading-relaxed">

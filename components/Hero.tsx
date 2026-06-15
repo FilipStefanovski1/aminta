@@ -7,7 +7,6 @@ const PANEL_DEMON = { body: "#74f7b5", horn: "#2f6b4f", eye: "#1f1f1f" };
 export default function Hero() {
   return (
     <section id="top" className="relative overflow-hidden pt-32 pb-20 md:pt-36 md:pb-28">
-      <div className="absolute inset-0 grid-bg opacity-100" />
 
       <div className="relative z-10 mx-auto max-w-7xl px-5 grid lg:grid-cols-2 gap-12 lg:gap-8 items-center">
         {/* Left: copy */}

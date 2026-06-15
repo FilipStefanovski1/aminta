@@ -30,7 +30,7 @@ export default function CursorTrail() {
       const id = idCounter.current++;
       setCells((prev) => {
         const next = [...prev, { id, x, y }];
-        return next.length > 48 ? next.slice(next.length - 48) : next;
+        return next.length > 80 ? next.slice(next.length - 80) : next;
       });
     };
 

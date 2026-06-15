@@ -2,10 +2,8 @@ import Reveal from "./Reveal";
 
 export default function OnboardingCTA() {
   return (
-    <section id="get-aminta" className="relative py-24 md:py-32 overflow-hidden">
-      <div className="absolute inset-0 grid-bg opacity-20" />
-
-      <div className="relative mx-auto max-w-3xl px-5 text-center">
+    <section id="get-aminta" className="py-24 md:py-32 overflow-hidden">
+      <div className="mx-auto max-w-3xl px-5 text-center">
         <Reveal>
           <h2 className="font-pixel text-2xl sm:text-3xl md:text-4xl text-white leading-snug">
             Need help getting started?{" "}

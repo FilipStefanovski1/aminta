@@ -5,9 +5,8 @@ import { LEVELS } from "./demon-data";
 
 export default function FeedTheDemon() {
   return (
-    <section id="demon" className="relative py-20 md:py-28 scroll-mt-20">
-      <div className="absolute inset-0 grid-bg opacity-20" />
-      <div className="relative mx-auto max-w-7xl px-5">
+    <section id="demon" className="py-20 md:py-28 scroll-mt-20">
+      <div className="mx-auto max-w-7xl px-5">
         <Reveal className="text-center max-w-3xl mx-auto">
           <p className="font-pixel text-xs text-accent uppercase tracking-widest">
             The retention mechanic

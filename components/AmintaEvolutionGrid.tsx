@@ -347,8 +347,7 @@ function EvolutionCard({ stage, index }: { stage: EvolutionStage; index: number 
 
 export default function AmintaEvolutionGrid() {
   return (
-    <section className="relative py-20 md:py-28 overflow-hidden">
-      <div className="absolute inset-0 grid-bg opacity-30" />
+    <section className="py-20 md:py-28 overflow-hidden">
 
       <style>{`
         @keyframes holoSweep {

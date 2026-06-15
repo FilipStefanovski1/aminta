@@ -136,8 +136,7 @@ const XP_ITEMS = [
 
 export default function ThreeModes() {
   return (
-    <section className="relative py-24 md:py-32 overflow-hidden">
-      <div className="absolute inset-0 grid-bg opacity-20" />
+    <section className="py-24 md:py-32 overflow-hidden">
 
       <div className="relative mx-auto max-w-7xl px-5">
         {/* heading — left-aligned, editorial */}
