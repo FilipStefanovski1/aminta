@@ -167,13 +167,7 @@ function Card({ card }: { card: WallCard }) {
           <p className="text-[11px] text-muted truncate">{card.company ? `${card.role} · ${card.company}` : card.role}</p>
         </div>
       </div>
-      <div className="mt-3 flex items-center justify-between gap-3">
-        <span className="font-pixel text-[10px] tracking-[0.08em] text-accent">
-          {KIND_LABEL[card.kind]}
-        </span>
-        <span className="font-pixel text-[9px] text-muted">{card.tag}</span>
-      </div>
-      <p className="mt-2 text-sm leading-relaxed text-[#d7d7dd]">"{card.review}"</p>
+      <p className="mt-3 text-sm leading-relaxed text-[#d7d7dd]">"{card.review}"</p>
     </div>
   );
 }
