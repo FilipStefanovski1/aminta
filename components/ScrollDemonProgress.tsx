@@ -251,10 +251,10 @@ function DemonAnimated() {
     const newStage = stageFor(v);
     currentStageRef.current = newStage;
 
-    // Stage changed — play sound only while section is in view
+    // Stage changed — play sound only while genuinely inside the section
     if (newStage.lv !== prevStageLvRef.current) {
       prevStageLvRef.current = newStage.lv;
-      if (interactedRef.current && audioCtxRef.current && inViewRef.current) {
+      if (interactedRef.current && audioCtxRef.current && inViewRef.current && v > 0.05 && v < 0.98) {
         const ctx = audioCtxRef.current;
         if (ctx.state === "suspended") {
           ctx.resume().then(() => doPlayBlip(ctx));
