@@ -79,6 +79,16 @@ const CARDS: WallCard[] = [
     tag: "Co-Founder",
   },
   {
+    id: "r4",
+    kind: "founder",
+    name: "Marija Ljusheva",
+    role: "Startup Community Coordinator @ EGC",
+    company: "",
+    review: "My job is connecting founders and keeping the community alive. Aminta helps me stay visible between events without spending an hour staring at a blank draft.",
+    avatar: "/testimonials/MarijaLjuseva.jpeg",
+    tag: "Community · Startups",
+  },
+  {
     id: "xp1",
     kind: "xp",
     name: "Jha Sundaram",
