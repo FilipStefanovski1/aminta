@@ -17,12 +17,20 @@ const pixel = Press_Start_2P({
 export const metadata: Metadata = {
   title: "Aminta | Feed Aminta. Grow your socials.",
   description:
-    "Aminta is the AI sidekick that makes posting on X addictive. Write tweets, replies, and polished posts in your voice — every post feeds Aminta and stacks XP.",
+    "Aminta is the AI writing sidekick that makes posting addictive. Write posts in your voice, feed your demon, stack XP, and grow your socials.",
   openGraph: {
     title: "Aminta | Feed Aminta. Grow your socials.",
     description:
-      "The AI sidekick that makes posting on X addictive. Generate posts in your voice, feed Aminta, stack XP, keep your streak alive.",
+      "The AI sidekick that makes posting addictive. Generate posts in your voice, feed Aminta, stack XP, keep your streak alive.",
     type: "website",
+    images: [{ url: "/og-image.png", width: 1200, height: 630 }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Aminta | Feed Aminta. Grow your socials.",
+    description:
+      "The AI sidekick that makes posting addictive. Generate posts in your voice, feed Aminta, stack XP, keep your streak alive.",
+    images: ["/og-image.png"],
   },
   icons: {
     icon: [
