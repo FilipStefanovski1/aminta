@@ -40,10 +40,9 @@ function IconInstagram() {
 }
 
 const SOCIALS = [
-  { label: "X", href: "#", icon: <IconX /> },
-  { label: "GitHub", href: "#", icon: <IconGitHub /> },
-  { label: "LinkedIn", href: "#", icon: <IconLinkedIn /> },
-  { label: "Instagram", href: "#", icon: <IconInstagram /> },
+  { label: "X", href: "https://x.com/amintaapp", icon: <IconX /> },
+  { label: "LinkedIn", href: "https://www.linkedin.com/company/amintaapp/", icon: <IconLinkedIn /> },
+  { label: "Instagram", href: "https://www.instagram.com/amintaapp/", icon: <IconInstagram /> },
 ];
 
 export default function Footer() {
