@@ -69,9 +69,6 @@ export default function Hero() {
                 <span className="text-[10px] text-muted">soon</span>
               </div>
             </div>
-            <p className="mt-3 text-[11px] text-muted">
-              <span className="text-accent">✓ Available now</span> · LinkedIn &amp; Reddit coming soon
-            </p>
           </div>
         </div>
 
