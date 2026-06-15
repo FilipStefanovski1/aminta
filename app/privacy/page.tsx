@@ -7,12 +7,11 @@ export const metadata: Metadata = {
   description: "How Aminta collects, uses, and protects your data. GDPR-compliant privacy policy for the Aminta Chrome extension and web application.",
 };
 
-function Section({ id, label, title, children }: { id: string; label: string; title: string; children: React.ReactNode }) {
+function Section({ id, label: _label, title, children }: { id: string; label: string; title: string; children: React.ReactNode }) {
   return (
-    <section id={id} className="pt-12 border-t border-[#2a2a2e]">
-      <p className="font-pixel text-[10px] text-[#74f7b5] uppercase tracking-widest mb-2">{label}</p>
-      <h2 className="text-xl font-semibold text-white mb-5">{title}</h2>
-      <div className="space-y-4 text-[#b8b8c4] leading-relaxed text-[0.9375rem]">{children}</div>
+    <section id={id} className="pt-9 border-t border-[#1e1e22]">
+      <h2 className="text-[1.0625rem] font-semibold text-white mb-4">{title}</h2>
+      <div className="space-y-4 text-[#888] leading-relaxed text-[0.9375rem]">{children}</div>
     </section>
   );
 }
@@ -20,15 +19,15 @@ function Section({ id, label, title, children }: { id: string; label: string; ti
 function Sub({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="mt-6">
-      <h3 className="text-[0.9375rem] font-semibold text-white mb-2">{title}</h3>
-      <div className="space-y-3 text-[#b8b8c4] leading-relaxed">{children}</div>
+      <h3 className="text-[0.9375rem] font-semibold text-[#ccc] mb-2">{title}</h3>
+      <div className="space-y-3 text-[#888] leading-relaxed">{children}</div>
     </div>
   );
 }
 
 function Notice({ children }: { children: React.ReactNode }) {
   return (
-    <div className="my-5 border-l-4 border-[#74f7b5] bg-[#0f1a14] rounded-r-xl px-5 py-4 text-[#c8d8cc] text-sm leading-relaxed">
+    <div className="my-4 border-l-2 border-[#74f7b5]/30 pl-4 text-[#777] text-sm leading-relaxed">
       {children}
     </div>
   );
@@ -37,7 +36,7 @@ function Notice({ children }: { children: React.ReactNode }) {
 function Li({ children }: { children: React.ReactNode }) {
   return (
     <li className="flex gap-2.5">
-      <span className="text-[#74f7b5] shrink-0 mt-0.5">◈</span>
+      <span className="text-[#444] shrink-0 mt-[0.3rem]">–</span>
       <span>{children}</span>
     </li>
   );
@@ -50,69 +49,59 @@ export default function PrivacyPage() {
 
       <main className="bg-[#0d0d0f] min-h-screen">
         {/* Hero */}
-        <div className="bg-black border-b border-[#1a1a1e]">
-          <div className="mx-auto max-w-3xl px-6 py-14">
-            <p className="font-pixel text-[10px] text-[#74f7b5] uppercase tracking-widest mb-3">Legal</p>
-            <h1 className="text-3xl sm:text-4xl font-semibold text-white mb-4">Privacy Policy</h1>
-            <p className="text-[#666] text-sm">
-              Last updated: <span className="text-[#999]">June 15, 2026</span>
-            </p>
-            <p className="mt-4 text-[#b8b8c4] leading-relaxed">
-              This Privacy Policy explains how Aminta collects, uses, stores, and protects your
-              information when you use the Aminta Chrome extension and web application. We are
-              committed to transparency and to protecting your privacy under applicable law,
-              including the EU General Data Protection Regulation (GDPR).
-            </p>
-          </div>
+        <div className="mx-auto max-w-3xl px-6 pt-12 pb-8">
+          <h1 className="text-2xl font-semibold text-white mb-3">Privacy Policy</h1>
+          <p className="text-[#555] text-sm mb-4">Last updated: June 15, 2026</p>
+          <p className="text-[#888] leading-relaxed text-[0.9375rem]">
+            This Privacy Policy explains how Aminta collects, uses, stores, and protects your
+            information when you use the Aminta Chrome extension and web application. We are
+            committed to transparency and to protecting your privacy under applicable law,
+            including the EU General Data Protection Regulation (GDPR).
+          </p>
         </div>
 
         {/* TOC */}
-        <div className="mx-auto max-w-3xl px-6 py-10">
-          <div className="bg-[#141418] border border-[#2a2a2e] rounded-2xl p-6">
-            <p className="font-pixel text-[10px] text-[#74f7b5] uppercase tracking-widest mb-4">Contents</p>
-            <ol className="space-y-1.5 text-sm text-[#888]">
-              {[
-                ["#controller", "1. Data Controller"],
-                ["#information", "2. Information We Collect"],
-                ["#use", "3. How We Use Your Information"],
-                ["#legal-basis", "4. Legal Basis for Processing (GDPR)"],
-                ["#ai", "5. AI Processing Disclosure"],
-                ["#extension", "6. Chrome Extension Permissions"],
-                ["#storage", "7. Data Storage and Security"],
-                ["#third-party", "8. Third-Party Services"],
-                ["#cookies", "9. Cookies and Local Storage"],
-                ["#retention", "10. Data Retention"],
-                ["#rights", "11. Your Rights Under GDPR"],
-                ["#transfers", "12. International Data Transfers"],
-                ["#children", "13. Children's Privacy"],
-                ["#changes", "14. Changes to This Policy"],
-                ["#contact", "15. Contact Information"],
-              ].map(([href, label]) => (
-                <li key={href}>
-                  <a href={href} className="hover:text-[#74f7b5] transition-colors">
-                    {label}
-                  </a>
-                </li>
-              ))}
-            </ol>
-          </div>
+        <div className="mx-auto max-w-3xl px-6 pb-8 border-b border-[#1e1e22]">
+          <ol className="space-y-1 text-sm text-[#555]">
+            {[
+              ["#controller", "1. Data Controller"],
+              ["#information", "2. Information We Collect"],
+              ["#use", "3. How We Use Your Information"],
+              ["#legal-basis", "4. Legal Basis for Processing (GDPR)"],
+              ["#ai", "5. AI Processing Disclosure"],
+              ["#extension", "6. Chrome Extension Permissions"],
+              ["#storage", "7. Data Storage and Security"],
+              ["#third-party", "8. Third-Party Services"],
+              ["#cookies", "9. Cookies and Local Storage"],
+              ["#retention", "10. Data Retention"],
+              ["#rights", "11. Your Rights Under GDPR"],
+              ["#transfers", "12. International Data Transfers"],
+              ["#children", "13. Children's Privacy"],
+              ["#changes", "14. Changes to This Policy"],
+              ["#contact", "15. Contact Information"],
+            ].map(([href, label]) => (
+              <li key={href}>
+                <a href={href} className="hover:text-[#888] transition-colors">
+                  {label}
+                </a>
+              </li>
+            ))}
+          </ol>
         </div>
 
         {/* Content */}
-        <div className="mx-auto max-w-3xl px-6 pb-24 space-y-0">
+        <div className="mx-auto max-w-3xl px-6 pb-20 space-y-0">
 
           <Section id="controller" label="§ 1" title="Data Controller">
             <p>
               Aminta is operated by an individual developer based in Belgium. For the purposes of
               EU data protection law, the data controller is:
             </p>
-            <div className="bg-[#141418] border border-[#2a2a2e] rounded-xl px-5 py-4 text-sm space-y-1">
-              <p className="text-white font-medium">Aminta</p>
-              <p>Country: Belgium</p>
-              <p>
+            <div className="mt-3 text-sm space-y-1.5">
+              <p className="text-[#888]">Aminta — Belgium</p>
+              <p className="text-[#888]">
                 Email:{" "}
                 <span className="font-mono text-[#74f7b5]">hello@amintaapp.com</span>
-                <span className="text-[#555] text-xs ml-2">← replace before publishing</span>
               </p>
             </div>
             <p>
@@ -583,10 +572,9 @@ export default function PrivacyPage() {
               If you have questions, concerns, or requests relating to this Privacy Policy or to
               how we handle your personal data, please contact us:
             </p>
-            <div className="bg-[#141418] border border-[#2a2a2e] rounded-xl px-5 py-5 text-sm space-y-2 mt-4">
-              <p className="text-white font-medium">Aminta — Data Controller</p>
-              <p>Country of establishment: Belgium</p>
-              <p>
+            <div className="mt-4 text-sm space-y-1.5">
+              <p className="text-[#888]">Aminta — Belgium</p>
+              <p className="text-[#888]">
                 Email:{" "}
                 <span className="font-mono text-[#74f7b5]">hello@amintaapp.com</span>
               </p>

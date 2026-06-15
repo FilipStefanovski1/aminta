@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 function Section({
   id,
-  label,
+  label: _label,
   title,
   children,
 }: {
@@ -20,12 +20,9 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section id={id} className="pt-12 border-t border-[#2a2a2e]">
-      <p className="font-pixel text-[10px] text-[#74f7b5] uppercase tracking-widest mb-2">
-        {label}
-      </p>
-      <h2 className="text-xl font-semibold text-white mb-5">{title}</h2>
-      <div className="space-y-4 text-[#b8b8c4] leading-relaxed text-[0.9375rem]">
+    <section id={id} className="pt-9 border-t border-[#1e1e22]">
+      <h2 className="text-[1.0625rem] font-semibold text-white mb-4">{title}</h2>
+      <div className="space-y-4 text-[#888] leading-relaxed text-[0.9375rem]">
         {children}
       </div>
     </section>
@@ -34,7 +31,7 @@ function Section({
 
 function Notice({ children }: { children: React.ReactNode }) {
   return (
-    <div className="my-5 border-l-4 border-[#74f7b5] bg-[#0f1a14] rounded-r-xl px-5 py-4 text-[#c8d8cc] text-sm leading-relaxed">
+    <div className="my-4 border-l-2 border-[#74f7b5]/30 pl-4 text-[#777] text-sm leading-relaxed">
       {children}
     </div>
   );
@@ -42,7 +39,7 @@ function Notice({ children }: { children: React.ReactNode }) {
 
 function Warning({ children }: { children: React.ReactNode }) {
   return (
-    <div className="my-5 border-l-4 border-[#f7a074] bg-[#1a100a] rounded-r-xl px-5 py-4 text-[#d4b8a8] text-sm leading-relaxed">
+    <div className="my-4 border-l-2 border-[#f7a074]/30 pl-4 text-[#777] text-sm leading-relaxed">
       {children}
     </div>
   );
@@ -51,7 +48,7 @@ function Warning({ children }: { children: React.ReactNode }) {
 function Li({ children }: { children: React.ReactNode }) {
   return (
     <li className="flex gap-2.5">
-      <span className="text-[#74f7b5] shrink-0 mt-0.5">◈</span>
+      <span className="text-[#444] shrink-0 mt-[0.3rem]">–</span>
       <span>{children}</span>
     </li>
   );
@@ -60,7 +57,7 @@ function Li({ children }: { children: React.ReactNode }) {
 function DeniedLi({ children }: { children: React.ReactNode }) {
   return (
     <li className="flex gap-2.5">
-      <span className="text-[#f7a074] shrink-0 mt-0.5">✕</span>
+      <span className="text-[#444] shrink-0 mt-[0.3rem]">–</span>
       <span>{children}</span>
     </li>
   );
@@ -79,27 +76,17 @@ export default function RefundPolicyPage() {
 
       <main className="bg-[#0d0d0f] min-h-screen">
         {/* Hero */}
-        <div className="bg-black border-b border-[#1a1a1e]">
-          <div className="mx-auto max-w-3xl px-6 py-14">
-            <p className="font-pixel text-[10px] text-[#74f7b5] uppercase tracking-widest mb-3">
-              Legal
-            </p>
-            <h1 className="text-3xl sm:text-4xl font-semibold text-white mb-4">
-              Refund Policy
-            </h1>
-            <p className="text-[#666] text-sm">
-              Last updated:{" "}
-              <span className="text-[#999]">June 2026</span>
-            </p>
-            <p className="mt-4 text-[#b8b8c4] leading-relaxed">
-              We want you to feel confident trying Aminta. This policy explains when refunds are
-              available, how to request one, and what falls outside our refund window.
-            </p>
-          </div>
+        <div className="mx-auto max-w-3xl px-6 pt-12 pb-8 border-b border-[#1e1e22]">
+          <h1 className="text-2xl font-semibold text-white mb-3">Refund Policy</h1>
+          <p className="text-[#555] text-sm mb-4">Last updated: June 2026</p>
+          <p className="text-[#888] leading-relaxed text-[0.9375rem]">
+            We want you to feel confident trying Aminta. This policy explains when refunds are
+            available, how to request one, and what falls outside our refund window.
+          </p>
         </div>
 
         {/* Content */}
-        <div className="mx-auto max-w-3xl px-6 pt-10 pb-24 space-y-0">
+        <div className="mx-auto max-w-3xl px-6 pt-2 pb-20 space-y-0">
 
           <Section id="monthly" label="§ 1" title="Monthly Subscriptions">
             <p>
@@ -168,18 +155,17 @@ export default function RefundPolicyPage() {
               For refund requests or billing questions, reach us at:
             </p>
 
-            <div className="bg-[#141418] border border-[#2a2a2e] rounded-xl px-5 py-5 text-sm space-y-2 mt-4">
-              <p className="text-white font-medium">Aminta Support</p>
-              <p>
+            <div className="mt-4 text-sm space-y-1.5">
+              <p className="text-[#888]">
                 Email: <Email />
               </p>
-              <p className="text-[#555] text-xs pt-1">
+              <p className="text-[#555] text-xs">
                 Include your order ID or the email address associated with your account. We aim
                 to respond within 5 business days.
               </p>
             </div>
 
-            <div className="mt-8 pt-6 border-t border-[#2a2a2e]">
+            <div className="mt-8 pt-6 border-t border-[#1e1e22]">
               <p className="text-[#555] text-sm">
                 This Refund Policy is part of our{" "}
                 <a href="/terms" className="text-[#74f7b5] hover:text-white transition-colors">
