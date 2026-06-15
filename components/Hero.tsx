@@ -14,7 +14,7 @@ export default function Hero() {
           <h1 className="font-pixel text-3xl sm:text-4xl lg:text-[3.4rem] leading-[1.2] text-white break-words">
             Feed Aminta.
             <br />
-            <span className="text-accent">Grow on X.</span>
+            <span className="text-accent">Grow your socials.</span>
           </h1>
 
           <p className="mt-7 max-w-md text-base sm:text-lg text-muted leading-relaxed">

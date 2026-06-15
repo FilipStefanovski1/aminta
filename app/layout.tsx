@@ -15,11 +15,11 @@ const pixel = Press_Start_2P({
 });
 
 export const metadata: Metadata = {
-  title: "Aminta · Feed Aminta. Grow on X.",
+  title: "Aminta | Feed Aminta. Grow your socials.",
   description:
     "Aminta is the AI sidekick that makes posting on X addictive. Write tweets, replies, and polished posts in your voice — every post feeds Aminta and stacks XP.",
   openGraph: {
-    title: "Aminta · Feed Aminta. Grow on X.",
+    title: "Aminta | Feed Aminta. Grow your socials.",
     description:
       "The AI sidekick that makes posting on X addictive. Generate posts in your voice, feed Aminta, stack XP, keep your streak alive.",
     type: "website",
