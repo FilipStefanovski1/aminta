@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, type CSSProperties } from "react";
 
 type DemonStageDetail = { active: boolean; color?: string };
 
-type CardKind = "placeholder" | "xp" | "founder" | "lore" | "truth" | "benefit";
+type CardKind = "placeholder" | "xp" | "founder" | "truth";
 
 interface WallCard {
   id: string;
@@ -19,44 +19,24 @@ interface WallCard {
 
 const CARDS: WallCard[] = [
   {
+    id: "r1",
+    kind: "founder",
+    name: "Lazar Bucan",
+    role: "AI & GTM Engineer · Superteam Balkans",
+    company: "Superteam Balkans",
+    review: "I spend my days thinking about AI and go-to-market. Aminta is the first tool that actually fits the way I think about building in public.",
+    avatar: "/testimonials/LazarBucan.jpeg",
+    tag: "AI & GTM",
+  },
+  {
     id: "p1",
     kind: "placeholder",
     name: "Victor Saltor",
-    role: "Solo creator",
-    company: "Launchframe",
-    review: "I know what I want to say. I just don't want to write it.",
-    avatar: "/testimonials/victor-saltor.jpg",
-    tag: "Creator pain",
-  },
-  {
-    id: "p2",
-    kind: "truth",
-    name: "Mila Vukikjevikj",
-    role: "Growth lead",
-    company: "Orbit Labs",
-    review: "Posting consistently is harder than posting once.",
-    avatar: "/testimonials/mila-vukikjevikj.jpg",
-    tag: "Posting truth",
-  },
-  {
-    id: "xp1",
-    kind: "xp",
-    name: "Jha Sundaram",
-    role: "Indie founder",
-    company: "Signalway",
-    review: "Every post earns XP. Every reply feeds Aminta. It keeps me in motion.",
-    avatar: "/testimonials/jha-sundaram.jpg",
-    tag: "POST +50 XP · REPLY +25 XP",
-  },
-  {
-    id: "l1",
-    kind: "lore",
-    name: "Samuel Naumovski Vickius",
-    role: "Product storyteller",
-    company: "Northstar Studio",
-    review: "Aminta gets stronger every time you post. Feed. Post. Repeat.",
-    avatar: "/testimonials/samuel-naumovski.jpg",
-    tag: "Aminta lore",
+    role: "Creator",
+    company: "",
+    review: "I know what I want to say. I just don't want to write it. Aminta removes the friction between the idea and the post.",
+    avatar: "/testimonials/VictorSaltor.jpeg",
+    tag: "Creator",
   },
   {
     id: "fn1",
@@ -69,44 +49,44 @@ const CARDS: WallCard[] = [
     tag: "Founder note",
   },
   {
-    id: "t1",
+    id: "r2",
+    kind: "founder",
+    name: "Franka Grazdani",
+    role: "COO · Co-founder ETH Macedonia",
+    company: "223",
+    review: "Running two organisations means content always loses to meetings. Aminta changed that. I post consistently now without it eating my calendar.",
+    avatar: "/testimonials/FrankaGrazdani.jpeg",
+    tag: "COO · Web3",
+  },
+  {
+    id: "p2",
     kind: "truth",
-    name: "Sofia Reed",
-    role: "Creator",
-    company: "Neon Journal",
-    review: "The blank page wins too often. The wall reminds me to publish anyway.",
-    avatar: "/testimonials/sofia-reed.jpg",
+    name: "Mila Vukikjevikj",
+    role: "Growth lead",
+    company: "Orbit Labs",
+    review: "Posting consistently is harder than posting once.",
+    avatar: "/testimonials/mila-vukikjevikj.jpg",
     tag: "Posting truth",
   },
   {
-    id: "b1",
-    kind: "benefit",
-    name: "Evan Brooks",
-    role: "Community manager",
-    company: "PulseForge",
-    review: "I reply faster without sounding robotic. It still feels like me.",
-    avatar: "/testimonials/evan-brooks.jpg",
-    tag: "Product benefit",
+    id: "r3",
+    kind: "founder",
+    name: "Filip Najdovski",
+    role: "Co-Founder & Deputy CEO",
+    company: "EaseAccess24",
+    review: "Building a startup doesn't leave much time for content. Aminta lets me stay visible without making it a second job.",
+    avatar: "/testimonials/FilipNajdovski.jpeg",
+    tag: "Co-Founder",
   },
   {
-    id: "p3",
-    kind: "placeholder",
-    name: "Lena Park",
-    role: "Consultant",
-    company: "Threadline",
-    review: "Most creators disappear because they stop showing up.",
-    avatar: "/testimonials/lena-park.jpg",
-    tag: "Creator pain",
-  },
-  {
-    id: "xp2",
+    id: "xp1",
     kind: "xp",
-    name: "Jonah Miles",
-    role: "SaaS operator",
-    company: "ClarityOS",
-    review: "Growth becomes visible. No posts. No XP. That clarity changed my week.",
-    avatar: "/testimonials/jonah-miles.jpg",
-    tag: "XP system",
+    name: "Jha Sundaram",
+    role: "Indie founder",
+    company: "Signalway",
+    review: "Every post earns XP. Every reply feeds Aminta. It keeps me in motion.",
+    avatar: "/testimonials/jha-sundaram.jpg",
+    tag: "POST +50 XP · REPLY +25 XP",
   },
   {
     id: "fn2",
@@ -119,44 +99,32 @@ const CARDS: WallCard[] = [
     tag: "Founder note",
   },
   {
-    id: "l2",
-    kind: "lore",
-    name: "Ari Quinn",
-    role: "Writer",
-    company: "Monolith Media",
-    review: "A hungry Aminta wants content. That tiny pressure keeps me consistent.",
-    avatar: "/testimonials/ari-quinn.jpg",
-    tag: "Aminta lore",
+    id: "p3",
+    kind: "placeholder",
+    name: "Lena Park",
+    role: "Consultant",
+    company: "Threadline",
+    review: "Most creators disappear because they stop showing up.",
+    avatar: "/testimonials/lena-park.jpg",
+    tag: "Creator pain",
   },
   {
-    id: "b2",
-    kind: "benefit",
-    name: "Mason Gray",
-    role: "Creator",
-    company: "Atlas Signals",
-    review: "Consistency has a companion now. I post more because momentum feels real.",
-    avatar: "/testimonials/mason-gray.jpg",
-    tag: "Product benefit",
-  },
-  {
-    id: "t2",
+    id: "t1",
     kind: "truth",
-    name: "Kayla Stone",
-    role: "Audience lead",
-    company: "Cinder House",
-    review: "Growth comes from repetition. Aminta makes repetition visible.",
-    avatar: "/testimonials/kayla-stone.jpg",
+    name: "Sofia Reed",
+    role: "Creator",
+    company: "Neon Journal",
+    review: "The blank page wins too often. The wall reminds me to publish anyway.",
+    avatar: "/testimonials/sofia-reed.jpg",
     tag: "Posting truth",
   },
 ];
 
 const KIND_LABEL: Record<CardKind, string> = {
-  placeholder: "PLACEHOLDER",
+  placeholder: "USER",
   xp: "XP",
   founder: "FOUNDER",
-  lore: "LORE",
   truth: "TRUTH",
-  benefit: "BENEFIT",
 };
 
 function hexToRgba(hex: string, alpha: number): string {
@@ -196,7 +164,7 @@ function Card({ card }: { card: WallCard }) {
         </div>
         <div className="min-w-0">
           <p className="font-pixel text-[11px] text-white truncate">{card.name}</p>
-          <p className="text-[11px] text-muted truncate">{card.role} · {card.company}</p>
+          <p className="text-[11px] text-muted truncate">{card.company ? `${card.role} · ${card.company}` : card.role}</p>
         </div>
       </div>
       <div className="mt-3 flex items-center justify-between gap-3">
