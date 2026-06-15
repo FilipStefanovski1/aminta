@@ -25,7 +25,7 @@ const CARDS: WallCard[] = [
     role: "Solo creator",
     company: "Launchframe",
     review: "I know what I want to say. I just don't want to write it.",
-    avatar: "https://i.pravatar.cc/80?img=12",
+    avatar: "/testimonials/victor-saltor.jpg",
     tag: "Creator pain",
   },
   {
@@ -35,7 +35,7 @@ const CARDS: WallCard[] = [
     role: "Growth lead",
     company: "Orbit Labs",
     review: "Posting consistently is harder than posting once.",
-    avatar: "https://i.pravatar.cc/80?img=32",
+    avatar: "/testimonials/mila-vukikjevikj.jpg",
     tag: "Posting truth",
   },
   {
@@ -45,7 +45,7 @@ const CARDS: WallCard[] = [
     role: "Indie founder",
     company: "Signalway",
     review: "Every post earns XP. Every reply feeds Aminta. It keeps me in motion.",
-    avatar: "https://i.pravatar.cc/80?img=47",
+    avatar: "/testimonials/jha-sundaram.jpg",
     tag: "POST +50 XP · REPLY +25 XP",
   },
   {
@@ -55,7 +55,7 @@ const CARDS: WallCard[] = [
     role: "Product storyteller",
     company: "Northstar Studio",
     review: "Aminta gets stronger every time you post. Feed. Post. Repeat.",
-    avatar: "https://i.pravatar.cc/80?img=5",
+    avatar: "/testimonials/samuel-naumovski.jpg",
     tag: "Aminta lore",
   },
   {
@@ -65,7 +65,7 @@ const CARDS: WallCard[] = [
     role: "Founder",
     company: "Aminta",
     review: "Most tools help you write. Aminta helps you keep showing up.",
-    avatar: "https://i.pravatar.cc/80?img=58",
+    avatar: "/testimonials/filip-stefanovski.jpg",
     tag: "Founder note",
   },
   {
@@ -75,7 +75,7 @@ const CARDS: WallCard[] = [
     role: "Creator",
     company: "Neon Journal",
     review: "The blank page wins too often. The wall reminds me to publish anyway.",
-    avatar: "https://i.pravatar.cc/80?img=24",
+    avatar: "/testimonials/sofia-reed.jpg",
     tag: "Posting truth",
   },
   {
@@ -85,7 +85,7 @@ const CARDS: WallCard[] = [
     role: "Community manager",
     company: "PulseForge",
     review: "I reply faster without sounding robotic. It still feels like me.",
-    avatar: "https://i.pravatar.cc/80?img=40",
+    avatar: "/testimonials/evan-brooks.jpg",
     tag: "Product benefit",
   },
   {
@@ -95,7 +95,7 @@ const CARDS: WallCard[] = [
     role: "Consultant",
     company: "Threadline",
     review: "Most creators disappear because they stop showing up.",
-    avatar: "https://i.pravatar.cc/80?img=65",
+    avatar: "/testimonials/lena-park.jpg",
     tag: "Creator pain",
   },
   {
@@ -105,7 +105,7 @@ const CARDS: WallCard[] = [
     role: "SaaS operator",
     company: "ClarityOS",
     review: "Growth becomes visible. No posts. No XP. That clarity changed my week.",
-    avatar: "https://i.pravatar.cc/80?img=14",
+    avatar: "/testimonials/jonah-miles.jpg",
     tag: "XP system",
   },
   {
@@ -115,7 +115,7 @@ const CARDS: WallCard[] = [
     role: "Founder",
     company: "Aminta",
     review: "Motivation fades. Systems don't.",
-    avatar: "https://i.pravatar.cc/80?img=58",
+    avatar: "/testimonials/filip-stefanovski.jpg",
     tag: "Founder note",
   },
   {
@@ -125,7 +125,7 @@ const CARDS: WallCard[] = [
     role: "Writer",
     company: "Monolith Media",
     review: "A hungry Aminta wants content. That tiny pressure keeps me consistent.",
-    avatar: "https://i.pravatar.cc/80?img=35",
+    avatar: "/testimonials/ari-quinn.jpg",
     tag: "Aminta lore",
   },
   {
@@ -135,7 +135,7 @@ const CARDS: WallCard[] = [
     role: "Creator",
     company: "Atlas Signals",
     review: "Consistency has a companion now. I post more because momentum feels real.",
-    avatar: "https://i.pravatar.cc/80?img=70",
+    avatar: "/testimonials/mason-gray.jpg",
     tag: "Product benefit",
   },
   {
@@ -145,7 +145,7 @@ const CARDS: WallCard[] = [
     role: "Audience lead",
     company: "Cinder House",
     review: "Growth comes from repetition. Aminta makes repetition visible.",
-    avatar: "https://i.pravatar.cc/80?img=21",
+    avatar: "/testimonials/kayla-stone.jpg",
     tag: "Posting truth",
   },
 ];
@@ -181,7 +181,19 @@ function Card({ card }: { card: WallCard }) {
           height={40}
           className="h-10 w-10 rounded-full object-cover border border-accent/50 shrink-0"
           loading="lazy"
+          onError={(e) => {
+            const t = e.currentTarget;
+            t.style.display = "none";
+            const el = t.nextElementSibling as HTMLElement | null;
+            if (el) el.style.display = "flex";
+          }}
         />
+        <div
+          style={{ display: "none" }}
+          className="h-10 w-10 rounded-full border border-accent/50 shrink-0 bg-panel2 items-center justify-center font-pixel text-[10px] text-accent"
+        >
+          {card.name.charAt(0)}
+        </div>
         <div className="min-w-0">
           <p className="font-pixel text-[11px] text-white truncate">{card.name}</p>
           <p className="text-[11px] text-muted truncate">{card.role} · {card.company}</p>
