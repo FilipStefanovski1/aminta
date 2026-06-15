@@ -4,128 +4,155 @@ import { useEffect, useMemo, useState, type CSSProperties } from "react";
 
 type DemonStageDetail = { active: boolean; color?: string };
 
-type CardKind = "placeholder" | "xp" | "feature" | "founder" | "lore" | "truth" | "benefit";
+type CardKind = "placeholder" | "xp" | "founder" | "lore" | "truth" | "benefit";
 
 interface WallCard {
   id: string;
   kind: CardKind;
-  title: string;
-  text: string;
-  meta?: string;
+  name: string;
+  role: string;
+  company: string;
+  review: string;
+  avatar: string;
+  tag: string;
 }
 
 const CARDS: WallCard[] = [
   {
     id: "p1",
     kind: "placeholder",
-    title: "Creator pain",
-    text: "I know what I want to say. I just don't want to write it.",
-    meta: "Placeholder note",
+    name: "Victor Saltor",
+    role: "Solo creator",
+    company: "Launchframe",
+    review: "I know what I want to say. I just don't want to write it.",
+    avatar: "https://i.pravatar.cc/80?img=12",
+    tag: "Creator pain",
   },
   {
     id: "p2",
-    kind: "placeholder",
-    title: "Posting truth",
-    text: "Posting consistently is harder than posting once.",
-    meta: "Placeholder note",
+    kind: "truth",
+    name: "Mila Vukikjevikj",
+    role: "Growth lead",
+    company: "Orbit Labs",
+    review: "Posting consistently is harder than posting once.",
+    avatar: "https://i.pravatar.cc/80?img=32",
+    tag: "Posting truth",
   },
   {
     id: "xp1",
     kind: "xp",
-    title: "XP Loop",
-    text: "Every post earns XP. Every reply feeds Aminta.",
-    meta: "POST +50 XP · REPLY +25 XP",
-  },
-  {
-    id: "f1",
-    kind: "feature",
-    title: "Feature",
-    text: "Generate tweets in your own voice, then polish fast.",
-    meta: "Tweet Generator · Polisher",
+    name: "Jha Sundaram",
+    role: "Indie founder",
+    company: "Signalway",
+    review: "Every post earns XP. Every reply feeds Aminta. It keeps me in motion.",
+    avatar: "https://i.pravatar.cc/80?img=47",
+    tag: "POST +50 XP · REPLY +25 XP",
   },
   {
     id: "l1",
     kind: "lore",
-    title: "Aminta lore",
-    text: "Aminta gets stronger every time you post.",
-    meta: "Feed. Post. Repeat.",
+    name: "Samuel Naumovski Vickius",
+    role: "Product storyteller",
+    company: "Northstar Studio",
+    review: "Aminta gets stronger every time you post. Feed. Post. Repeat.",
+    avatar: "https://i.pravatar.cc/80?img=5",
+    tag: "Aminta lore",
   },
   {
     id: "fn1",
     kind: "founder",
-    title: "Founder note",
-    text: "Most tools help you write. Aminta helps you keep showing up.",
-    meta: "System > motivation",
+    name: "Filip Stefanovski",
+    role: "Founder",
+    company: "Aminta",
+    review: "Most tools help you write. Aminta helps you keep showing up.",
+    avatar: "https://i.pravatar.cc/80?img=58",
+    tag: "Founder note",
   },
   {
     id: "t1",
     kind: "truth",
-    title: "Posting truth",
-    text: "The blank page wins too often.",
-    meta: "Break the freeze",
+    name: "Sofia Reed",
+    role: "Creator",
+    company: "Neon Journal",
+    review: "The blank page wins too often. The wall reminds me to publish anyway.",
+    avatar: "https://i.pravatar.cc/80?img=24",
+    tag: "Posting truth",
   },
   {
     id: "b1",
     kind: "benefit",
-    title: "Benefit",
-    text: "Reply faster without sounding robotic.",
-    meta: "Context-aware replies",
+    name: "Evan Brooks",
+    role: "Community manager",
+    company: "PulseForge",
+    review: "I reply faster without sounding robotic. It still feels like me.",
+    avatar: "https://i.pravatar.cc/80?img=40",
+    tag: "Product benefit",
   },
   {
     id: "p3",
     kind: "placeholder",
-    title: "Creator pain",
-    text: "Most creators disappear because they stop showing up.",
-    meta: "Placeholder note",
+    name: "Lena Park",
+    role: "Consultant",
+    company: "Threadline",
+    review: "Most creators disappear because they stop showing up.",
+    avatar: "https://i.pravatar.cc/80?img=65",
+    tag: "Creator pain",
   },
   {
     id: "xp2",
     kind: "xp",
-    title: "Level signal",
-    text: "Growth becomes visible. Streaks stop being invisible effort.",
-    meta: "No posts. No XP.",
-  },
-  {
-    id: "f2",
-    kind: "feature",
-    title: "Feature",
-    text: "Turn rough thoughts into publishable posts in seconds.",
-    meta: "Draft → Publish",
+    name: "Jonah Miles",
+    role: "SaaS operator",
+    company: "ClarityOS",
+    review: "Growth becomes visible. No posts. No XP. That clarity changed my week.",
+    avatar: "https://i.pravatar.cc/80?img=14",
+    tag: "XP system",
   },
   {
     id: "fn2",
     kind: "founder",
-    title: "Founder note",
-    text: "Motivation fades. Systems don't.",
-    meta: "Consistency engine",
+    name: "Filip Stefanovski",
+    role: "Founder",
+    company: "Aminta",
+    review: "Motivation fades. Systems don't.",
+    avatar: "https://i.pravatar.cc/80?img=58",
+    tag: "Founder note",
   },
   {
     id: "l2",
     kind: "lore",
-    title: "Aminta lore",
-    text: "A hungry Aminta wants content.",
-    meta: "Keep the companion fed",
+    name: "Ari Quinn",
+    role: "Writer",
+    company: "Monolith Media",
+    review: "A hungry Aminta wants content. That tiny pressure keeps me consistent.",
+    avatar: "https://i.pravatar.cc/80?img=35",
+    tag: "Aminta lore",
   },
   {
     id: "b2",
     kind: "benefit",
-    title: "Benefit",
-    text: "Consistency has a companion now.",
-    meta: "Native to your workflow",
+    name: "Mason Gray",
+    role: "Creator",
+    company: "Atlas Signals",
+    review: "Consistency has a companion now. I post more because momentum feels real.",
+    avatar: "https://i.pravatar.cc/80?img=70",
+    tag: "Product benefit",
   },
   {
     id: "t2",
     kind: "truth",
-    title: "Posting truth",
-    text: "Growth comes from repetition.",
-    meta: "Show up daily",
+    name: "Kayla Stone",
+    role: "Audience lead",
+    company: "Cinder House",
+    review: "Growth comes from repetition. Aminta makes repetition visible.",
+    avatar: "https://i.pravatar.cc/80?img=21",
+    tag: "Posting truth",
   },
 ];
 
 const KIND_LABEL: Record<CardKind, string> = {
   placeholder: "PLACEHOLDER",
   xp: "XP",
-  feature: "FEATURE",
   founder: "FOUNDER",
   lore: "LORE",
   truth: "TRUTH",
@@ -145,16 +172,29 @@ function hexToRgba(hex: string, alpha: number): string {
 
 function Card({ card }: { card: WallCard }) {
   return (
-    <article className="marquee-card rounded-xl p-4">
-      <div className="flex items-center justify-between gap-3">
+    <div className="marquee-card rounded-xl p-4">
+      <div className="flex items-start gap-3">
+        <img
+          src={card.avatar}
+          alt={`${card.name} profile`}
+          width={40}
+          height={40}
+          className="h-10 w-10 rounded-full object-cover border border-accent/50 shrink-0"
+          loading="lazy"
+        />
+        <div className="min-w-0">
+          <p className="font-pixel text-[11px] text-white truncate">{card.name}</p>
+          <p className="text-[11px] text-muted truncate">{card.role} · {card.company}</p>
+        </div>
+      </div>
+      <div className="mt-3 flex items-center justify-between gap-3">
         <span className="font-pixel text-[10px] tracking-[0.08em] text-accent">
           {KIND_LABEL[card.kind]}
         </span>
-        {card.meta ? <span className="font-pixel text-[9px] text-muted">{card.meta}</span> : null}
+        <span className="font-pixel text-[9px] text-muted">{card.tag}</span>
       </div>
-      <h3 className="mt-2 font-pixel text-[11px] text-white">{card.title}</h3>
-      <p className="mt-2 text-sm leading-relaxed text-[#d7d7dd]">{card.text}</p>
-    </article>
+      <p className="mt-2 text-sm leading-relaxed text-[#d7d7dd]">"{card.review}"</p>
+    </div>
   );
 }
 
@@ -170,6 +210,19 @@ function MarqueeColumn({ cards, speedClass }: ColumnProps) {
       <div className={`marquee-track ${speedClass}`}>
         {doubled.map((card, i) => (
           <Card key={`${card.id}-${i}`} card={card} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function MobileFeed({ cards }: { cards: WallCard[] }) {
+  const doubled = useMemo(() => [...cards, ...cards], [cards]);
+  return (
+    <div className="mobile-marquee">
+      <div className="marquee-track marquee-up-mobile">
+        {doubled.map((card, i) => (
+          <Card key={`mob-${card.id}-${i}`} card={card} />
         ))}
       </div>
     </div>
@@ -196,9 +249,14 @@ export default function MarqueeWall() {
   }, []);
 
   const wallVars = {
+    "--accent": accent,
+    "--accent-soft": hexToRgba(accent, 0.16),
+    "--accent-glow": hexToRgba(accent, 0.55),
     "--wall-accent": accent,
     "--wall-accent-soft": hexToRgba(accent, 0.16),
     "--wall-accent-glow": hexToRgba(accent, 0.55),
+    "--color-accent": accent,
+    "--color-accent-soft": hexToRgba(accent, 0.16),
   } as CSSProperties;
 
   return (
@@ -211,19 +269,16 @@ export default function MarqueeWall() {
           <h2 className="font-pixel text-2xl sm:text-3xl text-white leading-snug">
             Built for people who know they should post more.
           </h2>
-          <p className="mt-4 text-muted">Aminta helps you show up consistently.</p>
         </div>
 
-        <div className="mt-12 hidden md:grid grid-cols-3 gap-4 marquee-wall">
+        <div className="mt-12 hidden md:grid grid-cols-3 gap-4 marquee-wall marquee-fade-edge">
           <MarqueeColumn cards={columns[0]} speedClass="marquee-up-slow" />
           <MarqueeColumn cards={columns[1]} speedClass="marquee-down-medium" />
           <MarqueeColumn cards={columns[2]} speedClass="marquee-up-fast" />
         </div>
 
-        <div className="mt-10 md:hidden space-y-3">
-          {CARDS.slice(0, 10).map((card) => (
-            <Card key={`mobile-${card.id}`} card={card} />
-          ))}
+        <div className="mt-10 md:hidden">
+          <MobileFeed cards={CARDS} />
         </div>
       </div>
     </section>

@@ -1,5 +1,5 @@
-import CursorTrail from "./CursorTrail";
 import DemonMascot from "./DemonMascot";
+import HeaderAminta from "./HeaderAminta";
 
 // Mint, near-monochrome demon used only as a small supporting detail.
 const PANEL_DEMON = { body: "#74f7b5", horn: "#2f6b4f", eye: "#1f1f1f" };
@@ -7,10 +7,7 @@ const PANEL_DEMON = { body: "#74f7b5", horn: "#2f6b4f", eye: "#1f1f1f" };
 export default function Hero() {
   return (
     <section id="top" className="relative overflow-hidden pt-32 pb-20 md:pt-36 md:pb-28">
-      {/* subtle grid + cursor-lit cells */}
       <div className="absolute inset-0 grid-bg opacity-100" />
-      <CursorTrail />
-      <div className="absolute top-0 left-1/3 w-[40rem] h-[24rem] rounded-full bg-accent/[0.05] blur-[140px]" />
 
       <div className="relative z-10 mx-auto max-w-7xl px-5 grid lg:grid-cols-2 gap-12 lg:gap-8 items-center">
         {/* Left: copy */}
@@ -26,17 +23,11 @@ export default function Hero() {
             every reply gives XP, and every day keeps the streak alive.
           </p>
 
-          <div className="mt-9 flex flex-col sm:flex-row gap-3">
-            <a
-              href="#pricing"
-              className="inline-flex justify-center items-center rounded-lg border-2 border-accent bg-accent/10 px-7 py-3 font-semibold text-accent hover:bg-accent hover:text-black transition"
-            >
+          <div className="mt-9 flex flex-col sm:flex-row gap-4">
+            <a href="#pricing" className="rpg-btn-primary">
               Get Aminta
             </a>
-            <a
-              href="#how"
-              className="inline-flex justify-center items-center rounded-lg border border-line bg-panel px-6 py-3 font-medium text-white hover:border-accent/40 transition"
-            >
+            <a href="#how" className="rpg-btn-secondary">
               See how it works
             </a>
           </div>
@@ -94,7 +85,9 @@ export default function Hero() {
               <span>NRG 67%</span>
             </div>
             <div className="my-2 flex justify-center">
-              <DemonMascot skin={PANEL_DEMON} size={56} />
+              <div className="aminta-float aminta-glow">
+                <DemonMascot skin={PANEL_DEMON} size={56} />
+              </div>
             </div>
             <div className="flex justify-between text-[9px] text-muted mb-1">
               <span>EXP</span>
@@ -104,6 +97,11 @@ export default function Hero() {
               <div className="h-full bg-accent rounded-full" style={{ width: "58%" }} />
             </div>
             <p className="mt-2 text-center text-[9px] text-muted">POST +50 · REPLY +25</p>
+          </div>
+
+          {/* HeaderAminta — animated SVG companion, bottom-left corner of browser mockup */}
+          <div className="hidden lg:block absolute -bottom-4 -left-4 z-20">
+            <HeaderAminta />
           </div>
 
           {/* browser mockup */}

@@ -14,7 +14,7 @@ export interface DemonLevel {
 export const LEVELS: DemonLevel[] = [
   { lv: 1, name: "Dormant",     xp: 0,    skin: { body: "#2d3a48", horn: "#1a2230", eye: "#6dbfa0" } },
   { lv: 2, name: "Curious",     xp: 150,  skin: { body: "#1a5e48", horn: "#0f3d30", eye: "#74f7b5" } },
-  { lv: 3, name: "Happy",       xp: 400,  skin: { body: "#169962", horn: "#0d6642", eye: "#9dffd0" } },
+  { lv: 3, name: "Red",         xp: 400,  skin: { body: "#7d1a1a", horn: "#4a0f0f", eye: "#ff5555" } },
   { lv: 4, name: "Excited",     xp: 800,  skin: { body: "#0cb889", horn: "#087d5e", eye: "#c8fff0" } },
   { lv: 5, name: "Mischievous", xp: 1400, skin: { body: "#06d0a8", horn: "#04906e", eye: "#ffffff" } },
   { lv: 6, name: "Confident",   xp: 2200, skin: { body: "#00dcc0", horn: "#009e88", eye: "#ffffff" } },

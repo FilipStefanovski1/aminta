@@ -26,7 +26,7 @@ const STEPS = [
 
 export default function HowItWorks() {
   return (
-    <section id="how" className="relative py-20 md:py-28 scroll-mt-20">
+    <section id="how-it-works" className="relative py-20 md:py-28 scroll-mt-20">
       <div className="absolute inset-0 grid-bg opacity-30" />
       <div className="relative mx-auto max-w-7xl px-5">
         <Reveal className="text-center max-w-2xl mx-auto">

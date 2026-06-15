@@ -1,155 +1,245 @@
+"use client";
+
+import { useState } from "react";
 import Reveal from "./Reveal";
 
-interface Plan {
-  name: string;
-  price: string;
-  period: string;
-  status: string;
-  statusHighlight?: boolean;
-  tagline: string;
-  features: string[];
-  cta: string;
-  ctaHref: string;
-  highlight?: boolean;
-}
+type BillingMode = "monthly" | "lifetime";
 
-const PLANS: Plan[] = [
-  {
-    name: "Free",
-    price: "$0",
-    period: "forever",
-    status: "LIVE NOW",
-    statusHighlight: true,
-    tagline: "Bring your own API key. Everything runs locally in your browser.",
-    features: [
-      "Tweet Generator",
-      "Reply Generator",
-      "Tweet Polisher",
-      "Voice Profile",
-      "Insert into X",
-      "Local Storage",
-      "Works directly inside X",
-    ],
-    cta: "Install Extension",
-    ctaHref: "#",
-  },
-  {
-    name: "Pro",
-    price: "$9",
-    period: "/month",
-    status: "COMING SOON",
-    tagline: "More modes, progression, and customization — built on what works.",
-    features: [
-      "Thread Generator",
-      "Aminta XP Progression",
-      "Streak Tracking",
-      "Saved Content",
-      "Additional Generation Modes",
-      "More Customization",
-    ],
-    cta: "Join Waitlist",
-    ctaHref: "#",
-    highlight: true,
-  },
-  {
-    name: "Founder Access",
-    price: "$29",
-    period: "one-time",
-    status: "COMING SOON",
-    tagline: "Support the build early. Shape where Aminta goes.",
-    features: [
-      "Early Supporter Access",
-      "Direct Feedback Channel",
-      "Roadmap Influence",
-      "Founder Recognition",
-    ],
-    cta: "Become a Founder",
-    ctaHref: "https://calendly.com/filipstefanovskee/filip-stefanovski-aminta-founder",
-  },
-];
+const FREE_PLAN = {
+  name: "Free",
+  price: "$0",
+  billing: "forever",
+  description:
+    "Start with the essentials. Bring your own API key and generate directly inside X.",
+  features: [
+    "10 generations / day",
+    "Tweet Generator",
+    "Reply Generator",
+    "Tweet Polisher",
+    "Basic Aminta",
+    "Voice Profile",
+    "Insert into X",
+    "BYOK required",
+  ],
+  cta: "Get Started",
+  ctaHref: "#",
+  badge: null,
+  highlight: false,
+};
 
-function Check({ color = "text-accent" }: { color?: string }) {
+const PRO_PLAN = {
+  name: "Aminta Pro",
+  price: "$9",
+  billing: "/ month",
+  description:
+    "Unlimited posting power for creators who want to show up consistently.",
+  features: [
+    "Unlimited generations",
+    "Thread mode",
+    "Aminta DNA",
+    "Multiple Amintas",
+    "Saved content",
+    "Advanced voice controls",
+    "Future premium features",
+    "Discord community",
+  ],
+  cta: "Upgrade to Pro",
+  ctaHref: "#",
+  badge: "PRO",
+  highlight: true,
+};
+
+const FOUNDER_PLAN = {
+  name: "Founder",
+  price: "$49",
+  billing: "once",
+  description:
+    "Lock lifetime access before subscriptions become the default.",
+  features: [
+    "Everything in Aminta Pro",
+    "Lifetime access",
+    "Future premium features included",
+    "Founder Discord",
+    "Founder badge",
+    "Founder wall",
+    "Roadmap voting",
+    "Early access to new features",
+  ],
+  cta: "Claim Founder Access",
+  ctaHref: "https://calendly.com/filipstefanovskee/filip-stefanovski-aminta-founder",
+  badge: "LIMITED",
+  highlight: true,
+};
+
+function Check() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className={`${color} shrink-0 mt-0.5`}>
-      <path d="m5 13 4 4L19 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+    <svg
+      width="15"
+      height="15"
+      viewBox="0 0 24 24"
+      fill="none"
+      className="text-accent shrink-0 mt-0.5"
+    >
+      <path
+        d="m5 13 4 4L19 7"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
 
-export default function Pricing() {
+interface CardProps {
+  name: string;
+  price: string;
+  billing: string;
+  description: string;
+  features: string[];
+  cta: string;
+  ctaHref: string;
+  badge: string | null;
+  highlight: boolean;
+}
+
+function PricingCard({
+  name,
+  price,
+  billing,
+  description,
+  features,
+  cta,
+  ctaHref,
+  badge,
+  highlight,
+}: CardProps) {
+  const isExternal = ctaHref.startsWith("http");
+
   return (
-    <section id="pricing" className="relative py-20 md:py-28 scroll-mt-20 overflow-hidden">
-      <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-[40rem] h-[40rem] rounded-full bg-violet/10 blur-[130px]" />
-      <div className="relative mx-auto max-w-7xl px-5">
-        <Reveal className="text-center max-w-2xl mx-auto">
-          <p className="font-pixel text-xs text-accent uppercase tracking-widest">Pricing</p>
-          <h2 className="mt-4 font-pixel text-2xl sm:text-3xl text-white leading-snug">
-            Free to start. No tricks.
-          </h2>
-          <p className="mt-4 text-muted">
-            The free tier is real and fully functional. Bring your own API key and start generating
-            today — no payment required.
+    <div
+      className={`relative flex flex-col rounded-2xl p-7 md:p-8 h-full transition-all duration-300 ${
+        highlight
+          ? "border-2 border-accent bg-panel shadow-[0_0_60px_rgba(116,247,181,0.10),inset_0_1px_0_rgba(116,247,181,0.08)]"
+          : "border border-line bg-panel/60"
+      }`}
+    >
+      {highlight && (
+        <div className="absolute -top-px left-1/2 -translate-x-1/2 h-px w-3/4 bg-gradient-to-r from-transparent via-accent/60 to-transparent" />
+      )}
+
+      {/* header */}
+      <div className="flex items-start justify-between gap-3">
+        <p className="font-pixel text-[10px] uppercase tracking-widest text-muted">
+          {name}
+        </p>
+        {badge && (
+          <span className="shrink-0 rounded-full border border-accent/30 bg-accent/10 px-2.5 py-0.5 font-pixel text-[8px] text-accent uppercase tracking-widest">
+            {badge}
+          </span>
+        )}
+      </div>
+
+      {/* price */}
+      <div className="mt-3 flex items-baseline gap-1.5">
+        <span className="font-pixel text-4xl md:text-5xl text-white leading-none">
+          {price}
+        </span>
+        {billing && (
+          <span className="text-sm text-muted">{billing}</span>
+        )}
+      </div>
+
+      <p className="mt-4 text-sm text-muted leading-relaxed">{description}</p>
+
+      <a
+        href={ctaHref}
+        {...(isExternal ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+        className={`mt-7 block text-center rounded-xl py-3 text-sm font-semibold transition-all duration-200 ${
+          highlight
+            ? "bg-accent text-black hover:brightness-110 shadow-[0_4px_24px_rgba(116,247,181,0.25)]"
+            : "border border-line text-white hover:border-accent/40 hover:bg-accent/5"
+        }`}
+      >
+        {cta}
+      </a>
+
+      <ul className="mt-8 space-y-3">
+        {features.map((f) => (
+          <li key={f} className="flex items-start gap-2.5">
+            <Check />
+            <span className="text-sm text-muted">{f}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+export default function Pricing() {
+  const [mode, setMode] = useState<BillingMode>("monthly");
+  const paidPlan = mode === "monthly" ? PRO_PLAN : FOUNDER_PLAN;
+
+  return (
+    <section
+      id="pricing"
+      className="relative py-20 md:py-28 scroll-mt-20 overflow-hidden"
+    >
+
+      <div className="relative mx-auto max-w-5xl px-5">
+        {/* heading */}
+        <Reveal className="text-center">
+          <p className="font-pixel text-xs text-accent uppercase tracking-widest">
+            Pricing
           </p>
+          <h2 className="mt-4 font-pixel text-2xl sm:text-3xl text-white leading-snug">
+            Simple. No tricks.
+          </h2>
         </Reveal>
 
-        <div className="mt-14 grid lg:grid-cols-3 gap-5 items-start">
-          {PLANS.map((plan, i) => (
-            <Reveal key={plan.name} delay={i * 90}>
-              <div
-                className={`relative h-full rounded-2xl border p-7 transition-all duration-300 ${
-                  plan.highlight
-                    ? "border-accent bg-panel shadow-[0_0_50px_rgba(43,255,136,0.12)] lg:-translate-y-3"
-                    : "border-line bg-panel hover:border-white/20"
-                }`}
-              >
-                {/* status badge */}
-                <span
-                  className={`inline-block rounded-full px-3 py-0.5 font-pixel text-[9px] mb-4 ${
-                    plan.statusHighlight
-                      ? "bg-accent text-black"
-                      : "bg-white/10 text-white/60"
-                  }`}
-                >
-                  {plan.status}
-                </span>
+        {/* billing toggle */}
+        <Reveal className="mt-8 flex justify-center">
+          <div className="flex items-center rounded-full border border-line bg-panel p-1 gap-0.5">
+            <button
+              onClick={() => setMode("monthly")}
+              className={`rounded-full px-5 py-2 text-xs font-semibold transition-all duration-200 ${
+                mode === "monthly"
+                  ? "bg-accent text-black shadow-[0_2px_12px_rgba(116,247,181,0.3)]"
+                  : "text-muted hover:text-white"
+              }`}
+            >
+              Monthly
+            </button>
+            <button
+              onClick={() => setMode("lifetime")}
+              className={`rounded-full px-5 py-2 text-xs font-semibold transition-all duration-200 ${
+                mode === "lifetime"
+                  ? "bg-accent text-black shadow-[0_2px_12px_rgba(116,247,181,0.3)]"
+                  : "text-muted hover:text-white"
+              }`}
+            >
+              Lifetime{" "}
+              <span className={mode === "lifetime" ? "opacity-70" : "text-accent"}>
+                −20%
+              </span>
+            </button>
+          </div>
+        </Reveal>
 
-                <h3 className="font-pixel text-sm text-white">{plan.name}</h3>
-                <div className="mt-4 flex items-end gap-2">
-                  <span className="font-pixel text-3xl text-white">{plan.price}</span>
-                  <span className="text-muted text-sm mb-1">{plan.period}</span>
-                </div>
-                <p className="mt-2 text-sm text-muted">{plan.tagline}</p>
-
-                <a
-                  href={plan.ctaHref}
-                  {...(plan.ctaHref.startsWith("http") ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-                  className={`mt-6 block text-center rounded-xl py-3 font-semibold transition ${
-                    plan.highlight
-                      ? "btn-shine bg-accent text-black hover:opacity-90"
-                      : "border border-line text-white hover:border-accent/50"
-                  }`}
-                >
-                  {plan.cta}
-                </a>
-
-                <ul className="mt-7 space-y-3">
-                  {plan.features.map((f) => (
-                    <li key={f} className="flex gap-2.5 text-sm text-muted">
-                      <Check color={plan.highlight ? "text-accent" : "text-muted"} />
-                      <span>{f}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </Reveal>
-          ))}
+        {/* cards */}
+        <div className="mt-10 grid sm:grid-cols-2 gap-5 items-stretch">
+          <Reveal delay={0}>
+            <PricingCard {...FREE_PLAN} />
+          </Reveal>
+          <Reveal delay={80}>
+            <PricingCard key={paidPlan.name} {...paidPlan} />
+          </Reveal>
         </div>
 
         <Reveal className="mt-10 text-center">
-          <p className="text-xs text-muted max-w-2xl mx-auto">
-            <span className="text-white font-semibold">BYOK required for free tier.</span> Bring a
-            Groq (free tier), OpenRouter, or compatible API key. Aminta runs locally in your
-            browser — your key and your data never leave your device.
+          <p className="text-xs text-muted">
+            Free tier requires a Groq or OpenRouter API key.{" "}
+            <span className="text-white/50">Your key stays on your device.</span>
           </p>
         </Reveal>
       </div>

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-const GRID = 24; // must match --grid-size in globals.css
+const GRID = 24;
 const MINT = "#74f7b5";
 
 interface Cell {
@@ -11,15 +11,9 @@ interface Cell {
   y: number;
 }
 
-/**
- * Lights up the existing background grid cells under the cursor.
- * Snaps to the grid, fills exact GRID×GRID mint cells, fades over 600ms.
- * Scoped to its (relative) parent so cells stay locked to the visible grid.
- */
 export default function CursorTrail() {
-  const wrapRef = useRef<HTMLDivElement>(null);
   const [cells, setCells] = useState<Cell[]>([]);
-  const lastKey = useRef<string>("");
+  const lastKey = useRef("");
   const idCounter = useRef(0);
 
   useEffect(() => {
@@ -28,19 +22,11 @@ export default function CursorTrail() {
     if (reduce || coarse) return;
 
     const onMove = (e: MouseEvent) => {
-      const wrap = wrapRef.current;
-      if (!wrap) return;
-      const rect = wrap.getBoundingClientRect();
-      const relX = e.clientX - rect.left;
-      const relY = e.clientY - rect.top;
-      if (relX < 0 || relY < 0 || relX > rect.width || relY > rect.height) return;
-
-      const x = Math.floor(relX / GRID) * GRID;
-      const y = Math.floor(relY / GRID) * GRID;
+      const x = Math.floor(e.clientX / GRID) * GRID;
+      const y = Math.floor(e.clientY / GRID) * GRID;
       const key = `${x},${y}`;
       if (key === lastKey.current) return;
       lastKey.current = key;
-
       const id = idCounter.current++;
       setCells((prev) => {
         const next = [...prev, { id, x, y }];
@@ -48,7 +34,7 @@ export default function CursorTrail() {
       });
     };
 
-    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mousemove", onMove, { passive: true });
     return () => window.removeEventListener("mousemove", onMove);
   }, []);
 
@@ -57,19 +43,13 @@ export default function CursorTrail() {
   }, []);
 
   return (
-    <div ref={wrapRef} aria-hidden className="absolute inset-0 z-[1] pointer-events-none overflow-hidden">
+    <div aria-hidden className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
       {cells.map((cell) => (
         <span
           key={cell.id}
           onAnimationEnd={() => remove(cell.id)}
           className="cell-fade absolute"
-          style={{
-            left: cell.x,
-            top: cell.y,
-            width: GRID,
-            height: GRID,
-            background: MINT,
-          }}
+          style={{ left: cell.x, top: cell.y, width: GRID, height: GRID, background: MINT }}
         />
       ))}
     </div>

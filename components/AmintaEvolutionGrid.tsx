@@ -2,6 +2,7 @@ import Reveal from "./Reveal";
 import AmintaSprite from "./AmintaSprite";
 import type { DemonSkin } from "./demon-data";
 
+
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 interface EvolutionStage {
@@ -21,9 +22,9 @@ interface RarityDef {
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
 const STAGES: EvolutionStage[] = [
-  { lv: 1, name: "Dormant Aminta",     color: "#8ca0b0", skin: { body: "#2d3a48", horn: "#1a2230", eye: "#6dbfa0" } },
-  { lv: 2, name: "Curious Aminta",     color: "#74f7b5", skin: { body: "#1a5e48", horn: "#0f3d30", eye: "#74f7b5" } },
-  { lv: 3, name: "Happy Aminta",       color: "#40e898", skin: { body: "#169962", horn: "#0d6642", eye: "#9dffd0" } },
+  { lv: 1, name: "Beginner Aminta",     color: "#8ca0b0", skin: { body: "#2d3a48", horn: "#1a2230", eye: "#6dbfa0" } },
+  { lv: 2, name: "Chill Aminta",       color: "#74f7b5", skin: { body: "#1a5e48", horn: "#0f3d30", eye: "#74f7b5" } },
+  { lv: 3, name: "Red Aminta",          color: "#ff5555", skin: { body: "#7d1a1a", horn: "#4a0f0f", eye: "#ff5555" } },
   { lv: 4, name: "Excited Aminta",     color: "#00c8a8", skin: { body: "#0cb889", horn: "#087d5e", eye: "#c8fff0" } },
   { lv: 5, name: "Mischievous Aminta", color: "#00e0c0", skin: { body: "#06d0a8", horn: "#04906e", eye: "#ffffff" } },
   { lv: 6, name: "Confident Aminta",   color: "#40b0ff", skin: { body: "#00dcc0", horn: "#009e88", eye: "#ffffff" } },
@@ -308,10 +309,18 @@ function EvolutionCard({ stage, index }: { stage: EvolutionStage; index: number 
             style={{ width: 96, height: 96, background: stage.color, filter: "blur(44px)", opacity: 0.16 }}
           />
 
-          {/* Sprite (outzoomed & using AmintaSprite with floating + facial features) */}
+          {/* Sprite */}
           <div className="absolute inset-x-0 bottom-0 flex justify-center pb-1">
             <div style={{ transform: 'scale(0.86)', transformOrigin: '50% 100%' }}>
-              <AmintaSprite level={stage.lv} size={72} interactive={false} />
+              {stage.lv >= 7 && stage.lv <= 9 ? (
+                <div className="w-24 h-24 grid place-items-center">
+                  <span className="font-pixel text-5xl" style={{ color: stage.color, textShadow: `0 0 18px ${stage.color}44` }}>?</span>
+                </div>
+              ) : (
+                <div className="aminta-glow">
+                  <AmintaSprite level={stage.lv} size={72} interactive={false} />
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -327,10 +336,7 @@ function EvolutionCard({ stage, index }: { stage: EvolutionStage; index: number 
               ◈ {rarity.label}
             </p>
           </div>
-          <p className="font-pixel text-[11px]" style={{ color: stage.color }}>{stage.name}</p>
-          <p className="mt-1 font-pixel text-[7px]" style={{ color: "#1e2830" }}>
-            SUPPLY 999 · SEASON 1
-          </p>
+          <p className="font-pixel text-[11px]" style={{ color: stage.color }}>{stage.lv >= 7 ? '???' : stage.name}</p>
         </div>
       </div>
     </Reveal>
@@ -353,9 +359,6 @@ export default function AmintaEvolutionGrid() {
 
       <div className="relative mx-auto max-w-7xl px-5">
         <Reveal className="text-center max-w-2xl mx-auto">
-          <p className="font-pixel text-[9px] text-accent uppercase tracking-[0.3em]">
-            GENESIS COLLECTION · SEASON 1
-          </p>
           <h2 className="mt-4 font-pixel text-2xl sm:text-3xl text-white leading-snug">
             Collect Every Form
           </h2>
@@ -378,7 +381,6 @@ export default function AmintaEvolutionGrid() {
           >
             <span className="font-pixel text-xs text-accent">POST: +50 XP</span>
             <span className="font-pixel text-xs" style={{ color: "#4a6070" }}>REPLY: +25 XP</span>
-            <span className="font-pixel text-xs" style={{ color: "#f5d060" }}>◈ REACH LV.9 → ASCENDED</span>
           </div>
         </Reveal>
       </div>

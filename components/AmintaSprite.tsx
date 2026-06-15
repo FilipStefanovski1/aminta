@@ -15,7 +15,7 @@ export interface AmintaSpriteHandle {
 interface Props {
   level?: number;
   mood?: Mood;
-  message?: string;
+  message?: string | null;
   xp?: number;
   interactive?: boolean;
   size?: number;
@@ -127,37 +127,68 @@ interface Particle {
   size: number;
 }
 
-// ─── Eye shape per mood ───────────────────────────────────────────────────────
+// ─── Face shapes ──────────────────────────────────────────────────────────────
 
-// Returns rows representing eye pixel shape (2×2 block with variation)
-type EyeShape = "normal" | "closed" | "angry" | "sad" | "star" | "swirl" | "heart" | "zzz";
+type EyeShape = "normal" | "closed" | "angry" | "sad" | "star" | "swirl" | "heart" | "zzz" | "half" | "narrow" | "happy-closed";
+type MouthShape = "smile" | "open" | "frown" | "flat" | "fang-smile" | "o" | "zigzag";
+type BrowShape  = "none" | "raised" | "furrowed" | "one-up" | "flat" | "stern";
+
+interface LevelFace {
+  eye: EyeShape;
+  mouth: MouthShape;
+  brows: BrowShape;
+  cheeks: boolean;
+  cheekColor?: string;
+}
+
+// Per-level characteristic expression used in non-interactive (evolution grid) display
+const LEVEL_FACES: LevelFace[] = [
+  { eye: "normal",       mouth: "flat",       brows: "one-up",   cheeks: false },                       // Lv1  confused beginner
+  { eye: "angry",        mouth: "frown",      brows: "furrowed", cheeks: false },                       // Lv2  angry
+  { eye: "normal",       mouth: "smile",      brows: "raised",   cheeks: true,  cheekColor: "#ff8888" }, // Lv3  happy
+  { eye: "star",         mouth: "o",          brows: "raised",   cheeks: true,  cheekColor: "#ff5555" }, // Lv4  excited
+  { eye: "swirl",        mouth: "fang-smile", brows: "one-up",   cheeks: false },                       // Lv5  mischievous
+  { eye: "half",         mouth: "smile",      brows: "flat",     cheeks: false },                       // Lv6  confident
+  { eye: "narrow",       mouth: "flat",       brows: "stern",    cheeks: false },                       // Lv7  guardian
+  { eye: "star",         mouth: "smile",      brows: "raised",   cheeks: true,  cheekColor: "#ffe066" }, // Lv8  mythic/wise
+  { eye: "happy-closed", mouth: "smile",      brows: "none",     cheeks: true,  cheekColor: "#b0e0ff" }, // Lv9  ascended/peaceful
+];
 
 function eyeShapeForMood(mood: Mood, blink: boolean): EyeShape {
   if (blink) return "closed";
   switch (mood) {
-    case "sleeping": return "zzz";
-    case "angry": return "angry";
-    case "sad": return "sad";
-    case "excited": return "star";
+    case "sleeping":    return "zzz";
+    case "angry":       return "angry";
+    case "sad":         return "sad";
+    case "excited":     return "star";
     case "mischievous": return "swirl";
-    case "proud": return "star";
-    default: return "normal";
+    case "proud":       return "star";
+    default:            return "normal";
   }
 }
 
-// Returns mouth pixel data: array of [x, y] relative coords (mouth area starts at x=4 in 16-wide grid)
-type MouthShape = "smile" | "open" | "frown" | "flat" | "fang-smile" | "o" | "zigzag";
-
 function mouthForMood(mood: Mood): MouthShape {
   switch (mood) {
-    case "sleeping": return "flat";
-    case "hungry": return "open";
-    case "happy": return "smile";
-    case "excited": return "o";
-    case "angry": return "frown";
-    case "sad": return "frown";
-    case "proud": return "smile";
-    case "mischievous": return "smile";
+    case "sleeping":    return "flat";
+    case "hungry":      return "open";
+    case "happy":       return "smile";
+    case "excited":     return "o";
+    case "angry":       return "frown";
+    case "sad":         return "frown";
+    case "proud":       return "smile";
+    case "mischievous": return "fang-smile";
+  }
+}
+
+function browForMood(mood: Mood, blink: boolean): BrowShape {
+  if (blink) return "none";
+  switch (mood) {
+    case "angry":       return "furrowed";
+    case "excited":     return "raised";
+    case "mischievous": return "one-up";
+    case "sleeping":    return "none";
+    case "sad":         return "flat";
+    default:            return "flat";
   }
 }
 
@@ -185,6 +216,9 @@ interface SpriteProps {
   skin: DemonSkin;
   eyeShape: EyeShape;
   mouthShape: MouthShape;
+  browShape: BrowShape;
+  cheeks: boolean;
+  cheekColor?: string;
   eyeOffsetX: number; // -1, 0, 1
   eyeOffsetY: number; // -1, 0, 1
   size: number;
@@ -193,7 +227,7 @@ interface SpriteProps {
   hovering?: boolean;
 }
 
-function AmintaPixelSprite({ skin, eyeShape, mouthShape, eyeOffsetX, eyeOffsetY, size, aura, auraColor, hovering }: SpriteProps) {
+function AmintaPixelSprite({ skin, eyeShape, mouthShape, browShape, cheeks, cheekColor, eyeOffsetX, eyeOffsetY, size, aura, auraColor, hovering }: SpriteProps) {
   const COLS = 16;
   const ROWS_COUNT = BASE_ROWS.length;
   const h = (size * ROWS_COUNT) / COLS;
@@ -253,6 +287,26 @@ function AmintaPixelSprite({ skin, eyeShape, mouthShape, eyeOffsetX, eyeOffsetY,
       pixels.push({ x: bx + 1, y: by, fill: "#ffffff" });
       pixels.push({ x: bx, y: by + 1, fill: "#0a0a0a" });
       pixels.push({ x: bx + 1, y: by + 1, fill: skin.eye });
+    } else if (eyeShape === "half") {
+      // heavy-lidded confident eyes: dark top, eye-color bottom
+      pixels.push({ x: bx, y: by, fill: "#0a0a0a" });
+      pixels.push({ x: bx + 1, y: by, fill: "#0a0a0a" });
+      pixels.push({ x: bx, y: by + 1, fill: skin.eye });
+      pixels.push({ x: bx + 1, y: by + 1, fill: skin.eye });
+    } else if (eyeShape === "narrow") {
+      // intense slit: body top, dark slit bottom
+      pixels.push({ x: bx, y: by, fill: skin.body });
+      pixels.push({ x: bx + 1, y: by, fill: skin.body });
+      pixels.push({ x: bx, y: by + 1, fill: "#0a0a0a" });
+      pixels.push({ x: bx + 1, y: by + 1, fill: "#0a0a0a" });
+    } else if (eyeShape === "happy-closed") {
+      // peaceful crescent: visible top arc, body below
+      pixels.push({ x: bx, y: by, fill: skin.eye });
+      pixels.push({ x: bx + 1, y: by, fill: skin.eye });
+      pixels.push({ x: bx, y: by + 1, fill: skin.body });
+      pixels.push({ x: bx + 1, y: by + 1, fill: skin.body });
+      // close the bottom to make a ^ crescent shape
+      pixels.push({ x: bx, y: by, w: 2, h: 0.4, fill: "#0a0a0a" });
     } else {
       // normal: 2×2 eye block, pupil shifts with cursor
       pixels.push({ x: bx, y: by, fill: skin.eye });
@@ -268,6 +322,38 @@ function AmintaPixelSprite({ skin, eyeShape, mouthShape, eyeOffsetX, eyeOffsetY,
 
   drawEye(leftEyeBase.x, leftEyeBase.y);
   drawEye(rightEyeBase.x, rightEyeBase.y);
+
+  // Draw eyebrows (row 5 = directly above eyes; row 4 = raised)
+  const BROW = "#0a0a0a";
+  if (browShape === "raised") {
+    // Both brows lifted high — surprise/joy
+    pixels.push({ x: 3, y: 4, fill: BROW }, { x: 4, y: 4, fill: BROW });
+    pixels.push({ x: 11, y: 4, fill: BROW }, { x: 12, y: 4, fill: BROW });
+  } else if (browShape === "furrowed") {
+    // V-shape toward center — anger: outer high, inner low
+    pixels.push({ x: 2, y: 4, fill: BROW }, { x: 3, y: 5, fill: BROW }, { x: 4, y: 5, fill: BROW });
+    pixels.push({ x: 13, y: 4, fill: BROW }, { x: 12, y: 5, fill: BROW }, { x: 11, y: 5, fill: BROW });
+  } else if (browShape === "one-up") {
+    // Left raised, right normal — confused / mischievous
+    pixels.push({ x: 3, y: 4, fill: BROW }, { x: 4, y: 4, fill: BROW });
+    pixels.push({ x: 11, y: 5, fill: BROW }, { x: 12, y: 5, fill: BROW });
+  } else if (browShape === "flat") {
+    // Relaxed, low — confident / cool
+    pixels.push({ x: 3, y: 5, fill: BROW }, { x: 4, y: 5, fill: BROW });
+    pixels.push({ x: 11, y: 5, fill: BROW }, { x: 12, y: 5, fill: BROW });
+  } else if (browShape === "stern") {
+    // Wide heavy brows very close to eyes — guardian stare
+    pixels.push({ x: 2, y: 5, fill: BROW }, { x: 3, y: 5, fill: BROW }, { x: 4, y: 5, fill: BROW }, { x: 5, y: 5, fill: BROW });
+    pixels.push({ x: 11, y: 5, fill: BROW }, { x: 12, y: 5, fill: BROW }, { x: 13, y: 5, fill: BROW }, { x: 14, y: 5, fill: BROW });
+  }
+  // "none" → no brow pixels added
+
+  // Draw cheeks (pink/tinted blush outside mouth area, rows 9–10)
+  if (cheeks) {
+    const cc = cheekColor ?? "#ff8888";
+    pixels.push({ x: 1, y: 9, w: 2, h: 1.8, fill: cc });
+    pixels.push({ x: 13, y: 9, w: 2, h: 1.8, fill: cc });
+  }
 
   // Draw mouth
   const mouthY = 9;
@@ -394,6 +480,7 @@ const AmintaSprite = forwardRef<AmintaSpriteHandle, Props>(function AmintaSprite
   const [aura, setAura] = useState(false);
   const [auraColor, setAuraColor] = useState(skin.eye);
   const [speech, setSpeech] = useState<string | null>(message ?? null);
+  // track whether message is externally managed (non-undefined means parent owns speech)
   const [bounce, setBounce] = useState(false);
   const [float, setFloat] = useState(0); // oscillating y offset
 
@@ -448,9 +535,9 @@ const AmintaSprite = forwardRef<AmintaSpriteHandle, Props>(function AmintaSprite
     return () => window.removeEventListener("mousemove", onMove);
   }, [interactive]);
 
-  // Random idle speech
+  // Random idle speech — suppressed when message prop is explicitly set by parent
   useEffect(() => {
-    if (!interactive || message) return;
+    if (!interactive || message !== undefined) return;
     function scheduleIdleSpeech() {
       const delay = 5000 + Math.random() * 10000;
       return setTimeout(() => {
@@ -466,10 +553,28 @@ const AmintaSprite = forwardRef<AmintaSpriteHandle, Props>(function AmintaSprite
     return () => clearTimeout(timeoutRef.current);
   }, [interactive, mood, message]);
 
-  // Sync message prop
+  // Sync message prop — null explicitly clears speech
   useEffect(() => {
-    if (message !== undefined) setSpeech(message);
+    if (message !== undefined) setSpeech(message ?? null);
   }, [message]);
+
+  // Idle eye wander for non-interactive display mode
+  useEffect(() => {
+    if (interactive || reducedMotion.current) return;
+    const schedule = (): ReturnType<typeof setTimeout> => {
+      const delay = 1800 + Math.random() * 2500;
+      return setTimeout(() => {
+        const dx = [-1, 0, 1][Math.floor(Math.random() * 3)];
+        setEyeOffset({ x: dx, y: 0 });
+        timeoutRef.current = setTimeout(() => {
+          setEyeOffset({ x: 0, y: 0 });
+          timeoutRef.current = schedule();
+        }, 350 + Math.random() * 500);
+      }, delay);
+    };
+    const timeoutRef = { current: schedule() };
+    return () => clearTimeout(timeoutRef.current);
+  }, [interactive]);
 
   // XP gain reaction
   const triggerXPGain = useCallback((amount: number) => {
@@ -522,8 +627,14 @@ const AmintaSprite = forwardRef<AmintaSpriteHandle, Props>(function AmintaSprite
 
   useImperativeHandle(ref, () => ({ triggerXPGain, triggerLevelUp }), [triggerXPGain, triggerLevelUp]);
 
-  const eyeShape = eyeShapeForMood(mood, blink);
-  const mouthShape = mouthForMood(mood);
+  // Non-interactive display → use per-level characteristic face
+  const levelFace = !interactive ? LEVEL_FACES[clampedLevel - 1] : null;
+
+  const eyeShape   = levelFace?.eye   ?? eyeShapeForMood(mood, blink);
+  const mouthShape = levelFace?.mouth ?? mouthForMood(mood);
+  const browShape  = levelFace?.brows ?? browForMood(mood, blink);
+  const cheeks     = levelFace?.cheeks ?? (mood === "happy" || mood === "excited");
+  const cheekColor = levelFace?.cheekColor ?? "#ff8888";
 
   const containerH = (size * BASE_ROWS.length) / 16;
 
@@ -573,6 +684,9 @@ const AmintaSprite = forwardRef<AmintaSpriteHandle, Props>(function AmintaSprite
           skin={skin}
           eyeShape={eyeShape}
           mouthShape={mouthShape}
+          browShape={browShape}
+          cheeks={cheeks}
+          cheekColor={cheekColor}
           eyeOffsetX={eyeOffset.x}
           eyeOffsetY={eyeOffset.y}
           size={size}

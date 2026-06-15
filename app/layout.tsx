@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Press_Start_2P } from "next/font/google";
 import "./globals.css";
+import CursorTrail from "@/components/CursorTrail";
 
 const geist = Geist({
   variable: "--font-geist",
@@ -32,7 +33,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${geist.variable} ${pixel.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col bg-ink text-[#e7e7ef]">{children}</body>
+      <body className="min-h-full flex flex-col bg-ink text-[#e7e7ef]">
+        <CursorTrail />
+        <div className="relative z-[1] flex flex-col flex-1">{children}</div>
+      </body>
     </html>
   );
 }

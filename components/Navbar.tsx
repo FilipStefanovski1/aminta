@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from "react";
 
+// Order matches visual page order: Feed Aminta → Features → How It Works → Pricing → FAQ
 const LINKS = [
-  { label: "HOW IT WORKS", href: "#how" },
-  { label: "FEATURES", href: "#features" },
-  { label: "FEED AMINTA", href: "#demon" },
-  { label: "PRICING", href: "#pricing" },
-  { label: "FAQ", href: "#faq" },
+  { label: "FEED AMINTA", href: "#feed-aminta" },
+  { label: "FEATURES",    href: "#features" },
+  { label: "HOW IT WORKS", href: "#how-it-works" },
+  { label: "PRICING",     href: "#pricing" },
+  { label: "FAQ",         href: "#faq" },
 ];
 
 type DemonStageDetail = { active: boolean; color?: string };
@@ -75,7 +76,7 @@ export default function Navbar() {
         {/* right: CTA — flex-1 so it mirrors left side width */}
         <div className="flex-1 flex items-center justify-end">
           <a
-            href="#pricing"
+            href="#get-aminta"
             className="hidden lg:inline-flex shrink-0 font-pixel text-sm xl:text-base text-black whitespace-nowrap nav-cta"
           >
             Get Aminta
@@ -109,7 +110,7 @@ export default function Navbar() {
             </a>
           ))}
           <a
-            href="#pricing"
+            href="#get-aminta"
             onClick={() => setOpen(false)}
             className="font-pixel text-sm text-black pt-1"
             style={{ textShadow: "2px 2px 0 rgba(0,0,0,0.25)" }}

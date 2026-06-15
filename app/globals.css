@@ -15,12 +15,18 @@
 /* shared grid size — keep in sync with GRID in CursorTrail.tsx */
 :root {
   --grid-size: 24px;
+  --nav-height: 80px;
   color-scheme: dark;
 
   /* default accent (mint) — used anywhere a section hasn't set its own */
   --accent: #74f7b5;
   --accent-soft: rgba(116, 247, 181, 0.12);
   --accent-glow: rgba(116, 247, 181, 0.5);
+}
+
+/* Ensure all anchor sections clear the fixed navbar on scroll */
+section[id] {
+  scroll-margin-top: var(--nav-height);
 }
 
 /* section accent presets — one accent per section, tied to a demon stage.
@@ -222,9 +228,40 @@ body {
   animation: navXpPop 0.6s ease forwards;
 }
 
+/* ── Aminta character animations ───────────────────────────── */
+@keyframes amintaGlowPulse {
+  0%, 100% { filter: drop-shadow(0 0 6px rgba(116,247,181,0.3)); }
+  50%       { filter: drop-shadow(0 0 18px rgba(116,247,181,0.7)) drop-shadow(0 0 36px rgba(116,247,181,0.25)); }
+}
+@keyframes amintaSparkle {
+  0%, 100% { opacity: 0; transform: scale(0.4) rotate(0deg); }
+  40%, 60% { opacity: 1; transform: scale(1) rotate(180deg); }
+}
+.aminta-float   { animation: bob 4.5s ease-in-out infinite; }
+.aminta-glow    { animation: amintaGlowPulse 2.6s ease-in-out infinite; }
+.aminta-sparkle { animation: amintaSparkle 2s ease-in-out infinite; }
+.aminta-sparkle:nth-child(2) { animation-delay: 0.7s; }
+.aminta-sparkle:nth-child(3) { animation-delay: 1.3s; }
+
+/* PNG-safe blink: quick scaleY squash to simulate eye close */
+@keyframes amintaPngBlink {
+  0%, 87%, 100% { transform: scaleY(1); }
+  90%           { transform: scaleY(0.08); }
+  93%           { transform: scaleY(1); }
+  96%           { transform: scaleY(0.12); }
+  98%           { transform: scaleY(1); }
+}
+.aminta-png-blink { animation: amintaPngBlink 6s ease-in-out infinite; }
+.aminta-png-blink-delay { animation: amintaPngBlink 6s ease-in-out 2.4s infinite; }
+
 @media (prefers-reduced-motion: reduce) {
   .animate-floaty,
   .animate-bob,
+  .aminta-float,
+  .aminta-glow,
+  .aminta-sparkle,
+  .aminta-png-blink,
+  .aminta-png-blink-delay,
   .animate-pixel-pulse,
   .animate-pixel-float,
   .btn-shine::after,
@@ -250,13 +287,15 @@ body {
   100% { transform: translateY(0); }
 }
 
-.marquee-wall:hover .marquee-track {
-  animation-play-state: paused;
-}
 
 .marquee-column {
   height: 560px;
   overflow: hidden;
+}
+
+.marquee-fade-edge {
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 11%, #000 89%, transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0%, #000 11%, #000 89%, transparent 100%);
 }
 
 .marquee-track {
@@ -279,6 +318,7 @@ body {
 }
 
 .marquee-card {
+  position: relative;
   background: rgba(12, 12, 14, 0.62);
   border: 1px solid color-mix(in srgb, var(--wall-accent, var(--accent)) 45%, #1f1f1f 55%);
   box-shadow:
@@ -291,10 +331,183 @@ body {
     box-shadow 220ms ease;
 }
 
+.marquee-card:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--wall-accent, var(--accent)) 75%, #ffffff 25%);
+  outline-offset: 2px;
+}
+
 .marquee-card:hover {
   transform: translateY(-4px) scale(1.012);
   border-color: color-mix(in srgb, var(--wall-accent, var(--accent)) 72%, #1f1f1f 28%);
   box-shadow:
     0 0 0 1px rgba(0, 0, 0, 0.45) inset,
     0 0 20px color-mix(in srgb, var(--wall-accent-glow, var(--accent-glow)) 46%, transparent 54%);
+}
+
+/* ── RPG hero buttons ──────────────────────────────────────── */
+@keyframes rpgPrimaryGlow {
+  0%, 100% {
+    box-shadow:
+      inset 0 2px 0 rgba(255,255,255,0.5),
+      inset 0 -2px 0 rgba(0,0,0,0.32),
+      inset 2px 0 0 rgba(255,255,255,0.2),
+      inset -2px 0 0 rgba(0,0,0,0.22),
+      0 0 0 2px #0a0a0a,
+      0 4px 0 #1a5e38,
+      0 6px 0 #0a0a0a,
+      0 8px 20px rgba(0,0,0,0.55),
+      0 0 16px rgba(116,247,181,0.3);
+  }
+  50% {
+    box-shadow:
+      inset 0 2px 0 rgba(255,255,255,0.5),
+      inset 0 -2px 0 rgba(0,0,0,0.32),
+      inset 2px 0 0 rgba(255,255,255,0.2),
+      inset -2px 0 0 rgba(0,0,0,0.22),
+      0 0 0 2px #0a0a0a,
+      0 4px 0 #1a5e38,
+      0 6px 0 #0a0a0a,
+      0 8px 20px rgba(0,0,0,0.55),
+      0 0 44px rgba(116,247,181,0.78);
+  }
+}
+
+.rpg-btn-primary {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.8125rem 1.75rem;
+  background: #74f7b5;
+  border: none;
+  border-radius: 2px;
+  font-family: var(--font-pixel), ui-monospace, monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.07em;
+  color: #0a1612;
+  text-shadow: 0 1px 0 rgba(255,255,255,0.45);
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  animation: rpgPrimaryGlow 2.4s ease-in-out infinite;
+  transition: transform 60ms linear, box-shadow 70ms linear, filter 70ms linear;
+  will-change: transform;
+  -webkit-font-smoothing: antialiased;
+}
+
+.rpg-btn-primary:hover {
+  animation: none;
+  transform: translateY(-2px);
+  filter: brightness(1.07);
+  box-shadow:
+    inset 0 2px 0 rgba(255,255,255,0.5),
+    inset 0 -2px 0 rgba(0,0,0,0.32),
+    inset 2px 0 0 rgba(255,255,255,0.2),
+    inset -2px 0 0 rgba(0,0,0,0.22),
+    0 0 0 2px #0a0a0a,
+    0 6px 0 #1a5e38,
+    0 8px 0 #0a0a0a,
+    0 14px 28px rgba(0,0,0,0.65),
+    0 0 52px rgba(116,247,181,0.9);
+}
+
+.rpg-btn-primary:active {
+  animation: none;
+  transform: translateY(4px);
+  filter: brightness(0.95);
+  box-shadow:
+    inset 0 -1px 0 rgba(255,255,255,0.22),
+    inset 0 3px 0 rgba(0,0,0,0.28),
+    0 0 0 2px #0a0a0a,
+    0 0px 0 #1a5e38,
+    0 1px 0 #0a0a0a,
+    0 2px 8px rgba(0,0,0,0.5),
+    0 0 12px rgba(116,247,181,0.25);
+}
+
+.rpg-btn-secondary {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.8125rem 1.5rem;
+  background: #1c2220;
+  border: none;
+  border-radius: 2px;
+  font-family: var(--font-pixel), ui-monospace, monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.05em;
+  color: #aac0b8;
+  text-shadow: 0 1px 0 rgba(0,0,0,0.55);
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow:
+    inset 0 2px 0 rgba(255,255,255,0.09),
+    inset 0 -2px 0 rgba(0,0,0,0.52),
+    inset 2px 0 0 rgba(255,255,255,0.05),
+    inset -2px 0 0 rgba(0,0,0,0.38),
+    0 0 0 2px #0a0a0a,
+    0 4px 0 #0a0a0a,
+    0 8px 18px rgba(0,0,0,0.5);
+  transition: transform 60ms linear, box-shadow 70ms linear, color 60ms linear, filter 70ms linear;
+  will-change: transform;
+  -webkit-font-smoothing: antialiased;
+}
+
+.rpg-btn-secondary:hover {
+  transform: translateY(-2px);
+  color: #74f7b5;
+  filter: drop-shadow(0 0 14px rgba(116,247,181,0.25));
+  box-shadow:
+    inset 0 2px 0 rgba(255,255,255,0.1),
+    inset 0 -2px 0 rgba(0,0,0,0.52),
+    inset 2px 0 0 rgba(255,255,255,0.06),
+    inset -2px 0 0 rgba(0,0,0,0.38),
+    0 0 0 2px #1e5038,
+    0 6px 0 #0a0a0a,
+    0 14px 26px rgba(0,0,0,0.58);
+}
+
+.rpg-btn-secondary:active {
+  transform: translateY(4px);
+  color: #aac0b8;
+  filter: none;
+  box-shadow:
+    inset 0 -1px 0 rgba(255,255,255,0.05),
+    inset 0 3px 0 rgba(0,0,0,0.42),
+    0 0 0 2px #0a0a0a,
+    0 0px 0 #0a0a0a,
+    0 1px 0 rgba(0,0,0,0.6),
+    0 2px 5px rgba(0,0,0,0.4);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rpg-btn-primary { animation: none !important; }
+  .rpg-btn-primary, .rpg-btn-secondary { transition: none !important; }
+}
+
+/* ── Mobile marquee feed ───────────────────────────────────── */
+.marquee-up-mobile {
+  animation: marqueeUp 45s linear infinite;
+}
+
+.mobile-marquee {
+  height: 500px;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 12%, #000 88%, transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0%, #000 12%, #000 88%, transparent 100%);
+}
+
+.mobile-marquee .marquee-card {
+  cursor: default;
+  pointer-events: none;
+}
+
+.mobile-marquee .marquee-card:hover {
+  transform: none;
+  border-color: color-mix(in srgb, var(--wall-accent, var(--accent)) 45%, #1f1f1f 55%);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.45) inset,
+    0 0 14px color-mix(in srgb, var(--wall-accent-glow, var(--accent-glow)) 25%, transparent 75%);
 }

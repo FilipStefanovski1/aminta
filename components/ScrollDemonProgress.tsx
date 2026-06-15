@@ -19,7 +19,7 @@ const STAGES: Stage[] = [
   {
     min: 0,
     lv: 1,
-    name: "Dormant",
+    name: "Beginner",
     speech: "hello.",
     accent: "#74a090",
     soft: "rgba(116,160,144,0.14)",
@@ -29,7 +29,7 @@ const STAGES: Stage[] = [
   {
     min: 0.2,
     lv: 2,
-    name: "Curious",
+    name: "Chill",
     speech: "another post?",
     accent: "#74f7b5",
     soft: "rgba(116,247,181,0.12)",
@@ -156,7 +156,7 @@ function DemonStatic() {
   return (
     <section
       ref={ref}
-      id="demon"
+      id="feed-aminta"
       style={accentVars(stage)}
       className="relative py-24 scroll-mt-20 overflow-hidden"
     >
@@ -282,7 +282,7 @@ function DemonAnimated() {
   });
 
   return (
-    <section ref={ref} id="demon" className="relative h-[240vh] overflow-x-clip">
+    <section ref={ref} id="feed-aminta" className="relative h-[240vh] scroll-mt-20 overflow-x-clip">
       <div
         style={
           {
@@ -294,7 +294,6 @@ function DemonAnimated() {
         className="sticky top-0 h-screen overflow-hidden flex flex-col items-center justify-center px-5"
       >
         <div className="absolute inset-0 grid-bg opacity-100" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[40rem] h-[20rem] rounded-full bg-accent/[0.06] blur-[130px] transition-colors duration-500" />
 
         <div className="relative z-10 w-full max-w-3xl mx-auto text-center">
           <h2 className="mt-3 font-pixel text-2xl sm:text-3xl text-white">{HEADLINE}</h2>

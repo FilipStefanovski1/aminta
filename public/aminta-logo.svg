@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 17" width="400" height="340" shape-rendering="crispEdges">
+  <!-- Background -->
+  <rect width="20" height="17" fill="#74f7b5"/>
+  <!-- Left horn -->
+  <rect x="4" y="2" width="2" height="3" fill="#0a0a0a"/>
+  <!-- Right horn -->
+  <rect x="14" y="2" width="2" height="3" fill="#0a0a0a"/>
+  <!-- Body -->
+  <rect x="5" y="5" width="10" height="9" fill="#0a0a0a"/>
+  <!-- Eyes (green = background shows through) -->
+  <rect x="6" y="8" width="2" height="2" fill="#74f7b5"/>
+  <rect x="12" y="8" width="2" height="2" fill="#74f7b5"/>
+</svg>
