@@ -4,7 +4,7 @@ const STEPS = [
   {
     n: "01",
     title: "Set your voice",
-    desc: "Drop your niche, tone, and a few of your best tweets. Takes 60 seconds — done forever.",
+    desc: "Drop your niche, tone, and a few of your best tweets. Takes 60 seconds. Done forever.",
     accent: "text-accent",
     border: "border-line",
   },

@@ -6,7 +6,7 @@ import Reveal from "./Reveal";
 const FAQS = [
   {
     q: "What is Aminta?",
-    a: "An AI side-panel that lives inside X (Twitter). It writes tweets, replies, and polished posts in your own voice, and inserts them straight into the composer — no copy-paste, no extra tabs.",
+    a: "An AI side-panel that lives inside X (Twitter). It writes tweets, replies, and polished posts in your own voice, and inserts them straight into the composer. No copy-paste, no extra tabs.",
   },
   {
     q: "What does “feed Aminta” actually mean?",
@@ -14,7 +14,7 @@ const FAQS = [
   },
   {
     q: "Do I need my own API key?",
-    a: "Yes — Aminta is BYOK (bring your own key). It works with Groq's free tier, OpenRouter, or Google Gemini. You only pay us for the app; the AI usage runs on your own key, which keeps everything cheap and private.",
+    a: "Yes. Aminta is BYOK (bring your own key). It works with Groq's free tier, OpenRouter, or Google Gemini. You only pay us for the app; the AI usage runs on your own key, which keeps everything cheap and private.",
   },
   {
     q: "Does it work inside X / Twitter?",
@@ -22,19 +22,19 @@ const FAQS = [
   },
   {
     q: "Is my data private?",
-    a: "Completely. Your API key, voice profile, and XP all live locally in your browser. There's no Aminta server in the middle — requests go straight from your browser to your chosen AI provider.",
+    a: "Completely. Your API key, voice profile, and XP all live locally in your browser. There's no Aminta server in the middle. Requests go straight from your browser to your chosen AI provider.",
   },
   {
     q: "What happens if I miss a day?",
-    a: "Your streak breaks and the demon starts to fade — it loses its glow until you feed it again. Higher tiers include streak insurance (a freeze) so one busy day doesn't wipe your progress.",
+    a: "Your streak breaks and the demon starts to fade. It loses its glow until you feed it again. Higher tiers include streak insurance (a freeze) so one busy day doesn't wipe your progress.",
   },
   {
     q: "Which AI models can I use?",
-    a: "Anything your provider offers — Llama 3.3, Gemini, GPT, and more via OpenRouter, or fast free models on Groq. Aminta auto-detects your key and routes to the right provider.",
+    a: "Anything your provider offers: Llama 3.3, Gemini, GPT, and more via OpenRouter, or fast free models on Groq. Aminta auto-detects your key and routes to the right provider.",
   },
   {
     q: "Can I cancel anytime?",
-    a: "Yep. Monthly cancels anytime. Annual is billed yearly. Lifetime is a one-time payment — pay once and feed Aminta forever.",
+    a: "Yep. Monthly cancels anytime. Annual is billed yearly. Lifetime is a one-time payment. Pay once and feed Aminta forever.",
   },
 ];
 

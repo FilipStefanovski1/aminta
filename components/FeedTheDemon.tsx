@@ -71,7 +71,7 @@ export default function FeedTheDemon() {
             </div>
             <p className="mt-3 text-sm text-muted leading-relaxed">
               Post every day and the streak bonus stacks on top of everything. Consistency is the
-              cheat code — the demon rewards the grind.
+              cheat code. The demon rewards the grind.
             </p>
           </div>
           <div className="rounded-2xl border border-ember/30 bg-ember/5 p-6">
@@ -79,7 +79,7 @@ export default function FeedTheDemon() {
               <span>⚠</span> Miss a day and it starts to fade
             </div>
             <p className="mt-3 text-sm text-muted leading-relaxed">
-              Ghost the demon and it goes hungry — your streak breaks and it starts losing its glow.
+              Ghost the demon and it goes hungry. Your streak breaks and it starts losing its glow.
               Don&apos;t let it fade. Feed it daily.
             </p>
           </div>

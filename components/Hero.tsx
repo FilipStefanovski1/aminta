@@ -130,7 +130,7 @@ export default function Hero() {
                       <span className="text-[10px] text-muted">@indiehacker · 2h</span>
                     </div>
                     <p className="mt-1 text-xs text-white/75 leading-relaxed">
-                      the hardest part of growing on X isn&apos;t the writing — it&apos;s showing up
+                      the hardest part of growing on X isn&apos;t the writing. It&apos;s showing up
                       every day.
                     </p>
                   </div>

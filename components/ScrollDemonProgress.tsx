@@ -77,7 +77,7 @@ const REWARDS: [string, string][] = [
 
 const HEADLINE = "Feed Aminta";
 const DESC =
-  "Every post earns XP. Every reply keeps the streak alive. The AI gets you writing — Aminta gets you coming back.";
+  "Every post earns XP. Every reply keeps the streak alive. The AI gets you writing. Aminta gets you coming back.";
 
 function stageFor(p: number): Stage {
   let s = STAGES[0];
@@ -353,7 +353,7 @@ function DemonAnimated() {
               {done ? (
                 <p className="font-pixel text-xs text-accent">Demon fed. Streak secured.</p>
               ) : (
-                <p className="text-xs text-muted">Keep scrolling — keep feeding.</p>
+                <p className="text-xs text-muted">Keep scrolling. Keep feeding.</p>
               )}
             </div>
 

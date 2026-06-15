@@ -10,7 +10,7 @@ export default function ProductDemo() {
             Lives right next to your timeline
           </h2>
           <p className="mt-4 text-muted">
-            No new tab. No copy-paste. Aminta docks into X as a side panel — generate, polish,
+            No new tab. No copy-paste. Aminta docks into X as a side panel: generate, polish,
             and drop straight into the composer.
           </p>
         </Reveal>

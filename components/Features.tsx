@@ -15,7 +15,7 @@ interface Feature {
 const FEATURES: Feature[] = [
   {
     title: "Tweet Generator",
-    desc: "Type a topic. Get a post in your voice. No blank-box paralysis — just output.",
+    desc: "Type a topic. Get a post in your voice. No blank-box paralysis. Just output.",
     accent: "text-accent",
     feedback: "Aminta gains 50 XP.",
     icon: (
@@ -33,7 +33,7 @@ const FEATURES: Feature[] = [
   },
   {
     title: "Tweet Polisher",
-    desc: "Rough draft in, sharp banger out. Keeps your voice — just tighter. Refine the post, refine the demon.",
+    desc: "Rough draft in, sharp banger out. Keeps your voice, just tighter. Refine the post, refine the demon.",
     accent: "text-accent",
     feedback: "Voice refined.",
     icon: (
@@ -60,7 +60,7 @@ const FEATURES: Feature[] = [
   },
   {
     title: "BYOK API Support",
-    desc: "Bring your own key — Groq, OpenRouter, or Gemini. Your key, your cost. Aminta doesn't care which.",
+    desc: "Bring your own key: Groq, OpenRouter, or Gemini. Your key, your cost. Aminta doesn't care which.",
     accent: "text-accent",
     feedback: "Your key. Your demon. Full control.",
     icon: (

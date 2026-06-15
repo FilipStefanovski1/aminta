@@ -101,7 +101,7 @@ export default function DemonPlayground() {
                   <span style={{ color: next.skin.eye }}>{next.name}</span>
                 </>
               ) : (
-                <span className="text-gold font-semibold">DEMON KING — max evolution reached 👑</span>
+                <span className="text-gold font-semibold">DEMON KING · max evolution reached 👑</span>
               )}
             </p>
           </div>
@@ -112,7 +112,7 @@ export default function DemonPlayground() {
       <div>
         <h3 className="font-pixel text-lg text-white">Feed it. Watch it grow.</h3>
         <p className="mt-3 text-muted text-sm">
-          Tap an action to feed Aminta and stack XP — exactly how it works while you post on X.
+          Tap an action to feed Aminta and stack XP. Exactly how it works while you post.
         </p>
 
         <div className="mt-6 space-y-3">
