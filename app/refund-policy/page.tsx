@@ -1,0 +1,219 @@
+import type { Metadata } from "next";
+import LegalNav from "@/components/LegalNav";
+import Footer from "@/components/Footer";
+
+export const metadata: Metadata = {
+  title: "Refund Policy — Aminta",
+  description:
+    "Aminta's refund policy for monthly subscriptions and lifetime plans. Learn when refunds are available and how to request one.",
+};
+
+function Section({
+  id,
+  label,
+  title,
+  children,
+}: {
+  id: string;
+  label: string;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section id={id} className="pt-12 border-t border-[#2a2a2e]">
+      <p className="font-pixel text-[10px] text-[#74f7b5] uppercase tracking-widest mb-2">
+        {label}
+      </p>
+      <h2 className="text-xl font-semibold text-white mb-5">{title}</h2>
+      <div className="space-y-4 text-[#b8b8c4] leading-relaxed text-[0.9375rem]">
+        {children}
+      </div>
+    </section>
+  );
+}
+
+function Notice({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="my-5 border-l-4 border-[#74f7b5] bg-[#0f1a14] rounded-r-xl px-5 py-4 text-[#c8d8cc] text-sm leading-relaxed">
+      {children}
+    </div>
+  );
+}
+
+function Warning({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="my-5 border-l-4 border-[#f7a074] bg-[#1a100a] rounded-r-xl px-5 py-4 text-[#d4b8a8] text-sm leading-relaxed">
+      {children}
+    </div>
+  );
+}
+
+function Li({ children }: { children: React.ReactNode }) {
+  return (
+    <li className="flex gap-2.5">
+      <span className="text-[#74f7b5] shrink-0 mt-0.5">◈</span>
+      <span>{children}</span>
+    </li>
+  );
+}
+
+function DeniedLi({ children }: { children: React.ReactNode }) {
+  return (
+    <li className="flex gap-2.5">
+      <span className="text-[#f7a074] shrink-0 mt-0.5">✕</span>
+      <span>{children}</span>
+    </li>
+  );
+}
+
+function Email() {
+  return (
+    <span className="font-mono text-[#74f7b5]">hello@amintaapp.com</span>
+  );
+}
+
+export default function RefundPolicyPage() {
+  return (
+    <>
+      <LegalNav />
+
+      <main className="bg-[#0d0d0f] min-h-screen">
+        {/* Hero */}
+        <div className="bg-black border-b border-[#1a1a1e]">
+          <div className="mx-auto max-w-3xl px-6 py-14">
+            <p className="font-pixel text-[10px] text-[#74f7b5] uppercase tracking-widest mb-3">
+              Legal
+            </p>
+            <h1 className="text-3xl sm:text-4xl font-semibold text-white mb-4">
+              Refund Policy
+            </h1>
+            <p className="text-[#666] text-sm">
+              Last updated:{" "}
+              <span className="text-[#999]">June 2026</span>
+            </p>
+            <p className="mt-4 text-[#b8b8c4] leading-relaxed">
+              We want you to feel confident trying Aminta. This policy explains when refunds are
+              available, how to request one, and what falls outside our refund window.
+            </p>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="mx-auto max-w-3xl px-6 pt-10 pb-24 space-y-0">
+
+          <Section id="monthly" label="§ 1" title="Monthly Subscriptions">
+            <p>
+              You may request a refund within <strong className="text-white">7 days</strong> of
+              your initial purchase if you experience a technical issue that prevents Aminta from
+              functioning as intended and our support team is unable to resolve it within a
+              reasonable timeframe.
+            </p>
+            <Notice>
+              To be eligible, refund requests must be submitted within 7 days of the original
+              purchase date with a description of the issue encountered. Requests submitted after
+              this window will not be considered.
+            </Notice>
+            <p>
+              Submit all refund requests by email to: <Email />
+            </p>
+            <p>
+              Subscription renewals are <strong className="text-white">non-refundable</strong>.
+              If you no longer wish to be charged, cancel your subscription before the next
+              renewal date in your account settings. You retain access until the end of the
+              billing period.
+            </p>
+          </Section>
+
+          <Section id="lifetime" label="§ 2" title="Lifetime Plans">
+            <p>
+              Lifetime plan purchases may be refunded within{" "}
+              <strong className="text-white">14 days</strong> of the original purchase date,
+              provided the product has not been substantially used.
+            </p>
+            <p>
+              &ldquo;Substantially used&rdquo; means any of the following:
+            </p>
+            <ul className="mt-3 space-y-2">
+              <Li>More than 10 content generations have been made under the account</Li>
+              <Li>A Voice Profile has been saved and used to generate content</Li>
+              <Li>Content generated by Aminta has been published to a social platform</Li>
+            </ul>
+            <p>
+              If you purchased a lifetime plan and believe you qualify for a refund, contact{" "}
+              <Email /> within 14 days of purchase.
+            </p>
+          </Section>
+
+          <Section id="abuse" label="§ 3" title="Abuse Prevention">
+            <p>
+              We review all refund requests individually and in good faith. However, we reserve
+              the right to deny requests in cases of:
+            </p>
+            <ul className="mt-3 space-y-2.5">
+              <DeniedLi>Fraud or misrepresentation in the refund request</DeniedLi>
+              <DeniedLi>Abuse of the refund process (e.g., repeated purchase-and-refund cycles)</DeniedLi>
+              <DeniedLi>Excessive usage of the Service prior to requesting a refund</DeniedLi>
+              <DeniedLi>Violations of our Terms of Service that led to account suspension</DeniedLi>
+              <DeniedLi>Requests submitted outside the applicable refund window</DeniedLi>
+            </ul>
+            <Warning>
+              Attempting to obtain refunds through chargebacks without first contacting us may
+              result in permanent account termination. We respond to all good-faith requests
+              within 5 business days.
+            </Warning>
+          </Section>
+
+          <Section id="contact" label="§ 4" title="Contact">
+            <p>
+              For refund requests or billing questions, reach us at:
+            </p>
+
+            <div className="bg-[#141418] border border-[#2a2a2e] rounded-xl px-5 py-5 text-sm space-y-2 mt-4">
+              <p className="text-white font-medium">Aminta Support</p>
+              <p>
+                Email: <Email />
+              </p>
+              <p className="text-[#555] text-xs pt-1">
+                Include your order ID or the email address associated with your account. We aim
+                to respond within 5 business days.
+              </p>
+            </div>
+
+            <div className="mt-8 pt-6 border-t border-[#2a2a2e]">
+              <p className="text-[#555] text-sm">
+                This Refund Policy is part of our{" "}
+                <a href="/terms" className="text-[#74f7b5] hover:text-white transition-colors">
+                  Terms of Service
+                </a>
+                . In the event of a conflict, the Terms of Service prevail.
+              </p>
+              <div className="mt-4 flex flex-wrap gap-4 text-sm">
+                <a
+                  href="/terms"
+                  className="text-[#74f7b5] hover:text-white transition-colors"
+                >
+                  Terms of Service →
+                </a>
+                <a
+                  href="/privacy"
+                  className="text-[#74f7b5] hover:text-white transition-colors"
+                >
+                  Privacy Policy →
+                </a>
+                <a
+                  href="/"
+                  className="text-[#666] hover:text-[#74f7b5] transition-colors"
+                >
+                  Back to Aminta →
+                </a>
+              </div>
+            </div>
+          </Section>
+
+        </div>
+      </main>
+
+      <Footer />
+    </>
+  );
+}

@@ -31,6 +31,12 @@ export default function LegalNav() {
             Terms
           </Link>
           <Link
+            href="/refund-policy"
+            className="text-sm text-[#666] hover:text-[#74f7b5] transition-colors"
+          >
+            Refunds
+          </Link>
+          <Link
             href="/"
             className="text-sm text-[#74f7b5] hover:text-white transition-colors"
           >

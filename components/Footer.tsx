@@ -98,6 +98,10 @@ export default function Footer() {
         <a href="/terms" className="text-xs text-[#444] hover:text-[#74f7b5] transition-colors">
           Terms of Service
         </a>
+        <span style={{ color: "#222" }}>·</span>
+        <a href="/refund-policy" className="text-xs text-[#444] hover:text-[#74f7b5] transition-colors">
+          Refund Policy
+        </a>
       </div>
 
       {/* Copyright */}
