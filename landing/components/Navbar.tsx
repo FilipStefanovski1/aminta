@@ -73,15 +73,8 @@ export default function Navbar() {
           ))}
         </div>
 
-        {/* right: CTA — flex-1 so it mirrors left side width */}
+        {/* right side */}
         <div className="flex-1 flex items-center justify-end">
-          <a
-            href="#get-aminta"
-            className="hidden lg:inline-flex shrink-0 font-pixel text-sm xl:text-base text-black whitespace-nowrap nav-cta"
-          >
-            Get Aminta
-          </a>
-
           {/* mobile toggle */}
           <button
             aria-label="Toggle menu"
@@ -109,14 +102,6 @@ export default function Navbar() {
               [ {l.label} ]
             </a>
           ))}
-          <a
-            href="#get-aminta"
-            onClick={() => setOpen(false)}
-            className="font-pixel text-sm text-black pt-1"
-            style={{ textShadow: "2px 2px 0 rgba(0,0,0,0.25)" }}
-          >
-            Get Aminta →
-          </a>
         </div>
       )}
     </header>
