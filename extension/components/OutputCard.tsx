@@ -1,0 +1,109 @@
+import { useState } from "react"
+
+import { getForm, getLevel } from "~lib/evolution"
+import { insertText } from "~lib/messaging"
+import { incrementMissionPublished, recordStreak } from "~lib/missions"
+import type { Mode, Platform } from "~lib/prompts"
+import { hashText, tryAwardXP, XP_PER_MODE } from "~lib/xp"
+
+interface Props {
+  text: string
+  mode: Mode
+  platform: Platform
+  currentXP: number
+  onXPAwarded: (amount: number, levelUp?: { level: number; stage: string }) => void
+}
+
+export default function OutputCard({ text, mode, platform, currentXP, onXPAwarded }: Props) {
+  const [copied, setCopied] = useState(false)
+  const [insertStatus, setInsertStatus] = useState("")
+  const [xpStatus, setXpStatus] = useState("")
+  const [xpEarned, setXpEarned] = useState(false)
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    } catch {
+      setInsertStatus("Copy failed — select manually.")
+      setTimeout(() => setInsertStatus(""), 3000)
+    }
+  }
+
+  const insert = async () => {
+    setInsertStatus("")
+    setXpStatus("")
+
+    const res = await insertText(platform, text)
+    if (!res.ok) {
+      setInsertStatus(res.error ?? "Insert failed.")
+      setTimeout(() => setInsertStatus(""), 4000)
+      return
+    }
+    setInsertStatus("Inserted ✓")
+    setTimeout(() => setInsertStatus(""), 2000)
+
+    const hash = hashText(text)
+    const xpRes = await tryAwardXP(hash, XP_PER_MODE[mode])
+
+    if ("error" in xpRes) {
+      setXpStatus(
+        xpRes.error === "already_claimed"
+          ? "XP already claimed for this post."
+          : "Daily XP limit reached. Come back tomorrow."
+      )
+    } else {
+      setXpStatus(`+${xpRes.awarded} XP`)
+      setXpEarned(true)
+
+      const prevXP = currentXP
+      const newXP = xpRes.total
+      const oldLevel = getLevel(prevXP)
+      const newLevel = getLevel(newXP)
+
+      await recordStreak()
+      await incrementMissionPublished()
+
+      if (newLevel > oldLevel) {
+        onXPAwarded(xpRes.awarded, { level: newLevel, stage: getForm(newXP).name })
+      } else {
+        onXPAwarded(xpRes.awarded)
+      }
+    }
+
+    setTimeout(() => setXpStatus(""), 3000)
+  }
+
+  const insertLabel = platform === "linkedin" ? "Insert into LinkedIn" : "Insert into X"
+
+  return (
+    <div className="animate-card-in bg-[#111318] border border-[#1e2028] rounded-xl p-3 space-y-3">
+      <p className="text-sm whitespace-pre-wrap leading-relaxed text-[#e7e7ef]">{text}</p>
+
+      <div className="flex gap-2">
+        <button
+          onClick={copy}
+          className="flex-1 border border-[#1e2028] rounded py-2 text-[10px] text-[#666] hover:border-[#333] hover:text-[#888] transition-colors active:scale-[0.97]">
+          {copied ? "Copied ✓" : "Copy"}
+        </button>
+        <button
+          onClick={insert}
+          className="btn-pixel flex-1 bg-mint text-black rounded py-2 font-pixel text-[8px] active:scale-[0.97]">
+          {insertLabel}
+        </button>
+      </div>
+
+      <div className="space-y-0.5">
+        {insertStatus && (
+          <p className="text-[10px] text-[#555] animate-fade-in">{insertStatus}</p>
+        )}
+        {xpStatus && (
+          <p className={`text-[10px] font-pixel animate-fade-in ${xpEarned ? "text-mint" : "text-[#555]"}`}>
+            {xpStatus}
+          </p>
+        )}
+      </div>
+    </div>
+  )
+}

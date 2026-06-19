@@ -4,8 +4,14 @@
     {
       "name": "landing",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
-      "port": 3000
+      "runtimeArgs": [
+        "--prefix",
+        "landing",
+        "run",
+        "dev"
+      ],
+      "port": 3000,
+      "autoPort": false
     }
   ]
 }

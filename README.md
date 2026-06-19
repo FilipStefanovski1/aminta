@@ -1,36 +1,71 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# POPPYX
 
-## Getting Started
+Monorepo for **Ghosti2** — an AI writing assistant for X/Twitter.
 
-First, run the development server:
+Two independent apps, each with its own dependencies and config. They do **not**
+share a `node_modules`, a build pipeline, or tooling.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+```
+POPPYX/
+├── extension/   → Chrome extension (Plasmo + React + TS + Tailwind v3)
+├── landing/     → Marketing website (Next.js App Router + TS + Tailwind v4)
+└── README.md
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## `/extension` — Chrome extension
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The product. A Chrome **side panel** that generates tweets, replies, and polished
+drafts in your voice, and inserts them into X's composer. BYOK — auto-detects
+Groq (`gsk_…`), Google Gemini (`AIza…`/`AQ.…`), or OpenRouter (`sk-or-…`) by key prefix.
 
-## Learn More
+**Run it:**
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+cd extension
+npm install
+npm run dev
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Then load it in Chrome:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. Open `chrome://extensions`
+2. Enable **Developer mode** (top-right)
+3. **Load unpacked** → select `extension/build/chrome-mv3-dev`
+4. Pin the icon and click it to open the side panel
 
-## Deploy on Vercel
+**Production build:** `npm run build` → output in `extension/build/chrome-mv3-prod`.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## `/landing` — Marketing website
+
+The public site. Standard Next.js App Router app.
+
+**Run it:**
+
+```bash
+cd landing
+npm install        # already installed by scaffold
+npm run dev        # http://localhost:3000
+```
+
+**Production:** `npm run build && npm start`.
+
+---
+
+## Working on both
+
+They're separate apps — open two terminals:
+
+```bash
+# terminal 1
+cd extension && npm run dev
+
+# terminal 2
+cd landing && npm run dev
+```
+
+Never run `npm install` at the repo root — there is no root `package.json` by design.
+Install inside `extension/` or `landing/`.

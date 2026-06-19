@@ -1,0 +1,39 @@
+{
+  "name": "aminta",
+  "displayName": "Aminta",
+  "version": "0.1.0",
+  "description": "Aminta - Your AI writing companion for X.",
+  "scripts": {
+    "dev": "plasmo dev",
+    "build": "plasmo build",
+    "package": "plasmo package"
+  },
+  "dependencies": {
+    "plasmo": "latest",
+    "react": "18.2.0",
+    "react-dom": "18.2.0"
+  },
+  "devDependencies": {
+    "@types/chrome": "0.0.258",
+    "@types/react": "18.2.48",
+    "@types/react-dom": "18.2.18",
+    "autoprefixer": "10.4.17",
+    "postcss": "8.4.33",
+    "tailwindcss": "3.4.1",
+    "typescript": "5.3.3"
+  },
+  "manifest": {
+    "permissions": ["storage", "sidePanel", "tabs"],
+    "host_permissions": [
+      "https://x.com/*",
+      "https://twitter.com/*",
+      "https://www.linkedin.com/*",
+      "https://openrouter.ai/*",
+      "https://api.groq.com/*",
+      "https://generativelanguage.googleapis.com/*"
+    ],
+    "action": {
+      "default_title": "Open Aminta"
+    }
+  }
+}
