@@ -4,7 +4,6 @@ import "~style.css"
 
 import ApiKeyForm from "~components/ApiKeyForm"
 import DemonMascot from "~components/DemonMascot"
-import EvolutionsTab from "~components/EvolutionsTab"
 import GeneratorPanel from "~components/GeneratorPanel"
 import HomeTab from "~components/HomeTab"
 import SetupGate from "~components/SetupGate"
@@ -14,7 +13,7 @@ import { C } from "~lib/theme"
 import { getStore, setStore, type AmintaStore } from "~lib/storage"
 import type { Platform } from "~lib/prompts"
 
-type Tab = "home" | "write" | "train" | "evolutions"
+type Tab = "home" | "create" | "train"
 
 function detectPlatform(url: string): Platform {
   if (url.includes("linkedin.com")) return "linkedin"
@@ -56,9 +55,9 @@ function playLevelUpSound() {
 }
 
 function LevelUpModal({ data, onDismiss }: { data: LevelUpData; onDismiss: () => void }) {
-  const xp      = (data.level - 1) * 300
-  const form    = getForm(xp)
-  const tint    = form.color
+  const xp       = (data.level - 1) * 300
+  const form     = getForm(xp)
+  const tint     = form.color
   const dialogue = STAGE_DIALOGUE[data.stage] ?? "growing stronger."
   useEffect(() => { playLevelUpSound() }, [])
   return (
@@ -137,11 +136,11 @@ function SettingsOverlay({
 
 // ─── Bottom navigation ────────────────────────────────────────────────────────
 
-const NAV_ITEMS: { id: Tab; label: string; icon: (active: boolean) => React.ReactNode }[] = [
+const NAV_ITEMS: { id: Tab; label: string; icon: () => React.ReactNode }[] = [
   {
     id: "home",
     label: "Home",
-    icon: (active) => (
+    icon: () => (
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
         <path d="M3 9L9 3l6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
         <path d="M5 7.5V15h3v-4h2v4h3V7.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -149,33 +148,25 @@ const NAV_ITEMS: { id: Tab; label: string; icon: (active: boolean) => React.Reac
     ),
   },
   {
-    id: "write",
-    label: "Write",
-    icon: (active) => (
+    id: "create",
+    label: "Create",
+    icon: () => (
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-        <path d="M13 2l3 3-9 9H4v-3L13 2z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
-        <path d="M11 4l3 3" stroke="currentColor" strokeWidth="1.5"/>
+        <path d="M9 3.5L10.5 7l3.5.3-2.6 2.3.8 3.4L9 11.2l-3.2 1.8.8-3.4L4 7.3l3.5-.3L9 3.5z"
+          stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/>
+        <path d="M9 1v1.2M9 15.8V17M1 9h1.2M15.8 9H17M3.05 3.05l.85.85M14.1 14.1l.85.85M3.05 14.95l.85-.85M14.1 3.9l.85-.85"
+          stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
       </svg>
     ),
   },
   {
     id: "train",
-    label: "Teach",
-    icon: (active) => (
+    label: "Train",
+    icon: () => (
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
         <path d="M9 2C6.24 2 4 4.24 4 7c0 1.86 1.01 3.49 2.5 4.37V13h5v-1.63C13 10.49 14 8.86 14 7c0-2.76-2.24-5-5-5z"
           stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
         <path d="M6.5 13h5M7.5 15.5h3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-      </svg>
-    ),
-  },
-  {
-    id: "evolutions",
-    label: "Evolve",
-    icon: (active) => (
-      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-        <path d="M9 2l1.8 3.6L15 6.6l-3 2.92.7 4.08L9 11.4l-3.7 2.2.7-4.08L3 6.6l4.2-.99L9 2z"
-          stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
       </svg>
     ),
   },
@@ -192,7 +183,7 @@ function BottomNav({ active, onChange, tint }: { active: Tab; onChange: (t: Tab)
             onClick={() => onChange(id)}
             className="flex-1 flex flex-col items-center justify-center gap-1 py-2.5 transition-colors"
             style={{ color: isActive ? tint : "#3a3a4a" }}>
-            {icon(isActive)}
+            {icon()}
             <span className="font-pixel text-[5px] uppercase tracking-widest">{label}</span>
           </button>
         )
@@ -204,10 +195,10 @@ function BottomNav({ active, onChange, tint }: { active: Tab; onChange: (t: Tab)
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 function SidePanel() {
-  const [store, setLocalStore]        = useState<AmintaStore | null>(null)
-  const [tab, setTab]                 = useState<Tab>("home")
-  const [tabKey, setTabKey]           = useState(0)
-  const [levelUpData, setLevelUpData] = useState<LevelUpData | null>(null)
+  const [store, setLocalStore]          = useState<AmintaStore | null>(null)
+  const [tab, setTab]                   = useState<Tab>("home")
+  const [tabKey, setTabKey]             = useState(0)
+  const [levelUpData, setLevelUpData]   = useState<LevelUpData | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [detectedPlatform, setDetectedPlatform] = useState<Platform>("x")
 
@@ -282,9 +273,9 @@ function SidePanel() {
             className="w-7 h-7 flex items-center justify-center text-[#444] hover:text-[#888] transition-colors rounded-lg hover:bg-white/5"
             title="Settings">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <circle cx="7" cy="7" r="2.5" stroke="currentColor" strokeWidth="1.4"/>
-              <path d="M7 1v1.5M7 11.5V13M1 7h1.5M11.5 7H13M2.93 2.93l1.06 1.06M10.01 10.01l1.06 1.06M2.93 11.07l1.06-1.06M10.01 3.99l1.06-1.06"
-                stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+              <path d="M5.8 1.5 5.5 3.05c-.35.13-.67.3-.96.51L3.1 3.05 1.7 5.45l1.08.88C2.74 6.55 2.72 6.77 2.72 7s.02.45.06.67L1.7 8.55l1.4 2.4 1.44-.51c.29.21.61.38.96.51l.3 1.55h2.4l.3-1.55c.35-.13.67-.3.96-.51l1.44.51 1.4-2.4-1.08-.88c.04-.22.06-.44.06-.67s-.02-.45-.06-.67l1.08-.88-1.4-2.4-1.44.51c-.29-.21-.61-.38-.96-.51L8.2 1.5H5.8z"
+                stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
+              <circle cx="7" cy="7" r="1.7" stroke="currentColor" strokeWidth="1.2"/>
             </svg>
           </button>
         </header>
@@ -296,19 +287,19 @@ function SidePanel() {
             {tab === "home" && (
               <HomeTab
                 store={store}
-                onWrite={() => switchTab("write")}
-                onTeach={() => switchTab("train")}
-                onEvolve={() => switchTab("evolutions")}
+                onCreate={() => switchTab("create")}
+                onTrain={() => switchTab("train")}
                 onUpdate={refresh}
               />
             )}
 
-            {tab === "write" && (
+            {tab === "create" && (
               <GeneratorPanel
                 store={store}
                 initialPlatform={detectedPlatform}
                 onXPAwarded={refresh}
                 onLevelUp={(level, stage) => setLevelUpData({ level, stage })}
+                onTeach={() => switchTab("train")}
               />
             )}
 
@@ -319,10 +310,6 @@ function SidePanel() {
                 onSave={(voice) => update({ voice })}
                 dnaCount={store.tweetDNA?.length ?? 0}
               />
-            )}
-
-            {tab === "evolutions" && (
-              <EvolutionsTab store={store} />
             )}
 
           </div>

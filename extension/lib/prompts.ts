@@ -2,7 +2,15 @@ import type { ChatMessage } from "~lib/openrouter"
 import type { VoiceProfile } from "~lib/storage"
 
 export type Platform = "x" | "linkedin" | "threads"
-export type Mode = "tweet" | "reply" | "polish"
+export type Mode     = "tweet" | "reply" | "polish"
+export type Tone     = "direct" | "witty" | "analytical" | "inspiring"
+
+const TONE_GUIDE: Record<Tone, string> = {
+  direct:     "Be direct and concise. Cut all fluff. Get to the point fast.",
+  witty:      "Inject dry wit and subtle humor where it feels natural. Don't force it.",
+  analytical: "Be analytical and data-driven. Use reasoning and structured thinking.",
+  inspiring:  "Be inspiring. End with energy, conviction, or a strong clear vision.",
+}
 
 function voiceBlock(voice: VoiceProfile, tweetDNA: string[]): string {
   const examples = voice.examples
@@ -105,12 +113,14 @@ export function buildMessages(
   mode: Mode,
   voice: VoiceProfile,
   input: string,
-  tweetDNA: string[] = []
+  tweetDNA: string[] = [],
+  tone: Tone = "direct"
 ): ChatMessage[] {
+  const toneNote = `\nTONE DIRECTION: ${TONE_GUIDE[tone]}`
   const trimmed = input.trim()
 
   if (platform === "threads") {
-    const system = systemThreads(voice, tweetDNA)
+    const system = systemThreads(voice, tweetDNA) + toneNote
     let user = ""
     if (mode === "tweet") {
       user = `Write ONE original Threads post about this topic:\n"""${trimmed}"""`
@@ -126,7 +136,7 @@ export function buildMessages(
   }
 
   if (platform === "linkedin") {
-    const system = systemLinkedIn(voice, tweetDNA)
+    const system = systemLinkedIn(voice, tweetDNA) + toneNote
     let user = ""
     if (mode === "tweet") {
       user = `Write ONE original LinkedIn post about this topic:\n"""${trimmed}"""`
@@ -142,7 +152,7 @@ export function buildMessages(
   }
 
   // X
-  const system = systemX(voice, tweetDNA)
+  const system = systemX(voice, tweetDNA) + toneNote
   let user = ""
   if (mode === "tweet") {
     user = `Write ONE original X post about this topic:\n"""${trimmed}"""`

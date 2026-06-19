@@ -2,6 +2,14 @@ import { Fragment } from "react";
 import Reveal from "./Reveal";
 import AmintaSprite from "./AmintaSprite";
 
+function XLogo({ size = 18 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-label="X logo">
+      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.213 5.567 5.95-5.567zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+    </svg>
+  );
+}
+
 const STEPS = [
   {
     n: "01",
@@ -9,13 +17,17 @@ const STEPS = [
     desc: "Teach your niche, tone, and best posts once.",
     reward: "VOICE LOCKED IN",
     level: 1,
+    platformBadge: null as string | null,
+    disclaimer: null as string | null,
   },
   {
     n: "02",
-    title: "Generate inside X",
+    title: "Generate on X",
     desc: "Open the side panel, write replies or posts, insert with one click.",
     reward: "+50 XP · POST",
     level: 3,
+    platformBadge: "X PLATFORM",
+    disclaimer: "X is a trademark of X Corp. Aminta is not affiliated with or endorsed by X.",
   },
   {
     n: "03",
@@ -23,6 +35,8 @@ const STEPS = [
     desc: "Publishing earns XP, keeps your streak alive, and levels up Aminta.",
     reward: "STREAK ALIVE",
     level: 5,
+    platformBadge: null as string | null,
+    disclaimer: null as string | null,
   },
 ];
 
@@ -63,18 +77,46 @@ function QuestCard({ step }: { step: (typeof STEPS)[0] }) {
 
       <div className="flex flex-col flex-1 p-5">
         {/* Quest label */}
-        <p className="font-pixel text-[9px] text-accent/60 tracking-[0.18em] mb-5">
+        <p className="font-pixel text-[9px] text-accent/60 tracking-[0.18em] mb-4">
           QUEST {step.n}
         </p>
 
-        {/* Aminta state for this step */}
+        {/* Platform badge — only on step 02 */}
+        {step.platformBadge && (
+          <div className="flex justify-center mb-3">
+            <span
+              className="inline-flex items-center gap-1.5 font-pixel text-[8px] tracking-[0.14em] px-2.5 py-1 rounded-sm"
+              style={{
+                color: "rgba(255,255,255,0.35)",
+                border: "1px solid rgba(255,255,255,0.1)",
+                background: "rgba(255,255,255,0.04)",
+              }}
+            >
+              <span style={{ color: "rgba(255,255,255,0.4)" }}>
+                <XLogo size={11} />
+              </span>
+              {step.platformBadge}
+            </span>
+          </div>
+        )}
+
+        {/* Aminta mascot */}
         <div className="flex justify-center mb-4">
           <AmintaSprite level={step.level} interactive={false} size={52} />
         </div>
 
-        {/* Title */}
-        <h3 className="font-pixel text-sm text-white text-center mb-3">
-          {step.title}
+        {/* Title — inline X logo for step 02 */}
+        <h3 className="font-pixel text-sm text-white text-center mb-3 flex items-center justify-center gap-2 flex-wrap">
+          {step.platformBadge ? (
+            <>
+              Generate on{" "}
+              <span className="inline-flex items-center gap-1">
+                <XLogo size={14} />
+              </span>
+            </>
+          ) : (
+            step.title
+          )}
         </h3>
 
         {/* Description */}
@@ -92,6 +134,16 @@ function QuestCard({ step }: { step: (typeof STEPS)[0] }) {
             {step.reward}
           </span>
         </div>
+
+        {/* Disclaimer — only on step 02 */}
+        {step.disclaimer && (
+          <p
+            className="mt-3 text-center leading-snug"
+            style={{ fontSize: 10, color: "rgba(255,255,255,0.18)" }}
+          >
+            {step.disclaimer}
+          </p>
+        )}
       </div>
     </div>
   );

@@ -96,7 +96,7 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0 
         <SectionLabel>What you write about</SectionLabel>
         <input value={niche} onChange={(e) => setNiche(e.target.value)}
           placeholder="e.g. indie hacking, AI tools, fitness" className={inputCls} />
-        <p className="text-[10px] mt-2" style={{ color: C.textGhost }}>Be specific — vague topics make generic posts.</p>
+        <p className="text-[10px] mt-2" style={{ color: C.textDim }}>Be specific — vague topics make generic posts.</p>
       </Card>
 
       {/* ── How you sound ── */}
@@ -119,7 +119,7 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0 
           })}
         </div>
         {voiceStyle && (
-          <p className="text-[10px] mt-3 italic leading-relaxed pt-2.5" style={{ color: C.textFaint, borderTop: `1px solid ${C.border}` }}>
+          <p className="text-[10px] mt-3 italic leading-relaxed pt-2.5" style={{ color: C.textDim, borderTop: `1px solid ${C.border}` }}>
             "{STYLE_PREVIEWS[voiceStyle]}"
           </p>
         )}
@@ -129,25 +129,25 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0 
       <Card className="animate-card-in" style={{ animationDelay: "90ms" }}>
         <div className="flex items-center justify-between mb-2">
           <SectionLabel>Things you've written</SectionLabel>
-          <span className="font-pixel text-[6px]" style={{ color: C.textGhost }}>{examples.length}/5</span>
+          <span className="font-pixel text-[6px]" style={{ color: C.textFaint }}>{examples.length}/5</span>
         </div>
-        <p className="text-[10px] mb-3" style={{ color: C.textGhost }}>
+        <p className="text-[10px] mb-3" style={{ color: C.textDim }}>
           Paste a few of your best posts. Aminta learns your voice from these.
         </p>
 
         <div className="space-y-2">
           {examples.map((post, i) => (
             <div key={i} className="group flex gap-2.5 rounded-xl p-3" style={{ backgroundColor: C.cardInner, border: `1px solid ${C.border}` }}>
-              <span className="font-pixel text-[6px] mt-0.5 shrink-0 select-none" style={{ color: C.textGhost }}>#{i + 1}</span>
+              <span className="font-pixel text-[6px] mt-0.5 shrink-0 select-none" style={{ color: C.textFaint }}>#{i + 1}</span>
               <p className="flex-1 text-[11px] leading-relaxed break-words min-w-0" style={{ color: "#ccc" }}>{post}</p>
               <button onClick={() => removeExample(i)}
                 className="shrink-0 text-xs leading-none mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
-                style={{ color: C.textGhost }}>✕</button>
+                style={{ color: C.textFaint }}>✕</button>
             </div>
           ))}
 
           {examples.length === 0 && !adding && (
-            <p className="font-pixel text-[7px] text-center py-2" style={{ color: C.textGhost }}>nothing yet. show me how you write.</p>
+            <p className="font-pixel text-[7px] text-center py-2" style={{ color: C.textFaint }}>nothing yet. show me how you write.</p>
           )}
 
           {examples.length < 5 && (adding ? (
@@ -164,13 +164,13 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0 
                 <button onClick={addExample} disabled={!newPost.trim()}
                   className="font-pixel text-[8px] disabled:opacity-40" style={{ color: tint }}>Add →</button>
                 <button onClick={() => { setNewPost(""); setAdding(false) }}
-                  className="font-pixel text-[8px]" style={{ color: C.textFaint }}>Cancel</button>
+                  className="font-pixel text-[8px]" style={{ color: C.textDim }}>Cancel</button>
               </div>
             </div>
           ) : (
             <button onClick={() => setAdding(true)}
               className="w-full rounded-xl py-3 font-pixel text-[7px] flex items-center justify-center gap-2 transition-colors"
-              style={{ border: `1px dashed ${C.border}`, color: C.textFaint }}>
+              style={{ border: `1px dashed ${C.border}`, color: C.textDim }}>
               + Add a post
             </button>
           ))}
@@ -185,7 +185,7 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0 
 
         <div className="flex items-center justify-between mt-4 mb-2">
           <SectionLabel>Your rules (optional)</SectionLabel>
-          <span className="font-pixel text-[6px]" style={{ color: C.textGhost }}>{customRules.length}/300</span>
+          <span className="font-pixel text-[6px]" style={{ color: C.textFaint }}>{customRules.length}/300</span>
         </div>
         <textarea value={customRules} onChange={(e) => setCustomRules(e.target.value.slice(0, 300))} rows={3}
           placeholder={"Never use hashtags.\nNo emojis.\nDon't sound like a startup."}

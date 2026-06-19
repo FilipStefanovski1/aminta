@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react"
 
 import {
+  FORMS,
   getForm,
   getLevel,
-  getNextStage,
   getStageTint,
   getXpInLevel,
   getXpProgress,
@@ -14,7 +14,14 @@ import type { AmintaStore } from "~lib/storage"
 import { C } from "~lib/theme"
 import { Card, Sprite, SpeechBubble, SpriteMark, XPBar } from "~components/ui"
 
-// State-aware greeting — Aminta reacts to how the day is going.
+const RARITY_COLOR: Record<string, string> = {
+  COMMON:    "#8ca0b0",
+  UNCOMMON:  "#40e898",
+  RARE:      "#40b0ff",
+  EPIC:      "#c0a0ff",
+  LEGENDARY: "#f5d060",
+}
+
 function getLine(xpToday: number, streak: number): string {
   if (xpToday === 0)  return streak > 0 ? `${streak}-day streak. let's keep it.` : "i'm hungry. what are we posting?"
   if (xpToday >= 200) return "we're on fire today."
@@ -24,28 +31,28 @@ function getLine(xpToday: number, streak: number): string {
 
 interface Props {
   store: AmintaStore
-  onWrite: () => void
-  onTeach: () => void
-  onEvolve: () => void
+  onCreate: () => void
+  onTrain: () => void
   onUpdate?: () => void
 }
 
-export default function HomeTab({ store, onWrite, onTeach, onEvolve, onUpdate }: Props) {
-  const xp        = store.xp ?? 0
-  const level     = getLevel(xp)
-  const stage     = getForm(xp).name
-  const tint      = getStageTint(xp)
-  const progress  = getXpProgress(xp)
-  const xpInLevel = getXpInLevel(xp)
-  const xpToday   = store.xpToday ?? 0
-  const streak    = store.streak ?? 0
+export default function HomeTab({ store, onCreate, onTrain, onUpdate }: Props) {
+  const xp         = store.xp ?? 0
+  const level      = getLevel(xp)
+  const stage      = getForm(xp).name
+  const tint       = getStageTint(xp)
+  const progress   = getXpProgress(xp)
+  const xpInLevel  = getXpInLevel(xp)
+  const xpToday    = store.xpToday ?? 0
+  const streak     = store.streak ?? 0
   const voiceMatch = computeDNAStrength(store)
-  const mission   = getMissionProgress(store)
-  const next      = getNextStage(xp)
+  const mission    = getMissionProgress(store)
+  const nextLevel  = level < FORMS.length ? level + 1 : null
+  const currentForm = getForm(xp)
 
-  // Cycling speech bubble
   const line = getLine(xpToday, streak)
   const [visible, setVisible] = useState(true)
+
   useEffect(() => {
     const iv = setInterval(() => {
       setVisible(false)
@@ -58,18 +65,17 @@ export default function HomeTab({ store, onWrite, onTeach, onEvolve, onUpdate }:
     tryCompleteDailyMissions(store).then(ok => { if (ok && onUpdate) onUpdate() })
   }, [mission.generates, mission.published, mission.dnaTrained])
 
-  // Today's plan — what Aminta wants, in plain language.
   const tasks = [
-    { label: "Write one post",     done: mission.published >= 1,  action: onWrite  },
-    { label: "Reply to someone",   done: mission.generates >= 3,  action: onWrite  },
-    { label: "Teach me your voice", done: mission.dnaTrained,     action: onTeach  },
+    { label: "Write one post",      done: mission.published >= 1, action: onCreate },
+    { label: "Reply to someone",    done: mission.generates >= 3, action: onCreate },
+    { label: "Teach me your voice", done: mission.dnaTrained,     action: onTrain  },
   ]
   const allDone = tasks.every(t => t.done)
 
   return (
     <div className="space-y-3 pb-4">
 
-      {/* ── COMPANION CARD — single source of truth ── */}
+      {/* ── COMPANION CARD ── */}
       <Card pad={false} glow={tint}
         style={{
           backgroundImage: "radial-gradient(circle, #1c2030 1px, transparent 1px)",
@@ -80,15 +86,12 @@ export default function HomeTab({ store, onWrite, onTeach, onEvolve, onUpdate }:
           <p className="font-pixel text-[8px] text-center tracking-widest mb-3" style={{ color: tint }}>
             {stage} · Lv.{level}
           </p>
-
           <div className="mb-3">
             <SpeechBubble text={line} visible={visible} />
           </div>
-
           <div className="flex justify-center mt-2 mb-4">
             <Sprite xp={xp} size={96} />
           </div>
-
           <div className="flex items-baseline justify-between mb-1.5">
             <span className="font-pixel text-[8px]" style={{ color: C.textDim }}>Level {level}</span>
             <span className="font-pixel text-[7px]" style={{ color: tint }}>{xpInLevel} / {XP_PER_LEVEL} XP</span>
@@ -97,7 +100,7 @@ export default function HomeTab({ store, onWrite, onTeach, onEvolve, onUpdate }:
         </div>
       </Card>
 
-      {/* ── TODAY — Aminta tells the user what to do ── */}
+      {/* ── TODAY'S MISSIONS ── */}
       <Card pad={false} className="overflow-hidden animate-card-in" style={{ animationDelay: "30ms" }}>
         <div className="flex items-center justify-between px-4 py-2.5" style={{ borderBottom: `1px solid ${C.border}` }}>
           <p className="font-pixel text-[7px]" style={{ color: C.text }}>Today</p>
@@ -105,7 +108,6 @@ export default function HomeTab({ store, onWrite, onTeach, onEvolve, onUpdate }:
             ? <span className="font-pixel text-[6px]" style={{ color: tint }}>All done ✓</span>
             : <span className="font-pixel text-[6px]" style={{ color: C.textGhost }}>{tasks.filter(t => t.done).length}/{tasks.length}</span>}
         </div>
-
         <div>
           {tasks.map((t, i) => (
             <button
@@ -123,18 +125,17 @@ export default function HomeTab({ store, onWrite, onTeach, onEvolve, onUpdate }:
             </button>
           ))}
         </div>
-
         <div className="px-4 py-3" style={{ borderTop: `1px solid ${C.border}` }}>
           <button
-            onClick={onWrite}
+            onClick={onCreate}
             className="btn-pixel w-full py-2.5 rounded-xl font-pixel text-[9px] text-black"
             style={{ backgroundColor: tint }}>
-            Write with Aminta →
+            Create with Aminta →
           </button>
         </div>
       </Card>
 
-      {/* ── PROGRESS ── */}
+      {/* ── STATS ── */}
       <div className="grid grid-cols-3 gap-2 animate-card-in" style={{ animationDelay: "60ms" }}>
         {[
           { label: "Streak",      value: streak > 0 ? `${streak}d` : "—" },
@@ -148,24 +149,80 @@ export default function HomeTab({ store, onWrite, onTeach, onEvolve, onUpdate }:
         ))}
       </div>
 
-      {/* ── NEXT EVOLUTION PREVIEW ── */}
-      {next && (
-        <button
-          onClick={onEvolve}
-          className="w-full animate-card-in"
-          style={{ animationDelay: "90ms" }}>
-          <Card className="flex items-center gap-3 hover:bg-white/[0.01] transition-colors">
-            <div className="shrink-0 opacity-40">
-              <SpriteMark tint={tint} size={32} />
+      {/* ── EVOLUTION PATH (was a separate tab) ── */}
+      <div className="animate-card-in space-y-2" style={{ animationDelay: "90ms" }}>
+        <p className="font-pixel text-[7px] uppercase tracking-widest px-1" style={{ color: C.textFaint }}>Evolution path</p>
+
+        {/* Current form blurb */}
+        <div
+          className="flex items-center gap-3 rounded-xl px-3 py-3"
+          style={{ backgroundColor: currentForm.color + "0e", border: `1.5px solid ${currentForm.color}40` }}>
+          <div className="aminta-glow shrink-0">
+            <SpriteMark tint={currentForm.color} size={28} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-pixel text-[8px]" style={{ color: currentForm.color }}>{currentForm.name}</p>
+            <p className="text-[10px] mt-1 leading-snug" style={{ color: C.textFaint }}>{currentForm.blurb}</p>
+          </div>
+          <span className="font-pixel text-[6px] px-1.5 py-1 rounded shrink-0" style={{ backgroundColor: currentForm.color, color: "#000" }}>NOW</span>
+        </div>
+
+        {/* Path list — all forms */}
+        <div className="space-y-1">
+          {FORMS.filter(f => f.level !== level).map((form) => {
+            const unlocked = level > form.level
+            const isNext   = form.level === nextLevel
+            const show     = form.revealed || unlocked
+
+            return (
+              <div key={form.level}
+                className="flex items-center gap-3 rounded-xl px-3 py-2"
+                style={{
+                  backgroundColor: C.card,
+                  border: `1px solid ${isNext ? form.color + "44" : C.border}`,
+                  opacity: unlocked ? 1 : 0.55,
+                }}>
+                <div className="shrink-0" style={{ filter: unlocked ? "none" : "grayscale(1)" }}>
+                  {show
+                    ? <SpriteMark tint={form.color} size={22} />
+                    : <div className="w-[22px] h-[18px] flex items-center justify-center font-pixel text-[10px]" style={{ color: C.textGhost }}>?</div>}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-pixel text-[7px]" style={{ color: show ? (unlocked ? form.color : C.textDim) : C.textGhost }}>
+                    {show ? form.name : "???"}
+                  </p>
+                  <p className="font-pixel text-[5px] mt-0.5 uppercase tracking-widest"
+                    style={{ color: unlocked ? RARITY_COLOR[form.rarity] + "99" : C.textGhost }}>
+                    {form.rarity}
+                  </p>
+                </div>
+                <div className="shrink-0">
+                  {unlocked
+                    ? <span className="font-pixel text-[7px]" style={{ color: form.color }}>✓</span>
+                    : isNext
+                      ? <span className="font-pixel text-[6px]" style={{ color: tint }}>+{form.level * XP_PER_LEVEL - xp} XP</span>
+                      : <span className="font-pixel text-[5px]" style={{ color: C.textGhost }}>Lv.{form.level}</span>}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* How to grow */}
+        <div className="rounded-2xl p-3 space-y-2" style={{ backgroundColor: C.card, border: `1px solid ${C.border}` }}>
+          <p className="font-pixel text-[7px] uppercase tracking-widest" style={{ color: C.textFaint }}>How to grow</p>
+          {[
+            ["Post a tweet",  "+50 XP"],
+            ["Post a reply",  "+25 XP"],
+            ["Polish & post", "+15 XP"],
+          ].map(([label, gain]) => (
+            <div key={label} className="flex items-center justify-between">
+              <span className="text-[11px]" style={{ color: C.textFaint }}>{label}</span>
+              <span className="font-pixel text-[7px]" style={{ color: tint }}>{gain}</span>
             </div>
-            <div className="flex-1 text-left min-w-0">
-              <p className="font-pixel text-[6px] uppercase tracking-widest" style={{ color: C.textGhost }}>Next evolution</p>
-              <p className="font-pixel text-[8px] mt-1" style={{ color: C.textDim }}>{next.name}</p>
-            </div>
-            <span className="font-pixel text-[7px] shrink-0" style={{ color: tint }}>+{next.xpNeeded} XP →</span>
-          </Card>
-        </button>
-      )}
+          ))}
+        </div>
+      </div>
 
     </div>
   )

@@ -1,10 +1,10 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 
 import { generate as runAI } from "~lib/ai"
 import { getStageTint } from "~lib/evolution"
 import { readActivePost } from "~lib/messaging"
 import { incrementMissionGenerates } from "~lib/missions"
-import { buildMessages, type Mode, type Platform } from "~lib/prompts"
+import { buildMessages, type Mode, type Platform, type Tone } from "~lib/prompts"
 import type { AmintaStore } from "~lib/storage"
 import { C } from "~lib/theme"
 import { incrementGenerations } from "~lib/xp"
@@ -12,83 +12,177 @@ import { incrementGenerations } from "~lib/xp"
 import OutputCard from "~components/OutputCard"
 import { Sprite } from "~components/ui"
 
-// ─── Labels ────────────────────────────────────────────────────────────────
+// ─── Platform icons ────────────────────────────────────────────────────────────
 
-const PLATFORMS: { id: Platform; label: string }[] = [
-  { id: "x",        label: "X" },
-  { id: "linkedin", label: "LinkedIn" },
-  { id: "threads",  label: "Threads" },
+function LinkedInIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+    </svg>
+  )
+}
+
+function XIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.213 5.567 5.95-5.567zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+    </svg>
+  )
+}
+
+function ThreadsIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 192 192" fill="currentColor">
+      <path d="M141.537 88.9883C140.71 88.5919 139.87 88.2104 139.019 87.8451C137.537 60.5382 122.616 44.905 97.5619 44.745C97.4484 44.7443 97.3355 44.7443 97.222 44.7443C82.2364 44.7443 69.7731 51.1406 62.102 62.7807L75.881 72.2328C81.6116 63.5383 90.6052 61.6848 97.2286 61.6848C97.3051 61.6848 97.3819 61.6848 97.4576 61.6855C105.707 61.7381 111.932 64.1366 115.961 68.814C118.893 72.2193 120.854 76.925 121.825 82.8638C114.511 81.6207 106.601 81.2385 98.145 81.7233C74.3247 83.0954 59.0111 96.9879 60.0396 116.292C60.5615 126.084 65.4397 134.508 73.775 140.011C80.8224 144.663 89.899 146.938 99.3323 146.423C111.79 145.74 121.563 140.987 128.381 132.296C133.559 125.696 136.834 117.143 138.28 106.366C144.217 109.949 148.617 114.664 151.047 120.332C155.179 129.967 155.42 145.8 142.501 158.708C131.182 170.016 117.576 174.908 97.0135 175.059C74.2042 174.89 56.9538 167.575 45.7381 153.317C35.2355 139.966 29.8077 120.682 29.6052 96C29.8077 71.3178 35.2355 52.0336 45.7381 38.6827C56.9538 24.4249 74.2039 17.11 97.0132 16.9405C119.988 17.1113 137.539 24.4614 149.184 38.788C154.894 45.8136 159.199 54.6488 162.037 64.9503L178.184 60.6422C174.744 47.9622 169.331 37.0357 161.965 27.974C147.036 9.60668 125.202 0.195148 97.0695 0H96.9569C68.8816 0.19447 47.2921 9.6418 32.7883 28.0793C19.8819 44.4864 13.2244 67.3157 13.0007 95.9325L13 96L13.0007 96.0675C13.2244 124.684 19.8819 147.514 32.7883 163.921C47.2921 182.358 68.8816 191.806 96.9569 192H97.0695C122.03 191.827 139.624 185.292 154.118 170.811C173.081 151.866 172.51 128.119 166.26 113.541C161.776 103.087 153.227 94.5962 141.537 88.9883ZM98.4405 129.507C88.0005 130.095 77.1544 125.409 76.6196 115.372C76.2232 107.93 81.9158 99.626 99.0812 98.6368C101.047 98.5234 102.976 98.468 104.871 98.468C111.106 98.468 116.939 99.0737 122.242 100.233C120.264 124.935 108.662 128.946 98.4405 129.507Z" />
+    </svg>
+  )
+}
+
+// ─── Mode config ───────────────────────────────────────────────────────────────
+
+const MODE_CONFIG: { id: Mode; label: string; sub: string; icon: React.ReactNode }[] = [
+  {
+    id: "tweet",
+    label: "Post",
+    sub: "Create a new post",
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+      </svg>
+    ),
+  },
+  {
+    id: "reply",
+    label: "Reply",
+    sub: "Reply to someone",
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+      </svg>
+    ),
+  },
+  {
+    id: "polish",
+    label: "Polish",
+    sub: "Improve your draft",
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+      </svg>
+    ),
+  },
 ]
 
-const MODES: Mode[] = ["tweet", "reply", "polish"]
+// ─── Platform config ──────────────────────────────────────────────────────────
 
-// What each platform+mode is called, in the user's words.
-const NOUN: Record<Platform, Record<Mode, string>> = {
-  x:        { tweet: "Tweet",         reply: "Reply",   polish: "Polish" },
-  linkedin: { tweet: "Post",          reply: "Comment", polish: "Polish" },
-  threads:  { tweet: "Post",          reply: "Reply",   polish: "Polish" },
-}
+const PLATFORM_CONFIG: { id: Platform; label: string; icon: React.ReactNode }[] = [
+  { id: "linkedin", label: "LinkedIn",    icon: <LinkedInIcon /> },
+  { id: "x",        label: "X (Twitter)", icon: <XIcon /> },
+  { id: "threads",  label: "Threads",     icon: <ThreadsIcon /> },
+]
 
-const CTA: Record<Platform, Record<Mode, string>> = {
-  x:        { tweet: "Write Tweet",   reply: "Write Reply",   polish: "Polish Tweet" },
-  linkedin: { tweet: "Write Post",    reply: "Write Comment", polish: "Polish Post" },
-  threads:  { tweet: "Write Post",    reply: "Write Reply",   polish: "Polish Post" },
-}
+// ─── Tone config ──────────────────────────────────────────────────────────────
 
-const PROMPT: Record<Mode, string> = {
-  tweet:  "what should we post?",
-  reply:  "who are we replying to?",
-  polish: "paste your draft.",
-}
+const TONE_CONFIG: { id: Tone; label: string; desc: string; icon: React.ReactNode }[] = [
+  {
+    id: "direct",
+    label: "Direct",
+    desc: "Short. Clear.",
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+        <circle cx="12" cy="12" r="9" />
+        <circle cx="12" cy="12" r="3" />
+        <line x1="12" y1="2" x2="12" y2="6" />
+        <line x1="12" y1="18" x2="12" y2="22" />
+        <line x1="2" y1="12" x2="6" y2="12" />
+        <line x1="18" y1="12" x2="22" y2="12" />
+      </svg>
+    ),
+  },
+  {
+    id: "witty",
+    label: "Witty",
+    desc: "Clever. Playful.",
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+        <circle cx="12" cy="12" r="9" />
+        <circle cx="9" cy="10.5" r="1" fill="currentColor" stroke="none" />
+        <circle cx="15" cy="10.5" r="1" fill="currentColor" stroke="none" />
+        <path d="M8.5 15 Q12 17.5 15.5 15" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
+  {
+    id: "analytical",
+    label: "Analytical",
+    desc: "Logical. Data.",
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M5 20V14" />
+        <path d="M10 20V8" />
+        <path d="M15 20V11" />
+        <path d="M20 20V4" />
+        <path d="M2 20h20" />
+      </svg>
+    ),
+  },
+  {
+    id: "inspiring",
+    label: "Inspiring",
+    desc: "Bold. Vision.",
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+        <path d="M12 2l2.2 5.6 5.8 1.9-4.3 4 1 5.9L12 16.5l-4.7 2.9 1-5.9-4.3-4 5.8-1.9L12 2z"
+          stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+        <circle cx="4.5" cy="19.5" r="1.1" fill="currentColor" opacity="0.45" />
+        <circle cx="19.5" cy="5" r="0.9" fill="currentColor" opacity="0.45" />
+      </svg>
+    ),
+  },
+]
 
-const PLACEHOLDER: Record<Platform, Record<Mode, string>> = {
+// ─── Placeholder map ─────────────────────────────────────────────────────────
+
+const TOPIC_PLACEHOLDER: Record<Platform, Record<Mode, string>> = {
   x: {
-    tweet:  "A topic, angle or spark…",
+    tweet:  "A topic, angle, or spark…",
     reply:  "Paste the tweet you're replying to…",
     polish: "Paste your rough draft…",
   },
   linkedin: {
-    tweet:  "A topic or story angle…",
-    reply:  "Paste the post you're commenting on…",
+    tweet:  "e.g. AI tools, personal branding, growth…",
+    reply:  "Paste the LinkedIn post you're commenting on…",
     polish: "Paste your draft…",
   },
   threads: {
-    tweet:  "A topic, angle or spark…",
+    tweet:  "A topic, angle, or spark…",
     reply:  "Paste the post you're replying to…",
     polish: "Paste your rough draft…",
   },
 }
 
-// ─── Segmented control ───────────────────────────────────────────────────────
+// ─── Header speech bubble ─────────────────────────────────────────────────────
 
-function Segmented<T extends string>({
-  options,
-  value,
-  onChange,
-  tint,
-}: {
-  options: { id: T; label: string }[]
-  value: T
-  onChange: (v: T) => void
-  tint: string
-}) {
+function HeaderBubble({ text }: { text: string }) {
   return (
-    <div className="flex gap-1 p-1 rounded-xl" style={{ backgroundColor: C.cardInner, border: `1px solid ${C.border}` }}>
-      {options.map((o) => {
-        const active = value === o.id
-        return (
-          <button
-            key={o.id}
-            onClick={() => onChange(o.id)}
-            className="flex-1 py-2 rounded-lg font-pixel text-[7px] transition-all"
-            style={{
-              backgroundColor: active ? tint : "transparent",
-              color: active ? "#000" : C.textFaint,
-            }}>
-            {o.label}
-          </button>
-        )
-      })}
+    <div className="relative ml-2">
+      <div
+        className="px-2.5 py-2 text-[9.5px] font-medium leading-snug"
+        style={{
+          background: "#fff",
+          border: "2px solid #000",
+          boxShadow: "2px 2px 0 #000",
+          color: "#000",
+          maxWidth: 90,
+        }}>
+        {text}
+      </div>
+      <svg
+        width="8" height="10" viewBox="0 0 8 10"
+        style={{ position: "absolute", left: -7, top: 10, imageRendering: "pixelated" }}>
+        <polygon points="8,0 8,10 0,5" fill="#000" />
+        <polygon points="8,2 8,8 2,5" fill="#fff" />
+      </svg>
     </div>
   )
 }
@@ -100,28 +194,34 @@ interface Props {
   onXPAwarded: () => void
   onLevelUp: (level: number, stage: string) => void
   initialPlatform?: Platform
+  onTeach?: () => void
 }
 
-export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, initialPlatform = "x" }: Props) {
+export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, initialPlatform = "x", onTeach }: Props) {
   const [platform, setPlatform] = useState<Platform>(initialPlatform)
   const [mode,     setMode]     = useState<Mode>("tweet")
-  const [input,    setInput]    = useState("")
+  const [tone,     setTone]     = useState<Tone>("direct")
+  const [hoveredTone, setHoveredTone] = useState<Tone | null>(null)
+  const [topic,    setTopic]    = useState("")
+  const [context,  setContext]  = useState("")
   const [output,   setOutput]   = useState("")
   const [loading,  setLoading]  = useState(false)
   const [error,    setError]    = useState("")
   const [genKey,   setGenKey]   = useState(0)
 
+  useEffect(() => {
+    setPlatform(initialPlatform)
+  }, [initialPlatform])
+
   const xp   = store.xp ?? 0
   const tint = getStageTint(xp)
 
   const reset = () => { setError(""); setOutput("") }
-  const switchPlatform = (p: Platform) => { if (p !== platform) { setPlatform(p); reset() } }
-  const switchMode     = (m: Mode)     => { if (m !== mode)     { setMode(m); reset() } }
 
   const pull = async () => {
     setError("")
     const res = await readActivePost(platform)
-    if (res.ok && res.text) setInput(res.text)
+    if (res.ok && res.text) setTopic(res.text)
     else setError(res.error ?? "Couldn't read the post.")
   }
 
@@ -129,10 +229,11 @@ export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, initialP
     reset()
     if (!store.apiKey) { setError("Add your AI key in Settings first."); return }
     if (!store.voice)  { setError("Teach Aminta your voice first — go to Teach."); return }
-    if (!input.trim()) { setError("Give Aminta something to work with."); return }
+    const combined = topic.trim() + (context.trim() ? `\n\nAdditional context: ${context.trim()}` : "")
+    if (!combined) { setError("Give Aminta something to work with."); return }
     setLoading(true)
     try {
-      const messages = buildMessages(platform, mode, store.voice, input, store.tweetDNA ?? [])
+      const messages = buildMessages(platform, mode, store.voice, combined, store.tweetDNA ?? [], tone)
       const text = await runAI(store.apiKey, store.model, messages)
       setOutput(text)
       setGenKey(k => k + 1)
@@ -145,64 +246,221 @@ export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, initialP
     }
   }
 
-  const canGenerate = !!store.apiKey && !!store.voice && !!input.trim()
-  const isReply = mode === "reply"
+  const canGenerate = !!store.apiKey && !!store.voice && !!topic.trim()
+  const topicLabel =
+    mode === "reply"  ? "Who are we replying to?" :
+    mode === "polish" ? "Your draft"               :
+                        "What's this about?"
 
   return (
-    <div className="space-y-3 pb-4">
+    <div className="space-y-4 pb-4">
 
-      {/* ── Aminta presence ── */}
-      <div className="flex items-center gap-3 px-1">
-        <Sprite xp={xp} size={40} float />
-        <p className="font-pixel text-[9px]" style={{ color: C.text }}>{PROMPT[mode]}</p>
+      {/* ── Header ── */}
+      <div className="flex items-start justify-between gap-2 pt-1">
+        <h2 className="flex-1 text-[16px] font-semibold text-white leading-snug">
+          What are we<br />creating today?
+        </h2>
+        <div className="flex items-start gap-0 shrink-0">
+          <div style={{ marginTop: 6 }}>
+            <Sprite xp={xp} size={56} float />
+          </div>
+          <HeaderBubble text="I'll help make it great." />
+        </div>
       </div>
 
-      {/* ── Platform ── */}
-      <Segmented options={PLATFORMS} value={platform} onChange={switchPlatform} tint={tint} />
+      {/* ── Mode cards ── */}
+      <div className="grid grid-cols-3 gap-2">
+        {MODE_CONFIG.map((m) => {
+          const active = mode === m.id
+          return (
+            <button
+              key={m.id}
+              onClick={() => { setMode(m.id); reset() }}
+              className="flex flex-col items-start gap-1.5 rounded-xl p-3 text-left transition-all"
+              style={{
+                backgroundColor: active ? tint : C.card,
+                border: `1.5px solid ${active ? tint : C.border}`,
+                color: active ? "#000" : C.text,
+              }}>
+              <span style={{ color: active ? "#000" : C.textFaint, lineHeight: 1 }}>{m.icon}</span>
+              <span className="font-semibold text-[11px]">{m.label}</span>
+              <span className="text-[9px] leading-tight" style={{ opacity: 0.65 }}>{m.sub}</span>
+            </button>
+          )
+        })}
+      </div>
 
-      {/* ── Mode ── */}
-      <Segmented
-        options={MODES.map(m => ({ id: m, label: NOUN[platform][m] }))}
-        value={mode}
-        onChange={switchMode}
-        tint={tint}
-      />
+      {/* ── Platform pills ── */}
+      <div className="space-y-1.5">
+        <p className="text-[11px] font-medium" style={{ color: C.textFaint }}>Platform</p>
+        <div className="flex gap-2">
+          {PLATFORM_CONFIG.map((p) => {
+            const active = platform === p.id
+            return (
+              <button
+                key={p.id}
+                onClick={() => { setPlatform(p.id); reset() }}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl flex-1 justify-center transition-all text-[10px] font-medium"
+                style={{
+                  border: `1.5px solid ${active ? tint : C.border}`,
+                  backgroundColor: active ? tint + "18" : C.card,
+                  color: active ? tint : C.textDim,
+                }}>
+                <span style={{ color: active ? tint : C.textGhost }}>{p.icon}</span>
+                <span>{p.label}</span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
 
-      {/* ── Input ── */}
-      <div className="space-y-2">
-        <textarea
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          rows={4}
-          placeholder={PLACEHOLDER[platform][mode]}
-          className="input-pixel w-full rounded-xl px-3 py-3 text-sm resize-none"
-        />
-        {isReply && (
+      {/* ── Topic input ── */}
+      <div className="space-y-1.5">
+        <p className="text-[11px] font-medium" style={{ color: C.textFaint }}>{topicLabel}</p>
+        <div className="relative">
+          <textarea
+            value={topic}
+            onChange={(e) => setTopic(e.target.value)}
+            rows={3}
+            placeholder={TOPIC_PLACEHOLDER[platform][mode]}
+            className="input-pixel w-full rounded-xl px-3 py-2.5 text-sm resize-none"
+            style={{ paddingBottom: "22px" }}
+          />
+          <span className="absolute bottom-2 right-3 text-[9px]" style={{ color: C.textGhost }}>
+            {topic.length} / 120
+          </span>
+        </div>
+        {mode === "reply" && (
           <button
             onClick={pull}
-            className="w-full rounded-lg py-2 font-pixel text-[7px] transition-colors"
+            className="w-full rounded-lg py-2 text-[11px] font-medium transition-colors"
             style={{ border: `1px solid ${C.border}`, color: C.textFaint }}>
-            ↑ Pull from {platform === "linkedin" ? "LinkedIn" : "X"}
+            ↑ Pull from page
           </button>
         )}
       </div>
 
-      {/* ── Generate ── */}
-      <button
-        onClick={generate}
-        disabled={loading || !canGenerate}
-        className={`btn-pixel w-full rounded-xl py-3 font-pixel text-[9px] text-black transition-opacity ${
-          loading ? "cursor-wait opacity-80" : !canGenerate ? "opacity-40 cursor-not-allowed" : ""
-        }`}
-        style={{ backgroundColor: tint }}>
-        {loading ? (
-          <span className="dot-wave flex items-center justify-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-black/60" />
-            <span className="w-1.5 h-1.5 rounded-full bg-black/60" />
-            <span className="w-1.5 h-1.5 rounded-full bg-black/60" />
+      {/* ── Context input ── */}
+      <div className="space-y-1.5">
+        <p className="text-[11px] font-medium" style={{ color: C.textFaint }}>
+          Additional context{" "}
+          <span style={{ color: C.textGhost, fontWeight: 400 }}>(optional)</span>
+        </p>
+        <div className="relative">
+          <textarea
+            value={context}
+            onChange={(e) => setContext(e.target.value)}
+            rows={2}
+            placeholder="Add key points, ideas, or notes…"
+            className="input-pixel w-full rounded-xl px-3 py-2.5 text-sm resize-none"
+            style={{ paddingBottom: "22px" }}
+          />
+          <span className="absolute bottom-2 right-3 text-[9px]" style={{ color: C.textGhost }}>
+            {context.length} / 300
           </span>
-        ) : `${CTA[platform][mode]} →`}
+        </div>
+      </div>
+
+      {/* ── Tone ── */}
+      <div className="space-y-1.5">
+        <p className="text-[11px] font-medium" style={{ color: C.textFaint }}>Tone</p>
+        <div className="grid grid-cols-4 gap-1.5">
+          {TONE_CONFIG.map((t) => {
+            const active  = tone === t.id
+            const hovered = hoveredTone === t.id && !active
+            return (
+              <button
+                key={t.id}
+                onClick={() => setTone(t.id)}
+                onMouseEnter={() => setHoveredTone(t.id)}
+                onMouseLeave={() => setHoveredTone(null)}
+                className="flex flex-col items-center gap-1.5 pt-3 pb-2.5 px-1 rounded-xl"
+                style={{
+                  backgroundColor: active ? tint + "14" : C.card,
+                  border: `1.5px solid ${active ? tint : hovered ? tint + "55" : C.border}`,
+                  transform: active ? "translateY(-2px)" : hovered ? "scale(1.02)" : "none",
+                  boxShadow: active ? `0 4px 18px ${tint}22, 0 2px 6px rgba(0,0,0,0.35)` : "none",
+                  transition: "transform 0.13s ease, box-shadow 0.13s ease, border-color 0.13s ease, background-color 0.13s ease",
+                }}>
+                <span style={{
+                  color: active ? "#fff" : hovered ? tint + "cc" : C.textGhost,
+                  transition: "color 0.13s ease",
+                  lineHeight: 1,
+                }}>
+                  {t.icon}
+                </span>
+                <span
+                  className="font-semibold text-[10px] leading-none"
+                  style={{ color: active ? tint : hovered ? C.text : C.textDim }}>
+                  {t.label}
+                </span>
+                <span
+                  className="text-[8px] leading-none"
+                  style={{ color: active ? tint + "99" : C.textGhost }}>
+                  {t.desc}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* ── Aminta's brain ── */}
+      <button
+        className="w-full rounded-xl p-3 text-left transition-all"
+        style={{ backgroundColor: C.card, border: `1px solid ${C.border}` }}
+        onClick={onTeach}
+        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = tint + "55" }}
+        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = C.border }}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <svg width="14" height="12" viewBox="0 0 16 13" style={{ imageRendering: "pixelated", flexShrink: 0 }}>
+              <rect x="2" y="0" width="2" height="3" fill={tint} />
+              <rect x="12" y="0" width="2" height="3" fill={tint} />
+              <rect x="3" y="3" width="10" height="9" fill={tint} />
+              <rect x="4" y="6" width="2" height="2" fill="#1f1f1f" />
+              <rect x="10" y="6" width="2" height="2" fill="#1f1f1f" />
+            </svg>
+            <div>
+              <p className="text-[11px] font-semibold" style={{ color: tint }}>Aminta's brain</p>
+              <p className="text-[9px]" style={{ color: C.textGhost }}>Using your voice and knowledge</p>
+            </div>
+          </div>
+          <span className="text-lg" style={{ color: C.textGhost }}>›</span>
+        </div>
+        <div className="flex gap-1.5 mt-2 flex-wrap">
+          {["Your voice", "Your style", "Your topics"].map((tag) => (
+            <span
+              key={tag}
+              className="px-2 py-0.5 rounded-full text-[8px] font-medium"
+              style={{ border: `1px solid ${tint}44`, color: tint, backgroundColor: tint + "12" }}>
+              {tag}
+            </span>
+          ))}
+        </div>
       </button>
+
+      {/* ── Generate ── */}
+      <div className="space-y-2">
+        <button
+          onClick={generate}
+          disabled={loading || !canGenerate}
+          className={`btn-pixel w-full rounded-xl py-3.5 font-pixel text-[10px] text-black transition-opacity ${
+            loading ? "cursor-wait opacity-80" : !canGenerate ? "opacity-40 cursor-not-allowed" : ""
+          }`}
+          style={{ backgroundColor: tint }}>
+          {loading ? (
+            <span className="dot-wave flex items-center justify-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-black/60" />
+              <span className="w-1.5 h-1.5 rounded-full bg-black/60" />
+              <span className="w-1.5 h-1.5 rounded-full bg-black/60" />
+            </span>
+          ) : "Generate with Aminta ✦"}
+        </button>
+        <p className="text-center text-[10px]" style={{ color: C.textGhost }}>
+          ⚡ 1 generation = ~15 XP
+        </p>
+      </div>
 
       {error && <p className="text-[11px] text-red-400 animate-fade-in px-1">{error}</p>}
 
@@ -213,7 +471,10 @@ export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, initialP
           mode={mode}
           platform={platform}
           currentXP={xp}
-          onXPAwarded={(amount, levelUp) => { onXPAwarded(); if (levelUp) onLevelUp(levelUp.level, levelUp.stage) }}
+          onXPAwarded={(amount, levelUp) => {
+            onXPAwarded()
+            if (levelUp) onLevelUp(levelUp.level, levelUp.stage)
+          }}
         />
       )}
 

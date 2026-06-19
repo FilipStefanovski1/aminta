@@ -38,7 +38,7 @@ export function Card({
 
 export function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="font-pixel text-[7px] uppercase tracking-widest mb-2" style={{ color: C.textFaint }}>
+    <p className="font-pixel text-[7px] uppercase tracking-widest mb-2" style={{ color: C.textDim }}>
       {children}
     </p>
   )

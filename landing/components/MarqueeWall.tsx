@@ -1,8 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
-
-type DemonStageDetail = { active: boolean; color?: string };
+import { useMemo, type CSSProperties } from "react";
 
 type CardKind = "placeholder" | "xp" | "founder" | "truth";
 
@@ -214,16 +212,7 @@ function MobileFeed({ cards }: { cards: WallCard[] }) {
 }
 
 export default function MarqueeWall() {
-  const [accent, setAccent] = useState("#74f7b5");
-
-  useEffect(() => {
-    const onStage = (e: Event) => {
-      const detail = (e as CustomEvent<DemonStageDetail>).detail;
-      if (detail.active && detail.color) setAccent(detail.color);
-    };
-    window.addEventListener("demon-stage", onStage);
-    return () => window.removeEventListener("demon-stage", onStage);
-  }, []);
+  const accent = "#74f7b5";
 
   const columns = useMemo(() => {
     const c1 = CARDS.filter((_, i) => i % 3 === 0);

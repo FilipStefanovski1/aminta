@@ -103,6 +103,16 @@ interface CardProps {
   highlight: boolean;
 }
 
+function CryptoIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <path d="M9 9h6M9 12h6M9 15h4" />
+      <path d="M14 9v2a2 2 0 0 1-2 2" />
+    </svg>
+  );
+}
+
 function PricingCard({
   name,
   price,
@@ -163,6 +173,16 @@ function PricingCard({
       >
         {cta}
       </a>
+
+      {highlight && (
+        <a
+          href="#wallet"
+          className="mt-2 flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-medium text-muted border border-line transition-all duration-200 hover:border-accent/30 hover:text-accent/80 hover:bg-accent/5"
+        >
+          <CryptoIcon />
+          Pay with crypto
+        </a>
+      )}
 
       <ul className="mt-8 space-y-3">
         {features.map((f) => (
