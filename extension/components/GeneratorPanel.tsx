@@ -404,62 +404,22 @@ export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, initialP
         </div>
       </div>
 
-      {/* ── Aminta's brain ── */}
-      <button
-        className="w-full rounded-xl p-3 text-left transition-all"
-        style={{ backgroundColor: C.card, border: `1px solid ${C.border}` }}
-        onClick={onTeach}
-        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = tint + "55" }}
-        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = C.border }}>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <svg width="14" height="12" viewBox="0 0 16 13" style={{ imageRendering: "pixelated", flexShrink: 0 }}>
-              <rect x="2" y="0" width="2" height="3" fill={tint} />
-              <rect x="12" y="0" width="2" height="3" fill={tint} />
-              <rect x="3" y="3" width="10" height="9" fill={tint} />
-              <rect x="4" y="6" width="2" height="2" fill="#1f1f1f" />
-              <rect x="10" y="6" width="2" height="2" fill="#1f1f1f" />
-            </svg>
-            <div>
-              <p className="text-[11px] font-semibold" style={{ color: tint }}>Aminta's brain</p>
-              <p className="text-[9px]" style={{ color: C.textGhost }}>Using your voice and knowledge</p>
-            </div>
-          </div>
-          <span className="text-lg" style={{ color: C.textGhost }}>›</span>
-        </div>
-        <div className="flex gap-1.5 mt-2 flex-wrap">
-          {["Your voice", "Your style", "Your topics"].map((tag) => (
-            <span
-              key={tag}
-              className="px-2 py-0.5 rounded-full text-[8px] font-medium"
-              style={{ border: `1px solid ${tint}44`, color: tint, backgroundColor: tint + "12" }}>
-              {tag}
-            </span>
-          ))}
-        </div>
-      </button>
-
       {/* ── Generate ── */}
-      <div className="space-y-2">
-        <button
-          onClick={generate}
-          disabled={loading || !canGenerate}
-          className={`btn-pixel w-full rounded-xl py-3.5 font-pixel text-[10px] text-black transition-opacity ${
-            loading ? "cursor-wait opacity-80" : !canGenerate ? "opacity-40 cursor-not-allowed" : ""
-          }`}
-          style={{ backgroundColor: tint }}>
-          {loading ? (
-            <span className="dot-wave flex items-center justify-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-black/60" />
-              <span className="w-1.5 h-1.5 rounded-full bg-black/60" />
-              <span className="w-1.5 h-1.5 rounded-full bg-black/60" />
-            </span>
-          ) : "Generate with Aminta ✦"}
-        </button>
-        <p className="text-center text-[10px]" style={{ color: C.textGhost }}>
-          ⚡ 1 generation = ~15 XP
-        </p>
-      </div>
+      <button
+        onClick={generate}
+        disabled={loading || !canGenerate}
+        className={`btn-pixel w-full rounded-xl py-3.5 font-pixel text-[10px] text-black transition-opacity ${
+          loading ? "cursor-wait opacity-80" : !canGenerate ? "opacity-40 cursor-not-allowed" : ""
+        }`}
+        style={{ backgroundColor: tint }}>
+        {loading ? (
+          <span className="dot-wave flex items-center justify-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-black/60" />
+            <span className="w-1.5 h-1.5 rounded-full bg-black/60" />
+            <span className="w-1.5 h-1.5 rounded-full bg-black/60" />
+          </span>
+        ) : "Generate"}
+      </button>
 
       {error && <p className="text-[11px] text-red-400 animate-fade-in px-1">{error}</p>}
 

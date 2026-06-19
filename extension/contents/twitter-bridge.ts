@@ -167,13 +167,17 @@ function buildBar(): HTMLElement {
       "border:2px solid #000",
       "box-shadow:2px 2px 0 #000",
       "border-radius:6px",
-      "padding:4px 8px",
+      "padding:4px 10px",
       "font-family:'Press Start 2P',monospace",
       "font-size:7px",
+      "line-height:1",
+      "height:24px",
       "cursor:pointer",
       "transition:transform 0.08s,box-shadow 0.08s",
       "white-space:nowrap",
       "flex-shrink:0",
+      "display:inline-flex",
+      "align-items:center",
     ].join(";")
     btn.onmousedown = () => { btn.style.transform = "translate(1px,1px)"; btn.style.boxShadow = "1px 1px 0 #000" }
     btn.onmouseup   = () => { btn.style.transform = ""; btn.style.boxShadow = "2px 2px 0 #000" }
@@ -211,7 +215,7 @@ function buildBar(): HTMLElement {
   status.textContent = "Aminta"
 
   const generateBtn = makeBtn("+ Generate", () => runGenerate(bar, "tweet"))
-  const polishBtn   = makeBtn("✨ Polish",   () => runGenerate(bar, "polish"), false)
+  const polishBtn   = makeBtn("+ Polish",   () => runGenerate(bar, "polish"), false)
 
   bar.append(generateBtn, polishBtn, divider, keywords, status)
 

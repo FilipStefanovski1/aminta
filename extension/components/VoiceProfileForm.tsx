@@ -23,7 +23,52 @@ const STYLE_PREVIEWS: Record<string, string> = {
   Analytical:   "Engagement peaks 8–10 AM and 6–8 PM. That's the window.",
 }
 
+const INFO_TIPS: Record<string, string> = {
+  niche:        "Be specific — 'crypto' is too broad, 'DeFi protocol security' is useful. Aminta uses this to stay on-topic when generating.",
+  voice:        "Pick the style closest to how you actually write, not how you want to write. Aminta mimics your current voice, not an ideal one.",
+  examples:     "Paste 3–5 real posts you've written. The more authentic (even rough drafts), the better Aminta learns your patterns.",
+  inspiration:  "An X handle whose writing style you admire. Aminta blends their rhythm with your voice — not their content.",
+  rules:        "Hard rules Aminta must follow every time. Good examples: 'no hashtags', 'keep under 200 chars', 'never use the word leverage'.",
+}
+
 const inputCls = "input-pixel w-full rounded-xl px-3 py-2.5 text-sm"
+
+function InfoTip({ tip }: { tip: string }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <span className="relative inline-flex items-center ml-1.5">
+      <button
+        onClick={() => setOpen(v => !v)}
+        className="w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold leading-none transition-colors"
+        style={{
+          backgroundColor: open ? C.border : "transparent",
+          border: `1px solid ${C.border}`,
+          color: C.textDim,
+        }}>
+        i
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div
+            className="absolute left-0 top-6 z-20 rounded-xl p-3 text-[11px] leading-relaxed w-56"
+            style={{ backgroundColor: "#2a2a2e", border: `1px solid ${C.border}`, color: C.text, boxShadow: "0 8px 24px rgba(0,0,0,0.4)" }}>
+            {tip}
+          </div>
+        </>
+      )}
+    </span>
+  )
+}
+
+function SectionLabelWithTip({ children, tipKey }: { children: React.ReactNode; tipKey: string }) {
+  return (
+    <div className="flex items-center mb-2" style={{ marginBottom: 8 }}>
+      <p className="font-pixel text-[7px] uppercase tracking-widest" style={{ color: "#8a8a96" }}>{children}</p>
+      <InfoTip tip={INFO_TIPS[tipKey]} />
+    </div>
+  )
+}
 
 export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0 }: Props) {
   const tint = getStageTint(store.xp ?? 0)
@@ -93,15 +138,14 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0 
 
       {/* ── What you write about ── */}
       <Card className="animate-card-in" style={{ animationDelay: "30ms" }}>
-        <SectionLabel>What you write about</SectionLabel>
+        <SectionLabelWithTip tipKey="niche">What you write about</SectionLabelWithTip>
         <input value={niche} onChange={(e) => setNiche(e.target.value)}
           placeholder="e.g. indie hacking, AI tools, fitness" className={inputCls} />
-        <p className="text-[10px] mt-2" style={{ color: C.textDim }}>Be specific — vague topics make generic posts.</p>
       </Card>
 
       {/* ── How you sound ── */}
       <Card className="animate-card-in" style={{ animationDelay: "60ms" }}>
-        <SectionLabel>How you sound</SectionLabel>
+        <SectionLabelWithTip tipKey="voice">How you sound</SectionLabelWithTip>
         <div className="grid grid-cols-2 gap-2">
           {VOICE_STYLES.map((s) => {
             const active = voiceStyle === s
@@ -119,7 +163,7 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0 
           })}
         </div>
         {voiceStyle && (
-          <p className="text-[10px] mt-3 italic leading-relaxed pt-2.5" style={{ color: C.textDim, borderTop: `1px solid ${C.border}` }}>
+          <p className="text-[11px] mt-3 italic leading-relaxed pt-2.5" style={{ color: C.textDim, borderTop: `1px solid ${C.border}` }}>
             "{STYLE_PREVIEWS[voiceStyle]}"
           </p>
         )}
@@ -128,12 +172,9 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0 
       {/* ── Things you've written ── */}
       <Card className="animate-card-in" style={{ animationDelay: "90ms" }}>
         <div className="flex items-center justify-between mb-2">
-          <SectionLabel>Things you've written</SectionLabel>
+          <SectionLabelWithTip tipKey="examples">Things you've written</SectionLabelWithTip>
           <span className="font-pixel text-[6px]" style={{ color: C.textFaint }}>{examples.length}/5</span>
         </div>
-        <p className="text-[10px] mb-3" style={{ color: C.textDim }}>
-          Paste a few of your best posts. Aminta learns your voice from these.
-        </p>
 
         <div className="space-y-2">
           {examples.map((post, i) => (
@@ -179,12 +220,12 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0 
 
       {/* ── Who you sound like + rules ── */}
       <Card className="animate-card-in" style={{ animationDelay: "120ms" }}>
-        <SectionLabel>Who you sound like (optional)</SectionLabel>
+        <SectionLabelWithTip tipKey="inspiration">Who you sound like (optional)</SectionLabelWithTip>
         <input value={voiceInspiration} onChange={(e) => setVoiceInspiration(e.target.value)}
           placeholder="@handle, or leave blank" className={inputCls} />
 
-        <div className="flex items-center justify-between mt-4 mb-2">
-          <SectionLabel>Your rules (optional)</SectionLabel>
+        <div className="flex items-center justify-between mt-4 mb-0">
+          <SectionLabelWithTip tipKey="rules">Your rules (optional)</SectionLabelWithTip>
           <span className="font-pixel text-[6px]" style={{ color: C.textFaint }}>{customRules.length}/300</span>
         </div>
         <textarea value={customRules} onChange={(e) => setCustomRules(e.target.value.slice(0, 300))} rows={3}
