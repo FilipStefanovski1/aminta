@@ -161,8 +161,8 @@ export function Sprite({
       <rect x="2" y="0" width="2" height="3" fill={tint} />
       <rect x="12" y="0" width="2" height="3" fill={tint} />
       <rect x="3" y="3" width="10" height="9" fill={tint} />
-      <rect x="4" y="6" width="2" height={blink ? 0 : 2} fill="#0d0d0f" />
-      <rect x="10" y="6" width="2" height={blink ? 0 : 2} fill="#0d0d0f" />
+      <rect x="4" y="6" width="2" height={blink ? 0 : 2} fill="#1f1f1f" />
+      <rect x="10" y="6" width="2" height={blink ? 0 : 2} fill="#1f1f1f" />
     </svg>
   )
 }
@@ -175,8 +175,8 @@ export function SpriteMark({ tint, size = 36 }: { tint: string; size?: number })
       <rect x="2" y="0" width="2" height="3" fill={tint} />
       <rect x="12" y="0" width="2" height="3" fill={tint} />
       <rect x="3" y="3" width="10" height="9" fill={tint} />
-      <rect x="4" y="6" width="2" height="2" fill="#0d0d0f" />
-      <rect x="10" y="6" width="2" height="2" fill="#0d0d0f" />
+      <rect x="4" y="6" width="2" height="2" fill="#1f1f1f" />
+      <rect x="10" y="6" width="2" height="2" fill="#1f1f1f" />
     </svg>
   )
 }

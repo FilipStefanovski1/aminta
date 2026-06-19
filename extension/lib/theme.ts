@@ -2,12 +2,12 @@
 // Every screen pulls colors, radii and spacing from here so nothing drifts.
 
 export const C = {
-  bg:         "#0d0d0f", // app background
-  card:       "#111318", // standard card surface
-  cardInner:  "#0a0a0c", // inset surfaces (inputs, wells)
-  border:     "#1e2028", // default border / divider
-  borderSoft: "#16171d", // faint inner dividers
-  borderHover:"#2a2a3a", // hover border
+  bg:         "#1f1f1f", // app background — matches landing --color-ink
+  card:       "#242424", // standard card surface — matches landing --color-panel
+  cardInner:  "#1a1a1a", // inset surfaces (inputs, wells)
+  border:     "#343438", // default border / divider — matches landing --color-line
+  borderSoft: "#2a2a2a", // faint inner dividers
+  borderHover:"#444448", // hover border
   text:       "#e7e7ef", // primary text
   textDim:    "#8a8a96", // secondary text
   textFaint:  "#55555f", // tertiary / hints

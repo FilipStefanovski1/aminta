@@ -77,8 +77,8 @@ function LevelUpModal({ data, onDismiss }: { data: LevelUpData; onDismiss: () =>
               <rect x="2" y="0" width="2" height="3" fill={tint} />
               <rect x="12" y="0" width="2" height="3" fill={tint} />
               <rect x="3" y="3" width="10" height="9" fill={tint} />
-              <rect x="4" y="6" width="2" height="2" fill="#0d0d0f" />
-              <rect x="10" y="6" width="2" height="2" fill="#0d0d0f" />
+              <rect x="4" y="6" width="2" height="2" fill="#1f1f1f" />
+              <rect x="10" y="6" width="2" height="2" fill="#1f1f1f" />
             </svg>
           )}
         </div>
@@ -195,7 +195,7 @@ const NAV_ITEMS: { id: Tab; label: string; icon: (active: boolean) => React.Reac
 
 function BottomNav({ active, onChange, tint }: { active: Tab; onChange: (t: Tab) => void; tint: string }) {
   return (
-    <nav className="shrink-0 flex border-t border-[#1e2028] bg-[#0d0d0f]">
+    <nav className="shrink-0 flex border-t border-[#343438] bg-[#1f1f1f]">
       {NAV_ITEMS.map(({ id, label, icon }) => {
         const isActive = active === id
         return (
@@ -252,7 +252,7 @@ function SidePanel() {
 
   if (!store) {
     return (
-      <div className="absolute inset-0 flex items-center justify-center bg-[#0d0d0f]">
+      <div className="absolute inset-0 flex items-center justify-center bg-[#1f1f1f]">
         <p className="font-pixel text-[8px] text-[#333]">loading...</p>
       </div>
     )
@@ -262,7 +262,7 @@ function SidePanel() {
 
   return (
     <SetupGate store={store} onSave={update}>
-      <div className="absolute inset-0 flex flex-col bg-[#0d0d0f] overflow-hidden">
+      <div className="absolute inset-0 flex flex-col bg-[#1f1f1f] overflow-hidden">
 
         {/* ── Modals / overlays ── */}
         {levelUpData && (
@@ -284,8 +284,8 @@ function SidePanel() {
               <rect x="2" y="0" width="2" height="3" fill={tint} />
               <rect x="12" y="0" width="2" height="3" fill={tint} />
               <rect x="3" y="3" width="10" height="9" fill={tint} />
-              <rect x="4" y="6" width="2" height="2" fill="#0d0d0f" />
-              <rect x="10" y="6" width="2" height="2" fill="#0d0d0f" />
+              <rect x="4" y="6" width="2" height="2" fill="#1f1f1f" />
+              <rect x="10" y="6" width="2" height="2" fill="#1f1f1f" />
             </svg>
             <span className="font-pixel text-[8px]" style={{ color: tint }}>Aminta</span>
           </div>

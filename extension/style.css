@@ -5,8 +5,8 @@
 
 :root {
   --mint: #74f7b5;
-  --charcoal: #0d0d0f;
-  --panel: #141720;
+  --charcoal: #1f1f1f;
+  --panel: #242424;
   --border: #252a38;
 }
 
@@ -15,8 +15,8 @@ html, body {
   min-height: 100vh;
   margin: 0;
   padding: 0;
-  background-color: #0d0d0f !important;
-  background: #0d0d0f;
+  background-color: #1f1f1f !important;
+  background: #1f1f1f;
   color: #e7e7ef;
   font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
 }
@@ -44,7 +44,7 @@ html, body {
 
 /* pixel input */
 .input-pixel {
-  background: #0a0a0c;
+  background: #1a1a1a;
   border: 2px solid #252a38;
   color: #e7e7ef;
   outline: none;

@@ -22,7 +22,7 @@ const GROQ_MODELS = [
 const SELECT_STYLE: React.CSSProperties = {
   appearance: "none",
   WebkitAppearance: "none",
-  backgroundColor: "#0a0a0c",
+  backgroundColor: "#1a1a1a",
   color: "#e7e7ef",
   border: "2px solid #252a38",
   borderRadius: 8,
