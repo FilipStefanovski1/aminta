@@ -2,13 +2,15 @@
 
 import { useEffect, useRef } from "react";
 
-const GRID = 24; // must match --grid-size in globals.css
+// Must match --grid-size in globals.css
+const GRID = 24;
 const LIFE = 800;
 const MAX  = 40;
 
 interface Particle {
-  x: number;
-  y: number;
+  // stored in DOCUMENT coordinates so they stay locked to the CSS background grid
+  docX: number;
+  docY: number;
   born: number;
 }
 
@@ -37,19 +39,29 @@ export default function CursorTrail() {
     let raf = 0;
 
     const onMove = (e: MouseEvent) => {
-      const gx = Math.floor(e.clientX / GRID) * GRID;
-      const gy = Math.floor(e.clientY / GRID) * GRID;
+      // Convert viewport mouse position → document position
+      // so snapping aligns with the body background-grid (which scrolls with the page)
+      const docX = e.clientX + window.scrollX;
+      const docY = e.clientY + window.scrollY;
+
+      // Snap to grid in document space
+      const gx = Math.floor(docX / GRID) * GRID;
+      const gy = Math.floor(docY / GRID) * GRID;
+
       const key = `${gx},${gy}`;
       if (key === lastKey) return;
       lastKey = key;
-      particles.push({ x: gx, y: gy, born: performance.now() });
+
+      particles.push({ docX: gx, docY: gy, born: performance.now() });
       if (particles.length > MAX) particles.splice(0, particles.length - MAX);
     };
+
     window.addEventListener("mousemove", onMove, { passive: true });
 
     const draw = (now: number) => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+      // prune expired
       let i = 0;
       while (i < particles.length && now - particles[i].born > LIFE) i++;
       if (i > 0) particles.splice(0, i);
@@ -59,24 +71,22 @@ export default function CursorTrail() {
         const a = Math.pow(1 - t, 1.8);
         if (a < 0.01) continue;
 
-        const sz = GRID - 2;
-        const px = p.x + 1.5;
-        const py = p.y + 1.5;
+        // Convert document coords → current viewport coords for drawing
+        const vx = p.docX - window.scrollX;
+        const vy = p.docY - window.scrollY;
 
         ctx.save();
-
-        // glow
         ctx.shadowColor = "#74f7b5";
         ctx.shadowBlur  = 10 * a;
 
-        // very faint fill so background shows through
+        // near-transparent fill — background visible through it
         ctx.fillStyle = `rgba(116, 247, 181, ${a * 0.07})`;
-        ctx.fillRect(px, py, sz, sz);
+        ctx.fillRect(vx, vy, GRID, GRID);
 
-        // glowing border
+        // glowing mint border snapped perfectly to grid
         ctx.strokeStyle = `rgba(116, 247, 181, ${a * 0.9})`;
         ctx.lineWidth   = 1;
-        ctx.strokeRect(px, py, sz, sz);
+        ctx.strokeRect(vx + 0.5, vy + 0.5, GRID - 1, GRID - 1);
 
         ctx.restore();
       }
