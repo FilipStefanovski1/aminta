@@ -1,10 +1,8 @@
 import { useEffect, useRef, useState } from "react"
-import lvl1Src from "data-base64:~/assets/lvl1-aminta.png"
-import lvl2Src from "data-base64:~/assets/lvl2-aminta.png"
-import lvl3Src from "data-base64:~/assets/lvl3-aminta.png"
 
-import { getLevel, getStageTint } from "~lib/evolution"
+import { getForm, getLevel, getStageTint } from "~lib/evolution"
 import { C } from "~lib/theme"
+import DemonMascot from "~components/DemonMascot"
 
 // ─── Card ──────────────────────────────────────────────────────────────────
 // The one card surface used everywhere. Consistent radius, border, padding.
@@ -116,7 +114,7 @@ export function XPBar({ progress, tint }: { progress: number; tint: string }) {
 }
 
 // ─── Aminta sprite ─────────────────────────────────────────────────────────
-// The single source of truth for the mascot. PNG for Lv.1–3, tinted SVG above.
+// Uses the same DemonMascot pixel art as the landing page, driven by form skin.
 
 export function Sprite({
   xp,
@@ -129,41 +127,13 @@ export function Sprite({
   reacting?: boolean
   float?: boolean
 }) {
-  const level = getLevel(xp)
-  const tint  = getStageTint(xp)
-  const src   = level === 1 ? lvl1Src : level === 2 ? lvl2Src : level === 3 ? lvl3Src : null
+  const form = getForm(xp)
+  const cls  = reacting ? "sprite-react aminta-glow" : float ? "sprite-float aminta-glow" : "aminta-glow"
 
-  const [blink, setBlink] = useState(false)
-  useEffect(() => {
-    let t: ReturnType<typeof setTimeout>
-    const schedule = () => {
-      t = setTimeout(() => {
-        setBlink(true)
-        setTimeout(() => { setBlink(false); schedule() }, 110)
-      }, 3500 + Math.random() * 4500)
-    }
-    schedule()
-    return () => clearTimeout(t)
-  }, [])
-
-  const cls = reacting ? "sprite-react aminta-glow" : float ? "sprite-float aminta-glow" : "aminta-glow"
-
-  if (src) {
-    return (
-      <div className={cls} style={{ width: size, height: size }}>
-        <img src={src} alt="Aminta"
-          style={{ imageRendering: "pixelated", objectFit: "contain", width: "100%", height: "100%" }} />
-      </div>
-    )
-  }
   return (
-    <svg width={size} height={size * 0.8125} viewBox="0 0 16 13" className={cls} style={{ imageRendering: "pixelated" }}>
-      <rect x="2" y="0" width="2" height="3" fill={tint} />
-      <rect x="12" y="0" width="2" height="3" fill={tint} />
-      <rect x="3" y="3" width="10" height="9" fill={tint} />
-      <rect x="4" y="6" width="2" height={blink ? 0 : 2} fill="#1f1f1f" />
-      <rect x="10" y="6" width="2" height={blink ? 0 : 2} fill="#1f1f1f" />
-    </svg>
+    <div className={cls} style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <DemonMascot skin={form.skin} size={size} />
+    </div>
   )
 }
 

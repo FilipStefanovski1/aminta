@@ -1,17 +1,15 @@
 import { useEffect, useState } from "react"
-import lvl1Src from "data-base64:~/assets/lvl1-aminta.png"
-import lvl2Src from "data-base64:~/assets/lvl2-aminta.png"
-import lvl3Src from "data-base64:~/assets/lvl3-aminta.png"
 
 import "~style.css"
 
 import ApiKeyForm from "~components/ApiKeyForm"
+import DemonMascot from "~components/DemonMascot"
 import EvolutionsTab from "~components/EvolutionsTab"
 import GeneratorPanel from "~components/GeneratorPanel"
 import HomeTab from "~components/HomeTab"
 import SetupGate from "~components/SetupGate"
 import VoiceProfileForm from "~components/VoiceProfileForm"
-import { getStageTint } from "~lib/evolution"
+import { getForm, getStageTint } from "~lib/evolution"
 import { C } from "~lib/theme"
 import { getStore, setStore, type AmintaStore } from "~lib/storage"
 import type { Platform } from "~lib/prompts"
@@ -58,29 +56,19 @@ function playLevelUpSound() {
 }
 
 function LevelUpModal({ data, onDismiss }: { data: LevelUpData; onDismiss: () => void }) {
-  const tint    = getStageTint((data.level - 1) * 300)
-  const imgSrc  = data.level === 1 ? lvl1Src : data.level === 2 ? lvl2Src : data.level === 3 ? lvl3Src : null
+  const xp      = (data.level - 1) * 300
+  const form    = getForm(xp)
+  const tint    = form.color
   const dialogue = STAGE_DIALOGUE[data.stage] ?? "growing stronger."
   useEffect(() => { playLevelUpSound() }, [])
   return (
     <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/85">
       <div
-        className="animate-card-in mx-4 bg-[#111318] border-2 rounded-2xl p-6 text-center space-y-4 w-full max-w-[260px]"
+        className="animate-card-in mx-4 bg-[#242424] border-2 rounded-2xl p-6 text-center space-y-4 w-full max-w-[260px]"
         style={{ borderColor: tint + "55" }}>
         <p className="font-pixel text-[8px] uppercase tracking-widest" style={{ color: tint }}>Level Up</p>
-        <div className="mx-auto sprite-react aminta-glow" style={{ width: 56, height: 56, display: "inline-block" }}>
-          {imgSrc ? (
-            <img src={imgSrc} alt={`Aminta Lv.${data.level}`}
-              style={{ imageRendering: "pixelated", objectFit: "contain", display: "block", width: "100%", height: "100%" }} />
-          ) : (
-            <svg width="56" height="46" viewBox="0 0 16 13" style={{ imageRendering: "pixelated" }}>
-              <rect x="2" y="0" width="2" height="3" fill={tint} />
-              <rect x="12" y="0" width="2" height="3" fill={tint} />
-              <rect x="3" y="3" width="10" height="9" fill={tint} />
-              <rect x="4" y="6" width="2" height="2" fill="#1f1f1f" />
-              <rect x="10" y="6" width="2" height="2" fill="#1f1f1f" />
-            </svg>
-          )}
+        <div className="mx-auto sprite-react aminta-glow flex justify-center">
+          <DemonMascot skin={form.skin} size={64} />
         </div>
         <div>
           <p className="font-pixel text-2xl text-white">Lv.{data.level}</p>
