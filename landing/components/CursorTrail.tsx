@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 
-const GRID = 18;
+const GRID = 24; // must match --grid-size in globals.css
 const LIFE = 800;
 const MAX  = 40;
 
