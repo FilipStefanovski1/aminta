@@ -220,9 +220,8 @@ export default function OnboardingWizard({ store, onDone }: Props) {
         {step === 3 && (
           <>
             <PrimaryButton onClick={next} disabled={examples.length < 1}>Continue →</PrimaryButton>
-            {examples.length > 0 && examples.length < 3 && (
-              <p className="text-[10px] text-center" style={{ color: C.textGhost }}>Add a couple more for a sharper voice.</p>
-            )}
+            <button onClick={next} className="w-full text-center text-[10px] py-1 transition-colors"
+              style={{ color: C.textGhost }}>Skip for now</button>
           </>
         )}
         {step === 4 && (
