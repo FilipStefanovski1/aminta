@@ -2,9 +2,9 @@
 
 import { useEffect, useRef } from "react";
 
-const GRID = 20;
-const LIFE = 900; // ms
-const MAX  = 36;
+const GRID = 18;
+const LIFE = 800;
+const MAX  = 40;
 
 interface Particle {
   x: number;
@@ -55,31 +55,28 @@ export default function CursorTrail() {
       if (i > 0) particles.splice(0, i);
 
       for (const p of particles) {
-        const t = (now - p.born) / LIFE;           // 0 → 1
-        const a = Math.pow(1 - t, 2);              // ease out²
-
+        const t = (now - p.born) / LIFE;
+        const a = Math.pow(1 - t, 1.8);
         if (a < 0.01) continue;
 
         const sz = GRID - 2;
-        const px = p.x + 1;
-        const py = p.y + 1;
+        const px = p.x + 1.5;
+        const py = p.y + 1.5;
 
         ctx.save();
-        ctx.globalAlpha = a * 0.72;
 
-        // mint fill — bright, no dark base
-        ctx.fillStyle = "#74f7b5";
+        // glow
+        ctx.shadowColor = "#74f7b5";
+        ctx.shadowBlur  = 10 * a;
+
+        // very faint fill so background shows through
+        ctx.fillStyle = `rgba(116, 247, 181, ${a * 0.07})`;
         ctx.fillRect(px, py, sz, sz);
 
-        // white top-left shine strip
-        ctx.fillStyle = `rgba(255,255,255,${0.55 * (1 - t)})`;
-        ctx.fillRect(px, py, sz, 2);
-        ctx.fillRect(px, py, 2, sz);
-
-        // slightly darker bottom-right to give depth
-        ctx.fillStyle = `rgba(30,80,60,${0.4 * (1 - t)})`;
-        ctx.fillRect(px + sz - 2, py, 2, sz);
-        ctx.fillRect(px, py + sz - 2, sz, 2);
+        // glowing border
+        ctx.strokeStyle = `rgba(116, 247, 181, ${a * 0.9})`;
+        ctx.lineWidth   = 1;
+        ctx.strokeRect(px, py, sz, sz);
 
         ctx.restore();
       }
