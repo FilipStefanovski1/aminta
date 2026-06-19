@@ -284,7 +284,6 @@ export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, initialP
               }}>
               <span style={{ color: active ? "#000" : C.textFaint, lineHeight: 1 }}>{m.icon}</span>
               <span className="font-semibold text-[11px]">{m.label}</span>
-              <span className="text-[9px] leading-tight" style={{ opacity: 0.65 }}>{m.sub}</span>
             </button>
           )
         })}
