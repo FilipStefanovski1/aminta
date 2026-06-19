@@ -2,10 +2,9 @@
 
 import { useEffect, useRef } from "react";
 
-const GRID = 26;
-const CELL  = GRID - 3;   // visible cell size (gap between cells)
-const MAX   = 48;
-const LIFE  = 1100;        // ms a cell lives
+const GRID = 20;
+const LIFE = 900; // ms
+const MAX  = 36;
 
 interface Particle {
   x: number;
@@ -51,60 +50,36 @@ export default function CursorTrail() {
     const draw = (now: number) => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // prune dead particles
       let i = 0;
       while (i < particles.length && now - particles[i].born > LIFE) i++;
       if (i > 0) particles.splice(0, i);
 
-      for (let j = 0; j < particles.length; j++) {
-        const p = particles[j];
-        const t  = (now - p.born) / LIFE; // 0 → 1
-        // pop in fast, linger, then fade
-        const a  = t < 0.08
-          ? (t / 0.08)              // 0→1 in first 8% (pop in)
-          : Math.pow(1 - (t - 0.08) / 0.92, 1.6); // eased fade out
-        if (a < 0.005) continue;
+      for (const p of particles) {
+        const t = (now - p.born) / LIFE;           // 0 → 1
+        const a = Math.pow(1 - t, 2);              // ease out²
 
-        // scale: pop up from 60% to 100%, then stay
-        const scale = t < 0.08 ? 0.6 + 0.4 * (t / 0.08) : 1;
-        const sz    = CELL * scale;
-        const off   = (CELL - sz) / 2;
-        const px    = p.x + off + 1.5;
-        const py    = p.y + off + 1.5;
+        if (a < 0.01) continue;
+
+        const sz = GRID - 2;
+        const px = p.x + 1;
+        const py = p.y + 1;
 
         ctx.save();
-        ctx.globalAlpha = a;
+        ctx.globalAlpha = a * 0.72;
 
-        // ── dark base fill ──────────────────────────────────────────
-        ctx.fillStyle = "rgba(12, 22, 18, 0.7)";
+        // mint fill — bright, no dark base
+        ctx.fillStyle = "#74f7b5";
         ctx.fillRect(px, py, sz, sz);
 
-        // ── iridescent gradient overlay ─────────────────────────────
-        // top-left = bright mint, bottom-right = indigo/purple
-        const grad = ctx.createLinearGradient(px, py, px + sz, py + sz);
-        grad.addColorStop(0,    "rgba(116, 247, 181, 0.85)"); // mint
-        grad.addColorStop(0.45, "rgba(56,  192, 255, 0.55)"); // sky
-        grad.addColorStop(1,    "rgba(106, 140, 255, 0.30)"); // indigo
-        ctx.fillStyle = grad;
-        ctx.fillRect(px, py, sz, sz);
+        // white top-left shine strip
+        ctx.fillStyle = `rgba(255,255,255,${0.55 * (1 - t)})`;
+        ctx.fillRect(px, py, sz, 2);
+        ctx.fillRect(px, py, 2, sz);
 
-        // ── top + left edge highlight (glass illusion) ──────────────
-        const hiA = Math.min(a * 0.9, 0.75);
-        ctx.fillStyle = `rgba(255, 255, 255, ${hiA})`;
-        ctx.fillRect(px, py, sz, 1.5);  // top edge
-        ctx.fillRect(px, py, 1.5, sz);  // left edge
-
-        // ── glowing border ──────────────────────────────────────────
-        ctx.strokeStyle = `rgba(116, 247, 181, ${Math.min(a * 0.9, 0.7)})`;
-        ctx.lineWidth = 1;
-        ctx.strokeRect(px + 0.5, py + 0.5, sz - 1, sz - 1);
-
-        // ── inner glow spot (top-left corner) ──────────────────────
-        const spot = ctx.createRadialGradient(px + 3, py + 3, 0, px + 3, py + 3, sz * 0.6);
-        spot.addColorStop(0,   `rgba(200, 255, 230, ${a * 0.5})`);
-        spot.addColorStop(1,   "rgba(0,0,0,0)");
-        ctx.fillStyle = spot;
-        ctx.fillRect(px, py, sz, sz);
+        // slightly darker bottom-right to give depth
+        ctx.fillStyle = `rgba(30,80,60,${0.4 * (1 - t)})`;
+        ctx.fillRect(px + sz - 2, py, 2, sz);
+        ctx.fillRect(px, py + sz - 2, sz, 2);
 
         ctx.restore();
       }
