@@ -198,7 +198,7 @@ export default function HomeTab({ store, onCreate, onTrain, onUpdate }: Props) {
                 </div>
                 <div className="shrink-0">
                   {unlocked
-                    ? <span className="font-pixel text-[7px]" style={{ color: form.color }}>✓</span>
+                    ? <span className="text-base font-bold leading-none" style={{ color: form.color }}>✓</span>
                     : isNext
                       ? <span className="font-pixel text-[6px]" style={{ color: tint }}>+{form.level * XP_PER_LEVEL - xp} XP</span>
                       : <span className="font-pixel text-[5px]" style={{ color: C.textGhost }}>Lv.{form.level}</span>}
