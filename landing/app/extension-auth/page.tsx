@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 
+export const dynamic = "force-dynamic"
+
 type Status = "sending" | "done" | "error"
 
 export default function ExtensionAuthPage() {

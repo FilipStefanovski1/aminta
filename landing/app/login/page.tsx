@@ -3,6 +3,8 @@
 import { useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 
+export const dynamic = "force-dynamic"
+
 function DemonIcon({ size = 32 }: { size?: number }) {
   const s = size / 16
   return (
