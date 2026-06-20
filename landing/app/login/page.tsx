@@ -42,21 +42,19 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState("")
 
-  const supabase = createClient()
-
-  const extId = typeof window !== "undefined"
-    ? new URLSearchParams(window.location.search).get("ext_id")
-    : null
-  const callbackBase = `${typeof window !== "undefined" ? location.origin : ""}/auth/callback`
-  const callbackUrl = extId ? `${callbackBase}?ext_id=${extId}` : callbackBase
+  function getCallbackUrl() {
+    const extId = new URLSearchParams(window.location.search).get("ext_id")
+    const base = `${location.origin}/auth/callback`
+    return extId ? `${base}?ext_id=${extId}` : base
+  }
 
   async function handleMagicLink(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
     setError("")
-    const { error } = await supabase.auth.signInWithOtp({
+    const { error } = await createClient().auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: callbackUrl },
+      options: { emailRedirectTo: getCallbackUrl() },
     })
     if (error) setError(error.message)
     else setSent(true)
@@ -64,9 +62,9 @@ export default function LoginPage() {
   }
 
   async function handleGoogle() {
-    await supabase.auth.signInWithOAuth({
+    await createClient().auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: callbackUrl },
+      options: { redirectTo: getCallbackUrl() },
     })
   }
 
