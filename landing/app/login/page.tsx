@@ -96,9 +96,9 @@ export default function LoginPage() {
         <a
           href="/"
           className="flex items-center gap-1.5 font-pixel text-[7px] tracking-widest transition-colors"
-          style={{ color: "#3a3a4a" }}
-          onMouseEnter={e => (e.currentTarget.style.color = "#74f7b5")}
-          onMouseLeave={e => (e.currentTarget.style.color = "#3a3a4a")}
+          style={{ color: "#74f7b5" }}
+          onMouseEnter={e => (e.currentTarget.style.color = "#ffffff")}
+          onMouseLeave={e => (e.currentTarget.style.color = "#74f7b5")}
         >
           ← Back
         </a>
