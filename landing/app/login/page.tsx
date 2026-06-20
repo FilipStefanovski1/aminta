@@ -129,7 +129,6 @@ export default function LoginPage() {
                   <rect x="3" y="3" width="10" height="9" fill="#74f7b5" />
                   <rect x="5" y="6" width="2" height="2" fill="#1f1f1f" />
                   <rect x="9" y="6" width="2" height="2" fill="#1f1f1f" />
-                  <rect x="6" y="9" width="4" height="1" fill="#1f1f1f" />
                 </svg>
               </div>
               <p className="font-pixel text-[9px] tracking-widest" style={{ color: "#74f7b5" }}>

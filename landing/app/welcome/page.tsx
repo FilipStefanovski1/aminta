@@ -44,7 +44,7 @@ export default async function WelcomePage() {
             </>
           ) : (
             <>
-              <p className="text-white text-sm font-medium">Welcome to Aminta {plan === "lifetime" ? "Lifetime" : "Pro"} 🎉</p>
+              <p className="text-white text-sm font-medium">Welcome to Aminta {plan === "lifetime" ? "Lifetime" : "Pro"}</p>
               <p className="text-[#555] text-xs leading-relaxed">
                 Your account is active. Open the Aminta extension and log in to unlock all features.
               </p>
