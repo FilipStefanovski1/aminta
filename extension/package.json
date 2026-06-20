@@ -36,8 +36,12 @@
       "https://www.linkedin.com/*",
       "https://openrouter.ai/*",
       "https://api.groq.com/*",
-      "https://generativelanguage.googleapis.com/*"
+      "https://generativelanguage.googleapis.com/*",
+      "https://amintaapp.com/*"
     ],
+    "externally_connectable": {
+      "matches": ["https://amintaapp.com/*"]
+    },
     "action": {
       "default_title": "Open Aminta"
     }

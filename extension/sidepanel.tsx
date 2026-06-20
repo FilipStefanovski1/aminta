@@ -6,11 +6,14 @@ import ApiKeyForm from "~components/ApiKeyForm"
 import DemonMascot from "~components/DemonMascot"
 import GeneratorPanel from "~components/GeneratorPanel"
 import HomeTab from "~components/HomeTab"
+import LoginScreen from "~components/LoginScreen"
 import SetupGate from "~components/SetupGate"
 import VoiceProfileForm from "~components/VoiceProfileForm"
 import { getForm, getStageTint } from "~lib/evolution"
 import { C } from "~lib/theme"
 import { getStore, setStore, type AmintaStore } from "~lib/storage"
+import { getAuthSession } from "~lib/auth"
+import { pullFromCloud, pushToCloud } from "~lib/sync"
 import type { Platform } from "~lib/prompts"
 
 type Tab = "home" | "create" | "train"
@@ -201,8 +204,21 @@ function SidePanel() {
   const [levelUpData, setLevelUpData]   = useState<LevelUpData | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [detectedPlatform, setDetectedPlatform] = useState<Platform>("x")
+  const [authChecked, setAuthChecked]   = useState(false)
+  const [isLoggedIn, setIsLoggedIn]     = useState(false)
 
   const refresh = async () => setLocalStore(await getStore())
+
+  // Check auth + pull from cloud on startup
+  useEffect(() => {
+    getAuthSession().then(async (session) => {
+      if (session) {
+        setIsLoggedIn(true)
+        await pullFromCloud()
+      }
+      setAuthChecked(true)
+    })
+  }, [])
 
   useEffect(() => {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
@@ -229,11 +245,21 @@ function SidePanel() {
     if (next === "home") refresh()
   }
 
-  if (!store) {
+  if (!authChecked || !store) {
     return (
       <div className="absolute inset-0 flex items-center justify-center bg-[#1f1f1f]">
         <p className="font-pixel text-[8px] text-[#333]">loading...</p>
       </div>
+    )
+  }
+
+  if (!isLoggedIn) {
+    return (
+      <LoginScreen onSignedIn={async () => {
+        await pullFromCloud()
+        setIsLoggedIn(true)
+        await refresh()
+      }} />
     )
   }
 
@@ -297,7 +323,7 @@ function SidePanel() {
               <GeneratorPanel
                 store={store}
                 initialPlatform={detectedPlatform}
-                onXPAwarded={refresh}
+                onXPAwarded={async () => { await refresh(); pushToCloud() }}
                 onLevelUp={(level, stage) => setLevelUpData({ level, stage })}
                 onTeach={() => switchTab("train")}
               />
