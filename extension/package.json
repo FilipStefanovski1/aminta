@@ -29,7 +29,7 @@
     "128": "assets/icon128.png"
   },
   "manifest": {
-    "permissions": ["storage", "sidePanel", "tabs"],
+    "permissions": ["storage", "sidePanel", "tabs", "identity"],
     "host_permissions": [
       "https://x.com/*",
       "https://twitter.com/*",
@@ -44,6 +44,10 @@
     },
     "action": {
       "default_title": "Open Aminta"
+    },
+    "oauth2": {
+      "client_id": "110269399450-vfmckhcemps4s9k3okeb1ebh4bk17po7.apps.googleusercontent.com",
+      "scopes": ["openid", "email", "profile"]
     }
   }
 }

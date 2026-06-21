@@ -2,11 +2,11 @@ import { createClient } from "@supabase/supabase-js"
 import { NextResponse, type NextRequest } from "next/server"
 
 export async function POST(request: NextRequest) {
-  const { idToken } = await request.json()
-  if (!idToken) return NextResponse.json({ error: "Missing idToken" }, { status: 400 })
+  const { accessToken } = await request.json()
+  if (!accessToken) return NextResponse.json({ error: "Missing accessToken" }, { status: 400 })
 
-  // Verify the ID token with Google
-  const googleRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`)
+  // Verify the access token and get user info from Google
+  const googleRes = await fetch(`https://www.googleapis.com/oauth2/v1/userinfo?access_token=${accessToken}`)
   if (!googleRes.ok) return NextResponse.json({ error: "Invalid Google token" }, { status: 401 })
 
   const googleUser = await googleRes.json()

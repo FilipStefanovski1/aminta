@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { C } from "~lib/theme"
-import { storeAuthSession } from "~lib/auth"
+import { setAuthSession } from "~lib/auth"
 
 const GOOGLE_CLIENT_ID = "110269399450-vfmckhcemps4s9k3okeb1ebh4bk17po7.apps.googleusercontent.com"
 
@@ -16,60 +16,34 @@ export default function LoginScreen({ onSignedIn }: Props) {
     setLoading(true)
     setError("")
 
-    const redirectUri = `https://${chrome.runtime.id}.chromiumapp.org/`
-    const nonce = Math.random().toString(36).slice(2)
-
-    const authUrl =
-      `https://accounts.google.com/o/oauth2/auth` +
-      `?client_id=${GOOGLE_CLIENT_ID}` +
-      `&response_type=token id_token` +
-      `&redirect_uri=${encodeURIComponent(redirectUri)}` +
-      `&scope=${encodeURIComponent("openid email profile")}` +
-      `&nonce=${nonce}`
-
-    chrome.identity.launchWebAuthFlow(
-      { url: authUrl, interactive: true },
-      async (responseUrl) => {
-        if (chrome.runtime.lastError || !responseUrl) {
-          setError("Sign in cancelled")
-          setLoading(false)
-          return
-        }
-
-        // Extract id_token from the redirect hash
-        const hash = new URL(responseUrl).hash.slice(1)
-        const params = new URLSearchParams(hash)
-        const idToken = params.get("id_token")
-
-        if (!idToken) {
-          setError("No token received")
-          setLoading(false)
-          return
-        }
-
-        // Exchange with our backend
-        try {
-          const res = await fetch("https://amintaapp.com/api/auth/google", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ idToken }),
-          })
-          const data = await res.json()
-          if (!res.ok) throw new Error(data.error ?? "Auth failed")
-
-          await storeAuthSession({
-            accessToken: data.accessToken,
-            refreshToken: data.refreshToken,
-            userId: data.userId,
-            email: data.email,
-          })
-          onSignedIn()
-        } catch (e: any) {
-          setError(e.message)
-          setLoading(false)
-        }
+    chrome.identity.getAuthToken({ interactive: true }, async (token) => {
+      if (chrome.runtime.lastError || !token) {
+        setError("Sign in cancelled")
+        setLoading(false)
+        return
       }
-    )
+
+      try {
+        const res = await fetch("https://amintaapp.com/api/auth/google", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ accessToken: token }),
+        })
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error ?? "Auth failed")
+
+        await setAuthSession({
+          accessToken: data.accessToken,
+          refreshToken: data.refreshToken,
+          userId: data.userId,
+          email: data.email,
+        })
+        onSignedIn()
+      } catch (e: any) {
+        setError(e.message)
+        setLoading(false)
+      }
+    })
   }
 
   return (
