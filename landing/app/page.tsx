@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
 import ThreeModes from "@/components/ThreeModes";
@@ -12,7 +13,10 @@ import OnboardingCTA from "@/components/OnboardingCTA";
 import WalletConnect from "@/components/WalletConnect";
 import Footer from "@/components/Footer";
 
-export default function Home() {
+export default function Home({ searchParams }: { searchParams: Record<string, string> }) {
+  if (searchParams.code) {
+    redirect(`/auth/callback?code=${searchParams.code}`);
+  }
   return (
     <>
       <Navbar />
