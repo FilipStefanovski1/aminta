@@ -1,6 +1,3 @@
-import { redirect } from "next/navigation";
-
-export const dynamic = "force-dynamic";
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
 import ThreeModes from "@/components/ThreeModes";
@@ -13,13 +10,12 @@ import Pricing from "@/components/Pricing";
 import FAQ from "@/components/FAQ";
 import OnboardingCTA from "@/components/OnboardingCTA";
 import Footer from "@/components/Footer";
+import AuthCodeHandler from "@/components/AuthCodeHandler";
 
-export default function Home({ searchParams }: { searchParams: Record<string, string> }) {
-  if (searchParams.code) {
-    redirect(`/auth/callback?code=${searchParams.code}`);
-  }
+export default function Home() {
   return (
     <>
+      <AuthCodeHandler />
       <Navbar />
       <main className="flex-1">
         <Hero />
