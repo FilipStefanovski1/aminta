@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
 
 export const dynamic = "force-dynamic"
@@ -42,10 +42,13 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState("")
 
-  function getCallbackUrl() {
+  useEffect(() => {
     const extId = new URLSearchParams(window.location.search).get("ext_id")
-    const base = `${location.origin}/auth/callback`
-    return extId ? `${base}?ext_id=${extId}` : base
+    if (extId) localStorage.setItem("aminta_ext_id", extId)
+  }, [])
+
+  function getCallbackUrl() {
+    return `${location.origin}/auth/callback`
   }
 
   async function handleMagicLink(e: React.FormEvent) {
