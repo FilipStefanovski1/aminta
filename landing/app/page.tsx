@@ -10,7 +10,6 @@ import MarqueeWall from "@/components/MarqueeWall";
 import Pricing from "@/components/Pricing";
 import FAQ from "@/components/FAQ";
 import OnboardingCTA from "@/components/OnboardingCTA";
-import WalletConnect from "@/components/WalletConnect";
 import Footer from "@/components/Footer";
 
 export default function Home({ searchParams }: { searchParams: Record<string, string> }) {
@@ -30,7 +29,6 @@ export default function Home({ searchParams }: { searchParams: Record<string, st
         <MarqueeWall />
         <Pricing />
         <OnboardingCTA />
-        <WalletConnect />
         <FAQ />
       </main>
       <Footer />
