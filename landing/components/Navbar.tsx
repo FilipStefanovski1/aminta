@@ -2,13 +2,11 @@
 
 import { useEffect, useState } from "react";
 
-// Order matches visual page order: Feed Aminta → Features → How It Works → Pricing → FAQ
 const LINKS = [
-  { label: "FEED AMINTA", href: "#feed-aminta" },
-  { label: "FEATURES",    href: "#features" },
   { label: "HOW IT WORKS", href: "#how-it-works" },
-  { label: "PRICING",     href: "#pricing" },
-  { label: "FAQ",         href: "#faq" },
+  { label: "FEATURES",     href: "#features" },
+  { label: "PRICING",      href: "#pricing" },
+  { label: "FAQ",          href: "#faq" },
 ];
 
 type DemonStageDetail = { active: boolean; color?: string };

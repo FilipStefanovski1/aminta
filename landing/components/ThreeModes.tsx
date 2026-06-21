@@ -45,25 +45,25 @@ function SceneTimeline() {
 function ScenePanel() {
   return (
     <div className="rounded-xl overflow-hidden border border-accent/30 shadow-[0_0_28px_rgba(116,247,181,0.07)] bg-ink">
-      <Chrome right={<span className="text-[9px] font-pixel text-accent">Aminta</span>} />
-      <div className="grid grid-cols-[1fr_88px]">
-        <div className="p-2.5 border-r border-line/40 space-y-0">
-          <TweetRow />
-          <TweetRow short />
-        </div>
-        <div className="p-2 flex flex-col gap-1.5">
-          <span className="font-pixel text-[8px] text-accent">Aminta</span>
-          <div className="flex gap-0.5">
-            <span className="bg-accent text-black text-[7px] font-bold rounded px-1.5 py-0.5">Tweet</span>
-            <span className="text-muted text-[7px] px-1 py-0.5">Reply</span>
-          </div>
-          <div className="rounded bg-panel2/80 border border-line/40 px-1.5 py-1.5 text-[7px] text-muted/80 leading-relaxed">
-            shipping tonight...
-          </div>
-          <button className="rounded bg-accent text-black text-[7px] font-bold text-center py-1 w-full">
-            Generate
-          </button>
-        </div>
+      <Chrome />
+      {/* compose area */}
+      <div className="px-3 pt-3 pb-1">
+        <div className="h-1.5 w-24 rounded bg-panel2/40 mb-2" />
+        <div className="h-1.5 w-full rounded bg-panel2/30 mb-1.5" />
+        <div className="h-1.5 w-3/4 rounded bg-panel2/20" />
+      </div>
+      {/* x toolbar */}
+      <div className="flex items-center gap-2 px-3 py-2 border-t border-line/20">
+        {[...Array(5)].map((_, i) => (
+          <div key={i} className="w-3 h-3 rounded-sm bg-panel2/50" />
+        ))}
+        <span className="ml-auto text-[7px] font-bold text-white/30 bg-panel2/50 rounded-full px-2 py-0.5">Post</span>
+      </div>
+      {/* aminta injected bar */}
+      <div className="flex items-center gap-1.5 px-3 py-2 bg-panel2/30 border-t border-accent/20">
+        <span className="bg-accent text-black text-[7px] font-bold rounded px-2 py-0.5">+ Generate</span>
+        <span className="bg-panel2 border border-line/40 text-white/70 text-[7px] font-bold rounded px-2 py-0.5">+ Polish</span>
+        <span className="ml-auto font-pixel text-[7px] text-accent/60">Aminta</span>
       </div>
     </div>
   );
@@ -136,7 +136,7 @@ const XP_ITEMS = [
 
 export default function ThreeModes() {
   return (
-    <section className="py-24 md:py-32 overflow-hidden">
+    <section id="how-it-works" className="py-24 md:py-32 overflow-hidden scroll-mt-20">
 
       <div className="relative mx-auto max-w-7xl px-5">
         {/* heading — left-aligned, editorial */}

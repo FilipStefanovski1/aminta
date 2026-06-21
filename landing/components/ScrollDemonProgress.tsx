@@ -160,10 +160,10 @@ function DemonStatic() {
       ref={ref}
       id="feed-aminta"
       style={accentVars(stage)}
-      className="py-24 scroll-mt-20 overflow-hidden"
+      className="py-16 scroll-mt-20 overflow-hidden"
     >
       <div className="mx-auto max-w-2xl px-5 text-center">
-        <h2 className="mt-3 font-pixel text-2xl text-white">{HEADLINE}</h2>
+        <h2 className="mt-3 font-pixel text-xl sm:text-2xl text-white">{HEADLINE}</h2>
         <p className="mt-4 text-sm text-muted leading-relaxed">{DESC}</p>
         <div
           className="mt-10 flex justify-center"

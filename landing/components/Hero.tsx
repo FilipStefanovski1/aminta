@@ -1,12 +1,8 @@
-import DemonMascot from "./DemonMascot";
 import HeaderAminta from "./HeaderAminta";
-
-// Mint, near-monochrome demon used only as a small supporting detail.
-const PANEL_DEMON = { body: "#74f7b5", horn: "#2f6b4f", eye: "#1f1f1f" };
 
 export default function Hero() {
   return (
-    <section id="top" className="relative overflow-hidden pt-32 pb-20 md:pt-36 md:pb-28">
+    <section id="top" className="relative overflow-x-hidden pt-32 pb-32 md:pt-40 md:pb-40">
 
       <div className="relative z-10 mx-auto max-w-7xl px-5 grid lg:grid-cols-2 gap-12 lg:gap-8 items-center">
         {/* Left: copy */}
@@ -14,7 +10,8 @@ export default function Hero() {
           <h1 className="font-pixel text-3xl sm:text-4xl lg:text-[3.4rem] leading-[1.2] text-white break-words">
             Feed Aminta.
             <br />
-            <span className="whitespace-nowrap"><span className="text-accent">Grow on X</span><span className="align-middle ml-2 text-[0.22em] font-pixel text-white/30 tracking-wide">(for now)</span></span>
+            <span className="text-accent">Grow on X</span>
+            <span className="block mt-1 text-[0.22em] font-pixel text-white/30 tracking-wide">(for now)</span>
           </h1>
 
           <p className="mt-7 max-w-md text-base sm:text-lg text-muted leading-relaxed">
@@ -72,110 +69,46 @@ export default function Hero() {
           </div>
         </div>
 
-        {/* Right: product mockup + small demon card */}
-        <div className="relative lg:-mr-10">
-          {/* small demon side-panel card (supporting detail) */}
-          <div className="hidden sm:block absolute -top-6 -right-2 z-20 w-44 rounded-xl border border-accent/40 bg-panel p-3 shadow-xl">
-            <div className="flex items-center justify-between text-[10px] text-muted">
-              <span className="text-accent">Lv.4 Awakened</span>
-              <span>NRG 67%</span>
-            </div>
-            <div className="my-2 flex justify-center">
-              <div className="aminta-float aminta-glow">
-                <DemonMascot skin={PANEL_DEMON} size={56} />
-              </div>
-            </div>
-            <div className="flex justify-between text-[9px] text-muted mb-1">
-              <span>EXP</span>
-              <span>400 / 800</span>
-            </div>
-            <div className="h-1.5 rounded-full bg-panel2 overflow-hidden">
-              <div className="h-full bg-accent rounded-full" style={{ width: "58%" }} />
-            </div>
-            <p className="mt-2 text-center text-[9px] text-muted">POST +50 · REPLY +25</p>
-          </div>
+        {/* Right: product screenshots — layered on desktop, single image on mobile */}
+        <div className="relative">
+          {/* Mobile: just the composite */}
+          <img
+            src="/composite.png"
+            alt="Aminta extension panel"
+            className="lg:hidden w-full max-w-xs mx-auto h-auto rounded-2xl"
+          />
 
-          {/* HeaderAminta — animated SVG companion, bottom-left corner of browser mockup */}
-          <div className="hidden lg:block absolute -bottom-4 -left-4 z-20">
-            <HeaderAminta />
-          </div>
-
-          {/* browser mockup */}
-          <div className="rounded-2xl border border-line bg-panel/90 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.7)] overflow-hidden">
-            <div className="flex items-center gap-3 px-4 h-10 border-b border-line bg-panel2/60">
-              <div className="flex gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#3a3a3a]" />
-                <span className="w-2.5 h-2.5 rounded-full bg-[#3a3a3a]" />
-                <span className="w-2.5 h-2.5 rounded-full bg-[#3a3a3a]" />
+          {/* Desktop: layered layout */}
+          <div className="hidden lg:block relative h-[600px] overflow-visible">
+            {/* X tab — back layer */}
+            <div className="absolute left-0 top-8 w-[72%] z-10 rounded-xl overflow-hidden border border-accent/20 shadow-[0_20px_60px_-10px_rgba(0,0,0,0.8)]">
+              <div className="flex items-center gap-2 px-3 h-8 bg-[#1a1a1a] border-b border-white/5">
+                <div className="flex gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#3a3a3a]" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#3a3a3a]" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#3a3a3a]" />
+                </div>
+                <div className="mx-auto flex items-center gap-1.5 rounded bg-black/40 px-2 py-0.5 text-[9px] text-white/40">
+                  x.com/home
+                </div>
               </div>
-              <div className="mx-auto flex items-center gap-2 rounded-md bg-ink/70 px-3 py-1 text-[11px] text-muted">
-                <span className="text-accent/70">▪</span> x.com/home
+              <div className="bg-[#0f0f0f] h-[340px] flex items-center justify-center">
+                <span className="font-pixel text-[9px] text-white/10 tracking-widest">X TAB SCREENSHOT</span>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,220px)]">
-              {/* X feed */}
-              <div className="hidden sm:block p-4 border-r border-line">
-                <div className="flex gap-6 text-xs border-b border-line pb-2.5 mb-4">
-                  <span className="text-white font-medium border-b-2 border-white pb-2.5 -mb-2.5">
-                    For you
-                  </span>
-                  <span className="text-muted">Following</span>
-                </div>
-                <div className="flex gap-2.5 pb-4 mb-4 border-b border-line/70">
-                  <div className="w-8 h-8 rounded-full bg-panel2 shrink-0" />
-                  <div className="flex-1">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-xs text-white font-medium">building in public</span>
-                      <span className="text-[10px] text-muted">@indiehacker · 2h</span>
-                    </div>
-                    <p className="mt-1 text-xs text-white/75 leading-relaxed">
-                      the hardest part of growing on X isn&apos;t the writing. It&apos;s showing up
-                      every day.
-                    </p>
-                  </div>
-                </div>
-                {[0, 1].map((i) => (
-                  <div key={i} className="flex gap-2.5 py-3 border-b border-line/50">
-                    <div className="w-8 h-8 rounded-full bg-panel2 shrink-0" />
-                    <div className="flex-1 space-y-1.5 pt-1">
-                      <div className="h-2 w-20 rounded bg-panel2" />
-                      <div className="h-1.5 w-full rounded bg-panel2/70" />
-                      <div className="h-1.5 w-3/4 rounded bg-panel2/70" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Aminta panel */}
-              <div className="p-3 bg-panel">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="font-pixel text-[11px] text-white">Aminta</span>
-                  <span className="text-muted text-xs">⚙</span>
-                </div>
-                <div className="flex gap-1 rounded-md bg-ink p-1 mb-2.5 text-[10px]">
-                  <span className="flex-1 text-center rounded bg-accent text-black font-semibold py-1">
-                    Tweet
-                  </span>
-                  <span className="flex-1 text-center text-muted py-1">Reply</span>
-                  <span className="flex-1 text-center text-muted py-1">Polish</span>
-                </div>
-                <div className="rounded-md border border-line bg-ink p-2 text-[11px] text-white/75 min-h-[38px]">
-                  showing up daily on X
-                </div>
-                <div className="mt-2.5 rounded-md bg-accent text-black text-[11px] font-semibold text-center py-1.5">
-                  Generate
-                </div>
-                <div className="mt-2.5 rounded-md border border-line bg-ink p-2">
-                  <p className="text-[11px] text-white/85 leading-relaxed">
-                    consistency &gt; talent on this app. the people winning just never miss a day.
-                  </p>
-                  <div className="mt-2 rounded bg-accent/15 text-accent text-[10px] font-medium text-center py-1">
-                    Insert into X · +50 XP
-                  </div>
-                </div>
-              </div>
+            {/* Demon */}
+            <div className="absolute -bottom-4 left-4 z-30">
+              <HeaderAminta />
             </div>
+
+            {/* Extension — front layer, tilted */}
+            <img
+              src="/composite.png"
+              alt="Aminta extension panel"
+              className="absolute right-0 top-0 z-20 w-[46%] h-auto rounded-2xl border border-accent/30 shadow-[0_20px_60px_-10px_rgba(0,0,0,0.9)]"
+              style={{ transform: "perspective(800px) rotateY(-12deg) rotateX(2deg)" }}
+            />
           </div>
         </div>
       </div>

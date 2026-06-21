@@ -360,7 +360,7 @@ export default function AmintaEvolutionGrid() {
 
       <div className="relative mx-auto max-w-7xl px-5">
         <Reveal className="text-center max-w-2xl mx-auto">
-          <h2 className="mt-4 font-pixel text-2xl sm:text-3xl text-white leading-snug">
+          <h2 className="mt-4 font-pixel text-xl sm:text-2xl lg:text-3xl text-white leading-snug">
             Collect Every Form
           </h2>
           <p className="mt-4 text-muted">

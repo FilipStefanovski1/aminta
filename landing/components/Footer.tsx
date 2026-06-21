@@ -89,8 +89,18 @@ export default function Footer() {
         ))}
       </div>
 
+      {/* Support email */}
+      <div className="mt-10">
+        <a
+          href="mailto:hello@amintaapp.com"
+          className="text-sm text-[#555] hover:text-[#74f7b5] transition-colors"
+        >
+          hello@amintaapp.com
+        </a>
+      </div>
+
       {/* Legal links */}
-      <div className="mt-14 flex items-center justify-center gap-5">
+      <div className="mt-6 flex items-center justify-center gap-5">
         <a href="/privacy" className="text-xs text-[#444] hover:text-[#74f7b5] transition-colors">
           Privacy Policy
         </a>
