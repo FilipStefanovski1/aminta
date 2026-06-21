@@ -75,12 +75,6 @@ export default function Navbar() {
 
         {/* right side */}
         <div className="flex-1 flex items-center justify-end gap-4">
-          <a
-            href="/login"
-            className="hidden lg:block font-pixel text-[10px] xl:text-[11px] text-black hover:text-black/60 transition-colors whitespace-nowrap"
-          >
-            [ SIGN IN ]
-          </a>
           {/* mobile toggle */}
           <button
             aria-label="Toggle menu"
