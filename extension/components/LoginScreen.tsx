@@ -24,13 +24,13 @@ export default function LoginScreen({ onSignedIn }: Props) {
       }
 
       try {
-        const res = await fetch("https://amintaapp.com/api/auth/google", {
+        const res = await fetch("https://www.amintaapp.com/api/auth/google", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ accessToken: token }),
         })
         const data = await res.json()
-        if (!res.ok) throw new Error(data.error ?? "Auth failed")
+        if (!res.ok) throw new Error(data.error ?? `Server error ${res.status}`)
 
         await setAuthSession({
           accessToken: data.accessToken,
