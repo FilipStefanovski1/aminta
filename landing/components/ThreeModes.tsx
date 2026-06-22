@@ -31,13 +31,12 @@ function TweetRow({ short }: { short?: boolean }) {
 
 function SceneTimeline() {
   return (
-    <div className="rounded-xl overflow-hidden border border-line/50 shadow-lg bg-ink">
-      <Chrome />
-      <div className="p-3 space-y-0">
-        <TweetRow />
-        <TweetRow short />
-        <TweetRow />
-      </div>
+    <div className="overflow-hidden border border-line/50 shadow-lg">
+      <img
+        src="/youhaveanidea%20(1).png"
+        alt="X timeline"
+        className="w-full h-auto block"
+      />
     </div>
   );
 }

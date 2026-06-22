@@ -14,16 +14,11 @@ export default function Hero() {
             <span className="block mt-1 text-[0.22em] font-pixel text-white/30 tracking-wide">(for now)</span>
           </h1>
 
-          <p className="mt-7 max-w-md text-base sm:text-lg text-muted leading-relaxed">
-            Most tools help you write. Aminta makes posting addictive. Every tweet feeds your demon,
-            every reply gives XP, and every day keeps the streak alive.
-          </p>
-
           <div className="mt-9 flex flex-col sm:flex-row gap-4">
             <a href="#pricing" className="rpg-btn-primary">
               Get Aminta
             </a>
-            <a href="#how" className="rpg-btn-secondary">
+            <a href="#how-it-works" className="rpg-btn-secondary">
               See how it works
             </a>
           </div>

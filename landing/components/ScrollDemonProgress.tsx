@@ -110,26 +110,6 @@ function RewardLegend() {
   );
 }
 
-function doPlayBlip(ctx: AudioContext) {
-  try {
-    const now = ctx.currentTime;
-    // Two-tone arcade blip
-    ([0, 0.08] as const).forEach((offset, i) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.type = "square";
-      osc.frequency.setValueAtTime(i === 0 ? 330 : 550, now + offset);
-      gain.gain.setValueAtTime(0.06, now + offset);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.12);
-      osc.start(now + offset);
-      osc.stop(now + offset + 0.13);
-    });
-  } catch {
-    // blocked — fail silently
-  }
-}
 
 /** Static fallback for mobile / reduced-motion */
 function DemonStatic() {
@@ -198,29 +178,10 @@ function DemonAnimated() {
   const [stage, setStage] = useState<Stage>(STAGES[0]);
   const [done, setDone] = useState(false);
 
-  // Interaction + audio refs
-  const audioCtxRef = useRef<AudioContext | null>(null);
-  const interactedRef = useRef(false);
   const prevStageLvRef = useRef(STAGES[0].lv);
   const inViewRef = useRef(false);
   const currentStageRef = useRef<Stage>(STAGES[0]);
   const lastDispatchedColorRef = useRef<string | null>(null);
-
-  // Create AudioContext on first user click (browsers require a gesture)
-  useEffect(() => {
-    const onInteract = () => {
-      interactedRef.current = true;
-      if (!audioCtxRef.current) {
-        try {
-          audioCtxRef.current = new AudioContext();
-        } catch {
-          // ignore
-        }
-      }
-    };
-    window.addEventListener("click", onInteract);
-    return () => window.removeEventListener("click", onInteract);
-  }, []);
 
   // Track section visibility — dispatch demon-stage events to Navbar
   useEffect(() => {
@@ -253,17 +214,8 @@ function DemonAnimated() {
     const newStage = stageFor(v);
     currentStageRef.current = newStage;
 
-    // Stage changed — play sound only while genuinely inside the section
     if (newStage.lv !== prevStageLvRef.current) {
       prevStageLvRef.current = newStage.lv;
-      if (interactedRef.current && audioCtxRef.current && inViewRef.current && v > 0.08 && v < 0.88) {
-        const ctx = audioCtxRef.current;
-        if (ctx.state === "suspended") {
-          ctx.resume().then(() => doPlayBlip(ctx));
-        } else {
-          doPlayBlip(ctx);
-        }
-      }
     }
 
     // Dispatch color to Navbar only when it changes
