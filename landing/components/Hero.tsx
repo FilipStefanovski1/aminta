@@ -68,7 +68,7 @@ export default function Hero() {
           <img
             src="/composite.png"
             alt="Aminta extension panel"
-            className="lg:hidden w-full max-w-xs mx-auto h-auto rounded-2xl"
+            className="lg:hidden w-full max-w-sm md:max-w-md mx-auto h-auto rounded-2xl"
           />
 
           {/* Desktop: layered layout */}

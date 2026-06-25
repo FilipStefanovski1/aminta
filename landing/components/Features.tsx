@@ -106,21 +106,11 @@ export default function Features() {
           {FEATURES.map((f, i) => (
             <Reveal key={f.title} delay={i * 60}>
               <div
-                className="group h-full p-5 transition-all duration-150 cursor-default
+                className="feature-card group h-full p-5 transition-all duration-150 cursor-default
                            hover:-translate-y-0.5 active:translate-y-0.5"
                 style={{
                   background: "#1a1a1a",
-                  border: "2px solid #2a2a2a",
-                  boxShadow: "3px 3px 0 #000",
                   position: "relative",
-                }}
-                onMouseEnter={e => {
-                  (e.currentTarget as HTMLElement).style.borderColor = "#74f7b5"
-                  ;(e.currentTarget as HTMLElement).style.boxShadow = "3px 3px 0 #000, 0 0 16px rgba(116,247,181,0.12)"
-                }}
-                onMouseLeave={e => {
-                  (e.currentTarget as HTMLElement).style.borderColor = "#2a2a2a"
-                  ;(e.currentTarget as HTMLElement).style.boxShadow = "3px 3px 0 #000"
                 }}
               >
                 {/* top-left highlight strip */}

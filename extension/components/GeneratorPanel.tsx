@@ -321,7 +321,7 @@ export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, initialP
           return (
             <button
               key={m.id}
-              onClick={() => { setMode(m.id); reset() }}
+              onClick={() => { if (mode !== m.id) { setMode(m.id); reset() } }}
               className="flex flex-col items-start gap-1.5 rounded-xl p-3 text-left transition-all"
               style={{
                 backgroundColor: active ? tint : C.card,
@@ -430,7 +430,7 @@ export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, initialP
       {/* ── Context input ── */}
       <div className="space-y-1.5">
         <p className="text-[11px] font-medium" style={{ color: C.textFaint }}>
-          Additional context{" "}
+          {mode === "polish" ? "Polishing instructions" : "Additional context"}{" "}
           <span style={{ color: C.textGhost, fontWeight: 400 }}>(optional)</span>
         </p>
         <div className="relative">
@@ -438,7 +438,7 @@ export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, initialP
             value={context}
             onChange={(e) => setContext(e.target.value)}
             rows={2}
-            placeholder="Add key points, ideas, or notes…"
+            placeholder={mode === "polish" ? "e.g. make it punchier, add a hook…" : "Add key points, ideas, or notes…"}
             className="input-pixel w-full rounded-xl px-3 py-2.5 text-sm resize-none"
             style={{ paddingBottom: "22px" }}
           />
@@ -509,6 +509,22 @@ export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, initialP
         ) : "Generate"}
       </button>
 
+      {/* Explain why Generate is disabled */}
+      {!loading && !store.apiKey && (
+        <p className="text-[11px] animate-fade-in px-1" style={{ color: C.textFaint }}>
+          Add your AI key in{" "}
+          <button onClick={() => {}} className="underline" style={{ color: C.text }}>Settings</button>
+          {" "}to start generating.
+        </p>
+      )}
+      {!loading && store.apiKey && !store.voice && (
+        <p className="text-[11px] animate-fade-in px-1" style={{ color: C.textFaint }}>
+          Go to{" "}
+          <button onClick={onTeach} className="underline" style={{ color: C.text }}>Train</button>
+          {" "}to teach Aminta your voice first.
+        </p>
+      )}
+
       {error && <p className="text-[11px] text-red-400 animate-fade-in px-1">{error}</p>}
 
       {output && (
@@ -519,6 +535,7 @@ export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, initialP
           platform={platform}
           currentXP={xp}
           imageDataUrl={outputImage}
+          onRegenerate={generate}
           onXPAwarded={(amount, levelUp) => {
             onXPAwarded()
             if (levelUp) onLevelUp(levelUp.level, levelUp.stage)

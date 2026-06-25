@@ -34,7 +34,7 @@ const FAQS = [
   },
   {
     q: "Can I cancel anytime?",
-    a: "Yep. Monthly cancels anytime. Annual is billed yearly. Lifetime is a one-time payment. Pay once and feed Aminta forever.",
+    a: "Yep. Monthly cancels anytime — no lock-in. Lifetime is a one-time payment; pay once and feed Aminta forever.",
   },
 ];
 
@@ -43,6 +43,7 @@ function Item({ q, a }: { q: string; a: string }) {
   return (
     <button
       onClick={() => setOpen((v) => !v)}
+      aria-expanded={open}
       className="w-full text-left rounded-xl border border-line bg-panel px-5 py-4 hover:border-white/20 transition-colors"
     >
       <div className="flex items-center justify-between gap-4">

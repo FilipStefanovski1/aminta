@@ -6,16 +6,23 @@ import { incrementMissionPublished, recordStreak } from "~lib/missions"
 import type { Mode, Platform } from "~lib/prompts"
 import { hashText, tryAwardXP, XP_PER_MODE } from "~lib/xp"
 
+const CHAR_LIMITS: Record<Platform, number> = {
+  x: 280,
+  linkedin: 3000,
+  threads: 500,
+}
+
 interface Props {
   text: string
   mode: Mode
   platform: Platform
   currentXP: number
   imageDataUrl?: string | null
+  onRegenerate?: () => void
   onXPAwarded: (amount: number, levelUp?: { level: number; stage: string }) => void
 }
 
-export default function OutputCard({ text, mode, platform, currentXP, imageDataUrl, onXPAwarded }: Props) {
+export default function OutputCard({ text, mode, platform, currentXP, imageDataUrl, onRegenerate, onXPAwarded }: Props) {
   const [copied, setCopied] = useState(false)
   const [insertStatus, setInsertStatus] = useState("")
   const [xpStatus, setXpStatus] = useState("")
@@ -91,6 +98,9 @@ export default function OutputCard({ text, mode, platform, currentXP, imageDataU
   }
 
   const insertLabel = platform === "linkedin" ? "Insert into LinkedIn" : "Insert into X"
+  const charLimit = CHAR_LIMITS[platform]
+  const charCount = text.length
+  const charColor = charCount > charLimit ? "#f87171" : charCount > charLimit * 0.9 ? "#fbbf24" : "#444"
 
   return (
     <div className="animate-card-in bg-[#111318] border border-[#1e2028] rounded-xl p-3 space-y-3">
@@ -102,6 +112,13 @@ export default function OutputCard({ text, mode, platform, currentXP, imageDataU
         />
       )}
       <p className="text-sm whitespace-pre-wrap leading-relaxed text-[#e7e7ef]">{text}</p>
+
+      {/* Character count */}
+      <div className="flex justify-end">
+        <span className="font-pixel text-[8px]" style={{ color: charColor }}>
+          {charCount}/{charLimit}
+        </span>
+      </div>
 
       <div className="flex gap-2">
         <button
@@ -115,6 +132,14 @@ export default function OutputCard({ text, mode, platform, currentXP, imageDataU
           {insertLabel}
         </button>
       </div>
+
+      {onRegenerate && (
+        <button
+          onClick={onRegenerate}
+          className="w-full border border-[#1e2028] rounded py-1.5 text-[10px] text-[#555] hover:border-[#333] hover:text-[#888] transition-colors">
+          ↻ Try again
+        </button>
+      )}
 
       <div className="space-y-0.5">
         {insertStatus && (

@@ -73,6 +73,12 @@ export default function Navbar() {
 
         {/* right side */}
         <div className="flex-1 flex items-center justify-end gap-4">
+          <a
+            href="#pricing"
+            className="hidden lg:inline-flex items-center rpg-btn-primary text-[10px] px-5 py-2.5"
+          >
+            Get Aminta →
+          </a>
           {/* mobile toggle */}
           <button
             aria-label="Toggle menu"
@@ -85,11 +91,15 @@ export default function Navbar() {
       </nav>
 
       {/* mobile / tablet menu */}
-      {open && (
-        <div
-          className="lg:hidden border-t-4 border-black px-5 py-4 flex flex-col gap-3"
-          style={{ backgroundColor: bgColor, transition: "background-color 0.5s ease" }}
-        >
+      <div
+        className="lg:hidden overflow-hidden border-t-4 border-black"
+        style={{
+          maxHeight: open ? "240px" : "0",
+          transition: "max-height 0.22s cubic-bezier(0.22,1,0.36,1), background-color 0.5s ease",
+          backgroundColor: bgColor,
+        }}
+      >
+        <div className="px-5 py-4 flex flex-col gap-3">
           {LINKS.map((l) => (
             <a
               key={l.href}
@@ -100,7 +110,15 @@ export default function Navbar() {
               [ {l.label} ]
             </a>
           ))}
+          <a
+            href="#pricing"
+            onClick={() => setOpen(false)}
+            className="font-pixel text-[11px] text-black whitespace-nowrap mt-1"
+          >
+            [ GET AMINTA → ]
+          </a>
         </div>
+      </div>
       )}
     </header>
   );

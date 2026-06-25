@@ -19,10 +19,10 @@ const FREE_PLAN = {
     "Basic Aminta",
     "Voice Profile",
     "Insert into X",
-    "BYOK required",
+    "BYOK (Groq / Gemini / OpenRouter)",
   ],
   cta: "Get Started",
-  ctaHref: "#",
+  ctaHref: "#get-aminta",
   badge: null,
   highlight: false,
 };
@@ -35,16 +35,16 @@ const PRO_PLAN = {
     "Unlimited posting power for creators who want to show up consistently.",
   features: [
     "Unlimited generations",
-    "Thread mode",
     "Aminta DNA",
-    "Multiple Amintas",
-    "Saved content",
-    "Advanced voice controls",
+    "Thread mode (coming soon)",
+    "Multiple Amintas (coming soon)",
+    "Saved content (coming soon)",
+    "Advanced voice controls (coming soon)",
     "Future premium features",
     "Discord community",
   ],
   cta: "Upgrade to Pro",
-  ctaHref: "#",
+  ctaHref: "https://calendly.com/filipstefanovskee/filip-stefanovski-aminta-founder",
   badge: "PRO",
   highlight: true,
 };
@@ -174,23 +174,20 @@ function PricingCard({
         {cta}
       </a>
 
-      {highlight && (
-        <a
-          href="#wallet"
-          className="mt-2 flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-medium text-muted border border-line transition-all duration-200 hover:border-accent/30 hover:text-accent/80 hover:bg-accent/5"
-        >
-          <CryptoIcon />
-          Pay with crypto
-        </a>
-      )}
-
       <ul className="mt-8 space-y-3">
-        {features.map((f) => (
-          <li key={f} className="flex items-start gap-2.5">
-            <Check />
-            <span className="text-sm text-muted">{f}</span>
-          </li>
-        ))}
+        {features.map((f) => {
+          const isSoon = f.includes("(coming soon)")
+          const label = isSoon ? f.replace(" (coming soon)", "") : f
+          return (
+            <li key={f} className="flex items-start gap-2.5">
+              <Check />
+              <span className={`text-sm ${isSoon ? "text-muted/50" : "text-muted"}`}>
+                {label}
+                {isSoon && <span className="ml-1.5 text-[10px] text-muted/40">soon</span>}
+              </span>
+            </li>
+          )
+        })}
       </ul>
     </div>
   );
@@ -240,7 +237,7 @@ export default function Pricing() {
             >
               Lifetime{" "}
               <span className={mode === "lifetime" ? "opacity-70" : "text-accent"}>
-                −20%
+                Best value
               </span>
             </button>
           </div>

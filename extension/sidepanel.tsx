@@ -207,7 +207,7 @@ function BottomNav({ active, onChange, tint }: { active: Tab; onChange: (t: Tab)
             className="flex-1 flex flex-col items-center justify-center gap-1 py-2.5 transition-colors"
             style={{ color: isActive ? tint : "#3a3a4a" }}>
             {icon()}
-            <span className="font-pixel text-[5px] uppercase tracking-widest">{label}</span>
+            <span className="font-pixel text-[8px] uppercase tracking-widest">{label}</span>
           </button>
         )
       })}
@@ -229,15 +229,8 @@ function SidePanel() {
   const [authChecked, setAuthChecked]   = useState(false)
   const [isLoggedIn, setIsLoggedIn]     = useState(false)
   const [session, setSession]           = useState<AuthSession | null>(null)
-  const [minDelayDone, setMinDelayDone] = useState(false)
 
   const refresh = async () => setLocalStore(await getStore())
-
-  // Minimum 1 s splash so the jump animation always plays once
-  useEffect(() => {
-    const t = setTimeout(() => setMinDelayDone(true), 1000)
-    return () => clearTimeout(t)
-  }, [])
 
   // Check auth + pull from cloud on startup
   useEffect(() => {
@@ -283,7 +276,7 @@ function SidePanel() {
     if (next === "home") refresh()
   }
 
-  if (!authChecked || !store || !minDelayDone) {
+  if (!authChecked || !store) {
     return (
       <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-[#1f1f1f]">
         <div className="sprite-jump" style={{ filter: "drop-shadow(0 0 12px #74f7b566)" }}>
