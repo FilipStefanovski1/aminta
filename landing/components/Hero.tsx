@@ -86,7 +86,7 @@ export default function Hero() {
                 />
               </div>
               {/* Demon sits at bottom-left corner of the X tab */}
-              <div className="absolute bottom-0 left-0 z-30">
+              <div className="absolute bottom-0 left-0 z-30" style={{ transform: "scale(0.55)", transformOrigin: "bottom left" }}>
                 <HeaderAminta />
               </div>
             </div>
