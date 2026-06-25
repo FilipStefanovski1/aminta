@@ -62,37 +62,29 @@ export default function Hero() {
           </div>
         </div>
 
-        {/* Right: product screenshots — layered on desktop, single image on mobile */}
-        <div className="relative">
-          {/* Mobile: just the composite */}
+        {/* Right: layered product screenshots — same composition at every breakpoint */}
+        <div className="relative w-full" style={{ aspectRatio: "15 / 16" }}>
+          {/* X compose — back layer */}
+          <div className="absolute left-0 top-[5%] w-[72%] z-10">
+            <div
+              className="relative rounded-xl overflow-hidden border border-accent/20 shadow-[0_20px_60px_-10px_rgba(0,0,0,0.8)]"
+              style={{ aspectRatio: "9 / 8" }}
+            >
+              <img
+                src="/youhaveanidea%20(1).png"
+                alt="X timeline"
+                className="absolute inset-0 w-full h-full object-cover object-top"
+              />
+            </div>
+          </div>
+
+          {/* Extension panel — front layer, tilted */}
           <img
             src="/composite.png"
             alt="Aminta extension panel"
-            className="lg:hidden w-full max-w-sm md:max-w-md mx-auto h-auto rounded-2xl"
+            className="absolute right-0 top-0 z-20 w-[46%] h-auto rounded-2xl border border-accent/30 shadow-[0_20px_60px_-10px_rgba(0,0,0,0.9)]"
+            style={{ transform: "perspective(800px) rotateY(-12deg) rotateX(2deg)" }}
           />
-
-          {/* Desktop: layered layout */}
-          <div className="hidden lg:block relative h-[600px] overflow-visible">
-            {/* X tab — back layer, demon anchored to its bottom-left */}
-            <div className="absolute left-0 top-8 w-[72%] z-10">
-              <div className="relative rounded-xl overflow-hidden border border-accent/20 shadow-[0_20px_60px_-10px_rgba(0,0,0,0.8)]">
-                <img
-                  src="/youhaveanidea%20(1).png"
-                  alt="X timeline"
-                  className="w-full h-auto block"
-                  style={{ maxHeight: 380, objectFit: "cover", objectPosition: "top" }}
-                />
-              </div>
-            </div>
-
-            {/* Extension — front layer, tilted */}
-            <img
-              src="/composite.png"
-              alt="Aminta extension panel"
-              className="absolute right-0 top-0 z-20 w-[46%] h-auto rounded-2xl border border-accent/30 shadow-[0_20px_60px_-10px_rgba(0,0,0,0.9)]"
-              style={{ transform: "perspective(800px) rotateY(-12deg) rotateX(2deg)" }}
-            />
-          </div>
         </div>
       </div>
     </section>
