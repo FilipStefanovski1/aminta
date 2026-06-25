@@ -78,7 +78,13 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0 
   const [voiceInspiration, setVoiceInspiration] = useState(initial?.voiceInspiration ?? "")
   const [examples,         setExamples]         = useState<string[]>(() => {
     const raw = initial?.examples ?? ""
-    return raw ? raw.split("\n").filter(s => s.trim()) : []
+    if (!raw) return []
+    if (raw.startsWith("[")) {
+      try { return JSON.parse(raw) as string[] } catch {}
+    }
+    // legacy: split on double-newline, then single-newline as last resort
+    const byDouble = raw.split(/\n{2,}/).map(s => s.trim()).filter(Boolean)
+    return byDouble.length > 1 ? byDouble : raw.split("\n").map(s => s.trim()).filter(Boolean)
   })
   const [newPost,     setNewPost]     = useState("")
   const [adding,      setAdding]      = useState(false)
@@ -111,7 +117,7 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0 
       tone:             voiceStyle,
       voiceStyle,
       voiceInspiration: voiceInspiration.trim(),
-      examples:         examples.join("\n"),
+      examples:         JSON.stringify(examples),
       customRules:      customRules.trim(),
     })
     setSaved(true)

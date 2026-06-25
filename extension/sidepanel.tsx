@@ -12,7 +12,7 @@ import VoiceProfileForm from "~components/VoiceProfileForm"
 import { getForm, getStageTint } from "~lib/evolution"
 import { C } from "~lib/theme"
 import { getStore, setStore, type AmintaStore } from "~lib/storage"
-import { getAuthSession } from "~lib/auth"
+import { getAuthSession, clearAuthSession, type AuthSession } from "~lib/auth"
 import { pullFromCloud, pushToCloud } from "~lib/sync"
 import type { Platform } from "~lib/prompts"
 
@@ -95,11 +95,15 @@ function SettingsOverlay({
   onSave,
   onClose,
   onResetOnboarding,
+  session,
+  onSignOut,
 }: {
   store: AmintaStore
   onSave: (patch: Partial<AmintaStore>) => Promise<void>
   onClose: () => void
   onResetOnboarding: () => void
+  session: AuthSession | null
+  onSignOut: () => void
 }) {
   return (
     <div className="absolute inset-0 z-40 flex flex-col animate-slide-up" style={{ backgroundColor: C.bg }}>
@@ -110,6 +114,22 @@ function SettingsOverlay({
           style={{ color: C.textFaint }}>✕</button>
       </div>
       <div className="flex-1 overflow-y-auto p-4 space-y-5">
+        {session ? (
+          <div className="rounded-xl px-3 py-3 space-y-2" style={{ border: `1px solid ${C.border}` }}>
+            <p className="font-pixel text-[7px]" style={{ color: C.textFaint }}>Signed in as</p>
+            <p className="text-xs truncate" style={{ color: C.text }}>{session.email}</p>
+            <button
+              onClick={onSignOut}
+              className="w-full text-left px-3 py-2 rounded-lg font-pixel text-[7px] transition-colors mt-1"
+              style={{ border: `1px solid ${C.border}`, color: "#f87171" }}>
+              Sign out
+            </button>
+          </div>
+        ) : (
+          <div className="rounded-xl px-3 py-3" style={{ border: `1px solid ${C.border}` }}>
+            <p className="font-pixel text-[7px]" style={{ color: C.textFaint }}>Not signed in</p>
+          </div>
+        )}
         <ApiKeyForm initial={store} onSave={onSave} />
 
         <div className="space-y-3 pt-3" style={{ borderTop: `1px solid ${C.border}` }}>
@@ -206,19 +226,28 @@ function SidePanel() {
   const [detectedPlatform, setDetectedPlatform] = useState<Platform>("x")
   const [authChecked, setAuthChecked]   = useState(false)
   const [isLoggedIn, setIsLoggedIn]     = useState(false)
+  const [session, setSession]           = useState<AuthSession | null>(null)
 
   const refresh = async () => setLocalStore(await getStore())
 
   // Check auth + pull from cloud on startup
   useEffect(() => {
-    getAuthSession().then(async (session) => {
-      if (session) {
+    getAuthSession().then(async (s) => {
+      if (s) {
         setIsLoggedIn(true)
+        setSession(s)
         await pullFromCloud()
       }
       setAuthChecked(true)
     })
   }, [])
+
+  const handleSignOut = async () => {
+    await clearAuthSession()
+    setSession(null)
+    setIsLoggedIn(false)
+    setSettingsOpen(false)
+  }
 
   useEffect(() => {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
@@ -279,6 +308,8 @@ function SidePanel() {
             onSave={update}
             onClose={() => setSettingsOpen(false)}
             onResetOnboarding={async () => { await update({ onboardingDone: false }) }}
+            session={session}
+            onSignOut={handleSignOut}
           />
         )}
 

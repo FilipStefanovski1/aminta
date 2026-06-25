@@ -13,7 +13,7 @@ export interface Bounty {
 export interface VoiceProfile {
   niche: string
   tone: string
-  examples: string // one example tweet per line
+  examples: string // tweets separated by double newline
   voiceStyle: string
   voiceInspiration: string
   customRules: string

@@ -15,10 +15,22 @@ function getActiveTweet(): string {
 }
 
 function insertIntoComposer(text: string): boolean {
-  const box = document.querySelector('[data-testid="tweetTextarea_0"]') as HTMLElement | null
-  if (!box) return false
+  // Prefer the focused editor, fall back to first match
+  let wrapper = document.activeElement?.closest('[data-testid="tweetTextarea_0"]') as HTMLElement | null
+  if (!wrapper) wrapper = document.querySelector('[data-testid="tweetTextarea_0"]') as HTMLElement | null
+  if (!wrapper) return false
+
+  // X nests a contenteditable inside the testid wrapper
+  const box = (wrapper.querySelector('[contenteditable="true"]') ?? wrapper) as HTMLElement
   box.focus()
-  document.execCommand("selectAll", false)
+
+  // Explicitly select all existing content via Selection API, then replace
+  const range = document.createRange()
+  range.selectNodeContents(box)
+  const sel = window.getSelection()
+  sel?.removeAllRanges()
+  sel?.addRange(range)
+
   return document.execCommand("insertText", false, text)
 }
 
@@ -43,7 +55,7 @@ async function saveKeyword(raw: string): Promise<void> {
 
 // ─── Compose bar injection ────────────────────────────────────────────────────
 
-const BAR_ID = "aminta-compose-bar"
+const BAR_ATTR = "data-aminta-bar"
 
 function getComposerText(): string {
   const box = document.querySelector('[data-testid="tweetTextarea_0"]') as HTMLElement | null
@@ -70,7 +82,6 @@ async function runGenerate(bar: HTMLElement, mode: "tweet" | "polish", prefill?:
     input = composerText
     if (!input) { setBarStatus(bar, "Type a draft first", true); return }
   } else {
-    // Use prefill (keyword chip click), or whatever is in the compose box, as the topic
     input = prefill ?? composerText
   }
 
@@ -86,18 +97,32 @@ async function runGenerate(bar: HTMLElement, mode: "tweet" | "polish", prefill?:
       store.tweetDNA ?? []
     )
     const text = await runAI(store.apiKey, store.model, messages)
-    const ok   = insertIntoComposer(text)
-    setBarStatus(bar, ok ? "Done ✦" : "Click into the compose box first", !ok)
 
-    // Save topic as recent keyword after a successful tweet generate
-    if (mode === "tweet" && input && ok) {
-      await saveKeyword(input)
-      renderKeywords(bar)
-    }
+    // Show the Insert button — clicking it is a fresh user gesture so execCommand works
+    showInsertButton(bar, text, async (ok) => {
+      if (ok && mode === "tweet" && input) {
+        await saveKeyword(input)
+        renderKeywords(bar)
+      }
+    })
   } catch (e) {
     setBarStatus(bar, e instanceof Error ? e.message : "Error", true)
-  } finally {
     bar.querySelectorAll<HTMLButtonElement>("button").forEach(b => { b.disabled = false })
+  }
+}
+
+function showInsertButton(bar: HTMLElement, text: string, onInserted: (ok: boolean) => void) {
+  const insertBtn = bar.querySelector<HTMLButtonElement>(".aminta-insert-btn")
+  if (!insertBtn) return
+
+  setBarStatus(bar, truncate(text, 28))
+  insertBtn.style.display = "inline-flex"
+  insertBtn.onclick = () => {
+    const ok = insertIntoComposer(text)
+    insertBtn.style.display = "none"
+    bar.querySelectorAll<HTMLButtonElement>("button").forEach(b => { b.disabled = false })
+    setBarStatus(bar, ok ? "Done ✦" : "Click the compose box first", !ok)
+    onInserted(ok)
   }
 }
 
@@ -141,7 +166,6 @@ async function renderKeywords(bar: HTMLElement) {
 
 function buildBar(): HTMLElement {
   const bar = document.createElement("div")
-  bar.id = BAR_ID
   bar.style.cssText = [
     "display:flex",
     "align-items:center",
@@ -217,7 +241,11 @@ function buildBar(): HTMLElement {
   const generateBtn = makeBtn("+ Generate", () => runGenerate(bar, "tweet"))
   const polishBtn   = makeBtn("+ Polish",   () => runGenerate(bar, "polish"), false)
 
-  bar.append(generateBtn, polishBtn, divider, keywords, status)
+  const insertBtn = makeBtn("→ Insert", () => {}, true)
+  insertBtn.className = "aminta-insert-btn"
+  insertBtn.style.display = "none"
+
+  bar.append(generateBtn, polishBtn, insertBtn, divider, keywords, status)
 
   // Load keywords async after bar is built
   renderKeywords(bar)
@@ -226,17 +254,16 @@ function buildBar(): HTMLElement {
 }
 
 function injectBar(toolbar: Element) {
-  if (document.getElementById(BAR_ID)) return
+  // Check if this specific toolbar already has our bar injected right after it
+  const next = toolbar.nextElementSibling as HTMLElement | null
+  if (next?.hasAttribute(BAR_ATTR)) return
   const bar = buildBar()
+  bar.setAttribute(BAR_ATTR, "1")
   toolbar.parentElement?.insertBefore(bar, toolbar.nextSibling)
 }
 
 function removeBar() {
-  document.getElementById(BAR_ID)?.remove()
-}
-
-function getToolbar() {
-  return document.querySelector('[data-testid="toolBar"]')
+  document.querySelectorAll(`[${BAR_ATTR}]`).forEach(el => el.remove())
 }
 
 let observerActive = false
@@ -246,15 +273,14 @@ function startObserver() {
   observerActive = true
 
   const obs = new MutationObserver(() => {
-    const toolbar = getToolbar()
-    if (toolbar) injectBar(toolbar)
-    else         removeBar()
+    const toolbars = document.querySelectorAll('[data-testid="toolBar"]')
+    if (toolbars.length) toolbars.forEach(injectBar)
+    else removeBar()
   })
 
   obs.observe(document.body, { childList: true, subtree: true })
 
-  const toolbar = getToolbar()
-  if (toolbar) injectBar(toolbar)
+  document.querySelectorAll('[data-testid="toolBar"]').forEach(injectBar)
 }
 
 startObserver()
