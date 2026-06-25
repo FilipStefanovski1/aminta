@@ -23,12 +23,14 @@ export const metadata: Metadata = {
     description:
       "The AI sidekick that makes posting addictive. Generate posts in your voice, feed Aminta, stack XP, keep your streak alive.",
     type: "website",
+    images: [{ url: "/ogimage.png", width: 1200, height: 630 }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Aminta | Feed Aminta. Grow your socials.",
     description:
       "The AI sidekick that makes posting addictive. Generate posts in your voice, feed Aminta, stack XP, keep your streak alive.",
+    images: ["/ogimage.png"],
   },
   icons: {
     icon: [
