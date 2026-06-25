@@ -75,19 +75,20 @@ export default function Hero() {
 
           {/* Desktop: layered layout */}
           <div className="hidden lg:block relative h-[600px] overflow-visible">
-            {/* X tab — back layer */}
-            <div className="absolute left-0 top-8 w-[72%] z-10 rounded-xl overflow-hidden border border-accent/20 shadow-[0_20px_60px_-10px_rgba(0,0,0,0.8)]">
-              <img
-                src="/youhaveanidea%20(1).png"
-                alt="X timeline"
-                className="w-full h-auto block"
-                style={{ maxHeight: 380, objectFit: "cover", objectPosition: "top" }}
-              />
-            </div>
-
-            {/* Demon */}
-            <div className="absolute -bottom-4 left-4 z-30">
-              <HeaderAminta />
+            {/* X tab — back layer, demon anchored to its bottom-left */}
+            <div className="absolute left-0 top-8 w-[72%] z-10">
+              <div className="relative rounded-xl overflow-hidden border border-accent/20 shadow-[0_20px_60px_-10px_rgba(0,0,0,0.8)]">
+                <img
+                  src="/youhaveanidea%20(1).png"
+                  alt="X timeline"
+                  className="w-full h-auto block"
+                  style={{ maxHeight: 380, objectFit: "cover", objectPosition: "top" }}
+                />
+              </div>
+              {/* Demon sits at bottom-left corner of the X tab */}
+              <div className="absolute bottom-0 left-0 z-30">
+                <HeaderAminta />
+              </div>
             </div>
 
             {/* Extension — front layer, tilted */}
