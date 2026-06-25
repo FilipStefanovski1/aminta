@@ -1,6 +1,6 @@
 export default function Hero() {
   return (
-    <section id="top" className="relative overflow-x-hidden pt-32 pb-32 md:pt-40 md:pb-40">
+    <section id="top" className="relative overflow-clip pt-32 pb-32 md:pt-40 md:pb-40">
 
       <div className="relative z-10 mx-auto max-w-7xl px-5 grid lg:grid-cols-2 gap-12 lg:gap-8 items-center">
         {/* Left: copy */}
@@ -63,9 +63,9 @@ export default function Hero() {
         </div>
 
         {/* Right: layered product screenshots — same composition at every breakpoint */}
-        <div className="relative w-full" style={{ aspectRatio: "15 / 16" }}>
+        <div className="relative w-full" style={{ aspectRatio: "15 / 16", overflowX: "clip" }}>
           {/* X compose — back layer */}
-          <div className="absolute left-0 top-[5%] w-[72%] z-10">
+          <div className="absolute left-[3%] top-[5%] w-[69%] z-10">
             <div
               className="relative rounded-xl overflow-hidden border border-accent/20 shadow-[0_20px_60px_-10px_rgba(0,0,0,0.8)]"
               style={{ aspectRatio: "9 / 8" }}
@@ -82,7 +82,7 @@ export default function Hero() {
           <img
             src="/composite.png"
             alt="Aminta extension panel"
-            className="absolute right-0 top-0 z-20 w-[46%] h-auto rounded-2xl border border-accent/30 shadow-[0_20px_60px_-10px_rgba(0,0,0,0.9)]"
+            className="absolute right-[1%] top-0 z-20 w-[46%] h-auto rounded-2xl border border-accent/30 shadow-[0_20px_60px_-10px_rgba(0,0,0,0.9)]"
             style={{ transform: "perspective(800px) rotateY(-12deg) rotateX(2deg)" }}
           />
         </div>
