@@ -73,12 +73,11 @@ export default function Navbar() {
 
         {/* right side */}
         <div className="flex-1 flex items-center justify-end gap-4">
-          <a
-            href="#pricing"
-            className="hidden lg:inline-flex items-center rpg-btn-primary text-[10px] px-5 py-2.5"
-          >
-            Get Aminta →
-          </a>
+          <div className="hidden lg:block">
+            <a href="#pricing" className="rpg-btn-primary text-[10px] px-5 py-2.5">
+              Get Aminta →
+            </a>
+          </div>
           {/* mobile toggle */}
           <button
             aria-label="Toggle menu"
