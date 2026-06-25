@@ -15,6 +15,7 @@ const pixel = Press_Start_2P({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://amintaapp.com"),
   title: "Aminta | Feed Aminta. Grow your socials.",
   description:
     "Aminta is the AI writing sidekick that makes posting addictive. Write posts in your voice, feed your demon, stack XP, and grow your socials.",
