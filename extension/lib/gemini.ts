@@ -1,5 +1,17 @@
 // Direct call to Google AI Studio (Gemini) — free tier, no OpenRouter needed.
-import type { ChatMessage } from "~lib/openrouter"
+import type { ChatMessage, ContentPart } from "~lib/openrouter"
+
+function toGeminiParts(content: string | ContentPart[]): object[] {
+  if (typeof content === "string") return [{ text: content }]
+  return content.map((p) => {
+    if (p.type === "text") return { text: p.text }
+    // image_url — extract base64 from data URL
+    const url = p.image_url.url
+    const [header, data] = url.split(",")
+    const mimeType = header.match(/data:([^;]+)/)?.[1] ?? "image/jpeg"
+    return { inline_data: { mime_type: mimeType, data } }
+  })
+}
 
 export async function callGemini(
   apiKey: string,
@@ -12,14 +24,14 @@ export async function callGemini(
 
   const system = messages
     .filter((m) => m.role === "system")
-    .map((m) => m.content)
+    .map((m) => (typeof m.content === "string" ? m.content : ""))
     .join("\n")
 
   const contents = messages
     .filter((m) => m.role !== "system")
     .map((m) => ({
       role: m.role === "assistant" ? "model" : "user",
-      parts: [{ text: m.content }]
+      parts: toGeminiParts(m.content)
     }))
 
   const body = {

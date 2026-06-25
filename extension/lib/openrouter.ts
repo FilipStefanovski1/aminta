@@ -1,8 +1,12 @@
 // Generic OpenAI-compatible chat call. Used by OpenRouter and Groq.
 
+export type ContentPart =
+  | { type: "text"; text: string }
+  | { type: "image_url"; image_url: { url: string; detail?: "low" | "high" | "auto" } }
+
 export interface ChatMessage {
   role: "system" | "user" | "assistant"
-  content: string
+  content: string | ContentPart[]
 }
 
 export async function callOpenAICompat(

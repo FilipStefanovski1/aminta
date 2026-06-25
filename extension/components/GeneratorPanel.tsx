@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
-import { generate as runAI } from "~lib/ai"
+import { generate as runAI, generateFromImage } from "~lib/ai"
 import { getStageTint } from "~lib/evolution"
 import { readActivePost } from "~lib/messaging"
 import { incrementMissionGenerates } from "~lib/missions"
@@ -197,6 +197,29 @@ interface Props {
   onTeach?: () => void
 }
 
+// Resize image to max 1024px on longest side and return as JPEG data URL
+async function resizeImage(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+    img.onload = () => {
+      const MAX = 1024
+      const scale = Math.min(1, MAX / Math.max(img.width, img.height))
+      const w = Math.round(img.width * scale)
+      const h = Math.round(img.height * scale)
+      const canvas = document.createElement("canvas")
+      canvas.width = w
+      canvas.height = h
+      const ctx = canvas.getContext("2d")!
+      ctx.drawImage(img, 0, 0, w, h)
+      URL.revokeObjectURL(url)
+      resolve(canvas.toDataURL("image/jpeg", 0.85))
+    }
+    img.onerror = reject
+    img.src = url
+  })
+}
+
 export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, initialPlatform = "x", onTeach }: Props) {
   const [platform, setPlatform] = useState<Platform>(initialPlatform)
   const [mode,     setMode]     = useState<Mode>("tweet")
@@ -208,6 +231,9 @@ export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, initialP
   const [loading,  setLoading]  = useState(false)
   const [error,    setError]    = useState("")
   const [genKey,   setGenKey]   = useState(0)
+  const [imageDataUrl, setImageDataUrl] = useState<string | null>(null)
+  const [outputImage, setOutputImage]   = useState<string | null>(null)
+  const imageInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     setPlatform(initialPlatform)
@@ -216,7 +242,7 @@ export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, initialP
   const xp   = store.xp ?? 0
   const tint = getStageTint(xp)
 
-  const reset = () => { setError(""); setOutput("") }
+  const reset = () => { setError(""); setOutput(""); setOutputImage(null) }
 
   const pull = async () => {
     setError("")
@@ -225,17 +251,37 @@ export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, initialP
     else setError(res.error ?? "Couldn't read the post.")
   }
 
+  const handleImageFile = async (file: File) => {
+    if (!file.type.startsWith("image/")) { setError("Please select an image file."); return }
+    try {
+      const dataUrl = await resizeImage(file)
+      setImageDataUrl(dataUrl)
+      setError("")
+    } catch {
+      setError("Couldn't load image.")
+    }
+  }
+
+  const removeImage = () => {
+    setImageDataUrl(null)
+    if (imageInputRef.current) imageInputRef.current.value = ""
+  }
+
   const generate = async () => {
     reset()
     if (!store.apiKey) { setError("Add your AI key in Settings first."); return }
     if (!store.voice)  { setError("Teach Aminta your voice first — go to Teach."); return }
     const combined = topic.trim() + (context.trim() ? `\n\nAdditional context: ${context.trim()}` : "")
-    if (!combined) { setError("Give Aminta something to work with."); return }
+    if (!combined && !imageDataUrl) { setError("Give Aminta something to work with."); return }
     setLoading(true)
     try {
-      const messages = buildMessages(platform, mode, store.voice, combined, store.tweetDNA ?? [], tone)
-      const text = await runAI(store.apiKey, store.model, messages)
+      const topicInput = combined || "Write a post about this image."
+      const messages = buildMessages(platform, mode, store.voice, topicInput, store.tweetDNA ?? [], tone)
+      const text = imageDataUrl
+        ? await generateFromImage(store.apiKey, store.model, messages, imageDataUrl)
+        : await runAI(store.apiKey, store.model, messages)
       setOutput(text)
+      setOutputImage(imageDataUrl)
       setGenKey(k => k + 1)
       await incrementGenerations()
       await incrementMissionGenerates()
@@ -246,7 +292,7 @@ export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, initialP
     }
   }
 
-  const canGenerate = !!store.apiKey && !!store.voice && !!topic.trim()
+  const canGenerate = !!store.apiKey && !!store.voice && (!!topic.trim() || !!imageDataUrl)
   const topicLabel =
     mode === "reply"  ? "Who are we replying to?" :
     mode === "polish" ? "Your draft"               :
@@ -288,6 +334,48 @@ export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, initialP
           )
         })}
       </div>
+
+      {/* ── Image upload ── */}
+      {mode === "tweet" && (
+        <div className="space-y-1.5">
+          <p className="text-[11px] font-medium" style={{ color: C.textFaint }}>
+            Photo{" "}
+            <span style={{ color: C.textGhost, fontWeight: 400 }}>(optional — AI will write about it)</span>
+          </p>
+          {imageDataUrl ? (
+            <div className="relative rounded-xl overflow-hidden border border-line/50">
+              <img src={imageDataUrl} alt="Selected" className="w-full max-h-28 object-cover" />
+              <button
+                onClick={removeImage}
+                className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold"
+                style={{ background: "rgba(0,0,0,0.6)", color: "#fff" }}>
+                ✕
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => imageInputRef.current?.click()}
+              className="w-full rounded-xl py-3 text-[11px] font-medium border-dashed transition-colors flex items-center justify-center gap-2"
+              style={{ border: `1.5px dashed ${C.border}`, color: C.textFaint }}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleImageFile(f) }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <circle cx="8.5" cy="8.5" r="1.5" />
+                <path d="M21 15l-5-5L5 21" />
+              </svg>
+              Add photo
+            </button>
+          )}
+          <input
+            ref={imageInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImageFile(f) }}
+          />
+        </div>
+      )}
 
       {/* ── Platform pills ── */}
       <div className="space-y-1.5">
@@ -430,6 +518,7 @@ export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, initialP
           mode={mode}
           platform={platform}
           currentXP={xp}
+          imageDataUrl={outputImage}
           onXPAwarded={(amount, levelUp) => {
             onXPAwarded()
             if (levelUp) onLevelUp(levelUp.level, levelUp.stage)

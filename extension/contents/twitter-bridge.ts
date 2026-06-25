@@ -14,6 +14,41 @@ function getActiveTweet(): string {
   return (nodes[0] as HTMLElement).innerText.trim()
 }
 
+async function insertImageIntoComposer(dataUrl: string): Promise<boolean> {
+  try {
+    const res = await fetch(dataUrl)
+    const blob = await res.blob()
+    const ext = blob.type.includes("png") ? "png" : blob.type.includes("gif") ? "gif" : "jpg"
+    const file = new File([blob], `aminta-image.${ext}`, { type: blob.type || "image/jpeg" })
+
+    // Strategy 1: find X's hidden file input inside the toolbar
+    const toolbar = document.querySelector('[data-testid="toolBar"]')
+    const fileInput =
+      toolbar?.querySelector<HTMLInputElement>('input[type="file"]') ??
+      document.querySelector<HTMLInputElement>('input[type="file"][accept*="image"]')
+
+    if (fileInput) {
+      const dt = new DataTransfer()
+      dt.items.add(file)
+      Object.defineProperty(fileInput, "files", { value: dt.files, configurable: true })
+      fileInput.dispatchEvent(new Event("change", { bubbles: true }))
+      return true
+    }
+
+    // Strategy 2: synthetic paste event on the compose box
+    const wrapper = document.querySelector('[data-testid="tweetTextarea_0"]') as HTMLElement | null
+    if (!wrapper) return false
+    const box = (wrapper.querySelector('[contenteditable="true"]') ?? wrapper) as HTMLElement
+    box.focus()
+    const dt2 = new DataTransfer()
+    dt2.items.add(file)
+    box.dispatchEvent(new ClipboardEvent("paste", { clipboardData: dt2 as unknown as DataTransfer, bubbles: true, cancelable: true }))
+    return true
+  } catch {
+    return false
+  }
+}
+
 function insertIntoComposer(text: string): boolean {
   // Prefer the focused editor, fall back to first match
   let wrapper = document.activeElement?.closest('[data-testid="tweetTextarea_0"]') as HTMLElement | null
@@ -303,6 +338,16 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       ? { ok: true }
       : { ok: false, error: "No open composer found. Click the post or reply box on X first." }
     )
+    return true
+  }
+
+  if (msg?.type === "INSERT_IMAGE") {
+    insertImageIntoComposer(msg.imageDataUrl).then((ok) => {
+      sendResponse(ok
+        ? { ok: true }
+        : { ok: false, error: "Couldn't attach image. Make sure the X composer is open." }
+      )
+    })
     return true
   }
 

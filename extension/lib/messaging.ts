@@ -50,3 +50,7 @@ export function readActivePost(platform: Platform): Promise<BridgeResponse> {
 export function insertText(platform: Platform, text: string): Promise<BridgeResponse> {
   return send({ type: "INSERT_TEXT", text }, platform)
 }
+
+export function insertImage(platform: Platform, imageDataUrl: string): Promise<BridgeResponse> {
+  return send({ type: "INSERT_IMAGE", imageDataUrl }, platform)
+}

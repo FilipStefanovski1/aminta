@@ -12,11 +12,16 @@ const TONE_GUIDE: Record<Tone, string> = {
   inspiring:  "Be inspiring. End with energy, conviction, or a strong clear vision.",
 }
 
+function parseExamples(raw: string): string[] {
+  if (!raw) return []
+  if (raw.trim().startsWith("[")) {
+    try { return JSON.parse(raw) as string[] } catch {}
+  }
+  return raw.split("\n").map((s) => s.trim()).filter(Boolean)
+}
+
 function voiceBlock(voice: VoiceProfile, tweetDNA: string[]): string {
-  const examples = voice.examples
-    .split("\n")
-    .map((l) => l.trim())
-    .filter(Boolean)
+  const examples = parseExamples(voice.examples)
     .map((l) => `- ${l}`)
     .join("\n")
 

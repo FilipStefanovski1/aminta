@@ -1,7 +1,7 @@
 import { useState } from "react"
 
 import { getForm, getLevel } from "~lib/evolution"
-import { insertText } from "~lib/messaging"
+import { insertImage, insertText } from "~lib/messaging"
 import { incrementMissionPublished, recordStreak } from "~lib/missions"
 import type { Mode, Platform } from "~lib/prompts"
 import { hashText, tryAwardXP, XP_PER_MODE } from "~lib/xp"
@@ -11,10 +11,11 @@ interface Props {
   mode: Mode
   platform: Platform
   currentXP: number
+  imageDataUrl?: string | null
   onXPAwarded: (amount: number, levelUp?: { level: number; stage: string }) => void
 }
 
-export default function OutputCard({ text, mode, platform, currentXP, onXPAwarded }: Props) {
+export default function OutputCard({ text, mode, platform, currentXP, imageDataUrl, onXPAwarded }: Props) {
   const [copied, setCopied] = useState(false)
   const [insertStatus, setInsertStatus] = useState("")
   const [xpStatus, setXpStatus] = useState("")
@@ -41,8 +42,22 @@ export default function OutputCard({ text, mode, platform, currentXP, onXPAwarde
       setTimeout(() => setInsertStatus(""), 4000)
       return
     }
-    setInsertStatus("Inserted ✓")
-    setTimeout(() => setInsertStatus(""), 2000)
+
+    // Insert image after text if one was provided
+    if (imageDataUrl && platform === "x") {
+      setInsertStatus("Inserting image…")
+      const imgRes = await insertImage(platform, imageDataUrl)
+      if (!imgRes.ok) {
+        setInsertStatus("Text inserted. Image failed — attach manually.")
+        setTimeout(() => setInsertStatus(""), 4000)
+      } else {
+        setInsertStatus("Inserted ✓")
+        setTimeout(() => setInsertStatus(""), 2000)
+      }
+    } else {
+      setInsertStatus("Inserted ✓")
+      setTimeout(() => setInsertStatus(""), 2000)
+    }
 
     const hash = hashText(text)
     const xpRes = await tryAwardXP(hash, XP_PER_MODE[mode])
@@ -79,6 +94,13 @@ export default function OutputCard({ text, mode, platform, currentXP, onXPAwarde
 
   return (
     <div className="animate-card-in bg-[#111318] border border-[#1e2028] rounded-xl p-3 space-y-3">
+      {imageDataUrl && (
+        <img
+          src={imageDataUrl}
+          alt="Attached"
+          className="w-full rounded-lg object-cover max-h-36"
+        />
+      )}
       <p className="text-sm whitespace-pre-wrap leading-relaxed text-[#e7e7ef]">{text}</p>
 
       <div className="flex gap-2">
