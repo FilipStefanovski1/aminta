@@ -65,15 +65,12 @@ export default function Hero() {
         {/* Right: layered product screenshots — same composition at every breakpoint */}
         <div className="relative w-full" style={{ aspectRatio: "15 / 16", overflowX: "clip" }}>
           {/* X compose — back layer */}
-          <div className="absolute left-[3%] top-[5%] w-[69%] z-10">
-            <div
-              className="relative rounded-xl overflow-hidden border border-accent/20 shadow-[0_20px_60px_-10px_rgba(0,0,0,0.8)]"
-              style={{ aspectRatio: "9 / 8" }}
-            >
+          <div className="absolute left-[3%] top-[5%] w-[69%] z-10" style={{ height: "60%" }}>
+            <div className="h-full rounded-xl overflow-hidden border border-accent/20 shadow-[0_20px_60px_-10px_rgba(0,0,0,0.8)]">
               <img
                 src="/youhaveanidea%20(1).png"
                 alt="X timeline"
-                className="absolute inset-0 w-full h-full object-cover object-top"
+                className="w-full h-full object-cover object-left-top"
               />
             </div>
           </div>
