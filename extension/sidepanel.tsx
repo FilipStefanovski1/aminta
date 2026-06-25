@@ -217,6 +217,8 @@ function BottomNav({ active, onChange, tint }: { active: Tab; onChange: (t: Tab)
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
+const SPLASH_SKIN = { body: "#1a5e48", horn: "#0f3d30", eye: "#74f7b5" }
+
 function SidePanel() {
   const [store, setLocalStore]          = useState<AmintaStore | null>(null)
   const [tab, setTab]                   = useState<Tab>("home")
@@ -227,8 +229,15 @@ function SidePanel() {
   const [authChecked, setAuthChecked]   = useState(false)
   const [isLoggedIn, setIsLoggedIn]     = useState(false)
   const [session, setSession]           = useState<AuthSession | null>(null)
+  const [minDelayDone, setMinDelayDone] = useState(false)
 
   const refresh = async () => setLocalStore(await getStore())
+
+  // Minimum 1 s splash so the jump animation always plays once
+  useEffect(() => {
+    const t = setTimeout(() => setMinDelayDone(true), 1000)
+    return () => clearTimeout(t)
+  }, [])
 
   // Check auth + pull from cloud on startup
   useEffect(() => {
@@ -274,10 +283,13 @@ function SidePanel() {
     if (next === "home") refresh()
   }
 
-  if (!authChecked || !store) {
+  if (!authChecked || !store || !minDelayDone) {
     return (
-      <div className="absolute inset-0 flex items-center justify-center bg-[#1f1f1f]">
-        <p className="font-pixel text-[8px] text-[#333]">loading...</p>
+      <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-[#1f1f1f]">
+        <div className="sprite-jump" style={{ filter: "drop-shadow(0 0 12px #74f7b566)" }}>
+          <DemonMascot skin={SPLASH_SKIN} size={64} />
+        </div>
+        <p className="font-pixel text-[7px] text-[#74f7b5]/40 tracking-widest">AMINTA</p>
       </div>
     )
   }
