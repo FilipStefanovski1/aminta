@@ -117,6 +117,16 @@ const CARDS: WallCard[] = [
     tag: "Creator pain",
   },
   {
+    id: "r5",
+    kind: "founder",
+    name: "Samuel Naumovski Vickius",
+    role: "Executive Director",
+    company: "SMCC",
+    review: "As an executive director, your personal brand is part of the institution's brand. Aminta makes it easy to stay present on X without turning it into a full-time job.",
+    avatar: "/testimonials/samuel-naumovski.jpeg",
+    tag: "Executive",
+  },
+  {
     id: "t1",
     kind: "truth",
     name: "Sofia Reed",
