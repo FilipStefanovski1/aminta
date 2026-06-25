@@ -16,6 +16,7 @@ interface WallCard {
 }
 
 const CARDS: WallCard[] = [
+  // col 0
   {
     id: "r1",
     kind: "founder",
@@ -26,6 +27,7 @@ const CARDS: WallCard[] = [
     avatar: "/testimonials/LazarBucan.jpeg",
     tag: "AI & GTM",
   },
+  // col 1
   {
     id: "p1",
     kind: "placeholder",
@@ -36,6 +38,7 @@ const CARDS: WallCard[] = [
     avatar: "/testimonials/VictorSaltor.jpeg",
     tag: "Creator",
   },
+  // col 2
   {
     id: "fn1",
     kind: "founder",
@@ -46,6 +49,7 @@ const CARDS: WallCard[] = [
     avatar: "/testimonials/filip-stefanovski.jpg",
     tag: "Founder note",
   },
+  // col 0
   {
     id: "r2",
     kind: "founder",
@@ -56,16 +60,7 @@ const CARDS: WallCard[] = [
     avatar: "/testimonials/FrankaGrazdani.jpeg",
     tag: "COO · Web3",
   },
-  {
-    id: "p2",
-    kind: "truth",
-    name: "Mila Vukikjevikj",
-    role: "Growth lead",
-    company: "Orbit Labs",
-    review: "Posting consistently is harder than posting once.",
-    avatar: "/testimonials/mila-vukikjevikj.jpg",
-    tag: "Posting truth",
-  },
+  // col 1
   {
     id: "r3",
     kind: "founder",
@@ -76,6 +71,18 @@ const CARDS: WallCard[] = [
     avatar: "/testimonials/FilipNajdovski.jpeg",
     tag: "Co-Founder",
   },
+  // col 2
+  {
+    id: "p2",
+    kind: "truth",
+    name: "Mila Vukikjevikj",
+    role: "Growth lead",
+    company: "Orbit Labs",
+    review: "Posting consistently is harder than posting once.",
+    avatar: "/testimonials/mila-vukikjevikj.jpg",
+    tag: "Posting truth",
+  },
+  // col 0
   {
     id: "r4",
     kind: "founder",
@@ -86,6 +93,7 @@ const CARDS: WallCard[] = [
     avatar: "/testimonials/MarijaLjuseva.jpeg",
     tag: "Community · Startups",
   },
+  // col 1
   {
     id: "xp1",
     kind: "xp",
@@ -96,26 +104,7 @@ const CARDS: WallCard[] = [
     avatar: "/testimonials/JhaSundaram.png",
     tag: "POST +50 XP · REPLY +25 XP",
   },
-  {
-    id: "fn2",
-    kind: "founder",
-    name: "Filip Stefanovski",
-    role: "Founder",
-    company: "Aminta",
-    review: "Motivation fades. Systems don't.",
-    avatar: "/testimonials/filip-stefanovski.jpg",
-    tag: "Founder note",
-  },
-  {
-    id: "p3",
-    kind: "placeholder",
-    name: "Lena Park",
-    role: "Consultant",
-    company: "Threadline",
-    review: "Most creators disappear because they stop showing up.",
-    avatar: "/testimonials/lena-park.jpg",
-    tag: "Creator pain",
-  },
+  // col 2
   {
     id: "r5",
     kind: "founder",
@@ -126,6 +115,18 @@ const CARDS: WallCard[] = [
     avatar: "/testimonials/samuel-naumovski.jpeg",
     tag: "Executive",
   },
+  // col 0
+  {
+    id: "p3",
+    kind: "placeholder",
+    name: "Lena Park",
+    role: "Consultant",
+    company: "Threadline",
+    review: "Most creators disappear because they stop showing up.",
+    avatar: "/testimonials/lena-park.jpg",
+    tag: "Creator pain",
+  },
+  // col 1
   {
     id: "t1",
     kind: "truth",
