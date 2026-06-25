@@ -1,5 +1,3 @@
-import HeaderAminta from "./HeaderAminta";
-
 export default function Hero() {
   return (
     <section id="top" className="relative overflow-x-hidden pt-32 pb-32 md:pt-40 md:pb-40">
@@ -84,10 +82,6 @@ export default function Hero() {
                   className="w-full h-auto block"
                   style={{ maxHeight: 380, objectFit: "cover", objectPosition: "top" }}
                 />
-              </div>
-              {/* Demon sits at bottom-left corner of the X tab */}
-              <div className="absolute bottom-0 left-0 z-30" style={{ transform: "scale(0.55)", transformOrigin: "bottom left" }}>
-                <HeaderAminta />
               </div>
             </div>
 
