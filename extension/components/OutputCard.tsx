@@ -45,8 +45,14 @@ export default function OutputCard({ text, mode, platform, currentXP, imageDataU
 
     const res = await insertText(platform, text)
     if (!res.ok) {
-      setInsertStatus(res.error ?? "Insert failed.")
-      setTimeout(() => setInsertStatus(""), 4000)
+      // Clipboard fallback so the user is never stuck
+      try {
+        await navigator.clipboard.writeText(text)
+        setInsertStatus("Copied — paste it into the composer.")
+      } catch {
+        setInsertStatus("Insert failed — copy manually.")
+      }
+      setTimeout(() => setInsertStatus(""), 5000)
       return
     }
 

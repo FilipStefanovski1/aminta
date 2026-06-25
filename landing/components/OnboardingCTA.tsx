@@ -11,7 +11,9 @@ export default function OnboardingCTA() {
           </h2>
 
           <p className="mt-6 text-sm sm:text-base text-muted leading-relaxed">
-            30-minute personal onboarding &nbsp;·&nbsp; Setup assistance &nbsp;·&nbsp; Live Q&A &nbsp;·&nbsp; 100% free
+            30-minute personal onboarding
+            <span className="hidden sm:inline"> &nbsp;·&nbsp; Setup assistance &nbsp;·&nbsp; Live Q&A &nbsp;·&nbsp; 100% free</span>
+            <span className="block sm:hidden mt-1 text-xs text-muted/60">Setup · Q&A · 100% free</span>
           </p>
 
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">

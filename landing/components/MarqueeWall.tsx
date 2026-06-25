@@ -71,17 +71,6 @@ const CARDS: WallCard[] = [
     avatar: "/testimonials/FilipNajdovski.jpeg",
     tag: "Co-Founder",
   },
-  // col 2
-  {
-    id: "p2",
-    kind: "truth",
-    name: "Mila Vukikjevikj",
-    role: "Growth lead",
-    company: "Orbit Labs",
-    review: "Posting consistently is harder than posting once.",
-    avatar: "/testimonials/mila-vukikjevikj.jpg",
-    tag: "Posting truth",
-  },
   // col 0
   {
     id: "r4",
@@ -114,28 +103,6 @@ const CARDS: WallCard[] = [
     review: "As an executive director, your personal brand is part of the institution's brand. Aminta makes it easy to stay present on X without turning it into a full-time job.",
     avatar: "/testimonials/samuel-naumovski.jpeg",
     tag: "Executive",
-  },
-  // col 0
-  {
-    id: "p3",
-    kind: "placeholder",
-    name: "Lena Park",
-    role: "Consultant",
-    company: "Threadline",
-    review: "Most creators disappear because they stop showing up.",
-    avatar: "/testimonials/lena-park.jpg",
-    tag: "Creator pain",
-  },
-  // col 1
-  {
-    id: "t1",
-    kind: "truth",
-    name: "Sofia Reed",
-    role: "Creator",
-    company: "Neon Journal",
-    review: "The blank page wins too often. The wall reminds me to publish anyway.",
-    avatar: "/testimonials/sofia-reed.jpg",
-    tag: "Posting truth",
   },
 ];
 

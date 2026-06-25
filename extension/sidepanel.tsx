@@ -362,6 +362,7 @@ function SidePanel() {
                 onXPAwarded={async () => { await refresh(); pushToCloud() }}
                 onLevelUp={(level, stage) => setLevelUpData({ level, stage })}
                 onTeach={() => switchTab("train")}
+                onOpenSettings={() => setSettingsOpen(true)}
               />
             )}
 

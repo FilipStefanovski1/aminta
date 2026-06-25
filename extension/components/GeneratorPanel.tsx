@@ -195,6 +195,7 @@ interface Props {
   onLevelUp: (level: number, stage: string) => void
   initialPlatform?: Platform
   onTeach?: () => void
+  onOpenSettings?: () => void
 }
 
 // Resize image to max 1024px on longest side and return as JPEG data URL
@@ -220,7 +221,7 @@ async function resizeImage(file: File): Promise<string> {
   })
 }
 
-export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, initialPlatform = "x", onTeach }: Props) {
+export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, initialPlatform = "x", onTeach, onOpenSettings }: Props) {
   const [platform, setPlatform] = useState<Platform>(initialPlatform)
   const [mode,     setMode]     = useState<Mode>("tweet")
   const [tone,     setTone]     = useState<Tone>("direct")
@@ -513,7 +514,7 @@ export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, initialP
       {!loading && !store.apiKey && (
         <p className="text-[11px] animate-fade-in px-1" style={{ color: C.textFaint }}>
           Add your AI key in{" "}
-          <button onClick={() => {}} className="underline" style={{ color: C.text }}>Settings</button>
+          <button onClick={onOpenSettings} className="underline" style={{ color: C.text }}>Settings</button>
           {" "}to start generating.
         </p>
       )}
