@@ -77,19 +77,12 @@ export default function Hero() {
           <div className="hidden lg:block relative h-[600px] overflow-visible">
             {/* X tab — back layer */}
             <div className="absolute left-0 top-8 w-[72%] z-10 rounded-xl overflow-hidden border border-accent/20 shadow-[0_20px_60px_-10px_rgba(0,0,0,0.8)]">
-              <div className="flex items-center gap-2 px-3 h-8 bg-[#1a1a1a] border-b border-white/5">
-                <div className="flex gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#3a3a3a]" />
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#3a3a3a]" />
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#3a3a3a]" />
-                </div>
-                <div className="mx-auto flex items-center gap-1.5 rounded bg-black/40 px-2 py-0.5 text-[9px] text-white/40">
-                  x.com/home
-                </div>
-              </div>
-              <div className="bg-[#0f0f0f] h-[340px] flex items-center justify-center">
-                <span className="font-pixel text-[9px] text-white/10 tracking-widest">X TAB SCREENSHOT</span>
-              </div>
+              <img
+                src="/youhaveanidea%20(1).png"
+                alt="X timeline"
+                className="w-full h-auto block"
+                style={{ maxHeight: 380, objectFit: "cover", objectPosition: "top" }}
+              />
             </div>
 
             {/* Demon */}
