@@ -1,8 +1,7 @@
 const NAV = [
   { label: "Home", href: "#top" },
-  { label: "Features", href: "#features" },
   { label: "How It Works", href: "#how-it-works" },
-  { label: "Feed Aminta", href: "#demon" },
+  { label: "Features", href: "#features" },
   { label: "Pricing", href: "#pricing" },
   { label: "FAQ", href: "#faq" },
 ];

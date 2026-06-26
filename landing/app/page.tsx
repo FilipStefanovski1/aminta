@@ -19,11 +19,11 @@ export default function Home() {
       <Navbar />
       <main className="flex-1">
         <Hero />
+        <HowItWorks />
         <ThreeModes />
         <ScrollDemonProgress />
         <AmintaEvolutionGrid />
         <Features />
-        <HowItWorks />
         <MarqueeWall />
         <Pricing />
         <OnboardingCTA />

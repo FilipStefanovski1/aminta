@@ -232,7 +232,7 @@ function DemonAnimated() {
   });
 
   return (
-    <section ref={ref} id="feed-aminta" className="relative h-[240vh] scroll-mt-20 overflow-x-clip">
+    <section ref={ref} className="relative h-[240vh] scroll-mt-20 overflow-x-clip">
       <div
         style={
           {
