@@ -93,6 +93,17 @@ const CARDS: WallCard[] = [
     avatar: "/testimonials/JhaSundaram.png",
     tag: "POST +50 XP · REPLY +25 XP",
   },
+  // col 0
+  {
+    id: "r6",
+    kind: "founder",
+    name: "Stefan Savevski",
+    role: "COO",
+    company: "RUNSTACK",
+    review: "Most founders I know post once, feel cringe, and quit. Aminta removes that friction. You stop overthinking and just ship the post.",
+    avatar: "/testimonials/StefanSavevski.png",
+    tag: "COO",
+  },
   // col 2
   {
     id: "r5",
