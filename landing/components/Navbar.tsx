@@ -75,7 +75,7 @@ export default function Navbar() {
         <div className="flex-1 flex items-center justify-end gap-4">
           <div className="hidden lg:block">
             <a href="#pricing" className="rpg-btn-primary text-[10px] px-5 py-2.5">
-              Get Aminta →
+              Get Aminta
             </a>
           </div>
           {/* mobile toggle */}
