@@ -105,54 +105,91 @@ function SettingsOverlay({
   session: AuthSession | null
   onSignOut: () => void
 }) {
+  const plan = store.plan ?? "free"
+  const planLabel = plan === "lifetime" ? "FOUNDER" : plan === "pro" ? "PRO" : "FREE"
+  const planColor = plan === "lifetime" ? "#f5d060" : plan === "pro" ? "#74f7b5" : C.textGhost
+
   return (
     <div className="absolute inset-0 z-40 flex flex-col animate-slide-up" style={{ backgroundColor: C.bg }}>
+
+      {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 shrink-0" style={{ borderBottom: `1px solid ${C.border}` }}>
         <p className="font-pixel text-[9px]" style={{ color: C.text }}>Settings</p>
         <button onClick={onClose}
-          className="w-7 h-7 flex items-center justify-center transition-colors rounded-lg hover:bg-white/5"
+          className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/5 transition-colors"
           style={{ color: C.textFaint }}>✕</button>
       </div>
-      <div className="flex-1 overflow-y-auto p-4 space-y-5">
-        {session ? (
-          <div className="rounded-xl px-3 py-3 space-y-2" style={{ border: `1px solid ${C.border}` }}>
-            <p className="font-pixel text-[7px]" style={{ color: C.textFaint }}>Signed in as</p>
-            <p className="text-xs truncate" style={{ color: C.text }}>{session.email}</p>
-            <button
-              onClick={onSignOut}
-              className="btn-pixel w-full py-2.5 rounded-lg font-pixel text-[7px] mt-1"
-              style={{ backgroundColor: "#1a1a1a", color: "#f87171", borderColor: "#f87171" }}>
-              Sign out
-            </button>
-          </div>
-        ) : (
-          <div className="rounded-xl px-3 py-3" style={{ border: `1px solid ${C.border}` }}>
-            <p className="font-pixel text-[7px]" style={{ color: C.textFaint }}>Not signed in</p>
-          </div>
-        )}
-        <ApiKeyForm initial={store} onSave={onSave} />
 
-        <div className="space-y-3 pt-3" style={{ borderTop: `1px solid ${C.border}` }}>
+      <div className="flex-1 overflow-y-auto">
+
+        {/* ── ACCOUNT ── */}
+        <div className="px-4 pt-5 pb-4 space-y-3" style={{ borderBottom: `1px solid ${C.border}` }}>
+          <p className="font-pixel text-[6px] uppercase tracking-widest" style={{ color: C.textGhost }}>Account</p>
+
+          {session ? (
+            <>
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[11px] truncate" style={{ color: C.text }}>{session.email}</p>
+                  <div className="flex items-center gap-1.5 mt-1">
+                    <span className="font-pixel text-[6px] px-1.5 py-0.5 rounded" style={{ backgroundColor: planColor + "22", color: planColor, border: `1px solid ${planColor}44` }}>
+                      {planLabel}
+                    </span>
+                    {plan === "free" && (
+                      <a href="https://amintaapp.com/#pricing" target="_blank" rel="noreferrer"
+                        className="font-pixel text-[6px] underline" style={{ color: "#74f7b5" }}>
+                        Upgrade →
+                      </a>
+                    )}
+                  </div>
+                </div>
+                <button
+                  onClick={onSignOut}
+                  className="btn-pixel shrink-0 px-3 py-2 rounded-lg font-pixel text-[6px]"
+                  style={{ backgroundColor: "#1a1a1a", color: "#f87171", borderColor: "#f87171" }}>
+                  Sign out
+                </button>
+              </div>
+            </>
+          ) : (
+            <p className="font-pixel text-[7px]" style={{ color: C.textFaint }}>Not signed in</p>
+          )}
+        </div>
+
+        {/* ── AI PROVIDER ── */}
+        <div className="px-4 pt-5 pb-4 space-y-3" style={{ borderBottom: `1px solid ${C.border}` }}>
+          <p className="font-pixel text-[6px] uppercase tracking-widest" style={{ color: C.textGhost }}>AI Provider</p>
+          <ApiKeyForm initial={store} onSave={onSave} />
+        </div>
+
+        {/* ── DANGER ZONE ── */}
+        <div className="px-4 pt-5 pb-4 space-y-3">
+          <p className="font-pixel text-[6px] uppercase tracking-widest" style={{ color: C.textGhost }}>App</p>
           <button
             onClick={() => { onClose(); onResetOnboarding() }}
-            className="btn-pixel w-full py-2.5 rounded-xl font-pixel text-[7px]"
+            className="btn-pixel px-4 py-2 rounded-lg font-pixel text-[6px]"
             style={{ backgroundColor: "#1a1a1a", color: C.textFaint, borderColor: "#333" }}>
             ↺ Restart setup
           </button>
+        </div>
 
-          <div className="flex items-center justify-center gap-5 pt-1">
-            {[
-              { label: "X",        href: "https://x.com/amintaapp" },
-              { label: "LinkedIn", href: "https://www.linkedin.com/company/amintaapp/" },
-              { label: "Help",     href: "https://amintaapp.com" },
-            ].map(({ label, href }) => (
-              <a key={href} href={href} target="_blank" rel="noreferrer"
-                className="font-pixel text-[7px] transition-colors" style={{ color: C.textGhost }}>{label}</a>
-            ))}
-          </div>
-          <p className="text-[9px] text-center" style={{ color: C.textGhost }}>Aminta · v0.1</p>
+      </div>
+
+      {/* Footer */}
+      <div className="px-4 py-3 flex items-center justify-between shrink-0" style={{ borderTop: `1px solid ${C.border}` }}>
+        <p className="font-pixel text-[6px]" style={{ color: C.textGhost }}>v0.1</p>
+        <div className="flex items-center gap-4">
+          {[
+            { label: "X",        href: "https://x.com/amintaapp" },
+            { label: "LinkedIn", href: "https://www.linkedin.com/company/amintaapp/" },
+            { label: "Help",     href: "https://amintaapp.com" },
+          ].map(({ label, href }) => (
+            <a key={href} href={href} target="_blank" rel="noreferrer"
+              className="font-pixel text-[6px] hover:text-white transition-colors" style={{ color: C.textGhost }}>{label}</a>
+          ))}
         </div>
       </div>
+
     </div>
   )
 }
