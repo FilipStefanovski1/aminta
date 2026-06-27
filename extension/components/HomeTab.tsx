@@ -10,7 +10,7 @@ import {
   getXpInLevel,
   getXpProgress,
 } from "~lib/evolution"
-import { computeDNAStrength, getMissionProgress, tryCompleteDailyMissions } from "~lib/missions"
+import { getMissionProgress, tryCompleteDailyMissions } from "~lib/missions"
 import type { AmintaStore } from "~lib/storage"
 import { C } from "~lib/theme"
 import { Card, Sprite, SpeechBubble, SpriteMark, XPBar } from "~components/ui"
@@ -47,7 +47,6 @@ export default function HomeTab({ store, onCreate, onTrain, onUpdate }: Props) {
   const xpToday    = store.xpToday ?? 0
   const streak     = store.streak ?? 0
   const plan       = store.plan ?? "free"
-  const voiceMatch = computeDNAStrength(store)
   const mission    = getMissionProgress(store)
   const nextLevel  = level < FORMS.length ? level + 1 : null
   const currentForm = getForm(xp)
@@ -150,9 +149,9 @@ export default function HomeTab({ store, onCreate, onTrain, onUpdate }: Props) {
       {/* ── STATS ── */}
       <div className="grid grid-cols-3 gap-2 animate-card-in" style={{ animationDelay: "60ms" }}>
         {[
-          { label: "Streak",      value: streak > 0 ? `${streak}d` : "—" },
-          { label: "Today",       value: xpToday > 0 ? `+${xpToday}` : "0" },
-          { label: "Voice Match", value: `${voiceMatch}%` },
+          { label: "Streak", value: streak > 0 ? `${streak}d` : "—" },
+          { label: "Today",  value: xpToday > 0 ? `+${xpToday}` : "0" },
+          { label: "Plan",   value: plan === "lifetime" ? "FOUNDER" : plan === "pro" ? "PRO" : "FREE" },
         ].map(({ label, value }) => (
           <div key={label} className="rounded-2xl py-3 px-2 text-center" style={{ backgroundColor: C.card, border: `1px solid ${C.border}` }}>
             <p className="font-pixel text-[9px]" style={{ color: C.text }}>{value}</p>

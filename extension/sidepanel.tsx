@@ -120,8 +120,8 @@ function SettingsOverlay({
             <p className="text-xs truncate" style={{ color: C.text }}>{session.email}</p>
             <button
               onClick={onSignOut}
-              className="w-full text-left px-3 py-2 rounded-lg font-pixel text-[7px] transition-colors mt-1"
-              style={{ border: `1px solid ${C.border}`, color: "#f87171" }}>
+              className="btn-pixel w-full py-2.5 rounded-lg font-pixel text-[7px] mt-1"
+              style={{ backgroundColor: "#1a1a1a", color: "#f87171", borderColor: "#f87171" }}>
               Sign out
             </button>
           </div>
@@ -135,8 +135,8 @@ function SettingsOverlay({
         <div className="space-y-3 pt-3" style={{ borderTop: `1px solid ${C.border}` }}>
           <button
             onClick={() => { onClose(); onResetOnboarding() }}
-            className="w-full text-left px-3 py-2.5 rounded-xl font-pixel text-[7px] transition-colors"
-            style={{ border: `1px solid ${C.border}`, color: C.textFaint }}>
+            className="btn-pixel w-full py-2.5 rounded-xl font-pixel text-[7px]"
+            style={{ backgroundColor: "#1a1a1a", color: C.textFaint, borderColor: "#333" }}>
             ↺ Restart setup
           </button>
 

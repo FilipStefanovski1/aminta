@@ -37,6 +37,10 @@ html, body {
   cursor: pointer;
   transition: transform 0.08s, box-shadow 0.08s;
 }
+.btn-pixel:hover {
+  transform: translate(-1px, -2px);
+  box-shadow: 5px 5px 0 #000;
+}
 .btn-pixel:active {
   transform: translate(2px, 2px);
   box-shadow: 1px 1px 0 #000;
