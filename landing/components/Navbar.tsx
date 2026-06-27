@@ -84,7 +84,7 @@ export default function Navbar() {
             rel="noreferrer"
             className="flex items-center gap-1.5 font-pixel text-[9px] text-black/70 hover:text-black transition-colors whitespace-nowrap"
           >
-            <img src="/Chrome Logo.png" alt="" width={12} height={12} />
+            <img src="/Chrome%20Logo.png" alt="" width={12} height={12} />
             Get Extension
           </a>
         </div>
