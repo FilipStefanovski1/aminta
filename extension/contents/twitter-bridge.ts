@@ -49,23 +49,24 @@ async function insertImageIntoComposer(dataUrl: string): Promise<boolean> {
   }
 }
 
-function insertIntoComposer(text: string): boolean {
-  // Prefer the focused editor, fall back to first match
-  let wrapper = document.activeElement?.closest('[data-testid="tweetTextarea_0"]') as HTMLElement | null
-  if (!wrapper) wrapper = document.querySelector('[data-testid="tweetTextarea_0"]') as HTMLElement | null
+function findTextAreaWrapper(bar?: HTMLElement): HTMLElement | null {
+  // Prefer the textarea in the same compose container as the bar (modal vs sidebar disambiguation)
+  if (bar) {
+    const relative = bar.parentElement?.querySelector<HTMLElement>('[data-testid="tweetTextarea_0"]')
+    if (relative) return relative
+  }
+  // Fall back: focused composer, then first in DOM
+  const focused = document.activeElement?.closest<HTMLElement>('[data-testid="tweetTextarea_0"]')
+  return focused ?? document.querySelector<HTMLElement>('[data-testid="tweetTextarea_0"]')
+}
+
+function insertIntoComposer(text: string, bar?: HTMLElement): boolean {
+  const wrapper = findTextAreaWrapper(bar)
   if (!wrapper) return false
 
-  // X nests a contenteditable inside the testid wrapper
   const box = (wrapper.querySelector('[contenteditable="true"]') ?? wrapper) as HTMLElement
   box.focus()
-
-  // Explicitly select all existing content via Selection API, then replace
-  const range = document.createRange()
-  range.selectNodeContents(box)
-  const sel = window.getSelection()
-  sel?.removeAllRanges()
-  sel?.addRange(range)
-
+  document.execCommand("selectAll", false)
   return document.execCommand("insertText", false, text)
 }
 
@@ -92,9 +93,9 @@ async function saveKeyword(raw: string): Promise<void> {
 
 const BAR_ATTR = "data-aminta-bar"
 
-function getComposerText(): string {
-  const box = document.querySelector('[data-testid="tweetTextarea_0"]') as HTMLElement | null
-  return box ? box.innerText.trim() : ""
+function getComposerText(bar?: HTMLElement): string {
+  const wrapper = findTextAreaWrapper(bar)
+  return wrapper ? wrapper.innerText.trim() : ""
 }
 
 function setBarStatus(bar: HTMLElement, msg: string, isError = false) {
@@ -110,7 +111,7 @@ async function runGenerate(bar: HTMLElement, mode: "tweet" | "polish", prefill?:
   if (!store.apiKey) { setBarStatus(bar, "No API key — open Aminta Settings", true); return }
   if (!store.voice)  { setBarStatus(bar, "Train Aminta first", true); return }
 
-  const composerText = getComposerText()
+  const composerText = getComposerText(bar)
 
   let input = ""
   if (mode === "polish") {
@@ -153,7 +154,7 @@ function showInsertButton(bar: HTMLElement, text: string, onInserted: (ok: boole
   setBarStatus(bar, truncate(text, 28))
   insertBtn.style.display = "inline-flex"
   insertBtn.onclick = () => {
-    const ok = insertIntoComposer(text)
+    const ok = insertIntoComposer(text, bar)
     insertBtn.style.display = "none"
     bar.querySelectorAll<HTMLButtonElement>("button").forEach(b => { b.disabled = false })
     setBarStatus(bar, ok ? "Done ✦" : "Click the compose box first", !ok)
@@ -191,8 +192,7 @@ async function renderKeywords(bar: HTMLElement) {
     chip.onmouseenter = () => { chip.style.opacity = "1"; chip.style.borderColor = "#74f7b5" }
     chip.onmouseleave = () => { chip.style.opacity = "0.75"; chip.style.borderColor = "#252a38" }
     chip.onclick = () => {
-      // Fill compose box with the keyword, then generate
-      insertIntoComposer(kw)
+      insertIntoComposer(kw, bar)
       runGenerate(bar, "tweet", kw)
     }
     container.appendChild(chip)
@@ -273,7 +273,7 @@ function buildBar(): HTMLElement {
   ].join(";")
   status.textContent = "Aminta"
 
-  const generateBtn = makeBtn("+ Generate", () => runGenerate(bar, "tweet"))
+  const generateBtn = makeBtn("⚄ Generate", () => runGenerate(bar, "tweet"))
   const polishBtn   = makeBtn("+ Polish",   () => runGenerate(bar, "polish"), false)
 
   const insertBtn = makeBtn("→ Insert", () => {}, true)
