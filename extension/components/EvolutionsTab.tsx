@@ -1,4 +1,4 @@
-import { FORMS, getLevel, getStageTint, XP_PER_LEVEL } from "~lib/evolution"
+import { FORMS, LEVEL_THRESHOLDS, getLevel, getStageTint } from "~lib/evolution"
 import type { AmintaStore } from "~lib/storage"
 import { C } from "~lib/theme"
 import { Card, SpriteMark } from "~components/ui"
@@ -52,7 +52,7 @@ export default function EvolutionsTab({ store }: Props) {
               <p className="font-pixel text-[8px] mt-1" style={{ color: C.textDim }}>{next.revealed ? next.name : "???"}</p>
             </div>
             <span className="font-pixel text-[7px] shrink-0" style={{ color: tint }}>
-              +{next.level * XP_PER_LEVEL - xp} XP
+              +{LEVEL_THRESHOLDS[next.level - 1] - xp} XP
             </span>
           </div>
         </Card>

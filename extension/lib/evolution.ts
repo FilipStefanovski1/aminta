@@ -1,31 +1,48 @@
 export type EvolutionStage = "Egg" | "Imp" | "Familiar" | "Guardian" | "Ancient"
 
-export const XP_PER_LEVEL = 300
 export const MAX_LEVEL = 10
 
-// [minXP, stage, tint]
+// Cumulative XP needed to REACH each level (index = level - 1).
+// Level 1 costs 300 XP; each subsequent level costs ~1.5× more than the previous.
+// Gaps: 300 · 450 · 650 · 900 · 1200 · 1700 · 2300 · 3000 · 4000
+// Max (level 10): 14,500 XP ≈ 29 days at the 500 XP/day cap.
+export const LEVEL_THRESHOLDS = [0, 300, 750, 1400, 2300, 3500, 5200, 7500, 10500, 14500]
+
+// [minXP, stage, tint] — coarse 5-tier groupings used by getEvolutionStage
 const STAGES: [number, EvolutionStage, string][] = [
-  [0,    "Egg",      "#8ca0b0"],
-  [600,  "Imp",      "#74f7b5"],
-  [1200, "Familiar", "#74d4f7"],
-  [1800, "Guardian", "#c0a0ff"],
-  [2400, "Ancient",  "#f5d060"],
+  [0,     "Egg",      "#8ca0b0"],
+  [750,   "Imp",      "#74f7b5"],
+  [2300,  "Familiar", "#74d4f7"],
+  [5200,  "Guardian", "#c0a0ff"],
+  [10500, "Ancient",  "#f5d060"],
 ]
 
 export function getLevel(xp: number): number {
-  return Math.min(MAX_LEVEL, Math.floor(xp / XP_PER_LEVEL) + 1)
+  let level = 1
+  for (let i = 1; i < LEVEL_THRESHOLDS.length; i++) {
+    if (xp >= LEVEL_THRESHOLDS[i]) level = i + 1
+    else break
+  }
+  return level
 }
 
 export function getXpInLevel(xp: number): number {
   const level = getLevel(xp)
-  if (level === MAX_LEVEL) return xp - (MAX_LEVEL - 1) * XP_PER_LEVEL
-  return xp % XP_PER_LEVEL
+  return xp - LEVEL_THRESHOLDS[level - 1]
+}
+
+// XP span for the current level (used for progress bar denominator).
+export function getLevelSpan(xp: number): number {
+  const level = getLevel(xp)
+  if (level >= MAX_LEVEL) return LEVEL_THRESHOLDS[MAX_LEVEL - 1] - LEVEL_THRESHOLDS[MAX_LEVEL - 2]
+  return LEVEL_THRESHOLDS[level] - LEVEL_THRESHOLDS[level - 1]
 }
 
 export function getXpProgress(xp: number): number {
   const level = getLevel(xp)
-  if (level === MAX_LEVEL) return 100
-  return Math.round((getXpInLevel(xp) / XP_PER_LEVEL) * 100)
+  if (level >= MAX_LEVEL) return 100
+  const span = LEVEL_THRESHOLDS[level] - LEVEL_THRESHOLDS[level - 1]
+  return Math.round((getXpInLevel(xp) / span) * 100)
 }
 
 export function getEvolutionStage(xp: number): EvolutionStage {
@@ -46,7 +63,7 @@ export function getNextStage(xp: number): { name: string; xpNeeded: number } | n
   const level = getLevel(xp)
   if (level >= FORMS.length) return null
   const nextForm = FORMS[level] // FORMS[level] is the level+1 form (0-indexed)
-  return { name: nextForm.revealed ? nextForm.name : "a new form", xpNeeded: level * XP_PER_LEVEL - xp }
+  return { name: nextForm.revealed ? nextForm.name : "a new form", xpNeeded: LEVEL_THRESHOLDS[level] - xp }
 }
 
 // ─── Evolution forms ─────────────────────────────────────────────────────────

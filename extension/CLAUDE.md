@@ -61,7 +61,25 @@ Vision (image-to-text) is supported on Gemini and OpenRouter. **Groq does not su
 - XP is stored locally in `chrome.storage.local` and synced to cloud after each award
 
 ### Evolution levels
-10 levels, 300 XP per level. Named forms:
+10 levels. Level 1 costs 300 XP; each subsequent level costs ~1.5× more (exponential curve).
+
+Cumulative XP thresholds (`LEVEL_THRESHOLDS`):
+| Level | Total XP needed | XP to advance |
+|---|---|---|
+| 1 | 0 | 300 |
+| 2 | 300 | 450 |
+| 3 | 750 | 650 |
+| 4 | 1400 | 900 |
+| 5 | 2300 | 1200 |
+| 6 | 3500 | 1700 |
+| 7 | 5200 | 2300 |
+| 8 | 7500 | 3000 |
+| 9 | 10500 | 4000 |
+| 10 | 14500 | — |
+
+At the 500 XP/day cap, reaching max takes ~29 days.
+
+Named forms:
 
 | Level | Name | Stage | Color |
 |---|---|---|---|
