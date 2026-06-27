@@ -244,6 +244,29 @@ function SidePanel() {
     })
   }, [])
 
+  // Watch storage so the panel reacts immediately when OAuth completes,
+  // even if the Google auth popup disrupted the sidepanel's callback flow.
+  useEffect(() => {
+    const listener = (changes: Record<string, chrome.storage.StorageChange>) => {
+      if (changes.auth_access_token?.newValue) {
+        getAuthSession().then(async (s) => {
+          if (!s) return
+          setSession(s)
+          setIsLoggedIn(true)
+          setAuthChecked(true)
+          await pullFromCloud()
+          await refresh()
+        })
+      }
+      if ("auth_access_token" in changes && !changes.auth_access_token.newValue) {
+        setSession(null)
+        setIsLoggedIn(false)
+      }
+    }
+    chrome.storage.local.onChanged.addListener(listener)
+    return () => chrome.storage.local.onChanged.removeListener(listener)
+  }, [])
+
   const handleSignOut = async () => {
     await clearAuthSession()
     setSession(null)
