@@ -44,7 +44,7 @@ const PRO_PLAN = {
     "Discord community",
   ],
   cta: "Upgrade to Pro",
-  ctaHref: "https://calendly.com/filipstefanovskee/filip-stefanovski-aminta-founder",
+  ctaHref: "https://www.creem.io/test/payment/prod_6l3U3WOanZI0BZl03d6XeP",
   badge: "PRO",
   highlight: true,
 };
@@ -66,7 +66,7 @@ const FOUNDER_PLAN = {
     "Early access to new features",
   ],
   cta: "Claim Founder Access",
-  ctaHref: "https://calendly.com/filipstefanovskee/filip-stefanovski-aminta-founder",
+  ctaHref: "https://www.creem.io/test/payment/prod_5BDQkBTIBnVesffOYY7CF6",
   badge: "LIMITED",
   highlight: true,
 };
