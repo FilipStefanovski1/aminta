@@ -44,22 +44,21 @@ export default function Navbar() {
         opacity: visible ? 1 : 0,
       }}
     >
-      <nav className="mx-auto max-w-7xl h-20 px-5 flex items-center">
-        {/* left: pixel Aminta icon — flex-1 so it matches right side width */}
-        <div className="flex-1 flex items-center">
-          <a href="#top" aria-label="Aminta" className="flex items-center shrink-0">
-            <svg width="34" height="28" viewBox="0 0 16 13" className="pixelated">
-              <rect x="2" y="0" width="2" height="3" fill="#0a0a0a" />
-              <rect x="12" y="0" width="2" height="3" fill="#0a0a0a" />
-              <rect x="3" y="3" width="10" height="9" fill="#0a0a0a" />
-              <rect x="4" y="6" width="2" height="2" fill="#74f7b5" />
-              <rect x="10" y="6" width="2" height="2" fill="#74f7b5" />
-            </svg>
-          </a>
-        </div>
+      <nav className="mx-auto max-w-7xl h-20 px-5 flex items-center gap-6">
 
-        {/* center: bracketed links — truly centered */}
-        <div className="hidden lg:flex items-center gap-4 xl:gap-6 flex-nowrap">
+        {/* Logo */}
+        <a href="#top" aria-label="Aminta" className="flex items-center shrink-0">
+          <svg width="34" height="28" viewBox="0 0 16 13" className="pixelated">
+            <rect x="2" y="0" width="2" height="3" fill="#0a0a0a" />
+            <rect x="12" y="0" width="2" height="3" fill="#0a0a0a" />
+            <rect x="3" y="3" width="10" height="9" fill="#0a0a0a" />
+            <rect x="4" y="6" width="2" height="2" fill="#74f7b5" />
+            <rect x="10" y="6" width="2" height="2" fill="#74f7b5" />
+          </svg>
+        </a>
+
+        {/* Center nav links — fill remaining space */}
+        <div className="hidden lg:flex items-center gap-4 xl:gap-6 flex-1">
           {LINKS.map((l) => (
             <a
               key={l.href}
@@ -71,29 +70,51 @@ export default function Navbar() {
           ))}
         </div>
 
-        {/* right side */}
-        <div className="flex-1 flex items-center justify-end gap-4">
-          <div className="hidden lg:block">
-            <a href="#pricing" className="rpg-btn-primary text-[10px] px-5 py-2.5">
-              Get Aminta
-            </a>
-          </div>
-          {/* mobile toggle */}
+        {/* Right side: Sign in · Create account · Get Extension */}
+        <div className="hidden lg:flex items-center gap-3 shrink-0">
+          <a
+            href="/login"
+            className="font-pixel text-[9px] text-black/70 hover:text-black transition-colors whitespace-nowrap"
+          >
+            Sign in
+          </a>
+          <a href="/login?mode=create" className="rpg-btn-primary text-[9px] px-4 py-2 whitespace-nowrap">
+            Create account
+          </a>
+          <a
+            href="https://chromewebstore.google.com"
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-1.5 font-pixel text-[9px] text-black/70 hover:text-black transition-colors whitespace-nowrap border-2 border-black/30 hover:border-black/60 rounded px-3 py-2"
+          >
+            {/* Chrome icon */}
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="4" fill="#0a0a0a"/>
+              <path d="M12 8h8.66a10 10 0 1 1-17.32 0H12z" stroke="#0a0a0a" strokeWidth="2" fill="none"/>
+              <path d="M5.34 16L9.67 8.5" stroke="#0a0a0a" strokeWidth="2"/>
+              <path d="M18.66 16L14.33 8.5" stroke="#0a0a0a" strokeWidth="2"/>
+            </svg>
+            Get Extension
+          </a>
+        </div>
+
+        {/* Mobile toggle */}
+        <div className="lg:hidden ml-auto">
           <button
             aria-label="Toggle menu"
             onClick={() => setOpen((v) => !v)}
-            className="lg:hidden font-pixel text-base text-black"
+            className="font-pixel text-base text-black"
           >
             {open ? "[ X ]" : "[ = ]"}
           </button>
         </div>
       </nav>
 
-      {/* mobile / tablet menu */}
+      {/* Mobile menu */}
       <div
         className="lg:hidden overflow-hidden border-t-4 border-black"
         style={{
-          maxHeight: open ? "240px" : "0",
+          maxHeight: open ? "320px" : "0",
           transition: "max-height 0.22s cubic-bezier(0.22,1,0.36,1), background-color 0.5s ease",
           backgroundColor: bgColor,
         }}
@@ -109,12 +130,29 @@ export default function Navbar() {
               [ {l.label} ]
             </a>
           ))}
+          <div className="h-px bg-black/20 my-1" />
           <a
-            href="#pricing"
+            href="/login"
             onClick={() => setOpen(false)}
-            className="font-pixel text-[11px] text-black whitespace-nowrap mt-1"
+            className="font-pixel text-[11px] text-black/70 whitespace-nowrap"
           >
-            [ GET AMINTA → ]
+            [ SIGN IN ]
+          </a>
+          <a
+            href="/login?mode=create"
+            onClick={() => setOpen(false)}
+            className="font-pixel text-[11px] text-black whitespace-nowrap"
+          >
+            [ CREATE ACCOUNT → ]
+          </a>
+          <a
+            href="https://chromewebstore.google.com"
+            target="_blank"
+            rel="noreferrer"
+            onClick={() => setOpen(false)}
+            className="font-pixel text-[11px] text-black/70 whitespace-nowrap"
+          >
+            [ GET EXTENSION ]
           </a>
         </div>
       </div>

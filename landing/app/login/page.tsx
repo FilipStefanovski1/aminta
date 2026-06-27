@@ -41,10 +41,13 @@ export default function LoginPage() {
   const [sent, setSent]       = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState("")
+  const [isCreate, setIsCreate] = useState(false)
 
   useEffect(() => {
-    const extId = new URLSearchParams(window.location.search).get("ext_id")
+    const params = new URLSearchParams(window.location.search)
+    const extId = params.get("ext_id")
     if (extId) localStorage.setItem("aminta_ext_id", extId)
+    setIsCreate(params.get("mode") === "create")
   }, [])
 
   function getCallbackUrl() {
@@ -146,9 +149,11 @@ export default function LoginPage() {
             <>
               <div>
                 <p className="font-pixel text-[9px] tracking-widest mb-2" style={{ color: "#74f7b5" }}>
-                  Sign in
+                  {isCreate ? "Create account" : "Sign in"}
                 </p>
-                <p className="text-[#9a9aa3] text-xs">Sync your progress across devices</p>
+                <p className="text-[#9a9aa3] text-xs">
+                  {isCreate ? "Start growing your audience with Aminta" : "Sync your progress across devices"}
+                </p>
               </div>
 
               {/* Google */}
@@ -201,19 +206,32 @@ export default function LoginPage() {
                   className="w-full py-3 rounded-lg font-pixel text-[9px] tracking-widest text-black transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:brightness-110 active:scale-[0.98]"
                   style={{ background: "#74f7b5" }}
                 >
-                  {loading ? "Sending…" : "Send magic link"}
+                  {loading ? "Sending…" : isCreate ? "Create account" : "Send magic link"}
                 </button>
               </form>
             </>
           )}
         </div>
 
-        <p className="text-center text-[#3a3a4a] text-xs">
-          By signing in you agree to our{" "}
-          <a href="/terms" className="text-[#555] hover:text-[#74f7b5] transition-colors">Terms</a>
-          {" & "}
-          <a href="/privacy" className="text-[#555] hover:text-[#74f7b5] transition-colors">Privacy</a>
-        </p>
+        <div className="space-y-2 text-center">
+          <p className="text-[#3a3a4a] text-xs">
+            {isCreate ? (
+              <>Already have an account?{" "}
+                <a href="/login" className="text-[#74f7b5] hover:text-white transition-colors">Sign in</a>
+              </>
+            ) : (
+              <>Don&apos;t have an account?{" "}
+                <a href="/login?mode=create" className="text-[#74f7b5] hover:text-white transition-colors">Create one</a>
+              </>
+            )}
+          </p>
+          <p className="text-[#3a3a4a] text-xs">
+            By continuing you agree to our{" "}
+            <a href="/terms" className="text-[#555] hover:text-[#74f7b5] transition-colors">Terms</a>
+            {" & "}
+            <a href="/privacy" className="text-[#555] hover:text-[#74f7b5] transition-colors">Privacy</a>
+          </p>
+        </div>
       </div>
     </div>
   )
