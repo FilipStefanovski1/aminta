@@ -11,7 +11,6 @@ const LINKS = [
 
 type DemonStageDetail = { active: boolean; color?: string };
 
-
 export default function Navbar() {
   const [open, setOpen] = useState(false);
   const [demonColor, setDemonColor] = useState<string | null>(null);
@@ -45,43 +44,38 @@ export default function Navbar() {
         opacity: visible ? 1 : 0,
       }}
     >
-      <nav className="mx-auto max-w-7xl h-16 px-5 flex items-center">
+      <nav className="relative mx-auto max-w-7xl h-16 px-5 flex items-center">
 
-        {/* Left: Logo — flex-1 to balance right side */}
-        <div className="flex-1 flex items-center">
-          <a href="#top" aria-label="Aminta" className="flex items-center shrink-0">
-            <svg width="30" height="24" viewBox="0 0 16 13" className="pixelated">
-              <rect x="2" y="0" width="2" height="3" fill="#0a0a0a" />
-              <rect x="12" y="0" width="2" height="3" fill="#0a0a0a" />
-              <rect x="3" y="3" width="10" height="9" fill="#0a0a0a" />
-              <rect x="4" y="6" width="2" height="2" fill="#74f7b5" />
-              <rect x="10" y="6" width="2" height="2" fill="#74f7b5" />
-            </svg>
-          </a>
-        </div>
+        {/* Left: Logo */}
+        <a href="#top" aria-label="Aminta" className="flex items-center shrink-0 z-10">
+          <svg width="30" height="24" viewBox="0 0 16 13" className="pixelated">
+            <rect x="2" y="0" width="2" height="3" fill="#0a0a0a" />
+            <rect x="12" y="0" width="2" height="3" fill="#0a0a0a" />
+            <rect x="3" y="3" width="10" height="9" fill="#0a0a0a" />
+            <rect x="4" y="6" width="2" height="2" fill="#74f7b5" />
+            <rect x="10" y="6" width="2" height="2" fill="#74f7b5" />
+          </svg>
+        </a>
 
-        {/* Center: Nav links — truly centered */}
-        <div className="hidden lg:flex items-center gap-4 xl:gap-6">
+        {/* Center: Nav links — absolutely centered so they never touch the sides */}
+        <div className="hidden lg:flex absolute left-1/2 -translate-x-1/2 items-center gap-5">
           {LINKS.map((l) => (
             <a
               key={l.href}
               href={l.href}
-              className="font-pixel text-[9px] xl:text-[10px] text-black hover:text-black/60 transition-colors whitespace-nowrap"
+              className="font-pixel text-[9px] text-black hover:text-black/60 transition-colors whitespace-nowrap"
             >
               [ {l.label} ]
             </a>
           ))}
         </div>
 
-        {/* Right: Sign in · Create account · Get Extension — flex-1 justify-end */}
-        <div className="flex-1 hidden lg:flex items-center justify-end gap-5">
-          <a
-            href="/login"
-            className="font-pixel text-[9px] text-black/70 hover:text-black transition-colors whitespace-nowrap"
-          >
+        {/* Right: Sign in · Create account · Get Extension */}
+        <div className="hidden lg:flex items-center gap-4 ml-auto z-10">
+          <a href="/login" className="font-pixel text-[9px] text-black/70 hover:text-black transition-colors whitespace-nowrap">
             Sign in
           </a>
-          <a href="/login?mode=create" className="rpg-btn-primary text-[9px] px-3 py-1.5 whitespace-nowrap">
+          <a href="/login?mode=create" className="font-pixel text-[9px] text-black whitespace-nowrap border-2 border-black px-3 py-1.5 hover:bg-black/10 transition-colors">
             Create account
           </a>
           <a
@@ -90,21 +84,19 @@ export default function Navbar() {
             rel="noreferrer"
             className="flex items-center gap-1.5 font-pixel text-[9px] text-black/70 hover:text-black transition-colors whitespace-nowrap"
           >
-            <img src="/Chrome Logo.png" alt="" width={13} height={13} />
+            <img src="/Chrome Logo.png" alt="" width={12} height={12} />
             Get Extension
           </a>
         </div>
 
         {/* Mobile toggle */}
-        <div className="lg:hidden ml-auto">
-          <button
-            aria-label="Toggle menu"
-            onClick={() => setOpen((v) => !v)}
-            className="font-pixel text-base text-black"
-          >
-            {open ? "[ X ]" : "[ = ]"}
-          </button>
-        </div>
+        <button
+          aria-label="Toggle menu"
+          onClick={() => setOpen((v) => !v)}
+          className="lg:hidden ml-auto font-pixel text-base text-black z-10"
+        >
+          {open ? "[ X ]" : "[ = ]"}
+        </button>
       </nav>
 
       {/* Mobile menu */}
@@ -118,25 +110,14 @@ export default function Navbar() {
       >
         <div className="px-5 py-4 flex flex-col gap-3">
           {LINKS.map((l) => (
-            <a
-              key={l.href}
-              href={l.href}
-              onClick={() => setOpen(false)}
-              className="font-pixel text-[11px] text-black whitespace-nowrap"
-            >
+            <a key={l.href} href={l.href} onClick={() => setOpen(false)} className="font-pixel text-[11px] text-black whitespace-nowrap">
               [ {l.label} ]
             </a>
           ))}
           <div className="h-px bg-black/20 my-1" />
-          <a href="/login" onClick={() => setOpen(false)} className="font-pixel text-[11px] text-black/70 whitespace-nowrap">
-            [ SIGN IN ]
-          </a>
-          <a href="/login?mode=create" onClick={() => setOpen(false)} className="font-pixel text-[11px] text-black whitespace-nowrap">
-            [ CREATE ACCOUNT → ]
-          </a>
-          <a href="https://chromewebstore.google.com" target="_blank" rel="noreferrer" onClick={() => setOpen(false)} className="font-pixel text-[11px] text-black/70 whitespace-nowrap">
-            [ GET EXTENSION ]
-          </a>
+          <a href="/login" onClick={() => setOpen(false)} className="font-pixel text-[11px] text-black/70 whitespace-nowrap">[ SIGN IN ]</a>
+          <a href="/login?mode=create" onClick={() => setOpen(false)} className="font-pixel text-[11px] text-black whitespace-nowrap">[ CREATE ACCOUNT → ]</a>
+          <a href="https://chromewebstore.google.com" target="_blank" rel="noreferrer" onClick={() => setOpen(false)} className="font-pixel text-[11px] text-black/70 whitespace-nowrap">[ GET EXTENSION ]</a>
         </div>
       </div>
     </header>
