@@ -13,19 +13,15 @@ type DemonStageDetail = { active: boolean; color?: string };
 
 function ChromeIcon() {
   return (
-    <svg width="13" height="13" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="128" cy="128" r="56" fill="#4285F4"/>
-      <circle cx="128" cy="128" r="34" fill="white"/>
-      <circle cx="128" cy="128" r="20" fill="#1A73E8"/>
-      {/* Red segment */}
-      <path d="M128 72 L230 72 A110 110 0 0 1 181 181 Z" fill="#EA4335" opacity="0.9"/>
-      {/* Green segment */}
-      <path d="M181 181 L75 181 A110 110 0 0 1 26 72 Z" fill="none"/>
-      <path d="M128 72 L26 72 A110 110 0 0 0 75 181 Z" fill="#34A853" opacity="0.9"/>
-      {/* Yellow segment */}
-      <path d="M75 181 L181 181 A110 110 0 0 0 230 72 Z" fill="#FBBC05" opacity="0.9"/>
-      <circle cx="128" cy="128" r="34" fill="white"/>
-      <circle cx="128" cy="128" r="20" fill="#1A73E8"/>
+    <svg width="13" height="13" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="50" cy="50" r="47" stroke="#0a0a0a" strokeWidth="6"/>
+      <circle cx="50" cy="50" r="19" stroke="#0a0a0a" strokeWidth="6"/>
+      <line x1="50" y1="3" x2="50" y2="31" stroke="#0a0a0a" strokeWidth="6"/>
+      <line x1="50" y1="3" x2="16" y2="62" stroke="#0a0a0a" strokeWidth="6"/>
+      <line x1="50" y1="3" x2="84" y2="62" stroke="#0a0a0a" strokeWidth="6"/>
+      <line x1="16" y1="62" x2="35" y2="62" stroke="#0a0a0a" strokeWidth="6"/>
+      <line x1="84" y1="62" x2="66" y2="62" stroke="#0a0a0a" strokeWidth="6"/>
+      <circle cx="50" cy="50" r="12" fill="#0a0a0a"/>
     </svg>
   )
 }
@@ -92,21 +88,21 @@ export default function Navbar() {
         </div>
 
         {/* Right: Sign in · Create account · Get Extension — flex-1 justify-end */}
-        <div className="flex-1 hidden lg:flex items-center justify-end gap-3">
+        <div className="flex-1 hidden lg:flex items-center justify-end gap-5">
           <a
             href="/login"
             className="font-pixel text-[9px] text-black/70 hover:text-black transition-colors whitespace-nowrap"
           >
             Sign in
           </a>
-          <a href="/login?mode=create" className="rpg-btn-primary text-[9px] px-4 py-2 whitespace-nowrap">
+          <a href="/login?mode=create" className="rpg-btn-primary text-[9px] px-3 py-1.5 whitespace-nowrap">
             Create account
           </a>
           <a
             href="https://chromewebstore.google.com"
             target="_blank"
             rel="noreferrer"
-            className="flex items-center gap-1.5 font-pixel text-[9px] text-black/70 hover:text-black transition-colors whitespace-nowrap border-2 border-black/30 hover:border-black/60 rounded px-3 py-2"
+            className="flex items-center gap-1.5 font-pixel text-[9px] text-black/70 hover:text-black transition-colors whitespace-nowrap"
           >
             <ChromeIcon />
             Get Extension
