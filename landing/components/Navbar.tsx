@@ -11,20 +11,6 @@ const LINKS = [
 
 type DemonStageDetail = { active: boolean; color?: string };
 
-function ChromeIcon() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="50" cy="50" r="47" stroke="#0a0a0a" strokeWidth="6"/>
-      <circle cx="50" cy="50" r="19" stroke="#0a0a0a" strokeWidth="6"/>
-      <line x1="50" y1="3" x2="50" y2="31" stroke="#0a0a0a" strokeWidth="6"/>
-      <line x1="50" y1="3" x2="16" y2="62" stroke="#0a0a0a" strokeWidth="6"/>
-      <line x1="50" y1="3" x2="84" y2="62" stroke="#0a0a0a" strokeWidth="6"/>
-      <line x1="16" y1="62" x2="35" y2="62" stroke="#0a0a0a" strokeWidth="6"/>
-      <line x1="84" y1="62" x2="66" y2="62" stroke="#0a0a0a" strokeWidth="6"/>
-      <circle cx="50" cy="50" r="12" fill="#0a0a0a"/>
-    </svg>
-  )
-}
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
@@ -104,7 +90,7 @@ export default function Navbar() {
             rel="noreferrer"
             className="flex items-center gap-1.5 font-pixel text-[9px] text-black/70 hover:text-black transition-colors whitespace-nowrap"
           >
-            <ChromeIcon />
+            <img src="/Chrome Logo.png" alt="" width={13} height={13} />
             Get Extension
           </a>
         </div>
