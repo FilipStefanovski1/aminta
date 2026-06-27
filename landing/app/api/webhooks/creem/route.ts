@@ -26,7 +26,9 @@ export async function POST(request: NextRequest) {
   const event = JSON.parse(payload)
   const supabase = await createServiceClient()
 
-  const email: string | undefined = event.data?.customer?.email
+  // Creem payload uses event.object, not event.data
+  const obj = event.object ?? event.data ?? {}
+  const email: string | undefined = obj.customer?.email
   const eventType: string = event.eventType ?? event.type ?? ""
 
   if (!email) return NextResponse.json({ ok: true })
@@ -36,7 +38,7 @@ export async function POST(request: NextRequest) {
     eventType === "subscription.active" ||
     eventType === "checkout.completed"
   ) {
-    const isLifetime = event.data?.product?.price_type === "one_time"
+    const isLifetime = obj.product?.billing_type === "onetime" || obj.order?.type === "onetime"
     const plan = isLifetime ? "lifetime" : "pro"
 
     await supabase
@@ -45,8 +47,8 @@ export async function POST(request: NextRequest) {
         plan,
         paid_via: "card",
         subscription_status: "active",
-        creem_customer_id: event.data?.customer?.id,
-        creem_subscription_id: event.data?.subscription?.id ?? null,
+        creem_customer_id: obj.customer?.id,
+        creem_subscription_id: obj.subscription?.id ?? null,
       })
       .eq("email", email)
   }
