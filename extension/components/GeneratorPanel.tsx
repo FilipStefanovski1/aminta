@@ -243,6 +243,11 @@ export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, initialP
   const xp   = store.xp ?? 0
   const tint = getStageTint(xp)
 
+  const FREE_DAILY_LIMIT = 10
+  const todayISO = new Date().toISOString().slice(0, 10)
+  const todayGenerations = store.missionDate === todayISO ? (store.missionGenerates ?? 0) : 0
+  const atFreeLimit = (store.plan ?? "free") === "free" && todayGenerations >= FREE_DAILY_LIMIT
+
   const reset = () => { setError(""); setOutput(""); setOutputImage(null) }
 
   const pull = async () => {
@@ -293,7 +298,7 @@ export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, initialP
     }
   }
 
-  const canGenerate = !!store.apiKey && !!store.voice && (!!topic.trim() || !!imageDataUrl)
+  const canGenerate = !!store.apiKey && !!store.voice && (!!topic.trim() || !!imageDataUrl) && !atFreeLimit
   const topicLabel =
     mode === "reply"  ? "Who are we replying to?" :
     mode === "polish" ? "Your draft"               :
@@ -511,14 +516,33 @@ export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, initialP
       </button>
 
       {/* Explain why Generate is disabled */}
-      {!loading && !store.apiKey && (
+      {!loading && atFreeLimit && (
+        <div className="animate-fade-in rounded-xl px-4 py-3 space-y-2" style={{ backgroundColor: tint + "12", border: `1px solid ${tint}30` }}>
+          <p className="font-pixel text-[8px]" style={{ color: tint }}>
+            {FREE_DAILY_LIMIT}/{FREE_DAILY_LIMIT} free generations used today
+          </p>
+          <p className="text-[11px] leading-snug" style={{ color: C.textFaint }}>
+            Upgrade to Pro for unlimited generations, or come back tomorrow.
+          </p>
+          <a
+            href="https://amintaapp.com/#pricing"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block font-pixel text-[8px] px-3 py-1.5 rounded-lg text-black transition-all hover:brightness-110"
+            style={{ backgroundColor: tint }}
+          >
+            Upgrade →
+          </a>
+        </div>
+      )}
+      {!loading && !atFreeLimit && !store.apiKey && (
         <p className="text-[11px] animate-fade-in px-1" style={{ color: C.textFaint }}>
           Add your AI key in{" "}
           <button onClick={onOpenSettings} className="underline" style={{ color: C.text }}>Settings</button>
           {" "}to start generating.
         </p>
       )}
-      {!loading && store.apiKey && !store.voice && (
+      {!loading && !atFreeLimit && store.apiKey && !store.voice && (
         <p className="text-[11px] animate-fade-in px-1" style={{ color: C.textFaint }}>
           Go to{" "}
           <button onClick={onTeach} className="underline" style={{ color: C.text }}>Train</button>
