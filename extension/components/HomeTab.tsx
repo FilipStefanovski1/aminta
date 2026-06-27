@@ -2,12 +2,13 @@ import { useEffect, useState } from "react"
 
 import {
   FORMS,
+  LEVEL_THRESHOLDS,
   getForm,
+  getLevelSpan,
   getLevel,
   getStageTint,
   getXpInLevel,
   getXpProgress,
-  XP_PER_LEVEL,
 } from "~lib/evolution"
 import { computeDNAStrength, getMissionProgress, tryCompleteDailyMissions } from "~lib/missions"
 import type { AmintaStore } from "~lib/storage"
@@ -45,6 +46,7 @@ export default function HomeTab({ store, onCreate, onTrain, onUpdate }: Props) {
   const xpInLevel  = getXpInLevel(xp)
   const xpToday    = store.xpToday ?? 0
   const streak     = store.streak ?? 0
+  const plan       = store.plan ?? "free"
   const voiceMatch = computeDNAStrength(store)
   const mission    = getMissionProgress(store)
   const nextLevel  = level < FORMS.length ? level + 1 : null
@@ -83,9 +85,19 @@ export default function HomeTab({ store, onCreate, onTrain, onUpdate }: Props) {
           backgroundColor: "#0e1018",
         }}>
         <div className="px-4 pt-4 pb-5">
-          <p className="font-pixel text-[8px] text-center tracking-widest mb-3" style={{ color: tint }}>
-            {stage} · Lv.{level}
-          </p>
+          <div className="flex items-center justify-center gap-2 mb-3">
+            <p className="font-pixel text-[8px] tracking-widest" style={{ color: tint }}>
+              {stage} · Lv.{level}
+            </p>
+            {plan !== "free" && (
+              <span className="font-pixel text-[6px] px-1.5 py-0.5 rounded" style={{
+                backgroundColor: plan === "lifetime" ? "#f5d060" : tint,
+                color: "#000",
+              }}>
+                {plan === "lifetime" ? "FOUNDER" : "PRO"}
+              </span>
+            )}
+          </div>
           <div className="mb-3">
             <SpeechBubble text={line} visible={visible} />
           </div>
@@ -94,7 +106,7 @@ export default function HomeTab({ store, onCreate, onTrain, onUpdate }: Props) {
           </div>
           <div className="flex items-baseline justify-between mb-1.5">
             <span className="font-pixel text-[8px]" style={{ color: C.textDim }}>Level {level}</span>
-            <span className="font-pixel text-[7px]" style={{ color: tint }}>{xpInLevel} / {XP_PER_LEVEL} XP</span>
+            <span className="font-pixel text-[7px]" style={{ color: tint }}>{xpInLevel} / {getLevelSpan(xp)} XP</span>
           </div>
           <XPBar progress={progress} tint={tint} />
         </div>
@@ -200,7 +212,7 @@ export default function HomeTab({ store, onCreate, onTrain, onUpdate }: Props) {
                   {unlocked
                     ? <span className="text-base font-bold leading-none" style={{ color: form.color }}>✓</span>
                     : isNext
-                      ? <span className="font-pixel text-[6px]" style={{ color: tint }}>+{form.level * XP_PER_LEVEL - xp} XP</span>
+                      ? <span className="font-pixel text-[6px]" style={{ color: tint }}>+{LEVEL_THRESHOLDS[form.level - 1] - xp} XP</span>
                       : <span className="font-pixel text-[5px]" style={{ color: C.textGhost }}>Lv.{form.level}</span>}
                 </div>
               </div>

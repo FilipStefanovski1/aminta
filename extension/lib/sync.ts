@@ -63,6 +63,9 @@ export async function pullFromCloud(): Promise<void> {
       streak: Math.max(local.streak, data.streak ?? 0),
     }
 
+    // Always trust cloud for plan — Supabase users table is the source of truth
+    if (data.plan) patch.plan = data.plan
+
     // Only overwrite these if cloud has them and local doesn't
     if (!local.voice && data.voice_profile)     patch.voice = data.voice_profile
     if (!local.displayName && data.display_name) patch.displayName = data.display_name

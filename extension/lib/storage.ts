@@ -19,6 +19,8 @@ export interface VoiceProfile {
   customRules: string
 }
 
+export type Plan = "free" | "pro" | "lifetime"
+
 export interface AmintaStore {
   apiKey: string
   model: string
@@ -39,6 +41,7 @@ export interface AmintaStore {
   missionDate: string
   missionGenerates: number
   missionPublished: number
+  plan: Plan
 }
 
 export const DEFAULT_MODEL = "google/gemini-flash-1.5"
@@ -63,6 +66,7 @@ const DEFAULTS: AmintaStore = {
   missionDate: "",
   missionGenerates: 0,
   missionPublished: 0,
+  plan: "free",
 }
 
 export async function getStore(): Promise<AmintaStore> {

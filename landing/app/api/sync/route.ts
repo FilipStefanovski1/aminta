@@ -1,4 +1,5 @@
 import { createServerClient } from "@supabase/ssr"
+import { createServiceClient } from "@/lib/supabase/server"
 import { cookies } from "next/headers"
 import { NextResponse, type NextRequest } from "next/server"
 
@@ -43,7 +44,15 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  return NextResponse.json(data ?? null)
+  // Fetch plan from users table using service role (bypasses RLS)
+  const service = await createServiceClient()
+  const { data: profile } = await service
+    .from("users")
+    .select("plan")
+    .eq("id", user.id)
+    .single()
+
+  return NextResponse.json({ ...(data ?? {}), plan: profile?.plan ?? "free" })
 }
 
 export async function POST(request: NextRequest) {
