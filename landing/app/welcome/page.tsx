@@ -56,6 +56,13 @@ export default async function WelcomePage() {
           )}
         </div>
 
+        <a
+          href="https://amintaapp.com"
+          className="inline-block w-full py-3 rounded-xl text-xs font-semibold text-[#a78bfa] border border-[#2a2a2a] hover:border-[#a78bfa]/40 hover:bg-[#a78bfa]/5 transition-all duration-200"
+        >
+          ← Back to amintaapp.com
+        </a>
+
         <p className="text-[#333] text-xs">
           You can close this tab and go back to the extension.
         </p>
