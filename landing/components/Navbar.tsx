@@ -44,21 +44,9 @@ export default function Navbar() {
         opacity: visible ? 1 : 0,
       }}
     >
-      <nav className="relative mx-auto max-w-7xl h-16 px-5 flex items-center">
-
-        {/* Left: Logo */}
-        <a href="#top" aria-label="Aminta" className="flex items-center shrink-0 z-10">
-          <svg width="30" height="24" viewBox="0 0 16 13" className="pixelated">
-            <rect x="2" y="0" width="2" height="3" fill="#0a0a0a" />
-            <rect x="12" y="0" width="2" height="3" fill="#0a0a0a" />
-            <rect x="3" y="3" width="10" height="9" fill="#0a0a0a" />
-            <rect x="4" y="6" width="2" height="2" fill="#74f7b5" />
-            <rect x="10" y="6" width="2" height="2" fill="#74f7b5" />
-          </svg>
-        </a>
-
-        {/* Center: Nav links — absolutely centered so they never touch the sides */}
-        <div className="hidden lg:flex absolute left-1/2 -translate-x-1/2 items-center gap-5">
+      {/* Nav links — centered relative to full header width */}
+      <div className="hidden lg:flex absolute inset-x-0 top-0 h-16 items-center justify-center pointer-events-none">
+        <div className="flex items-center gap-5 pointer-events-auto">
           {LINKS.map((l) => (
             <a
               key={l.href}
@@ -69,9 +57,23 @@ export default function Navbar() {
             </a>
           ))}
         </div>
+      </div>
+
+      <nav className="relative mx-auto max-w-7xl h-16 px-5 flex items-center">
+
+        {/* Left: Logo */}
+        <a href="#top" aria-label="Aminta" className="flex items-center shrink-0">
+          <svg width="30" height="24" viewBox="0 0 16 13" className="pixelated">
+            <rect x="2" y="0" width="2" height="3" fill="#0a0a0a" />
+            <rect x="12" y="0" width="2" height="3" fill="#0a0a0a" />
+            <rect x="3" y="3" width="10" height="9" fill="#0a0a0a" />
+            <rect x="4" y="6" width="2" height="2" fill="#74f7b5" />
+            <rect x="10" y="6" width="2" height="2" fill="#74f7b5" />
+          </svg>
+        </a>
 
         {/* Right: Sign in · Create account · Get Extension */}
-        <div className="hidden lg:flex items-center gap-4 ml-auto z-10">
+        <div className="hidden lg:flex items-center gap-4 ml-auto">
           <a href="/login" className="font-pixel text-[9px] text-black/70 hover:text-black transition-colors whitespace-nowrap">
             Sign in
           </a>
@@ -93,7 +95,7 @@ export default function Navbar() {
         <button
           aria-label="Toggle menu"
           onClick={() => setOpen((v) => !v)}
-          className="lg:hidden ml-auto font-pixel text-base text-black z-10"
+          className="lg:hidden ml-auto font-pixel text-base text-black"
         >
           {open ? "[ X ]" : "[ = ]"}
         </button>
