@@ -75,7 +75,7 @@ export default function Navbar() {
           <a href="/login" className="font-pixel text-[9px] text-black/70 hover:text-black transition-colors whitespace-nowrap">
             Sign in
           </a>
-          <a href="/login?mode=create" className="font-pixel text-[9px] text-black whitespace-nowrap border-2 border-black px-3 py-1.5 hover:bg-black/10 transition-colors">
+          <a href="/login?mode=create" className="font-pixel text-[9px] text-black hover:text-black/60 transition-colors whitespace-nowrap">
             Create account
           </a>
           <a
