@@ -45,7 +45,7 @@ export default function Navbar() {
       }}
     >
       {/* 3-column grid: logo | centered links | right actions */}
-      <nav className="mx-auto max-w-7xl h-16 px-5 grid grid-cols-3 items-center">
+      <nav className="mx-auto max-w-7xl h-16 px-5 grid items-center" style={{ gridTemplateColumns: "auto 1fr auto" }}>
 
         {/* Col 1: Logo */}
         <div className="flex items-center">
