@@ -3,9 +3,9 @@
 import { useEffect, useState } from "react";
 
 const LINKS = [
-  { label: "HOW IT WORKS", href: "#how-it-works" },
-  { label: "FEATURES",     href: "#features" },
-  { label: "PRICING",      href: "#pricing" },
+  { label: "How it works", href: "#how-it-works" },
+  { label: "Features",     href: "#features" },
+  { label: "Pricing",      href: "#pricing" },
   { label: "FAQ",          href: "#faq" },
 ];
 
@@ -44,48 +44,39 @@ export default function Navbar() {
         opacity: visible ? 1 : 0,
       }}
     >
-      {/* 3-column grid: logo | centered links | right actions */}
-      <nav className="mx-auto max-w-7xl h-16 px-5 grid items-center" style={{ gridTemplateColumns: "auto 1fr auto" }}>
+      <nav className="mx-auto max-w-7xl h-16 px-6 grid items-center" style={{ gridTemplateColumns: "auto 1fr auto" }}>
 
         {/* Col 1: Logo */}
-        <div className="flex items-center">
-          <a href="#top" aria-label="Aminta" className="flex items-center shrink-0">
-            <svg width="30" height="24" viewBox="0 0 16 13" className="pixelated">
-              <rect x="2" y="0" width="2" height="3" fill="#0a0a0a" />
-              <rect x="12" y="0" width="2" height="3" fill="#0a0a0a" />
-              <rect x="3" y="3" width="10" height="9" fill="#0a0a0a" />
-              <rect x="4" y="6" width="2" height="2" fill="#74f7b5" />
-              <rect x="10" y="6" width="2" height="2" fill="#74f7b5" />
-            </svg>
-          </a>
-        </div>
+        <a href="#top" aria-label="Aminta" className="flex items-center gap-2 shrink-0">
+          <svg width="28" height="22" viewBox="0 0 16 13" className="pixelated">
+            <rect x="2" y="0" width="2" height="3" fill="#0a0a0a" />
+            <rect x="12" y="0" width="2" height="3" fill="#0a0a0a" />
+            <rect x="3" y="3" width="10" height="9" fill="#0a0a0a" />
+            <rect x="4" y="6" width="2" height="2" fill="#74f7b5" />
+            <rect x="10" y="6" width="2" height="2" fill="#74f7b5" />
+          </svg>
+        </a>
 
         {/* Col 2: Nav links — centered */}
-        <div className="hidden lg:flex items-center justify-center gap-4 xl:gap-5">
+        <div className="hidden lg:flex items-center justify-center gap-7">
           {LINKS.map((l) => (
             <a
               key={l.href}
               href={l.href}
               className="font-pixel text-[9px] text-black hover:text-black/60 transition-colors whitespace-nowrap"
             >
-              [ {l.label} ]
+              {l.label}
             </a>
           ))}
         </div>
 
         {/* Col 3: Right actions */}
-        <div className="hidden lg:flex items-center justify-end gap-4">
-          <a
-            href="/login"
-            className="font-pixel text-[9px] text-black/70 hover:text-black transition-colors whitespace-nowrap"
-          >
+        <div className="hidden lg:flex items-center gap-4 shrink-0">
+          <a href="/login" className="font-pixel text-[9px] text-black/70 hover:text-black transition-colors whitespace-nowrap">
             Sign in
           </a>
-          <a
-            href="/login?mode=create"
-            className="font-pixel text-[9px] text-black hover:text-black/60 transition-colors whitespace-nowrap"
-          >
-            Create account
+          <a href="/login?mode=create" className="rpg-btn-primary font-pixel text-[9px] px-4 py-2 whitespace-nowrap">
+            Get started
           </a>
           <a
             href="https://chromewebstore.google.com"
@@ -93,17 +84,17 @@ export default function Navbar() {
             rel="noreferrer"
             className="flex items-center gap-1.5 font-pixel text-[9px] text-black/70 hover:text-black transition-colors whitespace-nowrap"
           >
-            <img src="/chromelogo.png" alt="Chrome" width={13} height={13} style={{ display: "inline" }} />
+            <img src="/chromelogo.png" alt="Chrome" width={13} height={13} />
             Get Extension
           </a>
         </div>
 
-        {/* Mobile toggle — only shown on small screens, occupies col 2+3 */}
-        <div className="lg:hidden col-span-2 flex justify-end">
+        {/* Mobile toggle */}
+        <div className="lg:hidden col-start-3 flex justify-end">
           <button
             aria-label="Toggle menu"
             onClick={() => setOpen((v) => !v)}
-            className="font-pixel text-base text-black"
+            className="font-pixel text-sm text-black"
           >
             {open ? "[ X ]" : "[ = ]"}
           </button>
@@ -122,17 +113,14 @@ export default function Navbar() {
         <div className="px-5 py-4 flex flex-col gap-3">
           {LINKS.map((l) => (
             <a key={l.href} href={l.href} onClick={() => setOpen(false)}
-              className="font-pixel text-[11px] text-black whitespace-nowrap">
-              [ {l.label} ]
+              className="font-pixel text-[10px] text-black whitespace-nowrap">
+              {l.label}
             </a>
           ))}
           <div className="h-px bg-black/20 my-1" />
-          <a href="/login" onClick={() => setOpen(false)}
-            className="font-pixel text-[11px] text-black/70 whitespace-nowrap">[ SIGN IN ]</a>
-          <a href="/login?mode=create" onClick={() => setOpen(false)}
-            className="font-pixel text-[11px] text-black whitespace-nowrap">[ CREATE ACCOUNT → ]</a>
-          <a href="https://chromewebstore.google.com" target="_blank" rel="noreferrer" onClick={() => setOpen(false)}
-            className="font-pixel text-[11px] text-black/70 whitespace-nowrap">[ GET EXTENSION ]</a>
+          <a href="/login" onClick={() => setOpen(false)} className="font-pixel text-[10px] text-black/70 whitespace-nowrap">Sign in</a>
+          <a href="/login?mode=create" onClick={() => setOpen(false)} className="font-pixel text-[10px] text-black whitespace-nowrap">Get started</a>
+          <a href="https://chromewebstore.google.com" target="_blank" rel="noreferrer" onClick={() => setOpen(false)} className="font-pixel text-[10px] text-black/70 whitespace-nowrap">Get Extension</a>
         </div>
       </div>
     </header>
