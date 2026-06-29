@@ -75,7 +75,7 @@ export default function Navbar() {
           <a href="/login" className="font-pixel text-[9px] text-black/70 hover:text-black transition-colors whitespace-nowrap">
             Sign in
           </a>
-          <a href="/login?mode=create" className="rpg-btn-primary font-pixel text-[9px] px-4 py-2 whitespace-nowrap">
+          <a href="/login?mode=create" className="rpg-btn-primary whitespace-nowrap" style={{ padding: "6px 14px", fontSize: "9px" }}>
             Get started
           </a>
           <a
