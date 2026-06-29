@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { createClient } from "@/lib/supabase/client"
 
 export const dynamic = "force-dynamic"
@@ -27,15 +27,54 @@ function PixelFloat({ x, y, size, delay, color }: { x: string; y: string; size: 
   )
 }
 
-function PasswordStrength({ password }: { password: string }) {
-  const checks = [/.{8,}/, /[A-Z]/, /[0-9]/, /[^A-Za-z0-9]/]
-  const strength = checks.filter(r => r.test(password)).length
-  const colors = ["#343438", "#ef4444", "#f97316", "#eab308", "#74f7b5"]
+function OTPInput({ onComplete }: { onComplete: (code: string) => void }) {
+  const [digits, setDigits] = useState(["", "", "", "", "", ""])
+  const refs = useRef<(HTMLInputElement | null)[]>([])
+
+  function handleChange(i: number, val: string) {
+    const d = val.replace(/\D/g, "").slice(-1)
+    const next = [...digits]
+    next[i] = d
+    setDigits(next)
+    if (d && i < 5) refs.current[i + 1]?.focus()
+    if (next.every(v => v) && next.join("").length === 6) onComplete(next.join(""))
+  }
+
+  function handleKeyDown(i: number, e: React.KeyboardEvent) {
+    if (e.key === "Backspace" && !digits[i] && i > 0) refs.current[i - 1]?.focus()
+  }
+
+  function handlePaste(e: React.ClipboardEvent) {
+    const text = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6)
+    if (text.length === 6) {
+      setDigits(text.split(""))
+      onComplete(text)
+      refs.current[5]?.focus()
+    }
+  }
+
   return (
-    <div className="flex gap-1 mt-1.5">
-      {[1,2,3,4].map(i => (
-        <div key={i} className="h-1 flex-1 rounded-full transition-colors duration-300"
-          style={{ backgroundColor: i <= strength ? colors[strength] : "#343438" }} />
+    <div className="flex gap-3 justify-center">
+      {digits.map((d, i) => (
+        <input
+          key={i}
+          ref={el => { refs.current[i] = el }}
+          type="text"
+          inputMode="numeric"
+          maxLength={1}
+          value={d}
+          onChange={e => handleChange(i, e.target.value)}
+          onKeyDown={e => handleKeyDown(i, e)}
+          onPaste={handlePaste}
+          className="w-12 h-14 text-center text-xl font-semibold text-white rounded-xl focus:outline-none transition-all"
+          style={{
+            background: "#1f1f1f",
+            border: `2px solid ${d ? "#74f7b5" : "#343438"}`,
+            caretColor: "#74f7b5",
+          }}
+          onFocus={e => (e.currentTarget.style.borderColor = "#74f7b5")}
+          onBlur={e => (e.currentTarget.style.borderColor = digits[i] ? "#74f7b5" : "#343438")}
+        />
       ))}
     </div>
   )
@@ -43,14 +82,12 @@ function PasswordStrength({ password }: { password: string }) {
 
 export default function LoginPage() {
   const [isCreate, setIsCreate] = useState(false)
-  const [name, setName]         = useState("")
   const [email, setEmail]       = useState("")
-  const [password, setPassword] = useState("")
-  const [showPass, setShowPass] = useState(false)
-  const [agreed, setAgreed]     = useState(false)
+  const [step, setStep]         = useState<"form" | "otp">("form")
   const [loading, setLoading]   = useState(false)
+  const [verifying, setVerifying] = useState(false)
   const [error, setError]       = useState("")
-  const [sent, setSent]         = useState(false)
+  const [resendTimer, setResendTimer] = useState(0)
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -58,6 +95,12 @@ export default function LoginPage() {
     if (extId) localStorage.setItem("aminta_ext_id", extId)
     setIsCreate(params.get("mode") === "create")
   }, [])
+
+  useEffect(() => {
+    if (resendTimer <= 0) return
+    const t = setTimeout(() => setResendTimer(v => v - 1), 1000)
+    return () => clearTimeout(t)
+  }, [resendTimer])
 
   const cb = () => `${location.origin}/auth/callback`
 
@@ -69,25 +112,34 @@ export default function LoginPage() {
     await createClient().auth.signInWithOAuth({ provider: "github", options: { redirectTo: cb() } })
   }
 
-  async function handleEmail(e: React.FormEvent) {
+  async function handleSendOTP(e: React.FormEvent) {
     e.preventDefault()
-    if (isCreate && !agreed) { setError("Please agree to the Terms of Service"); return }
     setLoading(true)
     setError("")
-    const supabase = createClient()
-    if (isCreate) {
-      const { error } = await supabase.auth.signUp({
-        email, password,
-        options: { data: { full_name: name }, emailRedirectTo: cb() },
-      })
-      if (error) setError(error.message)
-      else setSent(true)
-    } else {
-      const { error } = await supabase.auth.signInWithPassword({ email, password })
-      if (error) setError(error.message)
-      else window.location.href = "/"
-    }
+    const { error } = await createClient().auth.signInWithOtp({
+      email,
+      options: { shouldCreateUser: true, emailRedirectTo: cb() },
+    })
+    if (error) setError(error.message)
+    else { setStep("otp"); setResendTimer(120) }
     setLoading(false)
+  }
+
+  async function handleVerifyOTP(code: string) {
+    setVerifying(true)
+    setError("")
+    const { error } = await createClient().auth.verifyOtp({
+      email, token: code, type: "email",
+    })
+    if (error) { setError(error.message); setVerifying(false) }
+    else window.location.href = "/"
+  }
+
+  async function handleResend() {
+    if (resendTimer > 0) return
+    setError("")
+    await createClient().auth.signInWithOtp({ email, options: { shouldCreateUser: true } })
+    setResendTimer(120)
   }
 
   return (
@@ -105,8 +157,9 @@ export default function LoginPage() {
 
       <div className="relative z-10 w-full max-w-sm space-y-5">
 
-        {/* Back */}
-        <a href="/" className="inline-flex items-center gap-2 text-sm font-medium transition-colors"
+        <a href={step === "otp" ? "#" : "/"}
+          onClick={step === "otp" ? (e) => { e.preventDefault(); setStep("form"); setError("") } : undefined}
+          className="inline-flex items-center gap-2 text-sm font-medium transition-colors"
           style={{ color: "#aaa" }}
           onMouseEnter={e => (e.currentTarget.style.color = "#fff")}
           onMouseLeave={e => (e.currentTarget.style.color = "#aaa")}>
@@ -116,17 +169,36 @@ export default function LoginPage() {
           Back
         </a>
 
-        {/* Logo */}
         <div className="flex justify-center">
           <div className="aminta-glow"><DemonIcon size={40} /></div>
         </div>
 
-        {sent ? (
-          <div className="rounded-2xl p-8 text-center space-y-3"
-            style={{ background: "rgba(36,36,36,0.85)", border: "1px solid #343438", backdropFilter: "blur(8px)" }}>
-            <DemonIcon size={32} />
-            <p className="font-pixel text-[9px] tracking-widest" style={{ color: "#74f7b5" }}>Check your email</p>
-            <p className="text-sm text-[#9a9aa3]">Confirmation sent to <span style={{ color: "#74f7b5" }}>{email}</span></p>
+        {step === "otp" ? (
+          <div className="rounded-2xl p-6 space-y-6"
+            style={{ background: "rgba(36,36,36,0.85)", border: "1px solid #343438", boxShadow: "0 0 40px rgba(116,247,181,0.06), 0 20px 60px rgba(0,0,0,0.5)", backdropFilter: "blur(8px)" }}>
+            <div className="text-center space-y-1">
+              <p className="text-white font-semibold text-base">Verify your email</p>
+              <p className="text-[#9a9aa3] text-sm">
+                Verification code sent to{" "}
+                <span style={{ color: "#74f7b5" }}>{email}</span>
+              </p>
+            </div>
+
+            <OTPInput onComplete={handleVerifyOTP} />
+
+            {verifying && <p className="text-center text-[#74f7b5] text-sm">Verifying…</p>}
+            {error && <p className="font-pixel text-[7px] text-red-400 text-center">{error}</p>}
+
+            <div className="h-px bg-[#343438]" />
+
+            <div className="text-center space-y-1">
+              <p className="text-[#888] text-sm">Didn&apos;t receive the code?</p>
+              <button onClick={handleResend} disabled={resendTimer > 0}
+                className="text-sm font-medium transition-colors disabled:cursor-not-allowed"
+                style={{ color: resendTimer > 0 ? "#555" : "#74f7b5" }}>
+                {resendTimer > 0 ? `Resend in ${resendTimer}s` : "Resend code"}
+              </button>
+            </div>
           </div>
         ) : (
           <div className="rounded-2xl p-6 space-y-4"
@@ -141,7 +213,6 @@ export default function LoginPage() {
               </p>
             </div>
 
-            {/* OAuth buttons */}
             <div className="space-y-2">
               <button onClick={handleGoogle}
                 className="rpg-btn-secondary w-full flex items-center justify-center gap-2 text-xs">
@@ -168,22 +239,7 @@ export default function LoginPage() {
               <div className="flex-1 h-px bg-[#343438]" />
             </div>
 
-            {/* Email form */}
-            <form onSubmit={handleEmail} className="space-y-3">
-              {isCreate && (
-                <div>
-                  <label className="font-pixel text-[7px] text-[#555] mb-1.5 block tracking-widest">Full name</label>
-                  <input
-                    type="text" placeholder="John Doe" value={name}
-                    onChange={e => setName(e.target.value)} required
-                    className="w-full px-3 py-2.5 rounded-lg text-sm placeholder-[#3a3a4a] text-white focus:outline-none transition-colors"
-                    style={{ background: "#1f1f1f", border: "1px solid #343438" }}
-                    onFocus={e => (e.currentTarget.style.borderColor = "#74f7b5")}
-                    onBlur={e => (e.currentTarget.style.borderColor = "#343438")}
-                  />
-                </div>
-              )}
-
+            <form onSubmit={handleSendOTP} className="space-y-3">
               <div>
                 <label className="font-pixel text-[7px] text-[#555] mb-1.5 block tracking-widest">Email address</label>
                 <input
@@ -195,66 +251,31 @@ export default function LoginPage() {
                   onBlur={e => (e.currentTarget.style.borderColor = "#343438")}
                 />
               </div>
-
-              <div>
-                <label className="font-pixel text-[7px] text-[#555] mb-1.5 block tracking-widest">Password</label>
-                <div className="relative">
-                  <input
-                    type={showPass ? "text" : "password"} placeholder="········" value={password}
-                    onChange={e => setPassword(e.target.value)} required minLength={8}
-                    className="w-full px-3 py-2.5 pr-10 rounded-lg text-sm placeholder-[#3a3a4a] text-white focus:outline-none transition-colors"
-                    style={{ background: "#1f1f1f", border: "1px solid #343438" }}
-                    onFocus={e => (e.currentTarget.style.borderColor = "#74f7b5")}
-                    onBlur={e => (e.currentTarget.style.borderColor = "#343438")}
-                  />
-                  <button type="button" onClick={() => setShowPass(v => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#555] hover:text-white transition-colors">
-                    {showPass
-                      ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-                      : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>}
-                  </button>
-                </div>
-                {isCreate && password && <PasswordStrength password={password} />}
-                {isCreate && <p className="text-[#555] text-[10px] mt-1">Must be at least 8 characters</p>}
-              </div>
-
-              {isCreate && (
-                <label className="flex items-start gap-2.5 cursor-pointer">
-                  <input type="checkbox" checked={agreed} onChange={e => setAgreed(e.target.checked)}
-                    className="mt-0.5 accent-[#74f7b5]" />
-                  <span className="text-[#888] text-xs leading-relaxed">
-                    I agree to the{" "}
-                    <a href="/terms" className="text-[#74f7b5] hover:text-white transition-colors">Terms of Service</a>
-                    {" "}and{" "}
-                    <a href="/privacy" className="text-[#74f7b5] hover:text-white transition-colors">Privacy Policy</a>
-                  </span>
-                </label>
-              )}
-
               {error && <p className="font-pixel text-[7px] text-red-400">{error}</p>}
-
               <button type="submit" disabled={loading}
                 className="w-full py-3 rounded-lg font-pixel text-[9px] tracking-widest text-black transition-all disabled:opacity-50 hover:brightness-110 active:scale-[0.98]"
                 style={{ background: "#74f7b5" }}>
-                {loading ? "…" : isCreate ? "Create account" : "Sign in"}
+                {loading ? "Sending…" : "Continue with email"}
               </button>
             </form>
           </div>
         )}
 
-        <div className="space-y-2 text-center">
-          <p className="text-[#888] text-xs">
-            {isCreate
-              ? <>Already have an account?{" "}<a href="/login" className="text-[#74f7b5] hover:text-white transition-colors">Sign in</a></>
-              : <>Don&apos;t have an account?{" "}<a href="/login?mode=create" className="text-[#74f7b5] hover:text-white transition-colors">Create one</a></>}
-          </p>
-          <p className="text-[#666] text-xs">
-            By continuing you agree to our{" "}
-            <a href="/terms" className="text-[#888] hover:text-[#74f7b5] transition-colors">Terms</a>
-            {" & "}
-            <a href="/privacy" className="text-[#888] hover:text-[#74f7b5] transition-colors">Privacy</a>
-          </p>
-        </div>
+        {step === "form" && (
+          <div className="space-y-2 text-center">
+            <p className="text-[#888] text-xs">
+              {isCreate
+                ? <>Already have an account?{" "}<a href="/login" className="text-[#74f7b5] hover:text-white transition-colors">Sign in</a></>
+                : <>Don&apos;t have an account?{" "}<a href="/login?mode=create" className="text-[#74f7b5] hover:text-white transition-colors">Create one</a></>}
+            </p>
+            <p className="text-[#666] text-xs">
+              By continuing you agree to our{" "}
+              <a href="/terms" className="text-[#888] hover:text-[#74f7b5] transition-colors">Terms</a>
+              {" & "}
+              <a href="/privacy" className="text-[#888] hover:text-[#74f7b5] transition-colors">Privacy</a>
+            </p>
+          </div>
+        )}
       </div>
     </div>
   )
