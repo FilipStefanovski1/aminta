@@ -77,7 +77,7 @@ export default function Navbar() {
           </a>
           <a href="https://chromewebstore.google.com" target="_blank" rel="noreferrer"
             className="flex items-center gap-1.5 font-pixel text-[9px] text-black/70 hover:text-black transition-colors whitespace-nowrap">
-            <img src="/chromelogo.png" alt="Chrome" width={13} height={13} />
+            <img src="/chromelogo.png" alt="Chrome" width={13} height={13} style={{ filter: "invert(1)" }} />
             Get Extension
           </a>
         </div>
