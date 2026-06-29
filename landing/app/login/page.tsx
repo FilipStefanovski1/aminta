@@ -101,12 +101,12 @@ export default function LoginPage() {
         {/* Back */}
         <a
           href="/"
-          className="flex items-center gap-1.5 font-pixel text-[7px] tracking-widest transition-colors"
+          className="font-pixel text-[7px] tracking-widest transition-colors"
           style={{ color: "#74f7b5" }}
           onMouseEnter={e => (e.currentTarget.style.color = "#ffffff")}
           onMouseLeave={e => (e.currentTarget.style.color = "#74f7b5")}
         >
-          ← Back
+          Back
         </a>
 
         {/* Logo */}
@@ -214,7 +214,7 @@ export default function LoginPage() {
         </div>
 
         <div className="space-y-2 text-center">
-          <p className="text-[#3a3a4a] text-xs">
+          <p className="text-[#888] text-xs">
             {isCreate ? (
               <>Already have an account?{" "}
                 <a href="/login" className="text-[#74f7b5] hover:text-white transition-colors">Sign in</a>
@@ -225,11 +225,11 @@ export default function LoginPage() {
               </>
             )}
           </p>
-          <p className="text-[#3a3a4a] text-xs">
+          <p className="text-[#666] text-xs">
             By continuing you agree to our{" "}
-            <a href="/terms" className="text-[#555] hover:text-[#74f7b5] transition-colors">Terms</a>
+            <a href="/terms" className="text-[#888] hover:text-[#74f7b5] transition-colors">Terms</a>
             {" & "}
-            <a href="/privacy" className="text-[#555] hover:text-[#74f7b5] transition-colors">Privacy</a>
+            <a href="/privacy" className="text-[#888] hover:text-[#74f7b5] transition-colors">Privacy</a>
           </p>
         </div>
       </div>
