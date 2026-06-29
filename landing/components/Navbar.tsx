@@ -44,33 +44,30 @@ export default function Navbar() {
         opacity: visible ? 1 : 0,
       }}
     >
-      <nav className="mx-auto max-w-7xl h-16 px-6 grid items-center" style={{ gridTemplateColumns: "auto 1fr auto" }}>
+      <nav className="mx-auto max-w-7xl h-16 px-6 flex items-center justify-between">
 
-        {/* Col 1: Logo */}
-        <a href="#top" aria-label="Aminta" className="flex items-center gap-2 shrink-0">
-          <svg width="28" height="22" viewBox="0 0 16 13" className="pixelated">
-            <rect x="2" y="0" width="2" height="3" fill="#0a0a0a" />
-            <rect x="12" y="0" width="2" height="3" fill="#0a0a0a" />
-            <rect x="3" y="3" width="10" height="9" fill="#0a0a0a" />
-            <rect x="4" y="6" width="2" height="2" fill="#74f7b5" />
-            <rect x="10" y="6" width="2" height="2" fill="#74f7b5" />
-          </svg>
-        </a>
-
-        {/* Col 2: Nav links — centered */}
-        <div className="hidden lg:flex items-center justify-center gap-7">
-          {LINKS.map((l) => (
-            <a
-              key={l.href}
-              href={l.href}
-              className="font-pixel text-[9px] text-black hover:text-black/60 transition-colors whitespace-nowrap"
-            >
-              {l.label}
-            </a>
-          ))}
+        {/* Left: Logo + nav links */}
+        <div className="flex items-center gap-8">
+          <a href="#top" aria-label="Aminta" className="flex items-center shrink-0">
+            <svg width="28" height="22" viewBox="0 0 16 13" className="pixelated">
+              <rect x="2" y="0" width="2" height="3" fill="#0a0a0a" />
+              <rect x="12" y="0" width="2" height="3" fill="#0a0a0a" />
+              <rect x="3" y="3" width="10" height="9" fill="#0a0a0a" />
+              <rect x="4" y="6" width="2" height="2" fill="#74f7b5" />
+              <rect x="10" y="6" width="2" height="2" fill="#74f7b5" />
+            </svg>
+          </a>
+          <div className="hidden lg:flex items-center gap-6">
+            {LINKS.map((l) => (
+              <a key={l.href} href={l.href}
+                className="font-pixel text-[9px] text-black hover:text-black/60 transition-colors whitespace-nowrap">
+                {l.label}
+              </a>
+            ))}
+          </div>
         </div>
 
-        {/* Col 3: Right actions */}
+        {/* Right: Sign in · Get started · Get Extension */}
         <div className="hidden lg:flex items-center gap-4 shrink-0">
           <a href="/login" className="font-pixel text-[9px] text-black/70 hover:text-black transition-colors whitespace-nowrap">
             Sign in
@@ -78,27 +75,17 @@ export default function Navbar() {
           <a href="/login?mode=create" className="rpg-btn-primary whitespace-nowrap" style={{ padding: "6px 14px", fontSize: "9px" }}>
             Get started
           </a>
-          <a
-            href="https://chromewebstore.google.com"
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-center gap-1.5 font-pixel text-[9px] text-black/70 hover:text-black transition-colors whitespace-nowrap"
-          >
+          <a href="https://chromewebstore.google.com" target="_blank" rel="noreferrer"
+            className="flex items-center gap-1.5 font-pixel text-[9px] text-black/70 hover:text-black transition-colors whitespace-nowrap">
             <img src="/chromelogo.png" alt="Chrome" width={13} height={13} />
             Get Extension
           </a>
         </div>
 
-        {/* Mobile toggle */}
-        <div className="lg:hidden col-start-3 flex justify-end">
-          <button
-            aria-label="Toggle menu"
-            onClick={() => setOpen((v) => !v)}
-            className="font-pixel text-sm text-black"
-          >
-            {open ? "[ X ]" : "[ = ]"}
-          </button>
-        </div>
+        <button aria-label="Toggle menu" onClick={() => setOpen((v) => !v)}
+          className="lg:hidden font-pixel text-sm text-black">
+          {open ? "[ X ]" : "[ = ]"}
+        </button>
       </nav>
 
       {/* Mobile menu */}
