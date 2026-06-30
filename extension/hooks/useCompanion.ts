@@ -2,7 +2,7 @@
 // Manages expression state lifecycle: dispatch → priority check → timer → reset.
 // Emits to the bus after each successful dispatch so subscribers stay in sync.
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import { ANIMATION_CSS } from "~lib/animation"
 import {
@@ -92,7 +92,10 @@ export function useCompanion(store: AmintaStore | null): {
   // Compose the return value on every render
   const state    = getCompanionState(store, expression, lastEvent)
   const mood     = deriveMood(store)
-  const speech   = store ? resolveDialogue(lastEvent, mood, store) : "..."
+  // Memoize speech so Math.random() only re-rolls when the event or mood changes,
+  // not on every store update or unrelated render (which caused double bubble-pops).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const speech   = useMemo(() => store ? resolveDialogue(lastEvent, mood, store) : "...", [lastEvent, mood])
   const animClass = ANIMATION_CSS[state.animationId]
 
   return { state, speech, animClass, animKey, dispatch }

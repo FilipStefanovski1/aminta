@@ -3,23 +3,23 @@ import { useEffect, useState } from "react"
 import { isGoogleKey, isGroqKey } from "~lib/ai"
 import type { AmintaStore } from "~lib/storage"
 
-const OPENROUTER_MODELS = [
+export const OPENROUTER_MODELS = [
   { id: "meta-llama/llama-3.3-70b-instruct:free", label: "Llama 3.3 70B (free)" },
   { id: "openai/gpt-4o-mini",                     label: "GPT-4o Mini" },
   { id: "anthropic/claude-3.5-haiku",             label: "Claude 3.5 Haiku" },
 ]
-const GOOGLE_MODELS = [
+export const GOOGLE_MODELS = [
   { id: "gemini-2.0-flash",      label: "Gemini 2.0 Flash" },
   { id: "gemini-2.5-flash",      label: "Gemini 2.5 Flash" },
   { id: "gemini-2.0-flash-lite", label: "Gemini 2.0 Flash Lite" },
 ]
-const GROQ_MODELS = [
+export const GROQ_MODELS = [
   { id: "llama-3.3-70b-versatile", label: "Llama 3.3 70B" },
   { id: "llama-3.1-8b-instant",    label: "Llama 3.1 8B" },
   { id: "gemma2-9b-it",            label: "Gemma 2 9B" },
 ]
 
-const SELECT_STYLE: React.CSSProperties = {
+export const SELECT_STYLE: React.CSSProperties = {
   appearance: "none",
   WebkitAppearance: "none",
   backgroundColor: "#1a1a1a",

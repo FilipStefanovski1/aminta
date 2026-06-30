@@ -2,15 +2,17 @@ import { useEffect, useRef, useState } from "react"
 
 import "~style.css"
 
-import ApiKeyForm from "~components/ApiKeyForm"
+import { GOOGLE_MODELS, GROQ_MODELS, OPENROUTER_MODELS, SELECT_STYLE } from "~components/ApiKeyForm"
 import DemonMascot from "~components/DemonMascot"
 import GeneratorPanel from "~components/GeneratorPanel"
 import HomeTab from "~components/HomeTab"
 import LoginScreen from "~components/LoginScreen"
 import SetupGate from "~components/SetupGate"
 import VoiceProfileForm from "~components/VoiceProfileForm"
-import { getForm, getStageTint } from "~lib/evolution"
+import { FORMS, getForm, getLevel, getLevelSpan, getStageTint, getXpInLevel, getXpProgress, getNextStage } from "~lib/evolution"
+import { isGoogleKey, isGroqKey } from "~lib/ai"
 import { C } from "~lib/theme"
+import { SpriteMark, XPBar } from "~components/ui"
 import { getStore, setStore, type AmintaStore } from "~lib/storage"
 import { getAuthSession, clearAuthSession, type AuthSession } from "~lib/auth"
 import { pullFromCloud, pushToCloud } from "~lib/sync"
@@ -93,8 +95,7 @@ function playLevelUpSound() {
 }
 
 function LevelUpModal({ data, onDismiss }: { data: LevelUpData; onDismiss: () => void }) {
-  const xp       = (data.level - 1) * 300
-  const form     = getForm(xp)
+  const form     = FORMS[Math.min(data.level - 1, FORMS.length - 1)]
   const tint     = form.color
   const dialogue = STAGE_DIALOGUE[data.stage] ?? "growing stronger."
 
@@ -161,89 +162,223 @@ function SettingsOverlay({
   session: AuthSession | null
   onSignOut: () => void
 }) {
-  const plan = store.plan ?? "free"
-  const planLabel = plan === "lifetime" ? "FOUNDER" : plan === "pro" ? "PRO" : "FREE"
-  const planColor = plan === "lifetime" ? "#f5d060" : plan === "pro" ? "#74f7b5" : C.textGhost
+  // ── Plan ────────────────────────────────────────────────────────────────────
+  const plan       = store.plan ?? "free"
+  const planLabel  = plan === "lifetime" ? "FOUNDER" : plan === "pro" ? "PRO" : "FREE"
+  const planColor  = plan === "lifetime" ? "#f5d060" : plan === "pro" ? "#74f7b5" : C.textGhost
+
+  // ── Evolution data (read-only) ───────────────────────────────────────────────
+  const xp        = store.xp ?? 0
+  const form      = getForm(xp)
+  const level     = getLevel(xp)
+  const xpInLevel = getXpInLevel(xp)
+  const levelSpan = getLevelSpan(xp)
+  const progress  = getXpProgress(xp)
+  const nextStage = getNextStage(xp)
+
+  // ── AI / key state (inlined from ApiKeyForm so we own the save UX) ──────────
+  const [key,       setKey]       = useState(store.apiKey ?? "")
+  const [model,     setModel]     = useState(store.model  ?? "")
+  const [saving,    setSaving]    = useState(false)
+  const [justSaved, setJustSaved] = useState(false)
+  const [error,     setError]     = useState("")
+
+  const isGoogle = isGoogleKey(key)
+  const isGroq   = isGroqKey(key)
+  const models   = isGoogle ? GOOGLE_MODELS : isGroq ? GROQ_MODELS : OPENROUTER_MODELS
+
+  const providerName  = isGroq ? "Groq" : isGoogle ? "Gemini" : "OpenRouter"
+  const providerDot   = isGroq ? "#f97316" : isGoogle ? "#4a90d9" : "#a78bfa"
+  const providerUrl   = isGroq
+    ? "console.groq.com/keys"
+    : isGoogle
+      ? "aistudio.google.com/apikey"
+      : "openrouter.ai/keys"
+
+  const isDirty = key.trim() !== (store.apiKey ?? "") || model !== (store.model ?? "")
+
+  // Reset model when provider switches
+  useEffect(() => {
+    if (!models.find(m => m.id === model)) setModel(models[0].id)
+  }, [isGoogle, isGroq]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const save = async () => {
+    if (!key.trim()) { setError("Paste an API key first."); return }
+    setError("")
+    setSaving(true)
+    const m = models.find(x => x.id === model)?.id ?? models[0].id
+    await onSave({ apiKey: key.trim(), model: m })
+    setSaving(false)
+    setJustSaved(true)
+    setTimeout(() => setJustSaved(false), 1400)
+  }
 
   return (
     <div className="absolute inset-0 z-40 flex flex-col animate-slide-up" style={{ backgroundColor: C.bg }}>
 
-      {/* Header */}
+      {/* ── Header ── */}
       <div className="flex items-center justify-between px-4 py-3 shrink-0" style={{ borderBottom: `1px solid ${C.border}` }}>
-        <p className="font-pixel text-[9px]" style={{ color: C.text }}>Settings</p>
+        <p className="font-pixel text-[8px]" style={{ color: C.text }}>Settings</p>
         <button onClick={onClose}
-          className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/5 transition-colors"
+          className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/5 transition-colors text-[13px]"
           style={{ color: C.textFaint }}>✕</button>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-6">
 
-        {/* ── ACCOUNT ── */}
-        <div className="px-4 pt-5 pb-4 space-y-3" style={{ borderBottom: `1px solid ${C.border}` }}>
-          <p className="font-pixel text-[6px] uppercase tracking-widest" style={{ color: C.textGhost }}>Account</p>
+        {/* ── 👤 ACCOUNT ── */}
+        <section className="space-y-2">
+          <p className="font-pixel text-[6px] uppercase tracking-widest px-0.5" style={{ color: C.textGhost }}>Account</p>
 
           {session ? (
-            <>
-              <div className="flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-[11px] truncate" style={{ color: C.text }}>{session.email}</p>
-                  <div className="flex items-center gap-1.5 mt-1">
-                    <span className="font-pixel text-[6px] px-1.5 py-0.5 rounded" style={{ backgroundColor: planColor + "22", color: planColor, border: `1px solid ${planColor}44` }}>
-                      {planLabel}
-                    </span>
-                    {plan === "free" && (
-                      <a href="https://amintaapp.com/#pricing" target="_blank" rel="noreferrer"
-                        className="font-pixel text-[6px] underline" style={{ color: "#74f7b5" }}>
-                        Upgrade →
-                      </a>
-                    )}
-                  </div>
-                </div>
-                <button
-                  onClick={onSignOut}
-                  className="btn-pixel shrink-0 px-3 py-2 rounded-lg font-pixel text-[6px]"
-                  style={{ backgroundColor: "#1a1a1a", color: "#f87171", borderColor: "#f87171" }}>
-                  Sign out
-                </button>
+            <div className="rounded-xl px-3 py-3 space-y-2" style={{ backgroundColor: C.card, border: `1px solid ${C.border}` }}>
+              {/* Email + plan badge */}
+              <div className="flex items-center justify-between gap-2 min-w-0">
+                <p className="text-[12px] truncate leading-none" style={{ color: C.text }}>{session.email}</p>
+                <span className="font-pixel text-[6px] shrink-0 px-1.5 py-0.5 rounded" style={{ backgroundColor: planColor + "1a", color: planColor, border: `1px solid ${planColor}33` }}>
+                  {planLabel}
+                </span>
               </div>
-            </>
+              {/* Connected status */}
+              <p className="text-[11px] leading-none" style={{ color: C.textFaint }}>
+                <span style={{ color: "#4ade80" }}>●</span>{" "}Connected
+              </p>
+              {plan === "free" && (
+                <a href="https://amintaapp.com/#pricing" target="_blank" rel="noreferrer"
+                  className="font-pixel text-[6px] underline block" style={{ color: C.mint }}>
+                  Upgrade to Pro →
+                </a>
+              )}
+            </div>
           ) : (
-            <p className="font-pixel text-[7px]" style={{ color: C.textFaint }}>Not signed in</p>
+            <p className="text-[12px] px-0.5" style={{ color: C.textFaint }}>Not signed in</p>
           )}
-        </div>
 
-        {/* ── AI PROVIDER ── */}
-        <div className="px-4 pt-5 pb-4 space-y-3" style={{ borderBottom: `1px solid ${C.border}` }}>
-          <p className="font-pixel text-[6px] uppercase tracking-widest" style={{ color: C.textGhost }}>AI Provider</p>
-          <ApiKeyForm initial={store} onSave={onSave} />
-        </div>
+          {session && (
+            <button
+              onClick={onSignOut}
+              className="font-pixel text-[6px] px-0.5 transition-colors hover:text-red-400"
+              style={{ color: C.textFaint }}>
+              Sign out
+            </button>
+          )}
+        </section>
 
-        {/* ── DANGER ZONE ── */}
-        <div className="px-4 pt-5 pb-4 space-y-3">
-          <p className="font-pixel text-[6px] uppercase tracking-widest" style={{ color: C.textGhost }}>App</p>
+        {/* ── 👾 YOUR AMINTA ── */}
+        <section className="space-y-2">
+          <p className="font-pixel text-[6px] uppercase tracking-widest px-0.5" style={{ color: C.textGhost }}>Your Aminta</p>
+          <div className="rounded-xl px-3 py-3" style={{ backgroundColor: C.card, border: `1px solid ${C.border}` }}>
+            <div className="flex items-center gap-3">
+              <div className="aminta-glow shrink-0">
+                <SpriteMark tint={form.color} size={30} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-baseline justify-between mb-2">
+                  <p className="font-pixel text-[8px]" style={{ color: form.color }}>{form.name}</p>
+                  <p className="font-pixel text-[6px]" style={{ color: C.textGhost }}>Lv. {level}</p>
+                </div>
+                <XPBar progress={progress} tint={form.color} />
+                <p className="font-pixel text-[6px] mt-1.5" style={{ color: C.textFaint }}>
+                  {xpInLevel} / {levelSpan} XP
+                  {nextStage && <span style={{ color: C.textGhost }}> · next: {nextStage.name}</span>}
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ── 🧠 AMINTA BRAIN ── */}
+        <section className="space-y-2">
+          <p className="font-pixel text-[6px] uppercase tracking-widest px-0.5" style={{ color: C.textGhost }}>Aminta Brain</p>
+
+          {/* Unified API key + model card */}
+          <div className="rounded-xl overflow-hidden" style={{ backgroundColor: C.card, border: `1px solid ${C.border}` }}>
+
+            {/* API Key row */}
+            <div className="px-3 pt-3 pb-2.5">
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="font-pixel text-[6px] uppercase tracking-widest" style={{ color: C.textGhost }}>
+                  API Key
+                </label>
+                <span className="font-pixel text-[6px]" style={{ color: providerDot }}>
+                  ● {providerName}
+                </span>
+              </div>
+              <input
+                type="password"
+                value={key}
+                onChange={e => setKey(e.target.value)}
+                placeholder="gsk_…  ·  AIza…  ·  sk-or-…"
+                className="input-pixel w-full rounded-lg px-3 py-2 text-[12px]"
+              />
+              <p className="text-[10px] mt-1.5 leading-none" style={{ color: C.textFaint }}>
+                {providerUrl} · stored locally
+              </p>
+            </div>
+
+            {/* Divider */}
+            <div style={{ height: 1, backgroundColor: C.borderSoft }} />
+
+            {/* Model row */}
+            <div className="px-3 pt-2.5 pb-3">
+              <label className="font-pixel text-[6px] uppercase tracking-widest block mb-1.5" style={{ color: C.textGhost }}>
+                Model
+              </label>
+              <select
+                value={models.find(m => m.id === model)?.id ?? models[0].id}
+                onChange={e => setModel(e.target.value)}
+                style={SELECT_STYLE}>
+                {models.map(m => (
+                  <option key={m.id} value={m.id}>{m.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {error && <p className="font-pixel text-[7px] text-red-400 px-0.5">{error}</p>}
+
+          {/* Save button — always present; style tracks dirty / saving / just-saved */}
+          <button
+            onClick={isDirty && !saving ? save : undefined}
+            className="w-full py-2.5 rounded-xl font-pixel text-[8px] transition-all duration-150"
+            style={{
+              backgroundColor: isDirty ? C.mint : "transparent",
+              color:            isDirty ? "#000" : justSaved ? C.mint : C.textGhost,
+              border:           `1px solid ${isDirty ? "transparent" : justSaved ? C.mint + "55" : C.border}`,
+              cursor:           isDirty ? "pointer" : "default",
+            }}>
+            {saving ? "Saving…" : isDirty ? "Save Changes" : "✓ Saved"}
+          </button>
+        </section>
+
+        {/* ── ⚙️ ADVANCED ── */}
+        <section className="space-y-2">
+          <p className="font-pixel text-[6px] uppercase tracking-widest px-0.5" style={{ color: C.textGhost }}>Advanced</p>
           <button
             onClick={() => { onClose(); onResetOnboarding() }}
-            className="btn-pixel px-4 py-2 rounded-lg font-pixel text-[6px]"
-            style={{ backgroundColor: "#1a1a1a", color: C.textFaint, borderColor: "#333" }}>
-            ↺ Restart setup
+            className="flex items-center gap-2 text-[12px] transition-colors hover:text-white"
+            style={{ color: C.textFaint }}>
+            <span>↺</span>
+            <span>Restart setup wizard</span>
           </button>
-        </div>
+        </section>
 
       </div>
 
-      {/* Footer */}
-      <div className="px-4 py-3 flex items-center justify-between shrink-0" style={{ borderTop: `1px solid ${C.border}` }}>
-        <p className="font-pixel text-[6px]" style={{ color: C.textGhost }}>v0.1</p>
-        <div className="flex items-center gap-4">
-          {[
-            { label: "X",        href: "https://x.com/amintaapp" },
-            { label: "LinkedIn", href: "https://www.linkedin.com/company/amintaapp/" },
-            { label: "Help",     href: "https://amintaapp.com" },
-          ].map(({ label, href }) => (
-            <a key={href} href={href} target="_blank" rel="noreferrer"
-              className="font-pixel text-[6px] hover:text-white transition-colors" style={{ color: C.textGhost }}>{label}</a>
-          ))}
-        </div>
+      {/* ── Footer ── */}
+      <div className="px-4 py-2.5 flex items-center gap-3 shrink-0" style={{ borderTop: `1px solid ${C.border}` }}>
+        <span className="font-pixel text-[6px]" style={{ color: C.textGhost }}>v0.1</span>
+        <span style={{ color: C.textGhost, fontSize: 10 }}>·</span>
+        {[
+          { label: "X",        href: "https://x.com/amintaapp" },
+          { label: "LinkedIn", href: "https://www.linkedin.com/company/amintaapp/" },
+          { label: "Help",     href: "https://amintaapp.com" },
+        ].map(({ label, href }) => (
+          <a key={href} href={href} target="_blank" rel="noreferrer"
+            className="font-pixel text-[6px] hover:text-white transition-colors" style={{ color: C.textGhost }}>
+            {label}
+          </a>
+        ))}
       </div>
 
     </div>
