@@ -5,7 +5,7 @@ import type { CompanionEvent } from "~lib/companion"
 import { getStageTint } from "~lib/evolution"
 import { readActivePost } from "~lib/messaging"
 import { incrementMissionGenerates } from "~lib/missions"
-import { buildMessages, type Mode, type Platform, type Tone } from "~lib/prompts"
+import { buildMessages, type Mode, type OutputLength, type Platform, type Tone } from "~lib/prompts"
 import type { AmintaStore } from "~lib/storage"
 import { C } from "~lib/theme"
 import { incrementGenerations } from "~lib/xp"
@@ -142,6 +142,14 @@ const TONE_CONFIG: { id: Tone; label: string; desc: string; icon: React.ReactNod
   },
 ]
 
+// ─── Length config ────────────────────────────────────────────────────────────
+
+const LENGTH_CONFIG: { id: OutputLength; label: string; desc: string }[] = [
+  { id: "short",  label: "Short",  desc: "Tight. Punchy." },
+  { id: "medium", label: "Medium", desc: "Balanced."      },
+  { id: "long",   label: "Long",   desc: "Developed."     },
+]
+
 // ─── Placeholder map ─────────────────────────────────────────────────────────
 
 const TOPIC_PLACEHOLDER: Record<Platform, Record<Mode, string>> = {
@@ -227,6 +235,7 @@ export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, initialP
   const [platform, setPlatform] = useState<Platform>(initialPlatform)
   const [mode,     setMode]     = useState<Mode>("tweet")
   const [tone,     setTone]     = useState<Tone>("direct")
+  const [length,   setLength]   = useState<OutputLength>("medium")
   const [hoveredTone, setHoveredTone] = useState<Tone | null>(null)
   const [topic,    setTopic]    = useState("")
   const [context,  setContext]  = useState("")
@@ -285,7 +294,7 @@ export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, initialP
     onContext?.("generate_start")
     try {
       const topicInput = combined || "Write a post about this image."
-      const messages = buildMessages(platform, mode, store.voice, topicInput, store.tweetDNA ?? [], tone)
+      const messages = buildMessages(platform, mode, store.voice, topicInput, store.tweetDNA ?? [], tone, length)
       const text = imageDataUrl
         ? await generateFromImage(store.apiKey, store.model, messages, imageDataUrl)
         : await runAI(store.apiKey, store.model, messages)
@@ -496,6 +505,34 @@ export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, initialP
                   className="text-[8px] leading-none"
                   style={{ color: active ? tint + "99" : C.textGhost }}>
                   {t.desc}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* ── Length ── */}
+      <div className="space-y-1.5">
+        <p className="text-[11px] font-medium" style={{ color: C.textFaint }}>Length</p>
+        <div className="flex rounded-xl overflow-hidden" style={{ border: `1.5px solid ${C.border}` }}>
+          {LENGTH_CONFIG.map((l, i) => {
+            const active = length === l.id
+            return (
+              <button
+                key={l.id}
+                onClick={() => setLength(l.id)}
+                className="flex-1 flex flex-col items-center gap-0.5 py-2 transition-all"
+                style={{
+                  backgroundColor: active ? tint + "18" : "transparent",
+                  borderRight: i < LENGTH_CONFIG.length - 1 ? `1px solid ${C.border}` : undefined,
+                  color: active ? tint : C.textGhost,
+                }}>
+                <span className="text-[10px] font-semibold" style={{ color: active ? tint : C.textDim }}>
+                  {l.label}
+                </span>
+                <span className="text-[8px]" style={{ color: active ? tint + "99" : C.textGhost }}>
+                  {l.desc}
                 </span>
               </button>
             )

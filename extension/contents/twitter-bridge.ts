@@ -65,9 +65,56 @@ function insertIntoComposer(text: string, bar?: HTMLElement): boolean {
   if (!wrapper) return false
 
   const box = (wrapper.querySelector('[contenteditable="true"]') ?? wrapper) as HTMLElement
-  box.focus()
-  document.execCommand("selectAll", false)
-  return document.execCommand("insertText", false, text)
+
+  // Focus without triggering blur on the box itself. The Insert button already
+  // has mousedown:preventDefault so focus never left the box in that flow.
+  // For INSERT_TEXT messages (sidepanel path), we may need to re-focus.
+  if (document.activeElement !== box) box.focus()
+
+  // Tell X's internal editor to select all content. We dispatch a real
+  // keydown event so X's own keyboard handler updates its selection state,
+  // then we also set the DOM selection so they agree.
+  const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
+  box.dispatchEvent(new KeyboardEvent("keydown", {
+    key: "a", code: "KeyA", keyCode: 65,
+    bubbles: true, cancelable: true,
+    ctrlKey: !isMac, metaKey: isMac,
+  }))
+
+  const sel = window.getSelection()
+  if (sel) {
+    const range = document.createRange()
+    range.selectNodeContents(box)
+    sel.removeAllRanges()
+    sel.addRange(range)
+  }
+
+  // Dispatch a native paste event carrying the text via DataTransfer.
+  //
+  // WHY PASTE INSTEAD OF execCommand("insertText"):
+  // execCommand fires beforeinput, which X's React editor handles internally.
+  // Chrome's execCommand implementation then *also* performs its own DOM
+  // mutation regardless of whether X called preventDefault() on beforeinput.
+  // Both the React state path and the browser DOM-mutation path run — one
+  // inserts, the other inserts again → duplicate text.
+  //
+  // A paste event has no parallel browser-side DOM mutation path.
+  // X's paste handler reads clipboardData.getData('text/plain'), replaces the
+  // current selection via its own state management, calls preventDefault(),
+  // and React reconciles once. Single insertion, consistent state.
+  const dt = new DataTransfer()
+  dt.setData("text/plain", text)
+
+  const pasteEvent = new ClipboardEvent("paste", {
+    bubbles: true,
+    cancelable: true,
+    clipboardData: dt as unknown as DataTransfer,
+  })
+
+  box.dispatchEvent(pasteEvent)
+
+  // pasteEvent.defaultPrevented is true when X's handler accepted the paste.
+  return pasteEvent.defaultPrevented
 }
 
 // ─── Recent keywords ──────────────────────────────────────────────────────────
@@ -134,31 +181,20 @@ async function runGenerate(bar: HTMLElement, mode: "tweet" | "polish", prefill?:
     )
     const text = await runAI(store.apiKey, store.model, messages)
 
-    // Show the Insert button — clicking it is a fresh user gesture so execCommand works
-    showInsertButton(bar, text, async (ok) => {
-      if (ok && mode === "tweet" && input) {
-        await saveKeyword(input)
-        renderKeywords(bar)
+    // Copy to clipboard — never touches the composer DOM, never races with
+    // X's focus/blur handlers. Insertion is the sidepanel's job.
+    navigator.clipboard.writeText(text).then(() => {
+      setBarStatus(bar, "Copied ✦ — paste with ⌘V", false)
+      if (mode === "tweet" && input) {
+        saveKeyword(input).then(() => renderKeywords(bar))
       }
+    }).catch(() => {
+      setBarStatus(bar, "Done — use Aminta sidebar to insert", false)
     })
   } catch (e) {
     setBarStatus(bar, e instanceof Error ? e.message : "Error", true)
+  } finally {
     bar.querySelectorAll<HTMLButtonElement>("button").forEach(b => { b.disabled = false })
-  }
-}
-
-function showInsertButton(bar: HTMLElement, text: string, onInserted: (ok: boolean) => void) {
-  const insertBtn = bar.querySelector<HTMLButtonElement>(".aminta-insert-btn")
-  if (!insertBtn) return
-
-  setBarStatus(bar, truncate(text, 28))
-  insertBtn.style.display = "inline-flex"
-  insertBtn.onclick = () => {
-    const ok = insertIntoComposer(text, bar)
-    insertBtn.style.display = "none"
-    bar.querySelectorAll<HTMLButtonElement>("button").forEach(b => { b.disabled = false })
-    setBarStatus(bar, ok ? "Done ✦" : "Click the compose box first", !ok)
-    onInserted(ok)
   }
 }
 
@@ -191,10 +227,8 @@ async function renderKeywords(bar: HTMLElement) {
     ].join(";")
     chip.onmouseenter = () => { chip.style.opacity = "1"; chip.style.borderColor = "#74f7b5" }
     chip.onmouseleave = () => { chip.style.opacity = "0.75"; chip.style.borderColor = "#252a38" }
-    chip.onclick = () => {
-      insertIntoComposer(kw, bar)
-      runGenerate(bar, "tweet", kw)
-    }
+    chip.addEventListener("mousedown", e => e.preventDefault())
+    chip.onclick = () => { runGenerate(bar, "tweet", kw) }
     container.appendChild(chip)
   })
 }
@@ -276,11 +310,7 @@ function buildBar(): HTMLElement {
   const generateBtn = makeBtn("⚄ Generate", () => runGenerate(bar, "tweet"))
   const polishBtn   = makeBtn("+ Polish",   () => runGenerate(bar, "polish"), false)
 
-  const insertBtn = makeBtn("→ Insert", () => {}, true)
-  insertBtn.className = "aminta-insert-btn"
-  insertBtn.style.display = "none"
-
-  bar.append(generateBtn, polishBtn, insertBtn, divider, keywords, status)
+  bar.append(generateBtn, polishBtn, divider, keywords, status)
 
   // Load keywords async after bar is built
   renderKeywords(bar)
@@ -336,7 +366,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     const ok = insertIntoComposer(msg.text)
     sendResponse(ok
       ? { ok: true }
-      : { ok: false, error: "No open composer found. Click the post or reply box on X first." }
+      : { ok: false, error: "Couldn't insert — click inside the X compose box first, then try again." }
     )
     return true
   }

@@ -108,8 +108,10 @@ export default function HomeTab({ store, onCreate, onTrain, onUpdate, animClass,
 
   useEffect(() => () => clearTimeout(toastTimer.current), [])
 
+  const planLabel = plan === "lifetime" ? "FOUNDER" : plan === "pro" ? "PRO" : "FREE"
+
   return (
-    <div className="space-y-3 pb-4">
+    <div className="space-y-4 pb-6">
 
       {/* ── MISSION TOAST ── */}
       {showToast && (
@@ -143,8 +145,8 @@ export default function HomeTab({ store, onCreate, onTrain, onUpdate, animClass,
           backgroundSize: "8px 8px",
           backgroundColor: "#0e1018",
         }}>
-        <div className="px-4 pt-4 pb-5" style={{ position: "relative" }}>
-          <div className="flex items-center justify-center gap-2 mb-3">
+        <div className="px-4 pt-5 pb-6" style={{ position: "relative" }}>
+          <div className="flex items-center justify-center gap-2 mb-2">
             <p className="font-pixel text-[8px] tracking-widest" style={{ color: tint }}>
               {stage} · Lv.{level}
             </p>
@@ -157,11 +159,12 @@ export default function HomeTab({ store, onCreate, onTrain, onUpdate, animClass,
               </span>
             )}
           </div>
-          <div className="mb-3">
-            <SpeechBubble key={bubbleKey} text={speech} />
-          </div>
-          <div className="flex justify-center mt-2 mb-4" style={{ position: "relative" }}>
-            <Sprite key={animKey} xp={xp} size={96} animClass={animClass} />
+          {/* Mascot — bubble absolutely anchored above head, not in flow */}
+          <div className="flex justify-center mb-5" style={{ position: "relative", marginTop: 48 }}>
+            <div style={{ position: "absolute", bottom: "100%", left: "50%", transform: "translateX(-50%)", marginBottom: 4, zIndex: 2 }}>
+              <SpeechBubble key={bubbleKey} text={speech} />
+            </div>
+            <Sprite key={animKey} xp={xp} size={112} animClass={animClass} />
             {xpFloat && (
               <div
                 key={xpFloat.id}
@@ -181,8 +184,8 @@ export default function HomeTab({ store, onCreate, onTrain, onUpdate, animClass,
             )}
           </div>
           <div className="flex items-baseline justify-between mb-1.5">
-            <span className="font-pixel text-[8px]" style={{ color: C.textDim }}>Level {level}</span>
-            <span className="font-pixel text-[7px]" style={{ color: tint }}>{xpInLevel} / {getLevelSpan(xp)} XP</span>
+            <span className="font-pixel text-[7px]" style={{ color: "#666672" }}>Level {level}</span>
+            <span className="font-pixel text-[8px]" style={{ color: tint }}>{xpInLevel} / {getLevelSpan(xp)} XP</span>
           </div>
           <XPBar progress={progress} tint={tint} />
         </div>
@@ -194,7 +197,7 @@ export default function HomeTab({ store, onCreate, onTrain, onUpdate, animClass,
           <p className="font-pixel text-[7px]" style={{ color: C.text }}>Today</p>
           {allDone
             ? <span className="font-pixel text-[6px]" style={{ color: tint }}>All done ✓</span>
-            : <span className="font-pixel text-[6px]" style={{ color: C.textGhost }}>{tasks.filter(t => t.done).length}/{tasks.length}</span>}
+            : <span className="text-[10px]" style={{ color: "#666672" }}>{tasks.filter(t => t.done).length}/{tasks.length}</span>}
         </div>
         <div>
           {tasks.map((t, i) => (
@@ -216,30 +219,30 @@ export default function HomeTab({ store, onCreate, onTrain, onUpdate, animClass,
         <div className="px-4 py-3" style={{ borderTop: `1px solid ${C.border}` }}>
           <button
             onClick={onCreate}
-            className="btn-pixel w-full py-2.5 rounded-xl font-pixel text-[9px] text-black"
+            className="btn-pixel w-full py-3 rounded-xl font-pixel text-[9px] text-black"
             style={{ backgroundColor: tint }}>
             Create with Aminta →
           </button>
         </div>
       </Card>
 
-      {/* ── STATS ── */}
-      <div className="grid grid-cols-3 gap-2 animate-card-in" style={{ animationDelay: "60ms" }}>
-        {[
+      {/* ── STATS — flat row ── */}
+      <div className="flex items-center animate-card-in rounded-2xl" style={{ animationDelay: "60ms", backgroundColor: C.card, border: `1px solid ${C.border}` }}>
+        {([
           { label: "Streak", value: streak > 0 ? `${streak}d` : "—" },
           { label: "Today",  value: xpToday > 0 ? `+${xpToday}` : "0" },
-          { label: "Plan",   value: plan === "lifetime" ? "FOUNDER" : plan === "pro" ? "PRO" : "FREE" },
-        ].map(({ label, value }) => (
-          <div key={label} className="rounded-2xl py-3 px-2 text-center" style={{ backgroundColor: C.card, border: `1px solid ${C.border}` }}>
+          { label: "Plan",   value: planLabel },
+        ] as { label: string; value: string }[]).map(({ label, value }, i, arr) => (
+          <div key={label} className="flex-1 text-center py-3" style={{ borderRight: i < arr.length - 1 ? `1px solid ${C.border}` : undefined }}>
             <p className="font-pixel text-[9px]" style={{ color: C.text }}>{value}</p>
-            <p className="font-pixel text-[5px] mt-1.5 uppercase tracking-widest" style={{ color: C.textGhost }}>{label}</p>
+            <p className="text-[9px] mt-1.5 uppercase tracking-[0.06em]" style={{ color: "#666672" }}>{label}</p>
           </div>
         ))}
       </div>
 
       {/* ── EVOLUTION PATH (was a separate tab) ── */}
       <div className="animate-card-in space-y-2" style={{ animationDelay: "90ms" }}>
-        <p className="font-pixel text-[7px] uppercase tracking-widest px-1" style={{ color: C.textFaint }}>Evolution path</p>
+        <p className="text-[9px] uppercase tracking-[0.1em] px-1" style={{ color: "#666672" }}>Evolution path</p>
 
         {/* Current form blurb */}
         <div
@@ -254,7 +257,7 @@ export default function HomeTab({ store, onCreate, onTrain, onUpdate, animClass,
           </div>
           <div className="flex-1 min-w-0">
             <p className="font-pixel text-[8px]" style={{ color: currentForm.color }}>{currentForm.name}</p>
-            <p className="text-[10px] mt-1 leading-snug" style={{ color: C.textFaint }}>{currentForm.blurb}</p>
+            <p className="text-[11px] mt-1 leading-snug" style={{ color: C.textDim }}>{currentForm.blurb}</p>
           </div>
           <span
             className={`font-pixel text-[6px] px-1.5 py-1 rounded shrink-0${newlyUnlockedLevel === level ? " animate-toast" : ""}`}
@@ -294,7 +297,7 @@ export default function HomeTab({ store, onCreate, onTrain, onUpdate, animClass,
                   <p className="font-pixel text-[7px]" style={{ color: show ? (unlocked ? form.color : C.textDim) : C.textGhost }}>
                     {show ? form.name : "???"}
                   </p>
-                  <p className="font-pixel text-[5px] mt-0.5 uppercase tracking-widest"
+                  <p className="text-[9px] mt-0.5 uppercase tracking-[0.04em]"
                     style={{ color: unlocked ? RARITY_COLOR[form.rarity] + "99" : C.textGhost }}>
                     {form.rarity}
                   </p>
@@ -313,7 +316,7 @@ export default function HomeTab({ store, onCreate, onTrain, onUpdate, animClass,
 
         {/* How to grow */}
         <div className="rounded-2xl p-3 space-y-2" style={{ backgroundColor: C.card, border: `1px solid ${C.border}` }}>
-          <p className="font-pixel text-[7px] uppercase tracking-widest" style={{ color: C.textFaint }}>How to grow</p>
+          <p className="text-[9px] uppercase tracking-[0.1em]" style={{ color: "#666672" }}>How to grow</p>
           {[
             ["Post a tweet",  "+50 XP"],
             ["Post a reply",  "+25 XP"],

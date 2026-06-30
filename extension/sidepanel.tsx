@@ -163,9 +163,9 @@ function SettingsOverlay({
   onSignOut: () => void
 }) {
   // ── Plan ────────────────────────────────────────────────────────────────────
-  const plan       = store.plan ?? "free"
-  const planLabel  = plan === "lifetime" ? "FOUNDER" : plan === "pro" ? "PRO" : "FREE"
-  const planColor  = plan === "lifetime" ? "#f5d060" : plan === "pro" ? "#74f7b5" : C.textGhost
+  const plan      = store.plan ?? "free"
+  const planLabel = plan === "lifetime" ? "FOUNDER" : plan === "pro" ? "PRO" : "FREE"
+  const planColor = plan === "lifetime" ? "#f5d060" : plan === "pro" ? "#74f7b5" : C.textGhost
 
   // ── Evolution data (read-only) ───────────────────────────────────────────────
   const xp        = store.xp ?? 0
@@ -176,7 +176,7 @@ function SettingsOverlay({
   const progress  = getXpProgress(xp)
   const nextStage = getNextStage(xp)
 
-  // ── AI / key state (inlined from ApiKeyForm so we own the save UX) ──────────
+  // ── AI / key state ──────────────────────────────────────────────────────────
   const [key,       setKey]       = useState(store.apiKey ?? "")
   const [model,     setModel]     = useState(store.model  ?? "")
   const [saving,    setSaving]    = useState(false)
@@ -187,9 +187,9 @@ function SettingsOverlay({
   const isGroq   = isGroqKey(key)
   const models   = isGoogle ? GOOGLE_MODELS : isGroq ? GROQ_MODELS : OPENROUTER_MODELS
 
-  const providerName  = isGroq ? "Groq" : isGoogle ? "Gemini" : "OpenRouter"
-  const providerDot   = isGroq ? "#f97316" : isGoogle ? "#4a90d9" : "#a78bfa"
-  const providerUrl   = isGroq
+  const providerName = isGroq ? "Groq" : isGoogle ? "Gemini" : "OpenRouter"
+  const providerDot  = isGroq ? "#f97316" : isGoogle ? "#4a90d9" : "#a78bfa"
+  const providerUrl  = isGroq
     ? "console.groq.com/keys"
     : isGoogle
       ? "aistudio.google.com/apikey"
@@ -197,7 +197,6 @@ function SettingsOverlay({
 
   const isDirty = key.trim() !== (store.apiKey ?? "") || model !== (store.model ?? "")
 
-  // Reset model when provider switches
   useEffect(() => {
     if (!models.find(m => m.id === model)) setModel(models[0].id)
   }, [isGoogle, isGroq]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -213,39 +212,44 @@ function SettingsOverlay({
     setTimeout(() => setJustSaved(false), 1400)
   }
 
+  // Shared section label style — system font, readable, non-competing
+  const sectionLabel = "text-[9px] uppercase tracking-[0.1em]"
+
   return (
     <div className="absolute inset-0 z-40 flex flex-col animate-slide-up" style={{ backgroundColor: C.bg }}>
 
       {/* ── Header ── */}
       <div className="flex items-center justify-between px-4 py-3 shrink-0" style={{ borderBottom: `1px solid ${C.border}` }}>
-        <p className="font-pixel text-[8px]" style={{ color: C.text }}>Settings</p>
+        <p className="font-pixel text-[9px]" style={{ color: C.text }}>Settings</p>
         <button onClick={onClose}
           className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/5 transition-colors text-[13px]"
           style={{ color: C.textFaint }}>✕</button>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-6">
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-5">
 
-        {/* ── 👤 ACCOUNT ── */}
-        <section className="space-y-2">
-          <p className="font-pixel text-[6px] uppercase tracking-widest px-0.5" style={{ color: C.textGhost }}>Account</p>
+        {/* ── ACCOUNT ── */}
+        <section className="space-y-1.5">
+          <p className={sectionLabel} style={{ color: "#666672" }}>Account</p>
 
           {session ? (
-            <div className="rounded-xl px-3 py-3 space-y-2" style={{ backgroundColor: C.card, border: `1px solid ${C.border}` }}>
-              {/* Email + plan badge */}
+            <div className="rounded-xl px-3 py-2" style={{ backgroundColor: C.card, border: `1px solid ${C.border}` }}>
               <div className="flex items-center justify-between gap-2 min-w-0">
                 <p className="text-[12px] truncate leading-none" style={{ color: C.text }}>{session.email}</p>
-                <span className="font-pixel text-[6px] shrink-0 px-1.5 py-0.5 rounded" style={{ backgroundColor: planColor + "1a", color: planColor, border: `1px solid ${planColor}33` }}>
-                  {planLabel}
-                </span>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="font-pixel text-[6px] px-1.5 py-0.5 rounded"
+                    style={{ backgroundColor: planColor + "1a", color: planColor, border: `1px solid ${planColor}33` }}>
+                    {planLabel}
+                  </span>
+                  <button onClick={onSignOut}
+                    className="text-[10px] transition-colors text-[#888896] hover:text-red-400">
+                    Sign out
+                  </button>
+                </div>
               </div>
-              {/* Connected status */}
-              <p className="text-[11px] leading-none" style={{ color: C.textFaint }}>
-                <span style={{ color: "#4ade80" }}>●</span>{" "}Connected
-              </p>
               {plan === "free" && (
                 <a href="https://amintaapp.com/#pricing" target="_blank" rel="noreferrer"
-                  className="font-pixel text-[6px] underline block" style={{ color: C.mint }}>
+                  className="text-[10px] underline block mt-1.5" style={{ color: C.mint }}>
                   Upgrade to Pro →
                 </a>
               )}
@@ -253,55 +257,46 @@ function SettingsOverlay({
           ) : (
             <p className="text-[12px] px-0.5" style={{ color: C.textFaint }}>Not signed in</p>
           )}
-
-          {session && (
-            <button
-              onClick={onSignOut}
-              className="font-pixel text-[6px] px-0.5 transition-colors hover:text-red-400"
-              style={{ color: C.textFaint }}>
-              Sign out
-            </button>
-          )}
         </section>
 
-        {/* ── 👾 YOUR AMINTA ── */}
-        <section className="space-y-2">
-          <p className="font-pixel text-[6px] uppercase tracking-widest px-0.5" style={{ color: C.textGhost }}>Your Aminta</p>
+        {/* ── YOUR AMINTA ── */}
+        <section className="space-y-1.5">
+          <p className={sectionLabel} style={{ color: "#666672" }}>Your Aminta</p>
           <div className="rounded-xl px-3 py-3" style={{ backgroundColor: C.card, border: `1px solid ${C.border}` }}>
             <div className="flex items-center gap-3">
-              <div className="aminta-glow shrink-0">
+              {/* Static soft glow — no pulse, idle float only */}
+              <div className="sprite-float shrink-0" style={{ filter: `drop-shadow(0 0 8px ${form.color}30)` }}>
                 <SpriteMark tint={form.color} size={30} />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-baseline justify-between mb-2">
                   <p className="font-pixel text-[8px]" style={{ color: form.color }}>{form.name}</p>
-                  <p className="font-pixel text-[6px]" style={{ color: C.textGhost }}>Lv. {level}</p>
+                  <p className="font-pixel text-[7px]" style={{ color: "#888896" }}>Lv. {level}</p>
                 </div>
                 <XPBar progress={progress} tint={form.color} />
-                <p className="font-pixel text-[6px] mt-1.5" style={{ color: C.textFaint }}>
-                  {xpInLevel} / {levelSpan} XP
-                  {nextStage && <span style={{ color: C.textGhost }}> · next: {nextStage.name}</span>}
-                </p>
+                <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                  <span className="font-pixel text-[7px]" style={{ color: "#888896" }}>{xpInLevel} / {levelSpan} XP</span>
+                  {nextStage && <span className="text-[10px]" style={{ color: "#666672" }}>· next: {nextStage.name}</span>}
+                </div>
               </div>
             </div>
           </div>
         </section>
 
-        {/* ── 🧠 AMINTA BRAIN ── */}
-        <section className="space-y-2">
-          <p className="font-pixel text-[6px] uppercase tracking-widest px-0.5" style={{ color: C.textGhost }}>Aminta Brain</p>
+        {/* ── AMINTA BRAIN ── dominant card: heavier border + elevated bg ── */}
+        <section className="space-y-1.5">
+          <p className={sectionLabel} style={{ color: "#666672" }}>Aminta Brain</p>
 
-          {/* Unified API key + model card */}
-          <div className="rounded-xl overflow-hidden" style={{ backgroundColor: C.card, border: `1px solid ${C.border}` }}>
+          <div className="rounded-xl overflow-hidden" style={{ backgroundColor: "#262628", border: "1px solid #404048" }}>
 
-            {/* API Key row */}
-            <div className="px-3 pt-3 pb-2.5">
+            {/* API Key */}
+            <div className="px-3.5 pt-3.5 pb-3">
               <div className="flex items-center justify-between mb-1.5">
-                <label className="font-pixel text-[6px] uppercase tracking-widest" style={{ color: C.textGhost }}>
+                <label className="text-[9px] uppercase tracking-[0.06em]" style={{ color: "#888896" }}>
                   API Key
                 </label>
-                <span className="font-pixel text-[6px]" style={{ color: providerDot }}>
-                  ● {providerName}
+                <span className="text-[9px]" style={{ color: "#888896" }}>
+                  <span style={{ color: providerDot }}>●</span>{" "}{providerName}
                 </span>
               </div>
               <input
@@ -311,17 +306,16 @@ function SettingsOverlay({
                 placeholder="gsk_…  ·  AIza…  ·  sk-or-…"
                 className="input-pixel w-full rounded-lg px-3 py-2 text-[12px]"
               />
-              <p className="text-[10px] mt-1.5 leading-none" style={{ color: C.textFaint }}>
+              <p className="text-[10px] mt-1.5 leading-none" style={{ color: "#666672" }}>
                 {providerUrl} · stored locally
               </p>
             </div>
 
-            {/* Divider */}
             <div style={{ height: 1, backgroundColor: C.borderSoft }} />
 
-            {/* Model row */}
-            <div className="px-3 pt-2.5 pb-3">
-              <label className="font-pixel text-[6px] uppercase tracking-widest block mb-1.5" style={{ color: C.textGhost }}>
+            {/* Model */}
+            <div className="px-3.5 pt-3 pb-3.5">
+              <label className="text-[9px] uppercase tracking-[0.06em] block mb-1.5" style={{ color: "#888896" }}>
                 Model
               </label>
               <select
@@ -337,27 +331,29 @@ function SettingsOverlay({
 
           {error && <p className="font-pixel text-[7px] text-red-400 px-0.5">{error}</p>}
 
-          {/* Save button — always present; style tracks dirty / saving / just-saved */}
-          <button
-            onClick={isDirty && !saving ? save : undefined}
-            className="w-full py-2.5 rounded-xl font-pixel text-[8px] transition-all duration-150"
-            style={{
-              backgroundColor: isDirty ? C.mint : "transparent",
-              color:            isDirty ? "#000" : justSaved ? C.mint : C.textGhost,
-              border:           `1px solid ${isDirty ? "transparent" : justSaved ? C.mint + "55" : C.border}`,
-              cursor:           isDirty ? "pointer" : "default",
-            }}>
-            {saving ? "Saving…" : isDirty ? "Save Changes" : "✓ Saved"}
-          </button>
+          {/* Save — right-aligned, not full-width */}
+          <div className="flex justify-end">
+            <button
+              onClick={isDirty && !saving ? save : undefined}
+              className="py-1.5 px-4 rounded-lg font-pixel text-[8px] transition-all duration-150"
+              style={{
+                minWidth:        100,
+                backgroundColor: isDirty ? C.mint : "transparent",
+                color:           isDirty ? "#000" : justSaved ? C.mint : "#666672",
+                border:          `1px solid ${isDirty ? "transparent" : justSaved ? C.mint + "55" : C.border}`,
+                cursor:          isDirty ? "pointer" : "default",
+              }}>
+              {saving ? "Saving…" : isDirty ? "Save Changes" : "✓ Saved"}
+            </button>
+          </div>
         </section>
 
-        {/* ── ⚙️ ADVANCED ── */}
-        <section className="space-y-2">
-          <p className="font-pixel text-[6px] uppercase tracking-widest px-0.5" style={{ color: C.textGhost }}>Advanced</p>
+        {/* ── ADVANCED ── */}
+        <section className="space-y-1.5">
+          <p className={sectionLabel} style={{ color: "#666672" }}>Advanced</p>
           <button
             onClick={() => { onClose(); onResetOnboarding() }}
-            className="flex items-center gap-2 text-[12px] transition-colors hover:text-white"
-            style={{ color: C.textFaint }}>
+            className="flex items-center gap-2 text-[11px] transition-colors text-[#666672] hover:text-[#aaaaaa]">
             <span>↺</span>
             <span>Restart setup wizard</span>
           </button>
@@ -367,18 +363,16 @@ function SettingsOverlay({
 
       {/* ── Footer ── */}
       <div className="px-4 py-2.5 flex items-center gap-3 shrink-0" style={{ borderTop: `1px solid ${C.border}` }}>
-        <span className="font-pixel text-[6px]" style={{ color: C.textGhost }}>v0.1</span>
-        <span style={{ color: C.textGhost, fontSize: 10 }}>·</span>
-        {[
-          { label: "X",        href: "https://x.com/amintaapp" },
-          { label: "LinkedIn", href: "https://www.linkedin.com/company/amintaapp/" },
-          { label: "Help",     href: "https://amintaapp.com" },
-        ].map(({ label, href }) => (
-          <a key={href} href={href} target="_blank" rel="noreferrer"
-            className="font-pixel text-[6px] hover:text-white transition-colors" style={{ color: C.textGhost }}>
-            {label}
-          </a>
-        ))}
+        <span className="text-[10px] text-[#555560]">v0.1</span>
+        <span className="text-[10px] text-[#555560]">·</span>
+        <a href="https://x.com/amintaapp" target="_blank" rel="noreferrer"
+          className="text-[10px] text-[#555560] hover:text-white transition-colors">X</a>
+        <span className="text-[10px] text-[#555560]">·</span>
+        <a href="https://www.linkedin.com/company/amintaapp/" target="_blank" rel="noreferrer"
+          className="text-[10px] text-[#555560] hover:text-white transition-colors">LinkedIn</a>
+        <span className="text-[10px] text-[#555560]">·</span>
+        <a href="https://amintaapp.com" target="_blank" rel="noreferrer"
+          className="text-[10px] text-[#555560] hover:text-white transition-colors">Help</a>
       </div>
 
     </div>

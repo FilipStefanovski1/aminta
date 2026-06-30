@@ -1,15 +1,22 @@
 import type { ChatMessage } from "~lib/openrouter"
 import type { VoiceProfile } from "~lib/storage"
 
-export type Platform = "x" | "linkedin" | "threads"
-export type Mode     = "tweet" | "reply" | "polish"
-export type Tone     = "direct" | "witty" | "analytical" | "inspiring"
+export type Platform     = "x" | "linkedin" | "threads"
+export type Mode         = "tweet" | "reply" | "polish"
+export type Tone         = "direct" | "witty" | "analytical" | "inspiring"
+export type OutputLength = "short" | "medium" | "long"
 
 const TONE_GUIDE: Record<Tone, string> = {
   direct:     "Be direct and concise. Cut all fluff. Get to the point fast.",
   witty:      "Inject dry wit and subtle humor where it feels natural. Don't force it.",
   analytical: "Be analytical and data-driven. Use reasoning and structured thinking.",
   inspiring:  "Be inspiring. End with energy, conviction, or a strong clear vision.",
+}
+
+const LENGTH_GUIDE: Record<OutputLength, string> = {
+  short:  "LENGTH PREFERENCE: Write short. One tight idea, expressed as directly as possible. Cut every sentence that isn't essential. This is a style choice — not a character counter.",
+  medium: "LENGTH PREFERENCE: Write at a balanced length. Make your point clearly and give it room to breathe, but don't pad. Default density.",
+  long:   "LENGTH PREFERENCE: Write long. Develop the idea — give context, reasoning, or examples that earn the length. Every sentence should add something real. Don't pad, but don't cut for the sake of brevity either.",
 }
 
 function parseExamples(raw: string): string[] {
@@ -119,9 +126,10 @@ export function buildMessages(
   voice: VoiceProfile,
   input: string,
   tweetDNA: string[] = [],
-  tone: Tone = "direct"
+  tone: Tone = "direct",
+  length: OutputLength = "medium"
 ): ChatMessage[] {
-  const toneNote = `\nTONE DIRECTION: ${TONE_GUIDE[tone]}`
+  const toneNote = `\nTONE DIRECTION: ${TONE_GUIDE[tone]}\n${LENGTH_GUIDE[length]}`
   const trimmed = input.trim()
 
   if (platform === "threads") {
