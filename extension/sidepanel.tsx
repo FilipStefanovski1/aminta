@@ -15,6 +15,7 @@ import { getStore, setStore, type AmintaStore } from "~lib/storage"
 import { getAuthSession, clearAuthSession, type AuthSession } from "~lib/auth"
 import { pullFromCloud, pushToCloud } from "~lib/sync"
 import type { Platform } from "~lib/prompts"
+import { useCompanion } from "~hooks/useCompanion"
 
 type Tab = "home" | "create" | "train"
 
@@ -269,6 +270,8 @@ function SidePanel() {
 
   const refresh = async () => setLocalStore(await getStore())
 
+  const { state: companionState, speech, animClass, dispatch } = useCompanion(store)
+
   // Check auth + pull from cloud on startup
   useEffect(() => {
     getAuthSession().then(async (s) => {
@@ -333,7 +336,10 @@ function SidePanel() {
   const switchTab = (next: Tab) => {
     setTab(next)
     setTabKey(k => k + 1)
-    if (next === "home") refresh()
+    if (next === "home") {
+      refresh()
+      dispatch("open")
+    }
   }
 
   if (!authChecked || !store) {
@@ -412,6 +418,9 @@ function SidePanel() {
                 onCreate={() => switchTab("create")}
                 onTrain={() => switchTab("train")}
                 onUpdate={refresh}
+                animClass={animClass}
+                speech={speech}
+                onContext={dispatch}
               />
             )}
 
@@ -419,10 +428,11 @@ function SidePanel() {
               <GeneratorPanel
                 store={store}
                 initialPlatform={detectedPlatform}
-                onXPAwarded={async () => { await refresh(); pushToCloud() }}
-                onLevelUp={(level, stage) => setLevelUpData({ level, stage })}
+                onXPAwarded={async () => { await refresh(); pushToCloud(); dispatch("insert") }}
+                onLevelUp={(level, stage) => { setLevelUpData({ level, stage }); dispatch("level_up") }}
                 onTeach={() => switchTab("train")}
                 onOpenSettings={() => setSettingsOpen(true)}
+                onContext={dispatch}
               />
             )}
 

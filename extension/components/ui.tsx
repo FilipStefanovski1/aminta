@@ -115,20 +115,22 @@ export function XPBar({ progress, tint }: { progress: number; tint: string }) {
 
 // ─── Aminta sprite ─────────────────────────────────────────────────────────
 // Uses the same DemonMascot pixel art as the landing page, driven by form skin.
+// Pass animClass from the Companion Engine for engine-driven renders.
+// Pass float={true} for simple decorative uses that don't need the engine.
 
 export function Sprite({
   xp,
   size = 96,
-  reacting = false,
-  float = true,
+  animClass,
+  float = false,
 }: {
   xp: number
   size?: number
-  reacting?: boolean
+  animClass?: string
   float?: boolean
 }) {
   const form = getForm(xp)
-  const cls  = reacting ? "sprite-react aminta-glow" : float ? "sprite-float aminta-glow" : "aminta-glow"
+  const cls  = animClass ?? (float ? "sprite-float aminta-glow" : "aminta-glow")
 
   return (
     <div className={cls} style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>

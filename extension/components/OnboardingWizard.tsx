@@ -202,7 +202,7 @@ export default function OnboardingWizard({ store, onDone }: Props) {
         {/* ── 5 · Learning ── */}
         {step === 5 && (
           <div className="animate-slide-up flex flex-col items-center text-center pt-10">
-            <Sprite xp={0} size={96} reacting />
+            <Sprite xp={0} size={96} animClass="sprite-react aminta-glow" />
             <div className="mt-6">
               <SpeechBubble text="learning your voice…" />
             </div>

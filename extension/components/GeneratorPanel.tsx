@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 
 import { generate as runAI, generateFromImage } from "~lib/ai"
+import type { CompanionEvent } from "~lib/companion"
 import { getStageTint } from "~lib/evolution"
 import { readActivePost } from "~lib/messaging"
 import { incrementMissionGenerates } from "~lib/missions"
@@ -196,6 +197,7 @@ interface Props {
   initialPlatform?: Platform
   onTeach?: () => void
   onOpenSettings?: () => void
+  onContext?: (event: CompanionEvent) => void
 }
 
 // Resize image to max 1024px on longest side and return as JPEG data URL
@@ -221,7 +223,7 @@ async function resizeImage(file: File): Promise<string> {
   })
 }
 
-export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, initialPlatform = "x", onTeach, onOpenSettings }: Props) {
+export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, initialPlatform = "x", onTeach, onOpenSettings, onContext }: Props) {
   const [platform, setPlatform] = useState<Platform>(initialPlatform)
   const [mode,     setMode]     = useState<Mode>("tweet")
   const [tone,     setTone]     = useState<Tone>("direct")
@@ -280,6 +282,7 @@ export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, initialP
     const combined = topic.trim() + (context.trim() ? `\n\nAdditional context: ${context.trim()}` : "")
     if (!combined && !imageDataUrl) { setError("Give Aminta something to work with."); return }
     setLoading(true)
+    onContext?.("generate_start")
     try {
       const topicInput = combined || "Write a post about this image."
       const messages = buildMessages(platform, mode, store.voice, topicInput, store.tweetDNA ?? [], tone)
@@ -291,8 +294,10 @@ export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, initialP
       setGenKey(k => k + 1)
       await incrementGenerations()
       await incrementMissionGenerates()
+      onContext?.("generate_end")
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong.")
+      onContext?.("api_error")
     } finally {
       setLoading(false)
     }

@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
+import type { CompanionEvent } from "~lib/companion"
 import {
   FORMS,
   LEVEL_THRESHOLDS,
@@ -23,21 +24,18 @@ const RARITY_COLOR: Record<string, string> = {
   LEGENDARY: "#f5d060",
 }
 
-function getLine(xpToday: number, streak: number): string {
-  if (xpToday === 0)  return streak > 0 ? `${streak}-day streak. let's keep it.` : "i'm hungry. what are we posting?"
-  if (xpToday >= 200) return "we're on fire today."
-  if (xpToday >= 100) return "keep cooking."
-  return "nice. one more?"
-}
-
 interface Props {
   store: AmintaStore
   onCreate: () => void
   onTrain: () => void
   onUpdate?: () => void
+  // From the Companion Engine via sidepanel
+  animClass: string
+  speech: string
+  onContext?: (event: CompanionEvent) => void
 }
 
-export default function HomeTab({ store, onCreate, onTrain, onUpdate }: Props) {
+export default function HomeTab({ store, onCreate, onTrain, onUpdate, animClass, speech, onContext }: Props) {
   const xp         = store.xp ?? 0
   const level      = getLevel(xp)
   const stage      = getForm(xp).name
@@ -51,7 +49,8 @@ export default function HomeTab({ store, onCreate, onTrain, onUpdate }: Props) {
   const nextLevel  = level < FORMS.length ? level + 1 : null
   const currentForm = getForm(xp)
 
-  const line = getLine(xpToday, streak)
+  // Blink keeps the bubble visible=true except for a 180ms dip every 5s.
+  // Removed in M1 when bubble-pop replaces it.
   const [visible, setVisible] = useState(true)
 
   useEffect(() => {
@@ -61,6 +60,10 @@ export default function HomeTab({ store, onCreate, onTrain, onUpdate }: Props) {
     }, 5000)
     return () => clearInterval(iv)
   }, [])
+
+  // Complete daily missions and fire mission_complete into the Companion Engine
+  // when allDone transitions from false to true within a session.
+  const prevAllDone = useRef(false)
 
   useEffect(() => {
     tryCompleteDailyMissions(store).then(ok => { if (ok && onUpdate) onUpdate() })
@@ -72,6 +75,14 @@ export default function HomeTab({ store, onCreate, onTrain, onUpdate }: Props) {
     { label: "Teach me your voice", done: mission.dnaTrained,     action: onTrain  },
   ]
   const allDone = tasks.every(t => t.done)
+
+  // Dispatch mission_complete once when all tasks first become complete this session
+  useEffect(() => {
+    if (allDone && !prevAllDone.current) {
+      onContext?.("mission_complete")
+    }
+    prevAllDone.current = allDone
+  }, [allDone])
 
   return (
     <div className="space-y-3 pb-4">
@@ -98,10 +109,10 @@ export default function HomeTab({ store, onCreate, onTrain, onUpdate }: Props) {
             )}
           </div>
           <div className="mb-3">
-            <SpeechBubble text={line} visible={visible} />
+            <SpeechBubble text={speech} visible={visible} />
           </div>
           <div className="flex justify-center mt-2 mb-4">
-            <Sprite xp={xp} size={96} />
+            <Sprite xp={xp} size={96} animClass={animClass} />
           </div>
           <div className="flex items-baseline justify-between mb-1.5">
             <span className="font-pixel text-[8px]" style={{ color: C.textDim }}>Level {level}</span>
