@@ -95,6 +95,17 @@ html, body {
   55%  { opacity: 1; transform: translateX(-50%) translateY(-22px) scale(1.12); }
   100% { opacity: 0; transform: translateX(-50%) translateY(-38px) scale(0.85); }
 }
+@keyframes xpPulse {
+  0%   { filter: brightness(1); }
+  35%  { filter: brightness(1.9) saturate(1.4); }
+  100% { filter: brightness(1); }
+}
+.xp-pulse { animation: xpPulse 0.75s ease-out both; }
+@keyframes particleFly {
+  0%   { opacity: 1; transform: translate(-50%, -50%) rotate(var(--angle)) translateY(0px); }
+  80%  { opacity: 1; transform: translate(-50%, -50%) rotate(var(--angle)) translateY(calc(-1 * var(--dist))); }
+  100% { opacity: 0; transform: translate(-50%, -50%) rotate(var(--angle)) translateY(calc(-1 * var(--dist))); }
+}
 @keyframes dotsWave {
   0%, 80%, 100% { transform: translateY(0); }
   40%           { transform: translateY(-4px); }

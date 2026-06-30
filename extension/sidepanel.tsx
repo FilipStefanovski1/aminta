@@ -29,6 +29,40 @@ function detectPlatform(url: string): Platform {
 
 interface LevelUpData { level: number; stage: string }
 
+// Pre-computed so particles are stable across re-renders
+const PARTICLES = Array.from({ length: 14 }, (_, i) => ({
+  angle:  `${(i / 14) * 360}deg`,
+  dist:   `${i % 2 === 0 ? 82 : 66}px`,
+  size:   i % 3 === 0 ? 4 : 3,
+  delay:  `${i * 0.028}s`,
+  colorIdx: i % 5,
+}))
+
+function ParticleBurst({ tint }: { tint: string }) {
+  const colors = [tint, "#74f7b5", "#fff", "#f5d060", "#3fe0c8"]
+  return (
+    <div style={{ position: "absolute", inset: 0, pointerEvents: "none", overflow: "hidden", borderRadius: "inherit" }}>
+      {PARTICLES.map((p, i) => (
+        <div
+          key={i}
+          style={{
+            position: "absolute",
+            top: "38%",
+            left: "50%",
+            width: p.size,
+            height: p.size,
+            borderRadius: "50%",
+            backgroundColor: colors[p.colorIdx],
+            animation: `particleFly 0.72s ease-out ${p.delay} both`,
+            "--angle": p.angle,
+            "--dist":  p.dist,
+          } as React.CSSProperties}
+        />
+      ))}
+    </div>
+  )
+}
+
 const STAGE_DIALOGUE: Record<string, string> = {
   Curious:     "i'm starting to get you.",
   Happy:       "this feels good.",
@@ -63,12 +97,31 @@ function LevelUpModal({ data, onDismiss }: { data: LevelUpData; onDismiss: () =>
   const form     = getForm(xp)
   const tint     = form.color
   const dialogue = STAGE_DIALOGUE[data.stage] ?? "growing stronger."
+
+  // Typewriter — starts 220ms after mount so the card-in animation finishes first
+  const [typed, setTyped] = useState("")
+  useEffect(() => {
+    setTyped("")
+    const delay = setTimeout(() => {
+      let i = 0
+      const iv = setInterval(() => {
+        i++
+        setTyped(dialogue.slice(0, i))
+        if (i >= dialogue.length) clearInterval(iv)
+      }, 38)
+      return () => clearInterval(iv)
+    }, 220)
+    return () => clearTimeout(delay)
+  }, [dialogue])
+
   useEffect(() => { playLevelUpSound() }, [])
+
   return (
     <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/85">
       <div
         className="animate-card-in mx-4 bg-[#242424] border-2 rounded-2xl p-6 text-center space-y-4 w-full max-w-[260px]"
-        style={{ borderColor: tint + "55" }}>
+        style={{ borderColor: tint + "55", position: "relative", overflow: "hidden" }}>
+        <ParticleBurst tint={tint} />
         <p className="font-pixel text-[8px] uppercase tracking-widest" style={{ color: tint }}>Level Up</p>
         <div className="mx-auto sprite-react aminta-glow flex justify-center">
           <DemonMascot skin={form.skin} size={64} />
@@ -76,7 +129,9 @@ function LevelUpModal({ data, onDismiss }: { data: LevelUpData; onDismiss: () =>
         <div>
           <p className="font-pixel text-2xl text-white">Lv.{data.level}</p>
           <p className="font-pixel text-[8px] mt-1" style={{ color: tint }}>{data.stage}</p>
-          <p className="text-[11px] text-[#666] mt-2 italic">"{dialogue}"</p>
+          <p className="text-[11px] text-[#666] mt-2 italic" style={{ minHeight: "1.4em" }}>
+            {typed ? `"${typed}"` : " "}
+          </p>
         </div>
         <button
           onClick={onDismiss}

@@ -96,19 +96,30 @@ export function GhostButton({
 // ─── XP bar ──────────────────────────────────────────────────────────────────
 
 export function XPBar({ progress, tint }: { progress: number; tint: string }) {
-  const ref = useRef<HTMLDivElement>(null)
+  const ref       = useRef<HTMLDivElement>(null)
+  const [pulsing, setPulsing] = useState(false)
+  const isFirst   = useRef(true)
+
   useEffect(() => {
     if (!ref.current) return
     ref.current.style.width = "0%"
     const id = requestAnimationFrame(() =>
       requestAnimationFrame(() => { if (ref.current) ref.current.style.width = `${progress}%` })
     )
+    // Skip pulse on the very first mount (bar just animating in from 0%)
+    if (!isFirst.current) setPulsing(true)
+    isFirst.current = false
     return () => cancelAnimationFrame(id)
   }, [progress])
+
   return (
     <div className="h-[6px] rounded-full overflow-hidden" style={{ backgroundColor: C.cardInner, border: `1px solid ${C.border}` }}>
-      <div ref={ref} className="h-full rounded-full"
-        style={{ width: 0, transition: "width 0.9s cubic-bezier(0.22,1,0.36,1)", backgroundColor: tint, boxShadow: `0 0 6px ${tint}88` }} />
+      <div
+        ref={ref}
+        className={`h-full rounded-full${pulsing ? " xp-pulse" : ""}`}
+        style={{ width: 0, transition: "width 0.9s cubic-bezier(0.22,1,0.36,1)", backgroundColor: tint, boxShadow: `0 0 6px ${tint}88` }}
+        onAnimationEnd={() => setPulsing(false)}
+      />
     </div>
   )
 }
