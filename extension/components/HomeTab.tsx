@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 
 import type { CompanionEvent } from "~lib/companion"
+import { deriveMood } from "~lib/companion"
 import {
   FORMS,
   LEVEL_THRESHOLDS,
@@ -71,6 +72,13 @@ export default function HomeTab({ store, onCreate, onTrain, onUpdate, animClass,
     }
   }, [speech])
 
+  // Mood from the engine — used for mood-aware card styling
+  const mood = deriveMood(store)
+
+  // Mission toast — shown once when all tasks complete this session
+  const [showToast, setShowToast] = useState(false)
+  const toastTimer = useRef<ReturnType<typeof setTimeout>>()
+
   // Complete daily missions and fire mission_complete into the Companion Engine
   // when allDone transitions from false to true within a session.
   const prevAllDone = useRef(false)
@@ -86,19 +94,49 @@ export default function HomeTab({ store, onCreate, onTrain, onUpdate, animClass,
   ]
   const allDone = tasks.every(t => t.done)
 
-  // Dispatch mission_complete once when all tasks first become complete this session
+  // Dispatch mission_complete + show toast once when all tasks first complete
   useEffect(() => {
     if (allDone && !prevAllDone.current) {
       onContext?.("mission_complete")
+      clearTimeout(toastTimer.current)
+      setShowToast(true)
+      toastTimer.current = setTimeout(() => setShowToast(false), 2800)
     }
     prevAllDone.current = allDone
   }, [allDone])
 
+  useEffect(() => () => clearTimeout(toastTimer.current), [])
+
   return (
     <div className="space-y-3 pb-4">
 
+      {/* ── MISSION TOAST ── */}
+      {showToast && (
+        <div
+          className="animate-toast-up font-pixel"
+          style={{
+            position: "fixed",
+            bottom: 52,
+            left: 16,
+            right: 16,
+            zIndex: 30,
+            borderRadius: 12,
+            padding: "9px 14px",
+            backgroundColor: tint + "18",
+            border: `1px solid ${tint}55`,
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            pointerEvents: "none",
+          }}
+        >
+          <span style={{ fontSize: 10 }}>✦</span>
+          <span className="text-[8px]" style={{ color: tint }}>Daily missions complete!</span>
+        </div>
+      )}
+
       {/* ── COMPANION CARD ── */}
-      <Card pad={false} glow={tint}
+      <Card pad={false} glow={mood === "hungry" ? "#f97316" : tint}
         style={{
           backgroundImage: "radial-gradient(circle, #1c2030 1px, transparent 1px)",
           backgroundSize: "8px 8px",

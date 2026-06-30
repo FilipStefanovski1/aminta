@@ -147,9 +147,45 @@ html, body {
 }
 .aminta-glow { animation: amintaGlow 2.6s ease-in-out infinite; }
 .aminta-sparkle { animation: amintaSparkle 1.8s ease-in-out infinite; }
+@keyframes amintaGlowDim {
+  0%, 100% { filter: drop-shadow(0 0 3px rgba(116,247,181,0.10)); }
+  50%       { filter: drop-shadow(0 0 7px rgba(116,247,181,0.25)); }
+}
+.aminta-glow-dim { animation: amintaGlowDim 3.5s ease-in-out infinite; }
+@keyframes spriteHungry {
+  0%, 100% { transform: translateY(0px) rotate(-1.5deg); }
+  35%      { transform: translateY(-3px) rotate(1deg); }
+  65%      { transform: translateY(-1px) rotate(-1deg); }
+}
+.sprite-hungry { animation: spriteHungry 3.6s ease-in-out infinite; }
+@keyframes spriteSleeping {
+  0%, 100% { transform: translateY(0px) scale(1); }
+  50%      { transform: translateY(2px) scale(0.97); }
+}
+.sprite-sleeping { animation: spriteSleeping 4.2s ease-in-out infinite; }
+@keyframes spriteThink {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  25%      { transform: translateY(-2px) rotate(-1deg); }
+  75%      { transform: translateY(-1px) rotate(1deg); }
+}
+.sprite-think { animation: spriteThink 1.8s ease-in-out infinite; }
+@keyframes spriteError {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70% { transform: translateX(-4px); }
+  20%, 40%, 60%      { transform: translateX(4px); }
+  80% { transform: translateX(-2px); }
+  90% { transform: translateX(2px); }
+}
+.sprite-error { animation: spriteError 0.6s ease-in-out both; }
+@keyframes toastSlideUp {
+  0%   { opacity: 0; transform: translateY(8px) scale(0.96); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+.animate-toast-up { animation: toastSlideUp 0.22s cubic-bezier(0.34,1.56,0.64,1) both; }
 
 @media (prefers-reduced-motion: reduce) {
   .sprite-float,
   .aminta-glow,
+  .aminta-glow-dim,
   .aminta-sparkle { animation: none !important; }
 }
