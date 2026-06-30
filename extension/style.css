@@ -209,8 +209,16 @@ html, body {
 
 @media (prefers-reduced-motion: reduce) {
   .sprite-float,
+  .sprite-jump,
+  .sprite-hungry,
+  .sprite-sleeping,
+  .sprite-think,
   .aminta-glow,
   .aminta-glow-dim,
   .aminta-preglow,
-  .aminta-sparkle { animation: none !important; }
+  .aminta-sparkle,
+  .evolve-pulse,
+  .demon-eye,
+  .demon-eye-r,
+  .dot-wave span { animation: none !important; }
 }

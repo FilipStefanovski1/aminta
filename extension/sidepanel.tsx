@@ -327,7 +327,7 @@ function SidePanel() {
 
   const refresh = async () => setLocalStore(await getStore())
 
-  const { state: companionState, speech, animClass, animKey, dispatch } = useCompanion(store)
+  const { speech, animClass, animKey, dispatch } = useCompanion(store)
 
   // Check auth + pull from cloud on startup
   useEffect(() => {
@@ -384,6 +384,7 @@ function SidePanel() {
   }, [])
 
   useEffect(() => { refresh() }, [])
+  useEffect(() => () => clearTimeout(newlyUnlockedTimer.current), [])
 
   const update = async (patch: Partial<AmintaStore>) => {
     await setStore(patch)

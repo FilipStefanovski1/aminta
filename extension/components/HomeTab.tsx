@@ -39,18 +39,18 @@ interface Props {
 }
 
 export default function HomeTab({ store, onCreate, onTrain, onUpdate, animClass, animKey, speech, onContext, newlyUnlockedLevel }: Props) {
-  const xp         = store.xp ?? 0
-  const level      = getLevel(xp)
-  const stage      = getForm(xp).name
-  const tint       = getStageTint(xp)
-  const progress   = getXpProgress(xp)
-  const xpInLevel  = getXpInLevel(xp)
-  const xpToday    = store.xpToday ?? 0
-  const streak     = store.streak ?? 0
-  const plan       = store.plan ?? "free"
-  const mission    = getMissionProgress(store)
-  const nextLevel  = level < FORMS.length ? level + 1 : null
+  const xp          = store.xp ?? 0
   const currentForm = getForm(xp)
+  const level       = getLevel(xp)
+  const stage       = currentForm.name
+  const tint        = getStageTint(xp)
+  const progress    = getXpProgress(xp)
+  const xpInLevel   = getXpInLevel(xp)
+  const xpToday     = store.xpToday ?? 0
+  const streak      = store.streak ?? 0
+  const plan        = store.plan ?? "free"
+  const mission     = getMissionProgress(store)
+  const nextLevel   = level < FORMS.length ? level + 1 : null
 
   // Floating XP — shown above the sprite when XP increases
   const prevXP = useRef(xp)
