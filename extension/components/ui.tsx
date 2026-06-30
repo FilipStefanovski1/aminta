@@ -155,9 +155,9 @@ export function SpriteMark({ tint, size = 36 }: { tint: string; size?: number })
 
 // ─── Speech bubble (white pixel bubble, downward tail) ──────────────────────
 
-export function SpeechBubble({ text, visible = true }: { text: string; visible?: boolean }) {
+export function SpeechBubble({ text }: { text: string }) {
   return (
-    <div className="flex justify-center" style={{ opacity: visible ? 1 : 0, transition: "opacity 0.15s" }}>
+    <div className="bubble-pop flex justify-center">
       <div className="relative">
         <div className="px-3 py-2" style={{ background: "#fff", border: "2px solid #000", boxShadow: "2px 2px 0 #000" }}>
           <p className="font-pixel text-[7px] text-black">{text}</p>

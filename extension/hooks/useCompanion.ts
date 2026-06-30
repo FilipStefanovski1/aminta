@@ -24,11 +24,15 @@ export function useCompanion(store: AmintaStore | null): {
   state:     CompanionState
   speech:    string
   animClass: string
+  animKey:   number
   dispatch:  (event: CompanionEvent) => void
 } {
   // "wave" as initial expression — fires on the first home tab open
   const [expression, setExpression] = useState<Expression>("wave")
   const [lastEvent,  setLastEvent]  = useState<CompanionEvent>("open")
+  // Increments each time a non-idle expression is applied.
+  // Used as key on Sprite so CSS one-shot animations always restart correctly.
+  const [animKey, setAnimKey] = useState(0)
 
   // Refs so dispatch never goes stale even across re-renders
   const storeRef      = useRef(store)
@@ -70,6 +74,7 @@ export function useCompanion(store: AmintaStore | null): {
     clearTimeout(resetTimer.current)
     setExpression(newExpr)
     setLastEvent(event)
+    setAnimKey(k => k + 1)
 
     const duration = EXPRESSION_DURATION[newExpr]
     if (duration !== undefined && duration !== Infinity) {
@@ -90,5 +95,5 @@ export function useCompanion(store: AmintaStore | null): {
   const speech   = store ? resolveDialogue(lastEvent, mood, store) : "..."
   const animClass = ANIMATION_CSS[state.animationId]
 
-  return { state, speech, animClass, dispatch }
+  return { state, speech, animClass, animKey, dispatch }
 }

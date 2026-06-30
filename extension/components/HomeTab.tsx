@@ -31,11 +31,12 @@ interface Props {
   onUpdate?: () => void
   // From the Companion Engine via sidepanel
   animClass: string
+  animKey: number
   speech: string
   onContext?: (event: CompanionEvent) => void
 }
 
-export default function HomeTab({ store, onCreate, onTrain, onUpdate, animClass, speech, onContext }: Props) {
+export default function HomeTab({ store, onCreate, onTrain, onUpdate, animClass, animKey, speech, onContext }: Props) {
   const xp         = store.xp ?? 0
   const level      = getLevel(xp)
   const stage      = getForm(xp).name
@@ -49,17 +50,26 @@ export default function HomeTab({ store, onCreate, onTrain, onUpdate, animClass,
   const nextLevel  = level < FORMS.length ? level + 1 : null
   const currentForm = getForm(xp)
 
-  // Blink keeps the bubble visible=true except for a 180ms dip every 5s.
-  // Removed in M1 when bubble-pop replaces it.
-  const [visible, setVisible] = useState(true)
+  // Floating XP — shown above the sprite when XP increases
+  const prevXP = useRef(xp)
+  const [xpFloat, setXpFloat] = useState<{ delta: number; id: number } | null>(null)
 
   useEffect(() => {
-    const iv = setInterval(() => {
-      setVisible(false)
-      setTimeout(() => setVisible(true), 180)
-    }, 5000)
-    return () => clearInterval(iv)
-  }, [])
+    if (xp > prevXP.current) {
+      setXpFloat({ delta: xp - prevXP.current, id: Date.now() })
+    }
+    prevXP.current = xp
+  }, [xp])
+
+  // Bubble-pop — remounts SpeechBubble each time the speech text changes
+  const [bubbleKey, setBubbleKey] = useState(0)
+  const prevSpeech = useRef(speech)
+  useEffect(() => {
+    if (speech !== prevSpeech.current) {
+      setBubbleKey(k => k + 1)
+      prevSpeech.current = speech
+    }
+  }, [speech])
 
   // Complete daily missions and fire mission_complete into the Companion Engine
   // when allDone transitions from false to true within a session.
@@ -94,7 +104,7 @@ export default function HomeTab({ store, onCreate, onTrain, onUpdate, animClass,
           backgroundSize: "8px 8px",
           backgroundColor: "#0e1018",
         }}>
-        <div className="px-4 pt-4 pb-5">
+        <div className="px-4 pt-4 pb-5" style={{ position: "relative" }}>
           <div className="flex items-center justify-center gap-2 mb-3">
             <p className="font-pixel text-[8px] tracking-widest" style={{ color: tint }}>
               {stage} · Lv.{level}
@@ -109,10 +119,27 @@ export default function HomeTab({ store, onCreate, onTrain, onUpdate, animClass,
             )}
           </div>
           <div className="mb-3">
-            <SpeechBubble text={speech} visible={visible} />
+            <SpeechBubble key={bubbleKey} text={speech} />
           </div>
-          <div className="flex justify-center mt-2 mb-4">
-            <Sprite xp={xp} size={96} animClass={animClass} />
+          <div className="flex justify-center mt-2 mb-4" style={{ position: "relative" }}>
+            <Sprite key={animKey} xp={xp} size={96} animClass={animClass} />
+            {xpFloat && (
+              <div
+                key={xpFloat.id}
+                className="xp-rise font-pixel text-[11px] pointer-events-none"
+                style={{
+                  position: "absolute",
+                  top: "20%",
+                  left: "50%",
+                  color: tint,
+                  whiteSpace: "nowrap",
+                  zIndex: 10,
+                }}
+                onAnimationEnd={() => setXpFloat(null)}
+              >
+                +{xpFloat.delta} XP
+              </div>
+            )}
           </div>
           <div className="flex items-baseline justify-between mb-1.5">
             <span className="font-pixel text-[8px]" style={{ color: C.textDim }}>Level {level}</span>

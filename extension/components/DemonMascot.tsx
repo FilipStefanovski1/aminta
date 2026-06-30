@@ -47,13 +47,35 @@ export default function DemonMascot({ skin, size = 96, className = "" }: Props) 
       role="img"
       aria-label="Aminta mascot"
     >
+      {/* Body, horns, mouth — everything except eyes */}
       {ROWS.map((row, y) =>
         row.split("").map((ch, x) => {
+          if (ch === "E") return null
           const fill = colorFor(ch, skin)
           if (!fill) return null
           return <rect key={`${x}-${y}`} x={x} y={y} width={1.02} height={1.02} fill={fill} />
         })
       )}
+      {/* Left eye — animated blink group */}
+      <g className="demon-eye">
+        {ROWS.map((row, y) =>
+          row.split("").map((ch, x) =>
+            ch === "E" && x < 8
+              ? <rect key={`el-${x}-${y}`} x={x} y={y} width={1.02} height={1.02} fill={skin.eye} />
+              : null
+          )
+        )}
+      </g>
+      {/* Right eye — animated blink group with slight delay */}
+      <g className="demon-eye demon-eye-r">
+        {ROWS.map((row, y) =>
+          row.split("").map((ch, x) =>
+            ch === "E" && x >= 8
+              ? <rect key={`er-${x}-${y}`} x={x} y={y} width={1.02} height={1.02} fill={skin.eye} />
+              : null
+          )
+        )}
+      </g>
     </svg>
   )
 }
