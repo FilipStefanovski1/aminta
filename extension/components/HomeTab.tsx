@@ -35,9 +35,10 @@ interface Props {
   animKey: number
   speech: string
   onContext?: (event: CompanionEvent) => void
+  newlyUnlockedLevel?: number | null
 }
 
-export default function HomeTab({ store, onCreate, onTrain, onUpdate, animClass, animKey, speech, onContext }: Props) {
+export default function HomeTab({ store, onCreate, onTrain, onUpdate, animClass, animKey, speech, onContext, newlyUnlockedLevel }: Props) {
   const xp         = store.xp ?? 0
   const level      = getLevel(xp)
   const stage      = getForm(xp).name
@@ -243,7 +244,11 @@ export default function HomeTab({ store, onCreate, onTrain, onUpdate, animClass,
         {/* Current form blurb */}
         <div
           className="flex items-center gap-3 rounded-xl px-3 py-3"
-          style={{ backgroundColor: currentForm.color + "0e", border: `1.5px solid ${currentForm.color}40` }}>
+          style={{
+            backgroundColor: currentForm.color + "0e",
+            border: `1.5px solid ${currentForm.color}40`,
+            boxShadow: newlyUnlockedLevel === level ? `0 0 18px ${currentForm.color}44` : undefined,
+          }}>
           <div className="aminta-glow shrink-0">
             <SpriteMark tint={currentForm.color} size={28} />
           </div>
@@ -251,7 +256,12 @@ export default function HomeTab({ store, onCreate, onTrain, onUpdate, animClass,
             <p className="font-pixel text-[8px]" style={{ color: currentForm.color }}>{currentForm.name}</p>
             <p className="text-[10px] mt-1 leading-snug" style={{ color: C.textFaint }}>{currentForm.blurb}</p>
           </div>
-          <span className="font-pixel text-[6px] px-1.5 py-1 rounded shrink-0" style={{ backgroundColor: currentForm.color, color: "#000" }}>NOW</span>
+          <span
+            className={`font-pixel text-[6px] px-1.5 py-1 rounded shrink-0${newlyUnlockedLevel === level ? " animate-toast" : ""}`}
+            style={{ backgroundColor: currentForm.color, color: "#000" }}
+          >
+            {newlyUnlockedLevel === level ? "NEW" : "NOW"}
+          </span>
         </div>
 
         {/* Path list — all forms */}
@@ -261,14 +271,20 @@ export default function HomeTab({ store, onCreate, onTrain, onUpdate, animClass,
             const isNext   = form.level === nextLevel
             const show     = form.revealed || unlocked
 
+            const showPulse = isNext && mood === "pre_evolve"
             return (
               <div key={form.level}
                 className="flex items-center gap-3 rounded-xl px-3 py-2"
                 style={{
+                  position: "relative",
+                  overflow: "hidden",
                   backgroundColor: C.card,
-                  border: `1px solid ${isNext ? form.color + "44" : C.border}`,
+                  border: `1px solid ${showPulse ? form.color + "88" : isNext ? form.color + "44" : C.border}`,
                   opacity: unlocked ? 1 : 0.55,
                 }}>
+                {showPulse && (
+                  <div className="evolve-pulse" style={{ position: "absolute", inset: 0, borderRadius: "inherit", pointerEvents: "none" }} />
+                )}
                 <div className="shrink-0" style={{ filter: unlocked ? "none" : "grayscale(1)" }}>
                   {show
                     ? <SpriteMark tint={form.color} size={22} />
@@ -287,7 +303,7 @@ export default function HomeTab({ store, onCreate, onTrain, onUpdate, animClass,
                   {unlocked
                     ? <span className="text-base font-bold leading-none" style={{ color: form.color }}>✓</span>
                     : isNext
-                      ? <span className="font-pixel text-[6px]" style={{ color: tint }}>+{LEVEL_THRESHOLDS[form.level - 1] - xp} XP</span>
+                      ? <span className="font-pixel text-[6px]" style={{ color: showPulse ? form.color : tint }}>+{LEVEL_THRESHOLDS[form.level - 1] - xp} XP</span>
                       : <span className="font-pixel text-[5px]" style={{ color: C.textGhost }}>Lv.{form.level}</span>}
                 </div>
               </div>

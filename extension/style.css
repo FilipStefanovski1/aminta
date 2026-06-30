@@ -158,6 +158,19 @@ html, body {
 }
 .aminta-glow { animation: amintaGlow 2.6s ease-in-out infinite; }
 .aminta-sparkle { animation: amintaSparkle 1.8s ease-in-out infinite; }
+@keyframes amintaPreglow {
+  0%, 100% { filter: drop-shadow(0 0 8px rgba(116,247,181,0.55)); }
+  50%       { filter: drop-shadow(0 0 22px rgba(116,247,181,1.0)) drop-shadow(0 0 42px rgba(116,247,181,0.5)); }
+}
+.aminta-preglow { animation: amintaPreglow 1.6s ease-in-out infinite; }
+@keyframes evolvePulse {
+  0%, 100% { opacity: 0.25; }
+  50%       { opacity: 1; }
+}
+.evolve-pulse {
+  background: radial-gradient(ellipse at 50% 0%, rgba(116,247,181,0.18) 0%, transparent 70%);
+  animation: evolvePulse 2s ease-in-out infinite;
+}
 @keyframes amintaGlowDim {
   0%, 100% { filter: drop-shadow(0 0 3px rgba(116,247,181,0.10)); }
   50%       { filter: drop-shadow(0 0 7px rgba(116,247,181,0.25)); }
@@ -198,5 +211,6 @@ html, body {
   .sprite-float,
   .aminta-glow,
   .aminta-glow-dim,
+  .aminta-preglow,
   .aminta-sparkle { animation: none !important; }
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 import "~style.css"
 
@@ -316,7 +316,9 @@ function SidePanel() {
   const [store, setLocalStore]          = useState<AmintaStore | null>(null)
   const [tab, setTab]                   = useState<Tab>("home")
   const [tabKey, setTabKey]             = useState(0)
-  const [levelUpData, setLevelUpData]   = useState<LevelUpData | null>(null)
+  const [levelUpData, setLevelUpData]       = useState<LevelUpData | null>(null)
+  const [newlyUnlockedLevel, setNewlyUnlockedLevel] = useState<number | null>(null)
+  const newlyUnlockedTimer = useRef<ReturnType<typeof setTimeout>>()
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [detectedPlatform, setDetectedPlatform] = useState<Platform>("x")
   const [authChecked, setAuthChecked]   = useState(false)
@@ -426,7 +428,14 @@ function SidePanel() {
 
         {/* ── Modals / overlays ── */}
         {levelUpData && (
-          <LevelUpModal data={levelUpData} onDismiss={() => { setLevelUpData(null); refresh() }} />
+          <LevelUpModal data={levelUpData} onDismiss={() => {
+            const level = levelUpData.level
+            setLevelUpData(null)
+            refresh()
+            clearTimeout(newlyUnlockedTimer.current)
+            setNewlyUnlockedLevel(level)
+            newlyUnlockedTimer.current = setTimeout(() => setNewlyUnlockedLevel(null), 8_000)
+          }} />
         )}
         {settingsOpen && (
           <SettingsOverlay
@@ -477,6 +486,7 @@ function SidePanel() {
                 animKey={animKey}
                 speech={speech}
                 onContext={dispatch}
+                newlyUnlockedLevel={newlyUnlockedLevel}
               />
             )}
 

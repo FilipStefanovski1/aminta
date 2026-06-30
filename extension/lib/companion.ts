@@ -1,6 +1,7 @@
 // Companion Engine — pure TypeScript, zero React imports.
 // Single source of truth for Aminta's mood, expression, animation, and speech routing.
 
+import { getLevel, LEVEL_THRESHOLDS } from "~lib/evolution"
 import type { AmintaStore } from "~lib/storage"
 
 // ─── Mood ─────────────────────────────────────────────────────────────────────
@@ -8,15 +9,24 @@ import type { AmintaStore } from "~lib/storage"
 // No events needed — changes between sessions.
 
 export type Mood =
-  | "idle"      // default
-  | "hungry"    // has a streak, hasn't posted today
-  | "sleeping"  // local time 0–5am
+  | "idle"        // default
+  | "pre_evolve"  // within 50 XP of the next level threshold
+  | "hungry"      // has a streak, hasn't posted today
+  | "sleeping"    // local time 0–5am
 
 export function deriveMood(store: AmintaStore | null): Mood {
   if (!store) return "idle"
 
   const hour = new Date().getHours()
   if (hour < 6) return "sleeping"
+
+  const xp    = store.xp ?? 0
+  const level = getLevel(xp)
+  // pre_evolve: within 50 XP of the next level — higher priority than hungry
+  if (level < LEVEL_THRESHOLDS.length) {
+    const xpLeft = LEVEL_THRESHOLDS[level] - xp
+    if (xpLeft > 0 && xpLeft <= 50) return "pre_evolve"
+  }
 
   const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10)
   if (
@@ -108,6 +118,7 @@ export type AnimationId =
   | "error"       // error (shake)
   | "hungry"      // mood: hungry (slow drift, dim)
   | "sleeping"    // mood: sleeping (near-still, dim)
+  | "pre_evolve"  // mood: near next level (float + bright preglow)
 
 const EXPRESSION_ANIM: Record<Expression, AnimationId | null> = {
   idle:        null,        // falls through to MOOD_ANIM
@@ -119,9 +130,10 @@ const EXPRESSION_ANIM: Record<Expression, AnimationId | null> = {
 }
 
 const MOOD_ANIM: Record<Mood, AnimationId> = {
-  idle:     "float",
-  hungry:   "hungry",
-  sleeping: "sleeping",
+  idle:       "float",
+  pre_evolve: "pre_evolve",
+  hungry:     "hungry",
+  sleeping:   "sleeping",
 }
 
 export function resolveAnimationId(expression: Expression, mood: Mood): AnimationId {

@@ -1,6 +1,7 @@
 // Dialogue module — owns all speech bubble text.
 // Replaces getLine() in HomeTab. Add new lines here without touching the engine.
 
+import { getLevel, LEVEL_THRESHOLDS } from "~lib/evolution"
 import type { AmintaStore } from "~lib/storage"
 import type { CompanionEvent, Mood } from "~lib/companion"
 
@@ -97,6 +98,18 @@ const DIALOGUE_TABLE: DialogueSelector[] = [
   // ── idle fallbacks: mood-aware ────────────────────────────────────────────
   { mood: "sleeping", lines: [
     { text: "zzz..." },
+  ]},
+  { mood: "pre_evolve", lines: [
+    { text: (s) => {
+      const level = getLevel(s.xp ?? 0)
+      const xpLeft = LEVEL_THRESHOLDS[level] - (s.xp ?? 0)
+      return `${xpLeft} XP to evolve.`
+    }},
+    { text: (s) => {
+      const level = getLevel(s.xp ?? 0)
+      const xpLeft = LEVEL_THRESHOLDS[level] - (s.xp ?? 0)
+      return `almost there. ${xpLeft} XP left.`
+    }},
   ]},
   { mood: "hungry", lines: [
     { text: (s) => `${s.streak > 0 ? `${s.streak}-day streak. ` : ""}don't break it now.` },

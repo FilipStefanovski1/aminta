@@ -1,3 +1,4 @@
+import { deriveMood } from "~lib/companion"
 import { FORMS, LEVEL_THRESHOLDS, getLevel, getStageTint } from "~lib/evolution"
 import type { AmintaStore } from "~lib/storage"
 import { C } from "~lib/theme"
@@ -13,14 +14,17 @@ const RARITY_COLOR: Record<string, string> = {
 
 interface Props {
   store: AmintaStore
+  newlyUnlockedLevel?: number | null
 }
 
-export default function EvolutionsTab({ store }: Props) {
+export default function EvolutionsTab({ store, newlyUnlockedLevel }: Props) {
   const xp           = store.xp ?? 0
   const currentLevel = getLevel(xp)
   const tint         = getStageTint(xp)
   const current      = FORMS[Math.min(currentLevel, FORMS.length) - 1]
   const next         = FORMS.find(f => f.level > currentLevel)
+  const mood         = deriveMood(store)
+  const isPreEvolve  = mood === "pre_evolve"
 
   return (
     <div className="space-y-3 pb-4">
@@ -42,16 +46,23 @@ export default function EvolutionsTab({ store }: Props) {
 
       {/* ── Next unlock ── */}
       {next && (
-        <Card className="animate-card-in" style={{ animationDelay: "30ms" }}>
+        <Card
+          className="animate-card-in"
+          style={{ animationDelay: "30ms", position: "relative", overflow: "hidden" }}
+          glow={isPreEvolve ? next.color : undefined}
+        >
+          {isPreEvolve && (
+            <div className="evolve-pulse" style={{ position: "absolute", inset: 0, borderRadius: "inherit", pointerEvents: "none" }} />
+          )}
           <div className="flex items-center gap-3">
-            <div className="shrink-0 opacity-50">
+            <div className="shrink-0" style={{ opacity: isPreEvolve ? 0.85 : 0.5 }}>
               {next.revealed ? <SpriteMark tint={next.color} size={36} /> : <div className="font-pixel text-[18px]" style={{ color: C.textGhost }}>?</div>}
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-pixel text-[6px] uppercase tracking-widest" style={{ color: C.textGhost }}>Next form</p>
-              <p className="font-pixel text-[8px] mt-1" style={{ color: C.textDim }}>{next.revealed ? next.name : "???"}</p>
+              <p className="font-pixel text-[8px] mt-1" style={{ color: isPreEvolve ? next.color : C.textDim }}>{next.revealed ? next.name : "???"}</p>
             </div>
-            <span className="font-pixel text-[7px] shrink-0" style={{ color: tint }}>
+            <span className="font-pixel text-[7px] shrink-0" style={{ color: isPreEvolve ? next.color : tint }}>
               +{LEVEL_THRESHOLDS[next.level - 1] - xp} XP
             </span>
           </div>
@@ -65,6 +76,7 @@ export default function EvolutionsTab({ store }: Props) {
           {FORMS.map((form) => {
             const unlocked  = currentLevel >= form.level
             const isCurrent = currentLevel === form.level
+            const isNew     = isCurrent && form.level === newlyUnlockedLevel
             const show      = form.revealed || unlocked
 
             return (
@@ -72,8 +84,9 @@ export default function EvolutionsTab({ store }: Props) {
                 className="flex items-center gap-3 rounded-xl px-3 py-2.5"
                 style={{
                   backgroundColor: isCurrent ? form.color + "0e" : C.card,
-                  border: isCurrent ? `1.5px solid ${form.color}` : `1px solid ${C.border}`,
+                  border: isNew ? `1.5px solid ${form.color}` : isCurrent ? `1.5px solid ${form.color}` : `1px solid ${C.border}`,
                   opacity: unlocked ? 1 : 0.55,
+                  boxShadow: isNew ? `0 0 16px ${form.color}44` : undefined,
                 }}>
                 <div className="shrink-0" style={{ filter: unlocked ? "none" : "grayscale(1)" }}>
                   {show
@@ -92,7 +105,9 @@ export default function EvolutionsTab({ store }: Props) {
                 </div>
 
                 <div className="shrink-0 text-right">
-                  {isCurrent ? (
+                  {isNew ? (
+                    <span className="font-pixel text-[5px] px-1.5 py-1 rounded animate-toast" style={{ backgroundColor: form.color, color: "#000" }}>NEW</span>
+                  ) : isCurrent ? (
                     <span className="font-pixel text-[5px] px-1.5 py-1 rounded" style={{ backgroundColor: form.color, color: "#000" }}>NOW</span>
                   ) : unlocked ? (
                     <span className="font-pixel text-[7px]" style={{ color: form.color }}>✓</span>
