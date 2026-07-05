@@ -13,6 +13,7 @@ import type { PlasmoCSConfig } from "plasmo"
 
 export const config: PlasmoCSConfig = {
   matches: ["https://amintaapp.com/*"],
+  run_at: "document_start",
 }
 
 window.addEventListener("message", async (event) => {
