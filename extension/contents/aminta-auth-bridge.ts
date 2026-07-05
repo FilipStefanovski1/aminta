@@ -16,10 +16,14 @@ export const config: PlasmoCSConfig = {
   run_at: "document_start",
 }
 
+console.log("[Aminta bridge] content script loaded on", window.location.href)
+
 window.addEventListener("message", async (event) => {
   // Only accept messages from our own origin.
   if (event.origin !== "https://amintaapp.com") return
   if (!event.data || event.data.type !== "AMINTA_AUTH_TOKENS") return
+
+  console.log("[Aminta bridge] HOP4 received AMINTA_AUTH_TOKENS from", event.origin)
 
   const { accessToken, refreshToken, userId, email } = event.data
   if (!accessToken) return
@@ -31,6 +35,8 @@ window.addEventListener("message", async (event) => {
       auth_user_id: userId,
       auth_user_email: email,
     })
+
+    console.log("[Aminta bridge] HOP5 storage written, sending ACK")
 
     // Tell background to close this tab + log + notify sidepanel.
     chrome.runtime.sendMessage({ type: "AMINTA_AUTH_FROM_BRIDGE" }).catch(() => {})

@@ -58,6 +58,7 @@ export default function ExtensionAuthPage() {
       // The content script receives our postMessage, writes to chrome.storage.local,
       // then posts back AMINTA_AUTH_ACK. This avoids any ext_id dependency.
       function onAck(event: MessageEvent) {
+        console.log("[ext-auth] HOP5 message received origin:", event.origin, "type:", event.data?.type)
         if (event.origin !== window.location.origin) return
         if (!event.data || event.data.type !== "AMINTA_AUTH_ACK") return
         window.removeEventListener("message", onAck)
@@ -82,6 +83,7 @@ export default function ExtensionAuthPage() {
 
       // Send tokens to the content script via postMessage.
       // The content script on amintaapp.com writes them to chrome.storage.local.
+      console.log("[ext-auth] HOP3 sending AMINTA_AUTH_TOKENS")
       window.postMessage({
         type: "AMINTA_AUTH_TOKENS",
         accessToken: session.access_token,

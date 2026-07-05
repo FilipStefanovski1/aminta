@@ -10,6 +10,8 @@ chrome.sidePanel
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.type !== "AMINTA_AUTH_FROM_BRIDGE") return false
 
+  console.log("[Aminta bg] HOP6 received AMINTA_AUTH_FROM_BRIDGE")
+
   chrome.storage.local
     .get(["auth_user_id", "auth_user_email"])
     .then(({ auth_user_id, auth_user_email }) => {

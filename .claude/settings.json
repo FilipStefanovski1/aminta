@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'echo \"$CLAUDE_TOOL_INPUT_FILE_PATH\" | grep -q \"evolution.ts\" && node extension/scripts/check-sprite-body.js || true'",
+            "cwd": "/Users/filipstefanovski/Desktop/POPPYX"
+          }
+        ]
+      }
+    ]
+  }
+}
