@@ -363,10 +363,6 @@ export default function AmintaEvolutionGrid() {
           <h2 className="mt-4 font-pixel text-xl sm:text-2xl lg:text-3xl text-white leading-snug">
             Collect Every Form
           </h2>
-          <p className="mt-4 text-muted">
-            Feed Aminta. Earn XP. Unlock all 9 evolutions.{" "}
-            <span className="text-accent">Your companion grows when you do.</span>
-          </p>
         </Reveal>
 
         <div className="mt-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">

@@ -15,20 +15,15 @@ import {
 import { getMissionProgress, tryCompleteDailyMissions } from "~lib/missions"
 import type { AmintaStore } from "~lib/storage"
 import { C } from "~lib/theme"
+import DemonMascot from "~components/DemonMascot"
 import { Card, Sprite, SpeechBubble, SpriteMark, XPBar } from "~components/ui"
 
-const RARITY_COLOR: Record<string, string> = {
-  COMMON:    "#8ca0b0",
-  UNCOMMON:  "#40e898",
-  RARE:      "#40b0ff",
-  EPIC:      "#c0a0ff",
-  LEGENDARY: "#f5d060",
-}
 
 interface Props {
   store: AmintaStore
   onCreate: () => void
   onTrain: () => void
+  onOpenCompanion?: () => void
   onUpdate?: () => void
   // From the Companion Engine via sidepanel
   animClass: string
@@ -38,7 +33,7 @@ interface Props {
   newlyUnlockedLevel?: number | null
 }
 
-export default function HomeTab({ store, onCreate, onTrain, onUpdate, animClass, animKey, speech, onContext, newlyUnlockedLevel }: Props) {
+export default function HomeTab({ store, onCreate, onTrain, onOpenCompanion, onUpdate, animClass, animKey, speech, onContext, newlyUnlockedLevel }: Props) {
   const xp          = store.xp ?? 0
   const currentForm = getForm(xp)
   const level       = getLevel(xp)
@@ -164,7 +159,9 @@ export default function HomeTab({ store, onCreate, onTrain, onUpdate, animClass,
             <div style={{ position: "absolute", bottom: "100%", left: "50%", transform: "translateX(-50%)", marginBottom: 4, zIndex: 2 }}>
               <SpeechBubble key={bubbleKey} text={speech} />
             </div>
-            <Sprite key={animKey} xp={xp} size={112} animClass={animClass} />
+            <button onClick={onOpenCompanion} className="cursor-pointer" style={{ background: "none", border: "none", padding: 0 }}>
+              <Sprite key={animKey} xp={xp} size={112} animClass={animClass} />
+            </button>
             {xpFloat && (
               <div
                 key={xpFloat.id}
@@ -240,95 +237,76 @@ export default function HomeTab({ store, onCreate, onTrain, onUpdate, animClass,
         ))}
       </div>
 
-      {/* ── EVOLUTION PATH (was a separate tab) ── */}
-      <div className="animate-card-in space-y-2" style={{ animationDelay: "90ms" }}>
-        <p className="text-[9px] uppercase tracking-[0.1em] px-1" style={{ color: "#666672" }}>Evolution path</p>
+      {/* ── NEXT EVOLUTION ── */}
+      {nextLevel ? (() => {
+        const nextForm  = FORMS[nextLevel - 1]
+        const xpToNext  = LEVEL_THRESHOLDS[nextLevel - 1] - xp
+        const isNew     = newlyUnlockedLevel === level
+        return (
+          <Card
+            pad={false}
+            className="animate-card-in overflow-hidden"
+            style={{
+              animationDelay: "90ms",
+              boxShadow: isNew ? `0 0 22px ${currentForm.color}44` : undefined,
+            }}>
+            <div className="px-4 pt-3.5 pb-4">
+              <p className="font-pixel text-[7px] uppercase tracking-widest mb-3" style={{ color: C.textDim }}>Next Evolution</p>
 
-        {/* Current form blurb */}
-        <div
-          className="flex items-center gap-3 rounded-xl px-3 py-3"
-          style={{
-            backgroundColor: currentForm.color + "0e",
-            border: `1.5px solid ${currentForm.color}40`,
-            boxShadow: newlyUnlockedLevel === level ? `0 0 18px ${currentForm.color}44` : undefined,
-          }}>
-          <div className="aminta-glow shrink-0">
-            <SpriteMark tint={currentForm.color} size={28} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-pixel text-[8px]" style={{ color: currentForm.color }}>{currentForm.name}</p>
-            <p className="text-[11px] mt-1 leading-snug" style={{ color: C.textDim }}>{currentForm.blurb}</p>
-          </div>
-          <span
-            className={`font-pixel text-[6px] px-1.5 py-1 rounded shrink-0${newlyUnlockedLevel === level ? " animate-toast" : ""}`}
-            style={{ backgroundColor: currentForm.color, color: "#000" }}
-          >
-            {newlyUnlockedLevel === level ? "NEW" : "NOW"}
-          </span>
-        </div>
-
-        {/* Path list — all forms */}
-        <div className="space-y-1">
-          {FORMS.filter(f => f.level !== level).map((form) => {
-            const unlocked = level > form.level
-            const isNext   = form.level === nextLevel
-            const show     = form.revealed || unlocked
-
-            const showPulse = isNext && mood === "pre_evolve"
-            return (
-              <div key={form.level}
-                className="flex items-center gap-3 rounded-xl px-3 py-2"
-                style={{
-                  position: "relative",
-                  overflow: "hidden",
-                  backgroundColor: C.card,
-                  border: `1px solid ${showPulse ? form.color + "88" : isNext ? form.color + "44" : C.border}`,
-                  opacity: unlocked ? 1 : 0.55,
-                }}>
-                {showPulse && (
-                  <div className="evolve-pulse" style={{ position: "absolute", inset: 0, borderRadius: "inherit", pointerEvents: "none" }} />
-                )}
-                <div className="shrink-0" style={{ filter: unlocked ? "none" : "grayscale(1)" }}>
-                  {show
-                    ? <SpriteMark tint={form.color} size={22} />
-                    : <div className="w-[22px] h-[18px] flex items-center justify-center font-pixel text-[10px]" style={{ color: C.textGhost }}>?</div>}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-pixel text-[7px]" style={{ color: show ? (unlocked ? form.color : C.textDim) : C.textGhost }}>
-                    {show ? form.name : "???"}
-                  </p>
-                  <p className="text-[9px] mt-0.5 uppercase tracking-[0.04em]"
-                    style={{ color: unlocked ? RARITY_COLOR[form.rarity] + "99" : C.textGhost }}>
-                    {form.rarity}
+              {/* Current ← → Next */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex flex-col items-center gap-1.5">
+                  <div className="aminta-glow">
+                    <DemonMascot skin={currentForm.skin} size={52} />
+                  </div>
+                  <p className="font-pixel text-[7px]" style={{ color: currentForm.color }}>
+                    {currentForm.name}{isNew ? " ✦" : ""}
                   </p>
                 </div>
-                <div className="shrink-0">
-                  {unlocked
-                    ? <span className="text-base font-bold leading-none" style={{ color: form.color }}>✓</span>
-                    : isNext
-                      ? <span className="font-pixel text-[6px]" style={{ color: showPulse ? form.color : tint }}>+{LEVEL_THRESHOLDS[form.level - 1] - xp} XP</span>
-                      : <span className="font-pixel text-[5px]" style={{ color: C.textGhost }}>Lv.{form.level}</span>}
+                <div className="flex flex-col items-center gap-1.5" style={{ opacity: 0.38 }}>
+                  {nextForm.revealed
+                    ? <DemonMascot skin={nextForm.skin} size={52} />
+                    : <div className="flex items-center justify-center font-pixel text-[16px]"
+                        style={{ width: 52, height: 42, color: C.textGhost }}>?</div>}
+                  <p className="font-pixel text-[7px]" style={{ color: nextForm.color }}>
+                    {nextForm.revealed ? nextForm.name : "???"}
+                  </p>
                 </div>
               </div>
-            )
-          })}
-        </div>
 
-        {/* How to grow */}
-        <div className="rounded-2xl p-3 space-y-2" style={{ backgroundColor: C.card, border: `1px solid ${C.border}` }}>
-          <p className="text-[9px] uppercase tracking-[0.1em]" style={{ color: "#666672" }}>How to grow</p>
-          {[
-            ["Post a tweet",  "+50 XP"],
-            ["Post a reply",  "+25 XP"],
-            ["Polish & post", "+15 XP"],
-          ].map(([label, gain]) => (
-            <div key={label} className="flex items-center justify-between">
-              <span className="text-[11px]" style={{ color: C.textFaint }}>{label}</span>
-              <span className="font-pixel text-[7px]" style={{ color: tint }}>{gain}</span>
+              {/* XP progress */}
+              <div className="mb-3">
+                <XPBar progress={progress} tint={tint} />
+                <div className="flex items-center justify-between mt-2">
+                  <span className="font-pixel text-[8px]" style={{ color: C.textDim }}>Lv.{level}</span>
+                  <span className="font-pixel text-[7px]" style={{ color: tint }}>
+                    {xpToNext} XP until {nextForm.revealed ? nextForm.name : "next form"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Companion link */}
+              <button
+                onClick={onOpenCompanion}
+                className="flex items-center gap-1.5 font-pixel text-[8px] opacity-60 hover:opacity-100 transition-opacity"
+                style={{ color: tint }}>
+                Open Aminta
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                  <path d="M2.5 6h7M6.5 3l3 3-3 3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
             </div>
-          ))}
-        </div>
-      </div>
+          </Card>
+        )
+      })() : (
+        <Card className="animate-card-in text-center" style={{ animationDelay: "90ms" }}>
+          <div className="aminta-glow flex justify-center mb-2">
+            <SpriteMark tint={tint} size={28} />
+          </div>
+          <p className="font-pixel text-[8px] mb-1" style={{ color: tint }}>{currentForm.name}</p>
+          <p className="text-[11px]" style={{ color: C.textDim }}>Max level reached. Legend status.</p>
+        </Card>
+      )}
 
     </div>
   )

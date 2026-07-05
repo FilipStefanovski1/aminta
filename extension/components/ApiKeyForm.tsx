@@ -14,9 +14,9 @@ export const GOOGLE_MODELS = [
   { id: "gemini-2.0-flash-lite", label: "Gemini 2.0 Flash Lite" },
 ]
 export const GROQ_MODELS = [
-  { id: "llama-3.3-70b-versatile", label: "Llama 3.3 70B" },
-  { id: "llama-3.1-8b-instant",    label: "Llama 3.1 8B" },
-  { id: "gemma2-9b-it",            label: "Gemma 2 9B" },
+  { id: "llama-3.3-70b-versatile", label: "Llama 3.3 70B", badge: "★ Recommended", badgeColor: "#74f7b5" },
+  { id: "llama3-70b-8192",         label: "Llama 3 70B",   badge: "Stable",        badgeColor: "#666672" },
+  { id: "llama3-8b-8192",          label: "Llama 3 8B",    badge: "Fast",          badgeColor: "#666672" },
 ]
 
 export const SELECT_STYLE: React.CSSProperties = {
@@ -117,6 +117,14 @@ export default function ApiKeyForm({ initial, onSave }: Props) {
             <option key={m.id} value={m.id}>{m.label}</option>
           ))}
         </select>
+        {isGroq && (() => {
+          const gm = GROQ_MODELS.find(m => m.id === model) ?? GROQ_MODELS[0]
+          return (
+            <p className="font-pixel text-[6px] mt-1.5" style={{ color: gm.badgeColor }}>
+              {gm.badge}
+            </p>
+          )
+        })()}
       </div>
 
       {error && <p className="font-pixel text-[7px] text-red-400">{error}</p>}

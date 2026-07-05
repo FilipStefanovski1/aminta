@@ -26,12 +26,14 @@ export async function GET(request: NextRequest) {
 
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
-      // If login was triggered from the extension, send them to the extension-auth handoff page
+      // Extension flow — hand off to extension-auth page
       const extId = searchParams.get("ext_id")
       if (extId) {
         return NextResponse.redirect(`${origin}/extension-auth?ext_id=${extId}`)
       }
-      return NextResponse.redirect(`${origin}${next}`)
+      // Web flow — go to dashboard (unless a specific next was requested)
+      const dest = next === "/" ? "/dashboard" : next
+      return NextResponse.redirect(`${origin}${dest}`)
     }
   }
 

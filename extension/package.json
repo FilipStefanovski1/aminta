@@ -29,7 +29,7 @@
     "128": "assets/icon128.png"
   },
   "manifest": {
-    "permissions": ["storage", "sidePanel", "tabs", "identity"],
+    "permissions": ["storage", "sidePanel", "tabs", "identity", "scripting"],
     "host_permissions": [
       "https://x.com/*",
       "https://twitter.com/*",

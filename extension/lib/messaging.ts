@@ -34,10 +34,21 @@ async function send(message: unknown, platform: Platform): Promise<BridgeRespons
       | undefined
     return res ?? { ok: false, error: "No response from the page." }
   } catch {
-    const name = platform === "x" ? "X" : "LinkedIn"
-    return {
-      ok: false,
-      error: `Can't reach the ${name} page. Reload the extension at chrome://extensions, then refresh this tab.`,
+    // Content script unreachable — try re-injecting it, then retry once.
+    try {
+      const file = platform === "x"
+        ? "contents/twitter-bridge.js"
+        : "contents/linkedin-bridge.js"
+      await chrome.scripting.executeScript({ target: { tabId: tab.id! }, files: [file] })
+      await new Promise(r => setTimeout(r, 300))
+      const retry = (await chrome.tabs.sendMessage(tab.id!, message)) as BridgeResponse | undefined
+      return retry ?? { ok: false, error: "No response from the page." }
+    } catch {
+      const name = platform === "x" ? "X" : "LinkedIn"
+      return {
+        ok: false,
+        error: `Refresh the ${name} tab and try again.`,
+      }
     }
   }
 }

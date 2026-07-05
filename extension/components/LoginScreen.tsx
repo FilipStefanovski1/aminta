@@ -1,49 +1,30 @@
 import { useState } from "react"
 import { C } from "~lib/theme"
-import { setAuthSession } from "~lib/auth"
-
-const GOOGLE_CLIENT_ID = "110269399450-vfmckhcemps4s9k3okeb1ebh4bk17po7.apps.googleusercontent.com"
 
 interface Props {
+  // Called by sidepanel's own storage-change listener; kept for API compat.
+  // LoginScreen itself does NOT call this — the sidepanel detects auth_access_token
+  // appearing in chrome.storage.local and transitions automatically.
   onSignedIn: () => void
 }
 
-export default function LoginScreen({ onSignedIn }: Props) {
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState("")
+type State = "idle" | "waiting"
 
-  async function signInWithGoogle() {
-    setLoading(true)
-    setError("")
+export default function LoginScreen({ onSignedIn: _onSignedIn }: Props) {
+  const [state, setState] = useState<State>("idle")
 
-    chrome.identity.getAuthToken({ interactive: true }, async (token) => {
-      if (chrome.runtime.lastError || !token) {
-        setError("Sign in cancelled")
-        setLoading(false)
-        return
-      }
+  function openLoginPage() {
+    const extId = chrome.runtime.id
+    // Opens the website's full Supabase OAuth flow. After the user signs in,
+    // /extension-auth sends AMINTA_AUTH to background.ts, which stores the tokens.
+    // The sidepanel's chrome.storage.local.onChanged listener then fires and
+    // calls pullFromCloud() + setIsLoggedIn(true) automatically.
+    chrome.tabs.create({ url: `https://amintaapp.com/login?ext_id=${extId}` })
+    setState("waiting")
+  }
 
-      try {
-        const res = await fetch("https://www.amintaapp.com/api/auth/google", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ accessToken: token }),
-        })
-        const data = await res.json()
-        if (!res.ok) throw new Error(data.error ?? `Server error ${res.status}`)
-
-        await setAuthSession({
-          accessToken: data.accessToken,
-          refreshToken: data.refreshToken,
-          userId: data.userId,
-          email: data.email,
-        })
-        onSignedIn()
-      } catch (e: any) {
-        setError(e.message)
-        setLoading(false)
-      }
-    })
+  function cancel() {
+    setState("idle")
   }
 
   return (
@@ -68,26 +49,39 @@ export default function LoginScreen({ onSignedIn }: Props) {
         </p>
       </div>
 
-      {error && (
-        <p className="font-pixel text-[7px] text-red-400 text-center">{error}</p>
+      {state === "idle" && (
+        <button
+          onClick={openLoginPage}
+          className="w-full py-3 rounded-xl font-pixel text-[8px] tracking-widest text-black transition-all hover:brightness-110 active:scale-[0.98]"
+          style={{ backgroundColor: "#74f7b5" }}
+        >
+          Sign in with Google
+        </button>
       )}
 
-      <button
-        onClick={signInWithGoogle}
-        disabled={loading}
-        className="w-full py-3 rounded-xl font-pixel text-[8px] tracking-widest text-black transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-50"
-        style={{ backgroundColor: "#74f7b5" }}
-      >
-        {loading ? "Signing in..." : "Sign in with Google"}
-      </button>
-
-      <button
-        onClick={onSignedIn}
-        className="font-pixel text-[7px] tracking-widest transition-colors"
-        style={{ color: C.textGhost }}
-      >
-        Skip for now
-      </button>
+      {state === "waiting" && (
+        <div className="w-full flex flex-col items-center gap-4">
+          <div className="flex flex-col items-center gap-2 text-center">
+            <div
+              className="w-6 h-6 rounded-full border-2 border-t-transparent animate-spin"
+              style={{ borderColor: "#74f7b5", borderTopColor: "transparent" }}
+            />
+            <p className="font-pixel text-[8px] tracking-widest" style={{ color: "#74f7b5" }}>
+              Waiting for sign in…
+            </p>
+            <p className="text-[10px]" style={{ color: C.textFaint }}>
+              Complete sign in on the tab that just opened
+            </p>
+          </div>
+          <button
+            onClick={cancel}
+            className="font-pixel text-[7px] tracking-widest transition-colors"
+            style={{ color: C.textGhost }}
+          >
+            Cancel
+          </button>
+        </div>
+      )}
     </div>
   )
 }

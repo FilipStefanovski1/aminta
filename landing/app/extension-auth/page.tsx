@@ -5,20 +5,53 @@ import { createClient } from "@/lib/supabase/client"
 
 export const dynamic = "force-dynamic"
 
-type Status = "sending" | "done" | "error"
+// Chrome extension IDs are exactly 32 chars, alphabet a-p (base-16 custom encoding).
+const EXT_ID_RE = /^[a-p]{32}$/
+
+// Allowlist of known Aminta extension IDs.
+// NEXT_PUBLIC_AMINTA_EXTENSION_IDS is a comma-separated list set at build time.
+// Leave empty to skip strict enforcement (dev/staging only).
+const ALLOWED_IDS: Set<string> = new Set(
+  (process.env.NEXT_PUBLIC_AMINTA_EXTENSION_IDS ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)
+)
+
+function isAllowedExtId(id: string): boolean {
+  // Must be a valid Chrome extension ID format.
+  if (!EXT_ID_RE.test(id)) return false
+  // If an allowlist is configured, the ID must be in it.
+  if (ALLOWED_IDS.size > 0) return ALLOWED_IDS.has(id)
+  // No allowlist configured — accept any well-formed ID (dev/staging).
+  return true
+}
+
+type Status = "sending" | "done" | "error" | "forbidden"
 
 export default function ExtensionAuthPage() {
   const [status, setStatus] = useState<Status>("sending")
+  const [errorDetail, setErrorDetail] = useState("")
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
-    const extId = params.get("ext_id")
-    if (!extId) { setStatus("error"); return }
+    const extId = params.get("ext_id") ?? ""
+
+    // Security: validate the extension ID before sending any tokens.
+    if (!isAllowedExtId(extId)) {
+      console.error("[Aminta] extension-auth: rejected ext_id:", extId)
+      setErrorDetail("Invalid extension ID.")
+      setStatus("forbidden")
+      return
+    }
 
     const supabase = createClient()
 
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) { setStatus("error"); return }
+      if (!session) {
+        setStatus("error")
+        return
+      }
 
       const msg = {
         type: "AMINTA_AUTH",
@@ -29,12 +62,22 @@ export default function ExtensionAuthPage() {
       }
 
       try {
-        // @ts-ignore — chrome is available in Chrome extension context pages
-        chrome.runtime.sendMessage(extId, msg, () => {
-          // Background will close this tab; show done state as fallback
-          setStatus("done")
+        // chrome.runtime.sendMessage only delivers to extensions that declared
+        // https://amintaapp.com/* in their externally_connectable manifest key.
+        // That provides a second layer of defence beyond the ID allowlist.
+        // @ts-ignore — chrome is injected by the browser in extension-origin contexts
+        chrome.runtime.sendMessage(extId, msg, (response) => {
+          if (chrome.runtime.lastError) {
+            console.error("[Aminta] extension-auth: sendMessage failed:", chrome.runtime.lastError.message)
+            setStatus("error")
+          } else {
+            // Clean up: remove the stored ext_id so it doesn't linger.
+            localStorage.removeItem("aminta_ext_id")
+            setStatus("done")
+          }
         })
-      } catch {
+      } catch (e) {
+        console.error("[Aminta] extension-auth: chrome.runtime unavailable:", e)
         setStatus("error")
       }
     })
@@ -70,6 +113,14 @@ export default function ExtensionAuthPage() {
               Something went wrong
             </p>
             <p className="text-xs text-[#555]">Close this tab and try again.</p>
+          </>
+        )}
+        {status === "forbidden" && (
+          <>
+            <p className="font-pixel text-[9px] tracking-widest text-red-400">
+              Unauthorised extension
+            </p>
+            <p className="text-xs text-[#555]">{errorDetail}</p>
           </>
         )}
       </div>

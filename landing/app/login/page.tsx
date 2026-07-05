@@ -102,7 +102,14 @@ export default function LoginPage() {
     return () => clearTimeout(t)
   }, [resendTimer])
 
-  const cb = () => `${location.origin}/auth/callback`
+  // Build the OAuth callback URL, preserving ext_id so the auth callback can
+  // redirect to /extension-auth and hand tokens back to the extension.
+  // ext_id is stored in localStorage when the login page is opened with ?ext_id=.
+  const cb = () => {
+    const base = `${location.origin}/auth/callback`
+    const extId = localStorage.getItem("aminta_ext_id")
+    return extId ? `${base}?ext_id=${encodeURIComponent(extId)}` : base
+  }
 
   async function handleGoogle() {
     await createClient().auth.signInWithOAuth({ provider: "google", options: { redirectTo: cb() } })
@@ -132,7 +139,7 @@ export default function LoginPage() {
       email, token: code, type: "email",
     })
     if (error) { setError(error.message); setVerifying(false) }
-    else window.location.href = "/"
+    else window.location.href = "/dashboard"
   }
 
   async function handleResend() {

@@ -17,7 +17,18 @@ export function isGroqKey(key: string): boolean {
 }
 
 const GEMINI_DEFAULT = "gemini-2.0-flash"
-const GROQ_DEFAULT = "llama-3.3-70b-versatile"
+export const GROQ_DEFAULT = "llama-3.3-70b-versatile"
+
+export const DEPRECATED_GROQ_IDS = new Set([
+  "llama-3.1-70b-versatile",
+  "llama-3.1-8b-instant",
+  "gemma2-9b-it",
+  "gpt-oss-120b",
+  "qwen-3.6-27b",
+  "llama-4-maverick-17b-128e-instruct",
+  "llama-4-scout-17b-16e-instruct",
+  "qwen-qwq-32b",
+])
 
 // Guard against stale / wrong-provider model names.
 function normalizeGeminiModel(model: string): string {
@@ -28,6 +39,7 @@ function normalizeGeminiModel(model: string): string {
 function normalizeGroqModel(model: string): string {
   // Groq models have no "/" and no ":free" suffix.
   if (!model || model.includes("/") || model.includes(":")) return GROQ_DEFAULT
+  if (DEPRECATED_GROQ_IDS.has(model)) return GROQ_DEFAULT
   return model
 }
 

@@ -1,23 +1,22 @@
 import type { DemonSkin } from "~lib/evolution"
 
-// 16-wide pixel grid — identical to landing/components/DemonMascot.tsx
-const ROWS = [
+// Fallback grid used when skin.rows is omitted (e.g. the splash screen skin).
+// Mirrors Happy's canonical 16-wide master template.
+const FALLBACK_ROWS = [
   "...H........H...",
   "..HHB......BHH..",
   "..HHBB....BBHH..",
-  "...BBBBBBBBBB...",
   "..BBBBBBBBBBBB..",
+  ".BBBBBBBBBBBBBB.",
   ".BBBBBBBBBBBBBB.",
   ".BBEEBBBBBBEEBB.",
   ".BBEEBBBBBBEEBB.",
   ".BBBBBBBBBBBBBB.",
   ".BBBBMMMMMMBBBB.",
   ".BBBBBMMMMBBBBBB",
-  ".BBBBBBBBBBBBBB.",
   "..BBBBBBBBBBBB..",
+  "...BBBBBBBBBB...",
 ]
-
-const COLS = 16
 
 function colorFor(ch: string, skin: DemonSkin): string | null {
   switch (ch) {
@@ -25,6 +24,8 @@ function colorFor(ch: string, skin: DemonSkin): string | null {
     case "H": return skin.horn
     case "E": return skin.eye
     case "M": return "#0a0a0a"
+    case "X": return skin.mark    ?? skin.horn
+    case "C": return skin.crystal ?? skin.eye
     default:  return null
   }
 }
@@ -36,10 +37,36 @@ interface Props {
 }
 
 export default function DemonMascot({ skin, size = 96, className = "" }: Props) {
-  const height = (size * ROWS.length) / COLS
+  if (skin.gif) {
+    return (
+      <img
+        src={skin.gif}
+        width={size}
+        height={size}
+        className={className}
+        style={{ imageRendering: "pixelated", display: "block" }}
+        alt="Aminta mascot"
+      />
+    )
+  }
+
+  const rows   = skin.rows ?? FALLBACK_ROWS
+  const cols   = rows[0]?.length ?? 16
+  const height = (size * rows.length) / cols
+  const mid    = cols / 2
+
+  // Split E pixels at the horizontal midpoint for independent left/right blink.
+  const leftEyePx:  Array<{ x: number; y: number }> = []
+  const rightEyePx: Array<{ x: number; y: number }> = []
+  rows.forEach((row, y) =>
+    row.split("").forEach((ch, x) => {
+      if (ch === "E") (x < mid ? leftEyePx : rightEyePx).push({ x, y })
+    })
+  )
+
   return (
     <svg
-      viewBox={`0 0 ${COLS} ${ROWS.length}`}
+      viewBox={`0 0 ${cols} ${rows.length}`}
       width={size}
       height={height}
       className={className}
@@ -47,8 +74,8 @@ export default function DemonMascot({ skin, size = 96, className = "" }: Props) 
       role="img"
       aria-label="Aminta mascot"
     >
-      {/* Body, horns, mouth — everything except eyes */}
-      {ROWS.map((row, y) =>
+      {/* Non-eye pixels */}
+      {rows.map((row, y) =>
         row.split("").map((ch, x) => {
           if (ch === "E") return null
           const fill = colorFor(ch, skin)
@@ -56,25 +83,19 @@ export default function DemonMascot({ skin, size = 96, className = "" }: Props) 
           return <rect key={`${x}-${y}`} x={x} y={y} width={1.02} height={1.02} fill={fill} />
         })
       )}
+
       {/* Left eye — animated blink group */}
       <g className="demon-eye">
-        {ROWS.map((row, y) =>
-          row.split("").map((ch, x) =>
-            ch === "E" && x < 8
-              ? <rect key={`el-${x}-${y}`} x={x} y={y} width={1.02} height={1.02} fill={skin.eye} />
-              : null
-          )
-        )}
+        {leftEyePx.map(({ x, y }) => (
+          <rect key={`el-${x}-${y}`} x={x} y={y} width={1.02} height={1.02} fill={skin.eye} />
+        ))}
       </g>
+
       {/* Right eye — animated blink group with slight delay */}
       <g className="demon-eye demon-eye-r">
-        {ROWS.map((row, y) =>
-          row.split("").map((ch, x) =>
-            ch === "E" && x >= 8
-              ? <rect key={`er-${x}-${y}`} x={x} y={y} width={1.02} height={1.02} fill={skin.eye} />
-              : null
-          )
-        )}
+        {rightEyePx.map(({ x, y }) => (
+          <rect key={`er-${x}-${y}`} x={x} y={y} width={1.02} height={1.02} fill={skin.eye} />
+        ))}
       </g>
     </svg>
   )

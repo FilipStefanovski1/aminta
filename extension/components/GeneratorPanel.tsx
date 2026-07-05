@@ -490,7 +490,7 @@ export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, initialP
                   transition: "transform 0.13s ease, box-shadow 0.13s ease, border-color 0.13s ease, background-color 0.13s ease",
                 }}>
                 <span style={{
-                  color: active ? "#fff" : hovered ? tint + "cc" : C.textGhost,
+                  color: active ? "#fff" : hovered ? tint + "cc" : C.textDim,
                   transition: "color 0.13s ease",
                   lineHeight: 1,
                 }}>
@@ -503,7 +503,7 @@ export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, initialP
                 </span>
                 <span
                   className="text-[8px] leading-none"
-                  style={{ color: active ? tint + "99" : C.textGhost }}>
+                  style={{ color: active ? tint + "cc" : C.textFaint }}>
                   {t.desc}
                 </span>
               </button>
@@ -531,7 +531,7 @@ export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, initialP
                 <span className="text-[10px] font-semibold" style={{ color: active ? tint : C.textDim }}>
                   {l.label}
                 </span>
-                <span className="text-[8px]" style={{ color: active ? tint + "99" : C.textGhost }}>
+                <span className="text-[8px]" style={{ color: active ? tint + "cc" : C.textFaint }}>
                   {l.desc}
                 </span>
               </button>

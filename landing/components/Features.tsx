@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import Reveal from "./Reveal";
 import AmintaSprite from "./AmintaSprite";
 import { LEVELS } from "./demon-data";
@@ -50,11 +51,63 @@ const FEATURES: Feature[] = [
   },
 ];
 
+// ─── XP feed animation constants — adjust freely ─────────────────────────────
+const INITIAL_XP = 280    // "XP to next level" displayed at animation start
+const XP_TO_NEXT = 400    // total XP span for this level (LV.3 → LV.4)
+const GAINS      = [50, 25] as const  // sequence of XP awards per step
+const STEP_DELAY = 800    // ms between gain steps
+const LOOP_DELAY = 1800   // ms pause before sequence loops
+
+type XpFloat = { id: number; val: number }
+
 function AmintaWidget() {
-  const level = LEVELS[2];
-  const next  = LEVELS[3];
-  const demoXp = 520;
-  const pct = Math.round(((demoXp - level.xp) / (next.xp - level.xp)) * 100);
+  const level = LEVELS[2]  // LV.3 Happy
+  const next  = LEVELS[3]  // LV.4 Excited
+
+  const startEarned              = XP_TO_NEXT - INITIAL_XP  // 120 XP earned at start
+  const [earnedXp, setEarnedXp] = useState(startEarned)
+  const [floats,   setFloats]   = useState<XpFloat[]>([])
+  const [noTx,     setNoTx]     = useState(false)
+  const timer                    = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return
+
+    let earned = startEarned
+    let step   = 0
+
+    const tick = () => {
+      if (step < GAINS.length) {
+        const gain = GAINS[step]
+        earned += gain
+        const id = Date.now() + step
+        setFloats(fs => [...fs, { id, val: gain }])
+        setEarnedXp(earned)
+        step++
+        timer.current = setTimeout(tick, STEP_DELAY)
+      } else {
+        // End of sequence — pause, then snap back and restart
+        timer.current = setTimeout(() => {
+          step   = 0
+          earned = startEarned
+          setNoTx(true)
+          setEarnedXp(startEarned)
+          // Re-enable transition after the DOM has painted the reset position
+          requestAnimationFrame(() => requestAnimationFrame(() => {
+            setNoTx(false)
+            timer.current = setTimeout(tick, 400)
+          }))
+        }, LOOP_DELAY)
+      }
+    }
+
+    timer.current = setTimeout(tick, 700)  // initial delay before first gain
+    return () => { if (timer.current) clearTimeout(timer.current) }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const pct       = Math.min(100, (earnedXp / XP_TO_NEXT) * 100)
+  const remaining = XP_TO_NEXT - earnedXp
 
   return (
     <div
@@ -67,20 +120,48 @@ function AmintaWidget() {
     >
       <AmintaSprite level={level.lv} size={40} interactive={false} />
       <div>
-        <div className="flex items-center gap-2">
+        {/* Title row — floats anchor here and rise out of the top */}
+        <div className="flex items-center gap-2" style={{ position: "relative" }}>
           <span className="font-pixel text-[10px] text-accent">LV.{level.lv}</span>
           <span className="font-pixel text-[10px] text-white">{level.name.toUpperCase()}</span>
-          <span className="font-pixel text-[8px]" style={{ color: "#74f7b5", opacity: 0.5 }}>+50 XP</span>
+          {floats.map(f => (
+            <span
+              key={f.id}
+              className="xp-float font-pixel text-[10px]"
+              style={{
+                position: "absolute",
+                right: 0,
+                top: 0,
+                color: "#74f7b5",
+                whiteSpace: "nowrap",
+                pointerEvents: "none",
+              }}
+              onAnimationEnd={() => setFloats(fs => fs.filter(x => x.id !== f.id))}
+            >
+              +{f.val} XP
+            </span>
+          ))}
         </div>
+
+        {/* Progress bar */}
         <div className="mt-1.5 h-2 w-36 overflow-hidden" style={{ background: "#111", border: "1px solid #333" }}>
-          <div className="h-full bg-accent" style={{ width: `${pct}%`, boxShadow: "0 0 6px #74f7b5" }} />
+          <div
+            className="h-full bg-accent"
+            style={{
+              width: `${pct}%`,
+              boxShadow: "0 0 6px #74f7b5",
+              transition: noTx ? "none" : "width 0.45s cubic-bezier(0.25, 0, 0.5, 1)",
+            }}
+          />
         </div>
+
+        {/* Remaining XP */}
         <p className="mt-1 font-pixel text-[8px]" style={{ color: "#74f7b5", opacity: 0.6 }}>
-          {next.xp - demoXp} XP TO LV.{next.lv}
+          {remaining} XP TO LV.{next.lv}
         </p>
       </div>
     </div>
-  );
+  )
 }
 
 export default function Features() {

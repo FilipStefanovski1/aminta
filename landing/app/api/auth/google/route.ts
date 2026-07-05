@@ -1,3 +1,18 @@
+// DEPRECATED — no longer called by the extension.
+//
+// This route used supabase.auth.admin.createUser() which creates an EMAIL-provider
+// Supabase user that is a DIFFERENT auth.uid() from the Google-OAuth user created
+// by the website login flow. That divergence caused XP/state to never sync between
+// the extension and the website.
+//
+// The extension now uses the shared OAuth flow:
+//   extension → opens amintaapp.com/login?ext_id={id}
+//   → user signs in via Supabase Google OAuth
+//   → /extension-auth sends real session tokens back
+//   → same auth.uid() on both sides
+//
+// This file is kept only for reference. It is no longer reachable from the extension.
+
 import { createClient } from "@supabase/supabase-js"
 import { NextResponse, type NextRequest } from "next/server"
 

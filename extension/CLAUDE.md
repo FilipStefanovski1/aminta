@@ -45,7 +45,7 @@ API key prefix determines provider — **no provider selection needed from the u
 | Key prefix | Provider | Default model |
 |---|---|---|
 | `AIza…` or `AQ.…` | Google AI Studio (Gemini) | `gemini-2.0-flash` |
-| `gsk_…` | Groq (free tier) | `llama-3.3-70b-versatile` |
+| `gsk_…` | Groq (free tier) | `gpt-oss-120b` |
 | anything else | OpenRouter | user-selected model |
 
 Vision (image-to-text) is supported on Gemini and OpenRouter. **Groq does not support vision** — throws a user-facing error if attempted.

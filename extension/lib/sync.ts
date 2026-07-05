@@ -3,6 +3,17 @@ import { getStore, setStore, type AmintaStore } from "./storage"
 
 const API_URL = "https://amintaapp.com/api/sync"
 
+const isDev = !("update_url" in chrome.runtime.getManifest())
+
+function xpToLevel(xp: number): number {
+  const thresholds = [0, 300, 750, 1400, 2300, 3500, 5200, 7500, 10500, 14500]
+  let level = 1
+  for (let i = 1; i < thresholds.length; i++) {
+    if (xp >= thresholds[i]) level = i + 1
+  }
+  return level
+}
+
 export async function pushToCloud(): Promise<void> {
   const session = await getAuthSession()
   if (!session) return
@@ -35,6 +46,19 @@ export async function pushToCloud(): Promise<void> {
       },
       body: JSON.stringify(payload),
     })
+
+    const now = new Date().toISOString()
+    await chrome.storage.local.set({ sync_last_push: now })
+
+    if (isDev) {
+      console.log("[Aminta sync] PUSH", {
+        auth_user_id: session.userId,
+        email: session.email,
+        xp: store.xp,
+        level: xpToLevel(store.xp),
+        timestamp: now,
+      })
+    }
   } catch { /* silent — offline or token expired */ }
 }
 
@@ -52,6 +76,8 @@ export async function pullFromCloud(): Promise<void> {
     if (!data) return
 
     const local = await getStore()
+
+    const localXpWasHigher = local.xp > (data.xp ?? 0)
 
     // Merge: take the higher XP (never go backwards)
     const patch: Partial<AmintaStore> = {
@@ -75,5 +101,29 @@ export async function pullFromCloud(): Promise<void> {
     if (!local.onboardingDone && data.onboarding_done)       patch.onboardingDone = data.onboarding_done
 
     await setStore(patch)
+
+    const now = new Date().toISOString()
+    await chrome.storage.local.set({ sync_last_pull: now })
+
+    if (isDev) {
+      console.log("[Aminta sync] PULL", {
+        auth_user_id: session.userId,
+        email: session.email,
+        local_xp: local.xp,
+        cloud_xp: data.xp ?? 0,
+        merged_xp: patch.xp,
+        local_level: xpToLevel(local.xp),
+        cloud_level: xpToLevel(data.xp ?? 0),
+        merged_level: xpToLevel(patch.xp ?? 0),
+        local_was_higher: localXpWasHigher,
+        timestamp: now,
+      })
+    }
+
+    // If local state was ahead of cloud, push merged state so Supabase catches up.
+    // Handles the "used extension offline, then logged in" case.
+    if (localXpWasHigher) {
+      await pushToCloud()
+    }
   } catch { /* silent */ }
 }
