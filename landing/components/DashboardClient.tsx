@@ -85,7 +85,7 @@ export default function DashboardClient({
   const [resetSent, setResetSent] = useState(false)
   const [copied, setCopied] = useState(false)
   const [blink, setBlink] = useState(false)
-  const blinkTimeout = useRef<ReturnType<typeof setTimeout>>()
+  const blinkTimeout = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   const level = getLevel(xp)
   const form  = FORMS[level - 1]
@@ -106,7 +106,7 @@ export default function DashboardClient({
   const q3Done = dnaCount >= 3
 
   // Blink scheduler
-  const scheduleNext = useRef<() => void>()
+  const scheduleNext = useRef<(() => void) | undefined>(undefined)
   scheduleNext.current = () => {
     blinkTimeout.current = setTimeout(() => {
       setBlink(true)

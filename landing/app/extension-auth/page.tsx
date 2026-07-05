@@ -65,10 +65,14 @@ export default function ExtensionAuthPage() {
         // chrome.runtime.sendMessage only delivers to extensions that declared
         // https://amintaapp.com/* in their externally_connectable manifest key.
         // That provides a second layer of defence beyond the ID allowlist.
-        // @ts-ignore — chrome is injected by the browser in extension-origin contexts
-        chrome.runtime.sendMessage(extId, msg, (response) => {
-          if (chrome.runtime.lastError) {
-            console.error("[Aminta] extension-auth: sendMessage failed:", chrome.runtime.lastError.message)
+        // Cast through window — chrome is injected by the browser when this page
+        // is opened from an extension context; TypeScript doesn't know about it.
+        const cr = (window as any).chrome
+        if (!cr?.runtime) { setStatus("error"); return }
+
+        cr.runtime.sendMessage(extId, msg, () => {
+          if (cr.runtime.lastError) {
+            console.error("[Aminta] extension-auth: sendMessage failed:", cr.runtime.lastError.message)
             setStatus("error")
           } else {
             // Clean up: remove the stored ext_id so it doesn't linger.
