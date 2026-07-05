@@ -4,6 +4,28 @@ chrome.sidePanel
   .setPanelBehavior({ openPanelOnActionClick: true })
   .catch((error) => console.error("Aminta sidePanel error:", error))
 
+// Internal message from the aminta-auth-bridge content script.
+// Fires after the content script has already written the tokens to storage.
+// We just need to close the tab and notify the sidepanel.
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (msg.type !== "AMINTA_AUTH_FROM_BRIDGE") return false
+
+  chrome.storage.local
+    .get(["auth_user_id", "auth_user_email"])
+    .then(({ auth_user_id, auth_user_email }) => {
+      const isDev = !("update_url" in chrome.runtime.getManifest())
+      if (isDev) {
+        console.log("[Aminta] auth stored — auth_user_id:", auth_user_id, "| email:", auth_user_email)
+      }
+
+      if (sender.tab?.id) chrome.tabs.remove(sender.tab.id)
+      chrome.runtime.sendMessage({ type: "AMINTA_AUTH_SUCCESS" }).catch(() => {})
+      sendResponse({ ok: true })
+    })
+
+  return true // keep port open for async sendResponse
+})
+
 // Receive auth token from amintaapp.com/extension-auth after the user completes
 // the full Supabase Google OAuth flow on the website. This produces the same
 // auth.uid() as the website — no admin.createUser divergence.

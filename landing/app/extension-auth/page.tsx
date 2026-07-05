@@ -54,38 +54,41 @@ export default function ExtensionAuthPage() {
         return
       }
 
-      const msg = {
-        type: "AMINTA_AUTH",
+      // Listen for ACK from the content script (aminta-auth-bridge.ts).
+      // The content script receives our postMessage, writes to chrome.storage.local,
+      // then posts back AMINTA_AUTH_ACK. This avoids any ext_id dependency.
+      function onAck(event: MessageEvent) {
+        if (event.origin !== window.location.origin) return
+        if (!event.data || event.data.type !== "AMINTA_AUTH_ACK") return
+        window.removeEventListener("message", onAck)
+        clearTimeout(timeoutId)
+        if (event.data.ok) {
+          localStorage.removeItem("aminta_ext_id")
+          setStatus("done")
+        } else {
+          setErrorDetail(`Bridge error: ${event.data.error ?? "unknown"}`)
+          setStatus("error")
+        }
+      }
+
+      // Timeout in case the content script isn't injected (extension not installed).
+      const timeoutId = setTimeout(() => {
+        window.removeEventListener("message", onAck)
+        setErrorDetail("Extension not detected — make sure Aminta is installed and enabled.")
+        setStatus("error")
+      }, 5000)
+
+      window.addEventListener("message", onAck)
+
+      // Send tokens to the content script via postMessage.
+      // The content script on amintaapp.com writes them to chrome.storage.local.
+      window.postMessage({
+        type: "AMINTA_AUTH_TOKENS",
         accessToken: session.access_token,
         refreshToken: session.refresh_token,
         userId: session.user.id,
         email: session.user.email ?? "",
-      }
-
-      try {
-        const cr = (window as any).chrome
-        if (!cr?.runtime) {
-          setErrorDetail("chrome.runtime not available.")
-          setStatus("error")
-          return
-        }
-
-        cr.runtime.sendMessage(extId, msg, () => {
-          if (cr.runtime.lastError) {
-            const msg = cr.runtime.lastError.message ?? "unknown"
-            console.error("[Aminta] extension-auth: sendMessage failed:", msg)
-            setErrorDetail(`Extension messaging failed: ${msg}`)
-            setStatus("error")
-          } else {
-            localStorage.removeItem("aminta_ext_id")
-            setStatus("done")
-          }
-        })
-      } catch (e) {
-        console.error("[Aminta] extension-auth: chrome.runtime unavailable:", e)
-        setErrorDetail(`Exception: ${String(e)}`)
-        setStatus("error")
-      }
+      }, window.location.origin)
     })
   }, [])
 
