@@ -42,9 +42,9 @@ window.addEventListener("message", async (event) => {
     chrome.runtime.sendMessage({ type: "AMINTA_AUTH_FROM_BRIDGE" }).catch(() => {})
 
     // ACK to the extension-auth page so it can show "Signed in!".
-    window.postMessage({ type: "AMINTA_AUTH_ACK", ok: true }, "https://amintaapp.com")
+    window.postMessage({ type: "AMINTA_AUTH_ACK", ok: true }, "*")
   } catch (err) {
     console.error("[Aminta bridge] storage.set failed:", err)
-    window.postMessage({ type: "AMINTA_AUTH_ACK", ok: false, error: String(err) }, "https://amintaapp.com")
+    window.postMessage({ type: "AMINTA_AUTH_ACK", ok: false, error: String(err) }, "*")
   }
 })

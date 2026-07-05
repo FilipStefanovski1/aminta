@@ -59,7 +59,6 @@ export default function ExtensionAuthPage() {
       // then posts back AMINTA_AUTH_ACK. This avoids any ext_id dependency.
       function onAck(event: MessageEvent) {
         console.log("[ext-auth] HOP5 message received origin:", event.origin, "type:", event.data?.type)
-        if (event.origin !== window.location.origin) return
         if (!event.data || event.data.type !== "AMINTA_AUTH_ACK") return
         window.removeEventListener("message", onAck)
         clearTimeout(timeoutId)
