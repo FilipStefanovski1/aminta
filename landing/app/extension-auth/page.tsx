@@ -121,7 +121,7 @@ export default function ExtensionAuthPage() {
             <p className="font-pixel text-[9px] tracking-widest text-red-400">
               Something went wrong
             </p>
-            <p className="text-xs text-[#555]">Close this tab and try again.</p>
+            <p className="text-xs text-[#555]">{errorDetail || "Close this tab and try again."}</p>
           </>
         )}
         {status === "forbidden" && (
