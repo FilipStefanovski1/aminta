@@ -49,6 +49,7 @@ export default function ExtensionAuthPage() {
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) {
+        setErrorDetail("No session — sign-in did not complete.")
         setStatus("error")
         return
       }
@@ -62,26 +63,27 @@ export default function ExtensionAuthPage() {
       }
 
       try {
-        // chrome.runtime.sendMessage only delivers to extensions that declared
-        // https://amintaapp.com/* in their externally_connectable manifest key.
-        // That provides a second layer of defence beyond the ID allowlist.
-        // Cast through window — chrome is injected by the browser when this page
-        // is opened from an extension context; TypeScript doesn't know about it.
         const cr = (window as any).chrome
-        if (!cr?.runtime) { setStatus("error"); return }
+        if (!cr?.runtime) {
+          setErrorDetail("chrome.runtime not available.")
+          setStatus("error")
+          return
+        }
 
         cr.runtime.sendMessage(extId, msg, () => {
           if (cr.runtime.lastError) {
-            console.error("[Aminta] extension-auth: sendMessage failed:", cr.runtime.lastError.message)
+            const msg = cr.runtime.lastError.message ?? "unknown"
+            console.error("[Aminta] extension-auth: sendMessage failed:", msg)
+            setErrorDetail(`Extension messaging failed: ${msg}`)
             setStatus("error")
           } else {
-            // Clean up: remove the stored ext_id so it doesn't linger.
             localStorage.removeItem("aminta_ext_id")
             setStatus("done")
           }
         })
       } catch (e) {
         console.error("[Aminta] extension-auth: chrome.runtime unavailable:", e)
+        setErrorDetail(`Exception: ${String(e)}`)
         setStatus("error")
       }
     })
