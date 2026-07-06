@@ -12,7 +12,7 @@
 import type { PlasmoCSConfig } from "plasmo"
 
 export const config: PlasmoCSConfig = {
-  matches: ["https://amintaapp.com/*"],
+  matches: ["https://amintaapp.com/*", "https://www.amintaapp.com/*"],
   run_at: "document_start",
 }
 
