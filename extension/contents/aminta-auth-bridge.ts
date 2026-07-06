@@ -36,7 +36,19 @@ window.addEventListener("message", async (event) => {
       auth_user_email: email,
     })
 
-    console.log("[Aminta bridge] HOP5 storage written, sending ACK")
+    console.log("[Aminta bridge] HOP5 storage.set called —",
+      "auth_user_id:", userId,
+      "| auth_user_email:", email,
+      "| auth_access_token exists:", !!accessToken)
+
+    // Read back immediately to confirm the write landed.
+    const written = await chrome.storage.local.get([
+      "auth_access_token", "auth_user_id", "auth_user_email",
+    ])
+    console.log("[Aminta bridge] HOP5 storage.get readback —",
+      "auth_user_id:", written.auth_user_id,
+      "| auth_user_email:", written.auth_user_email,
+      "| auth_access_token exists:", !!written.auth_access_token)
 
     // Tell background to close this tab + log + notify sidepanel.
     chrome.runtime.sendMessage({ type: "AMINTA_AUTH_FROM_BRIDGE" }).catch(() => {})

@@ -54,12 +54,26 @@ export default function ExtensionAuthPage() {
         return
       }
 
+      // Allowlist: accept AMINTA_AUTH_ACK from both www and non-www origins.
+      // Chrome content scripts post messages with the document origin of their
+      // isolated world, which can be www even when the page URL omits it.
+      const ALLOWED_ACK_ORIGINS = [
+        "https://amintaapp.com",
+        "https://www.amintaapp.com",
+      ]
+
       // Listen for ACK from the content script (aminta-auth-bridge.ts).
       // The content script receives our postMessage, writes to chrome.storage.local,
       // then posts back AMINTA_AUTH_ACK. This avoids any ext_id dependency.
       function onAck(event: MessageEvent) {
-        console.log("[ext-auth] HOP5 message received origin:", event.origin, "type:", event.data?.type)
+        console.log("[ext-auth] HOP5 message received — event.origin:", event.origin,
+          "| window.location.origin:", window.location.origin,
+          "| type:", event.data?.type)
         if (!event.data || event.data.type !== "AMINTA_AUTH_ACK") return
+        if (!ALLOWED_ACK_ORIGINS.includes(event.origin)) {
+          console.warn("[ext-auth] HOP5 rejected — origin not in allowlist:", event.origin)
+          return
+        }
         window.removeEventListener("message", onAck)
         clearTimeout(timeoutId)
         if (event.data.ok) {

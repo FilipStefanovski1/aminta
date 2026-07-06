@@ -474,10 +474,13 @@ function SidePanel() {
   // Check auth + pull from cloud on startup
   useEffect(() => {
     getAuthSession().then(async (s) => {
+      console.log("[Aminta sidepanel] startup auth check — session:", s ? `uid=${s.userId} email=${s.email}` : "null")
       if (s) {
         setIsLoggedIn(true)
         setSession(s)
-        await pullFromCloud() // pulls + pushes back if local XP was higher
+        console.log("[Aminta sidepanel] pulling from cloud...")
+        await pullFromCloud()
+        console.log("[Aminta sidepanel] pullFromCloud complete")
       }
       setAuthChecked(true)
     })
@@ -488,16 +491,24 @@ function SidePanel() {
   useEffect(() => {
     const listener = (changes: Record<string, chrome.storage.StorageChange>) => {
       if (changes.auth_access_token?.newValue) {
+        console.log("[Aminta sidepanel] storage.onChanged — auth_access_token set, fetching session")
         getAuthSession().then(async (s) => {
-          if (!s) return
+          if (!s) {
+            console.log("[Aminta sidepanel] storage.onChanged — getAuthSession returned null after token set")
+            return
+          }
+          console.log("[Aminta sidepanel] storage.onChanged — session:", `uid=${s.userId} email=${s.email}`)
           setSession(s)
           setIsLoggedIn(true)
           setAuthChecked(true)
+          console.log("[Aminta sidepanel] transitioning to logged-in UI, pulling from cloud...")
           await pullFromCloud()
+          console.log("[Aminta sidepanel] pullFromCloud complete, refreshing store")
           await refresh()
         })
       }
       if ("auth_access_token" in changes && !changes.auth_access_token.newValue) {
+        console.log("[Aminta sidepanel] storage.onChanged — auth_access_token cleared, signing out")
         setSession(null)
         setIsLoggedIn(false)
       }
