@@ -3,6 +3,8 @@ import { cookies } from "next/headers"
 import { NextResponse, type NextRequest } from "next/server"
 import { createServiceClient } from "@/lib/supabase/server"
 
+const isDev = process.env.NODE_ENV !== "production"
+
 // Idempotent: guarantees public.users + aminta_state exist for every account
 // that completes OAuth or email confirmation — no partial accounts.
 async function ensureProfile(user: { id: string; email?: string; user_metadata?: Record<string, unknown> }) {
@@ -53,13 +55,16 @@ export async function GET(request: NextRequest) {
       // Extension flow — hand off to extension-auth page
       const extId = searchParams.get("ext_id")
       if (extId) {
+        if (isDev) console.log("[auth/callback] auth callback destination: /extension-auth (ext_id:", extId, ")")
         return NextResponse.redirect(`${origin}/extension-auth?ext_id=${extId}`)
       }
       // Web flow — go to dashboard (unless a specific next was requested)
       const dest = next === "/" ? "/dashboard" : next
+      if (isDev) console.log("[auth/callback] auth callback destination:", dest)
       return NextResponse.redirect(`${origin}${dest}`)
     }
   }
 
+  if (isDev) console.log("[auth/callback] auth callback destination: /login?error=auth_failed")
   return NextResponse.redirect(`${origin}/login?error=auth_failed`)
 }

@@ -170,12 +170,19 @@ export function OAuthButtons({ onGoogle, onGitHub }: { onGoogle: () => void; onG
   )
 }
 
+const isDev = process.env.NODE_ENV !== "production"
+
 // Shared ext_id plumbing: the extension opens auth pages with ?ext_id=…; we
 // persist it so that after ANY auth method completes, the session is handed
 // to the extension via /extension-auth. Do not break this.
 export function persistExtId() {
   const extId = new URLSearchParams(window.location.search).get("ext_id")
-  if (extId) localStorage.setItem("aminta_ext_id", extId)
+  if (extId) {
+    localStorage.setItem("aminta_ext_id", extId)
+    if (isDev) console.log("[auth] login started from extension — ext_id:", extId)
+  } else if (isDev) {
+    console.log("[auth] normal web login — no ext_id")
+  }
 }
 
 export function oauthCallbackUrl(): string {
@@ -187,7 +194,9 @@ export function oauthCallbackUrl(): string {
 // Where to send a user who now has a live session in this browser.
 export function postAuthDestination(): string {
   const extId = localStorage.getItem("aminta_ext_id")
-  return extId ? `/extension-auth?ext_id=${encodeURIComponent(extId)}` : "/dashboard"
+  const dest = extId ? `/extension-auth?ext_id=${encodeURIComponent(extId)}` : "/dashboard"
+  if (isDev) console.log("[auth] final redirect target:", dest)
+  return dest
 }
 
 // Fire-and-forget: guarantee public.users + aminta_state exist for the

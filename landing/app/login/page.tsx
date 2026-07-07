@@ -9,6 +9,8 @@ import {
 
 // Sign in — email/password + Google/GitHub. Account creation lives on /signup.
 
+const isDev = process.env.NODE_ENV !== "production"
+
 export default function LoginPage() {
   const [email, setEmail]       = useState("")
   const [password, setPassword] = useState("")
@@ -17,6 +19,9 @@ export default function LoginPage() {
   const [loading, setLoading]   = useState(false)
   const [unconfirmed, setUnconfirmed] = useState(false)
   const [resent, setResent]     = useState(false)
+  // Hides the form while we check for an existing session, so a
+  // browser that's already signed in never flashes a blank login form.
+  const [checkingSession, setCheckingSession] = useState(true)
 
   useEffect(() => {
     persistExtId()
@@ -26,7 +31,23 @@ export default function LoginPage() {
       params.delete("mode")
       const qs = params.toString()
       window.location.replace("/signup" + (qs ? `?${qs}` : ""))
+      return
     }
+
+    // If this browser already has a live Supabase session, don't show a
+    // blank login form — that's exactly how someone ends up typing in a
+    // *different* account's credentials and binding the extension (or a
+    // second tab) to the wrong identity than the one already active here.
+    // Hand off the existing session instead, same as a fresh sign-in would.
+    createClient().auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        const dest = postAuthDestination()
+        if (isDev) console.log("[auth] /login: already signed in as", session.user.email, "— redirecting to", dest)
+        window.location.href = dest
+        return
+      }
+      setCheckingSession(false)
+    })
   }, [])
 
   function validate(): boolean {
@@ -81,6 +102,10 @@ export default function LoginPage() {
   const handleGitHub = async () => {
     await createClient().auth.signInWithOAuth({ provider: "github", options: { redirectTo: oauthCallbackUrl() } })
   }
+
+  // Avoid flashing the form while we check for an existing session above —
+  // either it redirects immediately, or this clears in well under a second.
+  if (checkingSession) return null
 
   return (
     <AuthShell>

@@ -1,9 +1,12 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 
 export const dynamic = "force-dynamic"
+
+const isDev = process.env.NODE_ENV !== "production"
 
 // Chrome extension IDs are exactly 32 chars, alphabet a-p (base-16 custom encoding).
 const EXT_ID_RE = /^[a-p]{32}$/
@@ -30,6 +33,7 @@ function isAllowedExtId(id: string): boolean {
 type Status = "sending" | "done" | "error" | "forbidden"
 
 export default function ExtensionAuthPage() {
+  const router = useRouter()
   const [status, setStatus] = useState<Status>("sending")
   const [errorDetail, setErrorDetail] = useState("")
 
@@ -65,6 +69,7 @@ export default function ExtensionAuthPage() {
       // Listen for ACK from the content script (aminta-auth-bridge.ts).
       // The content script receives our postMessage, writes to chrome.storage.local,
       // then posts back AMINTA_AUTH_ACK. This avoids any ext_id dependency.
+      let fallbackRedirectId: ReturnType<typeof setTimeout> | undefined
       function onAck(event: MessageEvent) {
         console.log("[ext-auth] HOP5 message received — event.origin:", event.origin,
           "| window.location.origin:", window.location.origin,
@@ -76,9 +81,22 @@ export default function ExtensionAuthPage() {
         }
         window.removeEventListener("message", onAck)
         clearTimeout(timeoutId)
+        if (isDev) console.log("[ext-auth] extension-auth ACK received — ok:", event.data.ok)
         if (event.data.ok) {
           localStorage.removeItem("aminta_ext_id")
           setStatus("done")
+
+          // The extension itself closes this tab (background.ts calls
+          // chrome.tabs.remove after AMINTA_AUTH_FROM_BRIDGE). That's the
+          // expected path and usually wins this race. But if the tab is
+          // still open after a short grace period — service worker was
+          // asleep, chrome.tabs.remove failed, the user opened this URL
+          // directly, etc. — never leave the user parked on a static
+          // "Signed in!" screen. Redirect to the dashboard instead.
+          fallbackRedirectId = setTimeout(() => {
+            if (isDev) console.log("[ext-auth] final redirect target: /dashboard (tab still open after handoff)")
+            router.replace("/dashboard")
+          }, 1500)
         } else {
           setErrorDetail(`Bridge error: ${event.data.error ?? "unknown"}`)
           setStatus("error")
@@ -128,7 +146,7 @@ export default function ExtensionAuthPage() {
             <p className="font-pixel text-[9px] tracking-widest" style={{ color: "#74f7b5" }}>
               Signed in!
             </p>
-            <p className="text-xs text-[#555]">You can close this tab.</p>
+            <p className="text-xs text-[#555]">This tab will close, or redirect to your dashboard.</p>
           </>
         )}
         {status === "error" && (
