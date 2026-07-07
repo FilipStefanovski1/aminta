@@ -19,7 +19,11 @@ interface Props {
   currentXP: number
   imageDataUrl?: string | null
   onRegenerate?: () => void
-  onXPAwarded: (amount: number, levelUp?: { level: number; stage: string }) => void
+  onXPAwarded: (
+    amount: number,
+    levelUp?: { level: number; stage: string },
+    firstPost?: boolean
+  ) => void
 }
 
 export default function OutputCard({ text, mode, platform, currentXP, imageDataUrl, onRegenerate, onXPAwarded }: Props) {
@@ -43,34 +47,46 @@ export default function OutputCard({ text, mode, platform, currentXP, imageDataU
     setInsertStatus("")
     setXpStatus("")
 
-    const res = await insertText(platform, text)
-    if (!res.ok) {
-      // Clipboard fallback so the user is never stuck
-      try {
-        await navigator.clipboard.writeText(text)
-        setInsertStatus("Copied — paste it into the composer.")
-      } catch {
-        setInsertStatus("Insert failed — copy manually.")
-      }
-      setTimeout(() => setInsertStatus(""), 5000)
-      return
-    }
+    // delivered = the text reached the user (composer OR clipboard).
+    // XP is awarded either way — LinkedIn/Threads and "wrong tab" users must
+    // not be locked out of the entire progression loop.
+    let delivered = false
 
-    // Insert image after text if one was provided
-    if (imageDataUrl && platform === "x") {
-      setInsertStatus("Inserting image…")
-      const imgRes = await insertImage(platform, imageDataUrl)
-      if (!imgRes.ok) {
-        setInsertStatus("Text inserted. Image failed — attach manually.")
-        setTimeout(() => setInsertStatus(""), 4000)
+    const res = await insertText(platform, text)
+    if (res.ok) {
+      delivered = true
+      // Insert image after text if one was provided
+      if (imageDataUrl && platform === "x") {
+        setInsertStatus("Inserting image…")
+        const imgRes = await insertImage(platform, imageDataUrl)
+        if (!imgRes.ok) {
+          setInsertStatus("Text inserted. Image failed — attach manually.")
+          setTimeout(() => setInsertStatus(""), 4000)
+        } else {
+          setInsertStatus("Inserted ✓")
+          setTimeout(() => setInsertStatus(""), 2000)
+        }
       } else {
         setInsertStatus("Inserted ✓")
         setTimeout(() => setInsertStatus(""), 2000)
       }
     } else {
-      setInsertStatus("Inserted ✓")
-      setTimeout(() => setInsertStatus(""), 2000)
+      // Clipboard fallback so the user is never stuck
+      try {
+        await navigator.clipboard.writeText(text)
+        delivered = true
+        setInsertStatus(
+          platform === "x"
+            ? `${res.error ? res.error + " " : ""}Copied instead — paste it into the composer. XP still counts.`
+            : "Copied to your clipboard — paste it into the composer. XP still counts."
+        )
+      } catch {
+        setInsertStatus("Insert failed — use Copy and paste it manually.")
+      }
+      setTimeout(() => setInsertStatus(""), 6000)
     }
+
+    if (!delivered) return
 
     const hash = hashText(text)
     const xpRes = await tryAwardXP(hash, XP_PER_MODE[mode])
@@ -89,6 +105,7 @@ export default function OutputCard({ text, mode, platform, currentXP, imageDataU
       const newXP = xpRes.total
       const oldLevel = getLevel(prevXP)
       const newLevel = getLevel(newXP)
+      const firstPost = prevXP === 0
 
       await recordStreak()
       await incrementMissionPublished()
@@ -96,7 +113,7 @@ export default function OutputCard({ text, mode, platform, currentXP, imageDataU
       if (newLevel > oldLevel) {
         onXPAwarded(xpRes.awarded, { level: newLevel, stage: getForm(newXP).name })
       } else {
-        onXPAwarded(xpRes.awarded)
+        onXPAwarded(xpRes.awarded, undefined, firstPost)
       }
     }
 
@@ -152,7 +169,7 @@ export default function OutputCard({ text, mode, platform, currentXP, imageDataU
           <p className="text-[10px] text-[#555] animate-fade-in">{insertStatus}</p>
         )}
         {xpStatus && (
-          <p className={`text-[10px] font-pixel animate-fade-in ${xpEarned ? "text-mint" : "text-[#555]"}`}>
+          <p className={`font-pixel animate-fade-in ${xpEarned ? "text-mint text-[12px]" : "text-[#555] text-[10px]"}`}>
             {xpStatus}
           </p>
         )}

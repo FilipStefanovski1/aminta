@@ -28,9 +28,15 @@ function detectPlatform(url: string): Platform {
   return "x"
 }
 
-// ─── Level-up modal ───────────────────────────────────────────────────────────
+// ─── Level-up / first-post modal ─────────────────────────────────────────────
 
-interface LevelUpData { level: number; stage: string }
+interface LevelUpData {
+  level: number
+  stage: string
+  // First-XP-ever celebration — same modal, different copy. No new mechanics.
+  firstPost?: boolean
+  amount?: number
+}
 
 // Pre-computed so particles are stable across re-renders
 const PARTICLES = Array.from({ length: 14 }, (_, i) => ({
@@ -98,7 +104,12 @@ function playLevelUpSound() {
 function LevelUpModal({ data, onDismiss }: { data: LevelUpData; onDismiss: () => void }) {
   const form     = FORMS[Math.min(data.level - 1, FORMS.length - 1)]
   const tint     = form.color
-  const dialogue = STAGE_DIALOGUE[data.stage] ?? "growing stronger."
+  const dialogue = data.firstPost
+    ? "our first post. i felt that."
+    : STAGE_DIALOGUE[data.stage] ?? "growing stronger."
+  const heading  = data.firstPost ? "First Post" : "Level Up"
+  const big      = data.firstPost ? `+${data.amount ?? 0} XP` : `Lv.${data.level}`
+  const sub      = data.firstPost ? "The loop has begun" : data.stage
 
   // Typewriter — starts 220ms after mount so the card-in animation finishes first
   const [typed, setTyped] = useState("")
@@ -124,13 +135,13 @@ function LevelUpModal({ data, onDismiss }: { data: LevelUpData; onDismiss: () =>
         className="animate-card-in mx-4 bg-[#242424] border-2 rounded-2xl p-6 text-center space-y-4 w-full max-w-[260px]"
         style={{ borderColor: tint + "55", position: "relative", overflow: "hidden" }}>
         <ParticleBurst tint={tint} />
-        <p className="font-pixel text-[8px] uppercase tracking-widest" style={{ color: tint }}>Level Up</p>
+        <p className="font-pixel text-[8px] uppercase tracking-widest" style={{ color: tint }}>{heading}</p>
         <div className="mx-auto sprite-react aminta-glow flex justify-center">
           <DemonMascot skin={form.skin} size={64} />
         </div>
         <div>
-          <p className="font-pixel text-2xl text-white">Lv.{data.level}</p>
-          <p className="font-pixel text-[8px] mt-1" style={{ color: tint }}>{data.stage}</p>
+          <p className="font-pixel text-2xl text-white">{big}</p>
+          <p className="font-pixel text-[8px] mt-1" style={{ color: tint }}>{sub}</p>
           <p className="text-[11px] text-[#666] mt-2 italic" style={{ minHeight: "1.4em" }}>
             {typed ? `"${typed}"` : " "}
           </p>
@@ -167,6 +178,39 @@ function SettingsOverlay({
   const plan      = store.plan ?? "free"
   const planLabel = plan === "lifetime" ? "FOUNDER" : plan === "pro" ? "PRO" : "FREE"
   const planColor = plan === "lifetime" ? "#f5d060" : plan === "pro" ? "#74f7b5" : C.textGhost
+
+  // ── Sync status (written by lib/sync.ts) ────────────────────────────────────
+  const [syncLine, setSyncLine] = useState<{ text: string; color: string } | null>(null)
+  useEffect(() => {
+    const load = async () => {
+      const d = await chrome.storage.local.get(["sync_status", "sync_last_push", "sync_last_pull"])
+      const last = [d.sync_last_push, d.sync_last_pull].filter(Boolean).sort().pop() as string | undefined
+      const ago = (() => {
+        if (!last) return null
+        const mins = Math.max(0, Math.round((Date.now() - new Date(last).getTime()) / 60_000))
+        if (mins < 1) return "just now"
+        if (mins < 60) return `${mins}m ago`
+        const hrs = Math.round(mins / 60)
+        return hrs < 24 ? `${hrs}h ago` : `${Math.round(hrs / 24)}d ago`
+      })()
+      switch (d.sync_status) {
+        case "offline":
+          setSyncLine({ text: "Offline — progress saved on this device", color: "#f5b50a" }); break
+        case "error":
+          setSyncLine({ text: "Sync issue — will retry after your next post", color: "#f5b50a" }); break
+        case "signed_out":
+          setSyncLine({ text: "Session expired — sign in to keep syncing", color: "#f87171" }); break
+        default:
+          setSyncLine(ago ? { text: `Synced ${ago}`, color: "#666672" } : null)
+      }
+    }
+    load()
+    const listener = (changes: Record<string, chrome.storage.StorageChange>) => {
+      if ("sync_status" in changes || "sync_last_push" in changes || "sync_last_pull" in changes) load()
+    }
+    chrome.storage.local.onChanged.addListener(listener)
+    return () => chrome.storage.local.onChanged.removeListener(listener)
+  }, [])
 
   // ── Evolution data (read-only) ───────────────────────────────────────────────
   const xp        = store.xp ?? 0
@@ -248,6 +292,9 @@ function SettingsOverlay({
                   </button>
                 </div>
               </div>
+              {syncLine && (
+                <p className="text-[10px] mt-1.5" style={{ color: syncLine.color }}>{syncLine.text}</p>
+              )}
               {plan === "free" && (
                 <a href="https://amintaapp.com/#pricing" target="_blank" rel="noreferrer"
                   className="text-[10px] underline block mt-1.5" style={{ color: C.mint }}>
@@ -471,16 +518,19 @@ function SidePanel() {
 
   const { speech, animClass, animKey, dispatch } = useCompanion(store)
 
-  // Check auth + pull from cloud on startup
+  // Check auth + pull from cloud on startup.
+  // The pull is raced against a timeout so a slow/unreachable network can
+  // never trap the user on the splash screen — sync retries after the next
+  // XP award anyway.
   useEffect(() => {
     getAuthSession().then(async (s) => {
-      console.log("[Aminta sidepanel] startup auth check — session:", s ? `uid=${s.userId} email=${s.email}` : "null")
       if (s) {
         setIsLoggedIn(true)
         setSession(s)
-        console.log("[Aminta sidepanel] pulling from cloud...")
-        await pullFromCloud()
-        console.log("[Aminta sidepanel] pullFromCloud complete")
+        await Promise.race([
+          pullFromCloud(),
+          new Promise((r) => setTimeout(r, 4_000)),
+        ])
       }
       setAuthChecked(true)
     })
@@ -586,18 +636,26 @@ function SidePanel() {
   const tint = getStageTint(store.xp ?? 0)
 
   return (
-    <SetupGate store={store} onSave={update}>
+    <SetupGate store={store} onSave={async (patch) => {
+      await update(patch)
+      // Sync the voice profile as soon as onboarding completes — otherwise it
+      // only reaches the cloud after the first XP award, and a second device
+      // would come up with no voice.
+      if (patch.onboardingDone) pushToCloud()
+    }}>
       <div className="absolute inset-0 flex flex-col bg-[#1f1f1f] overflow-hidden">
 
         {/* ── Modals / overlays ── */}
         {levelUpData && (
           <LevelUpModal data={levelUpData} onDismiss={() => {
-            const level = levelUpData.level
+            const { level, firstPost } = levelUpData
             setLevelUpData(null)
             refresh()
-            clearTimeout(newlyUnlockedTimer.current)
-            setNewlyUnlockedLevel(level)
-            newlyUnlockedTimer.current = setTimeout(() => setNewlyUnlockedLevel(null), 8_000)
+            if (!firstPost) {
+              clearTimeout(newlyUnlockedTimer.current)
+              setNewlyUnlockedLevel(level)
+              newlyUnlockedTimer.current = setTimeout(() => setNewlyUnlockedLevel(null), 8_000)
+            }
           }} />
         )}
         {companionOpen && (
@@ -670,6 +728,10 @@ function SidePanel() {
                 initialPlatform={detectedPlatform}
                 onXPAwarded={async () => { await refresh(); pushToCloud(); dispatch("insert") }}
                 onLevelUp={(level, stage) => { setLevelUpData({ level, stage }); dispatch("level_up") }}
+                onFirstPost={(amount) => {
+                  setLevelUpData({ level: 1, stage: "Dormant", firstPost: true, amount })
+                  dispatch("level_up")
+                }}
                 onTeach={() => switchTab("train")}
                 onOpenSettings={() => setSettingsOpen(true)}
                 onContext={dispatch}

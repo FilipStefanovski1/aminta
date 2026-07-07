@@ -33,9 +33,13 @@ export async function callOpenAICompat(
         messages,
         temperature: 0.9,
         max_tokens: 400
-      })
+      }),
+      signal: AbortSignal.timeout(60_000)
     })
-  } catch {
+  } catch (e) {
+    if (e instanceof DOMException && e.name === "TimeoutError") {
+      throw new Error(`${label} took too long to respond. Try again, or pick a faster model in Settings.`)
+    }
     throw new Error("Network error — check your internet connection.")
   }
 

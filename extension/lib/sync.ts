@@ -1,9 +1,24 @@
-import { getAuthSession } from "./auth"
+import { getAuthSession, refreshAuthSession, type AuthSession } from "./auth"
 import { getStore, setStore, type AmintaStore } from "./storage"
 
 const API_URL = "https://amintaapp.com/api/sync"
 
 const isDev = !("update_url" in chrome.runtime.getManifest())
+
+// Sync status is written to chrome.storage.local so the UI (Settings) can show
+// it. Sync must never fail silently.
+//   ok         — last sync succeeded
+//   offline    — network unreachable; progress is saved locally
+//   error      — server rejected the request; will retry on next sync
+//   signed_out — session expired and could not be refreshed
+export type SyncStatus = "ok" | "offline" | "error" | "signed_out"
+
+async function setSyncStatus(status: SyncStatus, error?: string): Promise<void> {
+  await chrome.storage.local.set({
+    sync_status: status,
+    sync_last_error: error ?? "",
+  })
+}
 
 function xpToLevel(xp: number): number {
   const thresholds = [0, 300, 750, 1400, 2300, 3500, 5200, 7500, 10500, 14500]
@@ -14,10 +29,53 @@ function xpToLevel(xp: number): number {
   return level
 }
 
-export async function pushToCloud(): Promise<void> {
-  const session = await getAuthSession()
-  if (!session) return
+// Perform an authenticated request. On 401, refresh the access token once and
+// retry. Returns null when the request could not be made (no session / offline
+// / refresh failed) — the caller has already had the sync status set.
+async function authedFetch(
+  init: Omit<RequestInit, "headers"> & { headers?: Record<string, string> }
+): Promise<Response | null> {
+  let session = await getAuthSession()
+  if (!session) {
+    await setSyncStatus("signed_out")
+    return null
+  }
 
+  const doFetch = (s: AuthSession) =>
+    fetch(API_URL, {
+      ...init,
+      headers: { ...(init.headers ?? {}), Authorization: `Bearer ${s.accessToken}` },
+    })
+
+  let res: Response
+  try {
+    res = await doFetch(session)
+  } catch {
+    await setSyncStatus("offline")
+    return null
+  }
+
+  if (res.status === 401) {
+    const refreshed = await refreshAuthSession()
+    if (!refreshed) {
+      // refreshAuthSession cleared the session if the token was truly dead;
+      // distinguish that from a transient failure.
+      const still = await getAuthSession()
+      await setSyncStatus(still ? "error" : "signed_out", "Session expired")
+      return null
+    }
+    try {
+      res = await doFetch(refreshed)
+    } catch {
+      await setSyncStatus("offline")
+      return null
+    }
+  }
+
+  return res
+}
+
+export async function pushToCloud(): Promise<void> {
   const store = await getStore()
 
   const payload = {
@@ -37,93 +95,121 @@ export async function pushToCloud(): Promise<void> {
     onboarding_done: store.onboardingDone,
   }
 
-  try {
-    await fetch(API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${session.accessToken}`,
-      },
-      body: JSON.stringify(payload),
+  const res = await authedFetch({
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  })
+  if (!res) return
+
+  if (!res.ok) {
+    await setSyncStatus("error", `Push failed (${res.status})`)
+    return
+  }
+
+  const now = new Date().toISOString()
+  await chrome.storage.local.set({ sync_last_push: now })
+  await setSyncStatus("ok")
+
+  if (isDev) {
+    console.log("[Aminta sync] PUSH", {
+      xp: store.xp,
+      level: xpToLevel(store.xp),
+      timestamp: now,
     })
-
-    const now = new Date().toISOString()
-    await chrome.storage.local.set({ sync_last_push: now })
-
-    if (isDev) {
-      console.log("[Aminta sync] PUSH", {
-        auth_user_id: session.userId,
-        email: session.email,
-        xp: store.xp,
-        level: xpToLevel(store.xp),
-        timestamp: now,
-      })
-    }
-  } catch { /* silent — offline or token expired */ }
+  }
 }
 
 export async function pullFromCloud(): Promise<void> {
-  const session = await getAuthSession()
-  if (!session) return
+  const res = await authedFetch({ method: "GET" })
+  if (!res) return
 
+  if (!res.ok) {
+    await setSyncStatus("error", `Pull failed (${res.status})`)
+    return
+  }
+
+  let data: Record<string, unknown> & {
+    xp?: number
+    generations_total?: number
+    earned_hashes?: string[]
+    streak?: number
+    streak_date?: string
+    plan?: AmintaStore["plan"]
+    voice_profile?: AmintaStore["voice"]
+    display_name?: string
+    bio?: string
+    interests?: string
+    tweet_dna?: string[]
+    onboarding_done?: boolean
+  }
   try {
-    const res = await fetch(API_URL, {
-      headers: { Authorization: `Bearer ${session.accessToken}` },
+    data = await res.json()
+  } catch {
+    await setSyncStatus("error", "Pull failed (bad response)")
+    return
+  }
+  if (!data) return
+
+  const local = await getStore()
+
+  const localXpWasHigher = local.xp > (data.xp ?? 0)
+
+  // Merge: never go backwards on XP; union earned hashes so two devices with
+  // different histories can't re-earn each other's XP.
+  const mergedHashes = Array.from(
+    new Set([...(local.earnedHashes ?? []), ...(data.earned_hashes ?? [])])
+  )
+
+  const patch: Partial<AmintaStore> = {
+    xp: Math.max(local.xp, data.xp ?? 0),
+    generationsTotal: Math.max(local.generationsTotal, data.generations_total ?? 0),
+    earnedHashes: mergedHashes,
+  }
+
+  // Streak: trust whichever side posted most recently (dates are YYYY-MM-DD,
+  // so string comparison is chronological). Math.max on the bare count could
+  // resurrect a stale streak from a dormant device.
+  const localDate = local.streakDate ?? ""
+  const cloudDate = data.streak_date ?? ""
+  if (cloudDate > localDate) {
+    patch.streak = data.streak ?? 0
+    patch.streakDate = cloudDate
+  } else if (cloudDate === localDate) {
+    patch.streak = Math.max(local.streak ?? 0, data.streak ?? 0)
+  }
+  // else: local is newer — keep local streak untouched
+
+  // Always trust cloud for plan — Supabase users table is the source of truth
+  if (data.plan) patch.plan = data.plan
+
+  // Only overwrite these if cloud has them and local doesn't
+  if (!local.voice && data.voice_profile)      patch.voice = data.voice_profile
+  if (!local.displayName && data.display_name) patch.displayName = data.display_name
+  if (!local.bio && data.bio)                  patch.bio = data.bio
+  if (!local.interests && data.interests)      patch.interests = data.interests
+  if ((!local.tweetDNA?.length) && data.tweet_dna?.length) patch.tweetDNA = data.tweet_dna
+  if (!local.onboardingDone && data.onboarding_done)       patch.onboardingDone = data.onboarding_done
+
+  await setStore(patch)
+
+  const now = new Date().toISOString()
+  await chrome.storage.local.set({ sync_last_pull: now })
+  await setSyncStatus("ok")
+
+  if (isDev) {
+    console.log("[Aminta sync] PULL", {
+      local_xp: local.xp,
+      cloud_xp: data.xp ?? 0,
+      merged_xp: patch.xp,
+      local_was_higher: localXpWasHigher,
+      timestamp: now,
     })
-    if (!res.ok) return
+  }
 
-    const data = await res.json()
-    if (!data) return
-
-    const local = await getStore()
-
-    const localXpWasHigher = local.xp > (data.xp ?? 0)
-
-    // Merge: take the higher XP (never go backwards)
-    const patch: Partial<AmintaStore> = {
-      xp: Math.max(local.xp, data.xp ?? 0),
-      generationsTotal: Math.max(local.generationsTotal, data.generations_total ?? 0),
-      earnedHashes: data.earned_hashes?.length > (local.earnedHashes?.length ?? 0)
-        ? data.earned_hashes
-        : local.earnedHashes,
-      streak: Math.max(local.streak, data.streak ?? 0),
-    }
-
-    // Always trust cloud for plan — Supabase users table is the source of truth
-    if (data.plan) patch.plan = data.plan
-
-    // Only overwrite these if cloud has them and local doesn't
-    if (!local.voice && data.voice_profile)     patch.voice = data.voice_profile
-    if (!local.displayName && data.display_name) patch.displayName = data.display_name
-    if (!local.bio && data.bio)                  patch.bio = data.bio
-    if (!local.interests && data.interests)      patch.interests = data.interests
-    if ((!local.tweetDNA?.length) && data.tweet_dna?.length) patch.tweetDNA = data.tweet_dna
-    if (!local.onboardingDone && data.onboarding_done)       patch.onboardingDone = data.onboarding_done
-
-    await setStore(patch)
-
-    const now = new Date().toISOString()
-    await chrome.storage.local.set({ sync_last_pull: now })
-
-    if (isDev) {
-      console.log("[Aminta sync] PULL", {
-        auth_user_id: session.userId,
-        email: session.email,
-        local_xp: local.xp,
-        cloud_xp: data.xp ?? 0,
-        merged_xp: patch.xp,
-        local_level: xpToLevel(local.xp),
-        cloud_level: xpToLevel(data.xp ?? 0),
-        merged_level: xpToLevel(patch.xp ?? 0),
-        local_was_higher: localXpWasHigher,
-        timestamp: now,
-      })
-    }
-
-    // If local state was ahead of cloud, push merged state so Supabase catches up.
-    // Handles the "used extension offline, then logged in" case.
-    if (localXpWasHigher) {
-      await pushToCloud()
-    }
-  } catch { /* silent */ }
+  // If local state was ahead of cloud, push merged state so Supabase catches up.
+  // Handles the "used extension offline, then logged in" case.
+  if (localXpWasHigher) {
+    await pushToCloud()
+  }
 }

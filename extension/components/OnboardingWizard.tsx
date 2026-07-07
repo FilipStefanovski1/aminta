@@ -19,7 +19,7 @@ const STYLE_PREVIEWS: Record<string, string> = {
   Analytical:   "Engagement peaks 8–10 AM and 6–8 PM. That's the window.",
 }
 
-const TOTAL = 6
+const TOTAL = 7
 
 function Dots({ current }: { current: number }) {
   return (
@@ -52,14 +52,14 @@ export default function OnboardingWizard({ store, onDone }: Props) {
   const next = () => setStep(s => s + 1)
   const addExample = () => { if (draft.trim()) { setExamples(p => [...p, draft.trim()]); setDraft("") } }
 
-  // Auto-advance the "learning" screen
+  // Auto-advance the "learning" screen to the final "go to X" step
   useEffect(() => {
     if (step !== 5) return
-    const t = setTimeout(() => finish(), 2200)
+    const t = setTimeout(() => setStep(6), 2200)
     return () => clearTimeout(t)
-  }, [step]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [step])
 
-  const finish = async () => {
+  const finish = async (openX: boolean) => {
     if (finishing) return
     setFinishing(true)
     const voice: VoiceProfile = {
@@ -70,6 +70,7 @@ export default function OnboardingWizard({ store, onDone }: Props) {
       voiceInspiration: store.voice?.voiceInspiration || "",
       customRules: store.voice?.customRules || "",
     }
+    if (openX) chrome.tabs.create({ url: "https://x.com" })
     await onDone({ interests: niche, voice, apiKey, onboardingDone: true })
   }
 
@@ -210,6 +211,33 @@ export default function OnboardingWizard({ store, onDone }: Props) {
           </div>
         )}
 
+        {/* ── 6 · Go to X ── */}
+        {step === 6 && (
+          <div className="animate-slide-up flex flex-col items-center text-center pt-6">
+            <Sprite xp={0} size={96} />
+            <div className="mt-6">
+              <SpeechBubble text="let's cook." />
+            </div>
+            <h2 className="font-pixel text-[11px] mt-8 leading-relaxed" style={{ color: C.text }}>
+              Find me on X.
+            </h2>
+            <p className="text-[12px] mt-3 leading-relaxed" style={{ color: C.textFaint }}>
+              Open x.com and start a post — you&apos;ll see my{" "}
+              <span style={{ color: C.mint }}>Generate</span> and{" "}
+              <span style={{ color: C.mint }}>Polish</span> buttons under the composer.
+              <br />
+              Publishing earns XP. XP evolves me.
+            </p>
+            <div className="mt-5 rounded-xl px-3 py-2.5" style={{ backgroundColor: C.card, border: `1px solid ${C.border}` }}>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[9px] font-bold rounded px-2 py-1" style={{ backgroundColor: C.mint, color: "#000" }}>+ Generate</span>
+                <span className="text-[9px] font-bold rounded px-2 py-1" style={{ backgroundColor: C.cardInner, color: C.textDim, border: `1px solid ${C.border}` }}>+ Polish</span>
+                <span className="font-pixel text-[7px] ml-1" style={{ color: C.mint }}>← in the X composer</span>
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
 
       {/* ── Footer action ── */}
@@ -229,6 +257,16 @@ export default function OnboardingWizard({ store, onDone }: Props) {
             <PrimaryButton onClick={next} disabled={!apiKey.trim()}>Continue →</PrimaryButton>
             <button onClick={next} className="w-full text-center text-[10px] py-1 transition-colors"
               style={{ color: C.textGhost }}>I'll add it later</button>
+          </>
+        )}
+        {step === 6 && (
+          <>
+            <PrimaryButton onClick={() => finish(true)} disabled={finishing}>
+              {finishing ? "Saving…" : "Open X →"}
+            </PrimaryButton>
+            <button onClick={() => finish(false)} disabled={finishing}
+              className="w-full text-center text-[10px] py-1 transition-colors"
+              style={{ color: C.textGhost }}>Start here in the panel</button>
           </>
         )}
       </div>

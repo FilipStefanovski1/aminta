@@ -55,10 +55,16 @@ Vision (image-to-text) is supported on Gemini and OpenRouter. **Groq does not su
 ## XP & Evolution (`lib/xp.ts`, `lib/evolution.ts`)
 
 ### XP rules
-- Awarded on **Insert** (not on Generate) to incentivise publishing
+- Awarded on **Insert** (not on Generate) to incentivise publishing. If direct
+  insert fails (wrong tab, LinkedIn/Threads), the clipboard fallback still
+  awards XP — no platform is locked out of progression
 - Each generated text is hashed — same post can only award XP once (`earnedHashes[]`)
 - Daily cap: **500 XP per day**
+- All "today" logic (cap, streak, missions, free limit) uses **local calendar
+  dates** via `lib/dates.ts` — never `toISOString()` (UTC)
 - XP is stored locally in `chrome.storage.local` and synced to cloud after each award
+- First-ever XP award triggers a "First Post" celebration modal (same component
+  as level-up, `firstPost` flag on `LevelUpData`)
 
 ### Evolution levels
 10 levels. Level 1 costs 300 XP; each subsequent level costs ~1.5× more (exponential curve).
@@ -166,9 +172,19 @@ onboardingDone  — boolean
 ---
 
 ## Auth & Sync (`lib/auth.ts`, `lib/sync.ts`)
-- Auth via Google OAuth on the landing page (`amintaapp.com/login`)
+- Auth via the landing page (`amintaapp.com/login` — Google, GitHub, or email OTP)
 - Tokens stored in `chrome.storage.local` as `auth_access_token`, `auth_refresh_token`, `auth_user_id`, `auth_user_email`
-- After every XP award: `pushToCloud()` syncs XP, streak, missions, voice profile to `amintaapp.com/api/sync`
+- **Token refresh**: on any 401, `sync.ts` calls `refreshAuthSession()` →
+  `POST amintaapp.com/api/auth/refresh` and retries once. A definitively dead
+  refresh token clears the session (sidepanel flips to LoginScreen); network
+  errors keep the session
+- Sync writes status to storage (`sync_status`: ok / offline / error /
+  signed_out, plus `sync_last_push` / `sync_last_pull` / `sync_last_error`) —
+  shown in Settings → Account. Sync must never fail silently
+- Cloud/local merge: XP = max, `earnedHashes` = set union, streak follows the
+  side with the newer `streakDate`
+- After every XP award: `pushToCloud()`; voice profile is also pushed when
+  onboarding completes
 - **Generation itself is never sent to Aminta's servers** — requests go directly from the browser to the user's AI provider
 
 ---

@@ -49,10 +49,14 @@ export async function callGemini(
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body)
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(60_000)
       }
     )
-  } catch {
+  } catch (e) {
+    if (e instanceof DOMException && e.name === "TimeoutError") {
+      throw new Error("Gemini took too long to respond. Try again in a moment.")
+    }
     throw new Error("Network error — check your internet connection.")
   }
 

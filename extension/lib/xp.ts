@@ -1,4 +1,5 @@
 import { getLevel } from "~lib/evolution"
+import { todayLocal } from "~lib/dates"
 import { getStore, setStore } from "~lib/storage"
 import type { Mode } from "~lib/prompts"
 
@@ -13,10 +14,6 @@ export function hashText(text: string): string {
   return (h >>> 0).toString(36)
 }
 
-function todayISO(): string {
-  return new Date().toISOString().slice(0, 10)
-}
-
 export type XPResult =
   | { awarded: number; total: number }
   | { error: "already_claimed" | "daily_cap" }
@@ -25,7 +22,7 @@ export { getLevel }
 
 export async function tryAwardXP(hash: string, amount: number): Promise<XPResult> {
   const store = await getStore()
-  const today = todayISO()
+  const today = todayLocal()
 
   const earnedHashes = store.earnedHashes ?? []
   if (earnedHashes.includes(hash)) {

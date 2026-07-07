@@ -1,9 +1,6 @@
+import { todayLocal, yesterdayLocal } from "~lib/dates"
 import { getStore, setStore, type AmintaStore } from "~lib/storage"
 import { tryAwardBountyXP } from "~lib/xp"
-
-function todayISO(): string {
-  return new Date().toISOString().slice(0, 10)
-}
 
 // Count of writing samples Aminta has learned from — voice examples + liked DNA.
 export function sampleCount(store: AmintaStore): number {
@@ -46,7 +43,7 @@ export async function tryCompleteTrainingQuest(store: AmintaStore): Promise<bool
 
 // Daily missions: reset daily, +150 XP when all done
 export function getMissionProgress(store: AmintaStore) {
-  const today = todayISO()
+  const today = todayLocal()
   const isToday = store.missionDate === today
   return {
     generates: isToday ? (store.missionGenerates ?? 0) : 0,
@@ -58,13 +55,13 @@ export function getMissionProgress(store: AmintaStore) {
 export async function tryCompleteDailyMissions(store: AmintaStore): Promise<boolean> {
   const { generates, published, dnaTrained } = getMissionProgress(store)
   if (generates < 3 || published < 1 || !dnaTrained) return false
-  const res = await tryAwardBountyXP(`daily-missions:${todayISO()}`, 150)
+  const res = await tryAwardBountyXP(`daily-missions:${todayLocal()}`, 150)
   return !("error" in res)
 }
 
 export async function incrementMissionGenerates(): Promise<void> {
   const store = await getStore()
-  const today = todayISO()
+  const today = todayLocal()
   const isToday = store.missionDate === today
   await setStore({
     missionDate: today,
@@ -75,7 +72,7 @@ export async function incrementMissionGenerates(): Promise<void> {
 
 export async function incrementMissionPublished(): Promise<void> {
   const store = await getStore()
-  const today = todayISO()
+  const today = todayLocal()
   const isToday = store.missionDate === today
   await setStore({
     missionDate: today,
@@ -86,9 +83,8 @@ export async function incrementMissionPublished(): Promise<void> {
 
 export async function recordStreak(): Promise<void> {
   const store = await getStore()
-  const today = todayISO()
+  const today = todayLocal()
   if (store.streakDate === today) return
-  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
-  const streak = store.streakDate === yesterday ? (store.streak ?? 0) + 1 : 1
+  const streak = store.streakDate === yesterdayLocal() ? (store.streak ?? 0) + 1 : 1
   await setStore({ streak, streakDate: today })
 }

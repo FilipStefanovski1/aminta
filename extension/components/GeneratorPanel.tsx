@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react"
 
-import { generate as runAI, generateFromImage } from "~lib/ai"
+import { generate as runAI, generateFromImage, isGroqKey } from "~lib/ai"
 import type { CompanionEvent } from "~lib/companion"
+import { todayLocal } from "~lib/dates"
 import { getStageTint } from "~lib/evolution"
 import { readActivePost } from "~lib/messaging"
 import { incrementMissionGenerates } from "~lib/missions"
@@ -202,6 +203,7 @@ interface Props {
   store: AmintaStore
   onXPAwarded: () => void
   onLevelUp: (level: number, stage: string) => void
+  onFirstPost?: (amount: number) => void
   initialPlatform?: Platform
   onTeach?: () => void
   onOpenSettings?: () => void
@@ -231,7 +233,7 @@ async function resizeImage(file: File): Promise<string> {
   })
 }
 
-export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, initialPlatform = "x", onTeach, onOpenSettings, onContext }: Props) {
+export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, onFirstPost, initialPlatform = "x", onTeach, onOpenSettings, onContext }: Props) {
   const [platform, setPlatform] = useState<Platform>(initialPlatform)
   const [mode,     setMode]     = useState<Mode>("tweet")
   const [tone,     setTone]     = useState<Tone>("direct")
@@ -255,9 +257,9 @@ export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, initialP
   const tint = getStageTint(xp)
 
   const FREE_DAILY_LIMIT = 10
-  const todayISO = new Date().toISOString().slice(0, 10)
-  const todayGenerations = store.missionDate === todayISO ? (store.missionGenerates ?? 0) : 0
-  const atFreeLimit = (store.plan ?? "free") === "free" && todayGenerations >= FREE_DAILY_LIMIT
+  const isFree = (store.plan ?? "free") === "free"
+  const todayGenerations = store.missionDate === todayLocal() ? (store.missionGenerates ?? 0) : 0
+  const atFreeLimit = isFree && todayGenerations >= FREE_DAILY_LIMIT
 
   const reset = () => { setError(""); setOutput(""); setOutputImage(null) }
 
@@ -286,6 +288,7 @@ export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, initialP
 
   const generate = async () => {
     reset()
+    if (!navigator.onLine) { setError("You're offline — check your connection and try again."); return }
     if (!store.apiKey) { setError("Add your AI key in Settings first."); return }
     if (!store.voice)  { setError("Teach Aminta your voice first — go to Teach."); return }
     const combined = topic.trim() + (context.trim() ? `\n\nAdditional context: ${context.trim()}` : "")
@@ -355,8 +358,8 @@ export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, initialP
         })}
       </div>
 
-      {/* ── Image upload ── */}
-      {mode === "tweet" && (
+      {/* ── Image upload ── (hidden for Groq keys — Groq has no vision support) */}
+      {mode === "tweet" && !isGroqKey(store.apiKey ?? "") && (
         <div className="space-y-1.5">
           <p className="text-[11px] font-medium" style={{ color: C.textFaint }}>
             Photo{" "}
@@ -557,6 +560,13 @@ export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, initialP
         ) : "Generate"}
       </button>
 
+      {/* Free-plan usage counter — visible before the wall, not only at it */}
+      {!loading && isFree && !atFreeLimit && !!store.apiKey && !!store.voice && (
+        <p className="text-[10px] text-center animate-fade-in" style={{ color: C.textGhost }}>
+          {todayGenerations}/{FREE_DAILY_LIMIT} free generations used today
+        </p>
+      )}
+
       {/* Explain why Generate is disabled */}
       {!loading && atFreeLimit && (
         <div className="animate-fade-in rounded-xl px-4 py-3 space-y-2" style={{ backgroundColor: tint + "12", border: `1px solid ${tint}30` }}>
@@ -603,9 +613,10 @@ export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, initialP
           currentXP={xp}
           imageDataUrl={outputImage}
           onRegenerate={generate}
-          onXPAwarded={(amount, levelUp) => {
+          onXPAwarded={(amount, levelUp, firstPost) => {
             onXPAwarded()
             if (levelUp) onLevelUp(levelUp.level, levelUp.stage)
+            else if (firstPost) onFirstPost?.(amount)
           }}
         />
       )}

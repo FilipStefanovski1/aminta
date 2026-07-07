@@ -1,6 +1,7 @@
 // Companion Engine — pure TypeScript, zero React imports.
 // Single source of truth for Aminta's mood, expression, animation, and speech routing.
 
+import { yesterdayLocal } from "~lib/dates"
 import { getLevel, LEVEL_THRESHOLDS } from "~lib/evolution"
 import type { AmintaStore } from "~lib/storage"
 
@@ -28,10 +29,9 @@ export function deriveMood(store: AmintaStore | null): Mood {
     if (xpLeft > 0 && xpLeft <= 50) return "pre_evolve"
   }
 
-  const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10)
   if (
     (store.streak ?? 0) > 0 &&
-    store.streakDate === yesterday &&
+    store.streakDate === yesterdayLocal() &&
     (store.xpToday ?? 0) === 0
   ) {
     return "hungry"

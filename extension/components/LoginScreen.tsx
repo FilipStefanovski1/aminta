@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { C } from "~lib/theme"
 
 interface Props {
@@ -8,10 +8,18 @@ interface Props {
   onSignedIn: () => void
 }
 
-type State = "idle" | "waiting"
+type State = "idle" | "waiting" | "stalled"
 
 export default function LoginScreen({ onSignedIn: _onSignedIn }: Props) {
   const [state, setState] = useState<State>("idle")
+
+  // If sign-in hasn't completed after 90s, stop spinning and offer a retry —
+  // the user may have closed the tab or hit an error on the website.
+  useEffect(() => {
+    if (state !== "waiting") return
+    const t = setTimeout(() => setState("stalled"), 90_000)
+    return () => clearTimeout(t)
+  }, [state])
 
   function openLoginPage() {
     const extId = chrome.runtime.id
@@ -42,21 +50,31 @@ export default function LoginScreen({ onSignedIn: _onSignedIn }: Props) {
 
       <div className="text-center space-y-1.5">
         <p className="font-pixel text-[9px] tracking-widest" style={{ color: "#74f7b5" }}>
-          Sign in to sync
+          Sign in to Aminta
         </p>
         <p className="text-xs" style={{ color: C.textFaint }}>
-          Keep your XP &amp; streak safe across devices
+          Your XP, streak &amp; plan sync to your account
         </p>
       </div>
 
-      {state === "idle" && (
-        <button
-          onClick={openLoginPage}
-          className="w-full py-3 rounded-xl font-pixel text-[8px] tracking-widest text-black transition-all hover:brightness-110 active:scale-[0.98]"
-          style={{ backgroundColor: "#74f7b5" }}
-        >
-          Sign in with Google
-        </button>
+      {(state === "idle" || state === "stalled") && (
+        <div className="w-full flex flex-col items-center gap-3">
+          {state === "stalled" && (
+            <p className="text-[10px] text-center" style={{ color: C.textFaint }}>
+              Still waiting… Finish sign-in in the tab that opened, or try again.
+            </p>
+          )}
+          <button
+            onClick={openLoginPage}
+            className="w-full py-3 rounded-xl font-pixel text-[8px] tracking-widest text-black transition-all hover:brightness-110 active:scale-[0.98]"
+            style={{ backgroundColor: "#74f7b5" }}
+          >
+            {state === "stalled" ? "Try again" : "Sign in on amintaapp.com"}
+          </button>
+          <p className="text-[10px]" style={{ color: C.textGhost }}>
+            Google · GitHub · Email &amp; password
+          </p>
+        </div>
       )}
 
       {state === "waiting" && (
