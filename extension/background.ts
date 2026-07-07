@@ -1,10 +1,19 @@
+import { handleAuthUserChanged } from "./lib/accountScope"
+
 export {}
 
 chrome.sidePanel
   .setPanelBehavior({ openPanelOnActionClick: true })
   .catch((error) => console.error("Aminta sidePanel error:", error))
 
-// Log every storage change that touches auth keys.
+// Log every storage change that touches auth keys, and — the canonical
+// trigger for cross-account contamination prevention — detect whenever
+// auth_user_id itself changes (sign-in, sign-out, or switching accounts on
+// the same device) and route it through handleAuthUserChanged, which clears
+// account-scoped local state before any cloud state for the new user is
+// loaded. This listener is the authoritative source: chrome.storage's
+// oldValue/newValue are reliable even if the sidepanel isn't open when the
+// switch happens.
 chrome.storage.local.onChanged.addListener((changes) => {
   const authKeys = ["auth_access_token", "auth_refresh_token", "auth_user_id", "auth_user_email"]
   const authChanged = authKeys.some(k => k in changes)
@@ -13,6 +22,14 @@ chrome.storage.local.onChanged.addListener((changes) => {
     "auth_user_id:", changes.auth_user_id?.newValue ?? "(unchanged)",
     "| auth_user_email:", changes.auth_user_email?.newValue ?? "(unchanged)",
     "| auth_access_token set:", !!changes.auth_access_token?.newValue)
+
+  if ("auth_user_id" in changes) {
+    const previousUserId = (changes.auth_user_id.oldValue as string | undefined) ?? null
+    const nextUserId = (changes.auth_user_id.newValue as string | undefined) ?? null
+    handleAuthUserChanged(previousUserId, nextUserId).catch((err) =>
+      console.error("[Aminta bg] handleAuthUserChanged failed:", err)
+    )
+  }
 })
 
 // Internal message from the aminta-auth-bridge content script.

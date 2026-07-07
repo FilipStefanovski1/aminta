@@ -185,6 +185,18 @@ onboardingDone  — boolean
   side with the newer `streakDate`
 - After every XP award: `pushToCloud()`; voice profile is also pushed when
   onboarding completes
+- **Cross-account isolation**: `chrome.storage.local` is one global bucket
+  shared by every signed-in user on the device — it is NOT scoped per
+  account. `lib/accountScope.ts → handleAuthUserChanged(previousUserId,
+  nextUserId)` is the only place allowed to clear account-scoped state
+  (`storage.ts → ACCOUNT_SCOPED_KEYS`, i.e. everything except `apiKey`/
+  `model`) before a cloud pull. It's wired into `background.ts`'s
+  `chrome.storage.local.onChanged` listener (authoritative — has real
+  `oldValue`/`newValue` even if the sidepanel is closed) and mirrored in
+  `sidepanel.tsx`'s own listener. Never call `pullFromCloud()` directly in
+  response to `auth_user_id` changing — its merge (`Math.max` against local
+  XP) will silently resurrect a previous account's XP/streak/voice profile
+  onto a different user if the local cache wasn't cleared first
 - **Generation itself is never sent to Aminta's servers** — requests go directly from the browser to the user's AI provider
 
 ---

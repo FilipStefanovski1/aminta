@@ -77,3 +77,23 @@ export async function getStore(): Promise<AmintaStore> {
 export async function setStore(patch: Partial<AmintaStore>): Promise<void> {
   await chrome.storage.local.set(patch)
 }
+
+// Device-scoped: tied to this browser/install, not to whoever is signed in.
+// Everything else in AmintaStore is account-scoped and must never survive
+// a switch to a different Supabase auth user.
+const DEVICE_SCOPED_KEYS = new Set<keyof AmintaStore>(["apiKey", "model"])
+
+export const ACCOUNT_SCOPED_KEYS = (Object.keys(DEFAULTS) as (keyof AmintaStore)[])
+  .filter((k) => !DEVICE_SCOPED_KEYS.has(k))
+
+// Resets every account-scoped field back to its default (Lv.1 / 0 XP / no
+// voice profile / etc.) while leaving device-scoped settings (API key, model)
+// untouched. Call this before loading a different user's cloud state so a
+// stale local cache can never be merged into the wrong account.
+export async function clearAccountScopedState(): Promise<void> {
+  const patch: Partial<AmintaStore> = {}
+  for (const key of ACCOUNT_SCOPED_KEYS) {
+    ;(patch as Record<string, unknown>)[key] = DEFAULTS[key]
+  }
+  await setStore(patch)
+}

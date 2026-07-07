@@ -18,9 +18,15 @@ export const config: PlasmoCSConfig = {
 
 console.log("[Aminta bridge] content script loaded on", window.location.href)
 
+// Accept both apex and www — the content script is injected on both
+// (see manifest `matches` above), but this origin check used to be
+// hardcoded to the apex only, silently dropping the handoff for anyone
+// who landed on www.amintaapp.com.
+const ALLOWED_ORIGINS = ["https://amintaapp.com", "https://www.amintaapp.com"]
+
 window.addEventListener("message", async (event) => {
   // Only accept messages from our own origin.
-  if (event.origin !== "https://amintaapp.com") return
+  if (!ALLOWED_ORIGINS.includes(event.origin)) return
   if (!event.data || event.data.type !== "AMINTA_AUTH_TOKENS") return
 
   console.log("[Aminta bridge] HOP4 received AMINTA_AUTH_TOKENS from", event.origin)

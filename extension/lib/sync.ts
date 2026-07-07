@@ -5,6 +5,28 @@ const API_URL = "https://amintaapp.com/api/sync"
 
 const isDev = !("update_url" in chrome.runtime.getManifest())
 
+// Bumped by lib/accountScope.ts's handleAuthUserChanged() every time the
+// signed-in user changes in this JS context (sidepanel page or background
+// service worker — each has its own module instance/epoch, which is the
+// right scope since an in-flight Promise can't outlive the page it started
+// in anyway).
+//
+// push/pull calls are fired-and-forgotten from several places (XP award,
+// onboarding completion, the startup pull raced against a timeout). Without
+// this guard, a slow request started under account A that resolves *after*
+// the user has switched to account B would either push A's cached XP onto
+// B's cloud row (using whatever token happens to be in storage when the
+// fetch fires) or overwrite B's freshly-loaded local state with A's stale
+// merge result. Every send and every write below re-checks the epoch
+// immediately beforehand and bails out if it's stale.
+let syncEpoch = 0
+export function currentSyncEpoch(): number {
+  return syncEpoch
+}
+export function bumpSyncEpoch(): number {
+  return ++syncEpoch
+}
+
 // Sync status is written to chrome.storage.local so the UI (Settings) can show
 // it. Sync must never fail silently.
 //   ok         — last sync succeeded
@@ -76,7 +98,13 @@ async function authedFetch(
 }
 
 export async function pushToCloud(): Promise<void> {
+  const epoch = currentSyncEpoch()
   const store = await getStore()
+
+  if (epoch !== currentSyncEpoch()) {
+    if (isDev) console.log("[Aminta sync] PUSH aborted — account changed before send")
+    return
+  }
 
   const payload = {
     xp: store.xp,
@@ -102,6 +130,11 @@ export async function pushToCloud(): Promise<void> {
   })
   if (!res) return
 
+  if (epoch !== currentSyncEpoch()) {
+    if (isDev) console.log("[Aminta sync] PUSH response discarded — account changed mid-flight")
+    return
+  }
+
   if (!res.ok) {
     await setSyncStatus("error", `Push failed (${res.status})`)
     return
@@ -120,9 +153,15 @@ export async function pushToCloud(): Promise<void> {
   }
 }
 
-export async function pullFromCloud(): Promise<void> {
+export async function pullFromCloud(): Promise<{ cloudXp: number } | void> {
+  const epoch = currentSyncEpoch()
   const res = await authedFetch({ method: "GET" })
   if (!res) return
+
+  if (epoch !== currentSyncEpoch()) {
+    if (isDev) console.log("[Aminta sync] PULL response discarded — account changed mid-flight")
+    return
+  }
 
   if (!res.ok) {
     await setSyncStatus("error", `Pull failed (${res.status})`)
@@ -191,6 +230,16 @@ export async function pullFromCloud(): Promise<void> {
   if ((!local.tweetDNA?.length) && data.tweet_dna?.length) patch.tweetDNA = data.tweet_dna
   if (!local.onboardingDone && data.onboarding_done)       patch.onboardingDone = data.onboarding_done
 
+  if (epoch !== currentSyncEpoch()) {
+    // The account changed again while we were computing the merge above
+    // (each step here is synchronous, but getStore()/setStore() below yield,
+    // so re-check right at the write boundary). Writing this patch now would
+    // silently overwrite whatever the newer account-switch handler already
+    // loaded for the current user.
+    if (isDev) console.log("[Aminta sync] PULL merge discarded — account changed before write")
+    return
+  }
+
   await setStore(patch)
 
   const now = new Date().toISOString()
@@ -212,4 +261,6 @@ export async function pullFromCloud(): Promise<void> {
   if (localXpWasHigher) {
     await pushToCloud()
   }
+
+  return { cloudXp: data.xp ?? 0 }
 }

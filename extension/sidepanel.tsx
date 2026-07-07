@@ -17,6 +17,7 @@ import { SpriteMark, XPBar } from "~components/ui"
 import { getStore, setStore, type AmintaStore } from "~lib/storage"
 import { getAuthSession, clearAuthSession, type AuthSession } from "~lib/auth"
 import { pullFromCloud, pushToCloud } from "~lib/sync"
+import { handleAuthUserChanged } from "~lib/accountScope"
 import type { Platform } from "~lib/prompts"
 import { useCompanion } from "~hooks/useCompanion"
 
@@ -513,6 +514,10 @@ function SidePanel() {
   const [authChecked, setAuthChecked]   = useState(false)
   const [isLoggedIn, setIsLoggedIn]     = useState(false)
   const [session, setSession]           = useState<AuthSession | null>(null)
+  // Tracks the last known auth_user_id in-memory so the storage listener
+  // below (whose closure is fixed at mount) can detect an account switch
+  // even though `session` state itself is stale inside that closure.
+  const prevUserIdRef = useRef<string | null>(null)
 
   const refresh = async () => setLocalStore(await getStore())
 
@@ -527,6 +532,7 @@ function SidePanel() {
       if (s) {
         setIsLoggedIn(true)
         setSession(s)
+        prevUserIdRef.current = s.userId
         await Promise.race([
           pullFromCloud(),
           new Promise((r) => setTimeout(r, 4_000)),
@@ -551,14 +557,26 @@ function SidePanel() {
           setSession(s)
           setIsLoggedIn(true)
           setAuthChecked(true)
-          console.log("[Aminta sidepanel] transitioning to logged-in UI, pulling from cloud...")
-          await pullFromCloud()
-          console.log("[Aminta sidepanel] pullFromCloud complete, refreshing store")
+          // Route through the canonical handler instead of a raw pullFromCloud():
+          // if this uid differs from the last one we saw on this device, it
+          // clears account-scoped local state (xp/streak/voice/etc.) BEFORE
+          // loading cloud state, so a stale cache from a previous account can
+          // never be merged into this one. Same-user reloads (or a background
+          // token refresh) are a no-op here and fall through to a normal pull.
+          console.log("[Aminta sidepanel] transitioning to logged-in UI —",
+            "previous uid:", prevUserIdRef.current, "| next uid:", s.userId)
+          await handleAuthUserChanged(prevUserIdRef.current, s.userId)
+          prevUserIdRef.current = s.userId
+          console.log("[Aminta sidepanel] account state resolved, refreshing store")
           await refresh()
         })
       }
       if ("auth_access_token" in changes && !changes.auth_access_token.newValue) {
         console.log("[Aminta sidepanel] storage.onChanged — auth_access_token cleared, signing out")
+        handleAuthUserChanged(prevUserIdRef.current, null).catch((err) =>
+          console.error("[Aminta sidepanel] handleAuthUserChanged (logout) failed:", err)
+        )
+        prevUserIdRef.current = null
         setSession(null)
         setIsLoggedIn(false)
       }
