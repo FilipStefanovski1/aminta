@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { EXTENSION_URL } from "@/lib/links";
 
 const ANCHORS = [
   { label: "How it works", hash: "how-it-works" },
@@ -95,7 +96,7 @@ export default function Navbar({ alwaysVisible = false }: { alwaysVisible?: bool
               <a href="/dashboard" className="rpg-btn-primary whitespace-nowrap" style={{ padding: "6px 14px", fontSize: "9px" }}>
                 Dashboard
               </a>
-              <a href="https://chromewebstore.google.com" target="_blank" rel="noreferrer"
+              <a href={EXTENSION_URL} target="_blank" rel="noreferrer"
                 className="flex items-center gap-1.5 font-pixel text-[9px] text-black/70 hover:text-black transition-colors whitespace-nowrap">
                 <img src="/chromelogo.png" alt="Chrome" width={13} height={13} style={{ filter: "invert(1)" }} />
                 Get Extension
@@ -106,10 +107,10 @@ export default function Navbar({ alwaysVisible = false }: { alwaysVisible?: bool
               <a href="/login" className="font-pixel text-[9px] text-black/70 hover:text-black transition-colors whitespace-nowrap">
                 Sign in
               </a>
-              <a href="/login?mode=create" className="rpg-btn-primary whitespace-nowrap" style={{ padding: "6px 14px", fontSize: "9px" }}>
+              <a href="/signup" className="rpg-btn-primary whitespace-nowrap" style={{ padding: "6px 14px", fontSize: "9px" }}>
                 Get started
               </a>
-              <a href="https://chromewebstore.google.com" target="_blank" rel="noreferrer"
+              <a href={EXTENSION_URL} target="_blank" rel="noreferrer"
                 className="flex items-center gap-1.5 font-pixel text-[9px] text-black/70 hover:text-black transition-colors whitespace-nowrap">
                 <img src="/chromelogo.png" alt="Chrome" width={13} height={13} style={{ filter: "invert(1)" }} />
                 Get Extension
@@ -144,13 +145,13 @@ export default function Navbar({ alwaysVisible = false }: { alwaysVisible?: bool
           {authed ? (
             <>
               <a href="/dashboard" onClick={() => setOpen(false)} className="font-pixel text-[10px] text-black whitespace-nowrap">Dashboard</a>
-              <a href="https://chromewebstore.google.com" target="_blank" rel="noreferrer" onClick={() => setOpen(false)} className="font-pixel text-[10px] text-black/70 whitespace-nowrap">Get Extension</a>
+              <a href={EXTENSION_URL} target="_blank" rel="noreferrer" onClick={() => setOpen(false)} className="font-pixel text-[10px] text-black/70 whitespace-nowrap">Get Extension</a>
             </>
           ) : (
             <>
               <a href="/login" onClick={() => setOpen(false)} className="font-pixel text-[10px] text-black/70 whitespace-nowrap">Sign in</a>
-              <a href="/login?mode=create" onClick={() => setOpen(false)} className="font-pixel text-[10px] text-black whitespace-nowrap">Get started</a>
-              <a href="https://chromewebstore.google.com" target="_blank" rel="noreferrer" onClick={() => setOpen(false)} className="font-pixel text-[10px] text-black/70 whitespace-nowrap">Get Extension</a>
+              <a href="/signup" onClick={() => setOpen(false)} className="font-pixel text-[10px] text-black whitespace-nowrap">Get started</a>
+              <a href={EXTENSION_URL} target="_blank" rel="noreferrer" onClick={() => setOpen(false)} className="font-pixel text-[10px] text-black/70 whitespace-nowrap">Get Extension</a>
             </>
           )}
         </div>
