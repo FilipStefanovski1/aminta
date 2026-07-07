@@ -7,7 +7,11 @@ function verifySignature(payload: string, signature: string, secret: string): bo
     .createHmac("sha256", secret)
     .update(payload)
     .digest("hex")
-  return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))
+  const a = Buffer.from(signature)
+  const b = Buffer.from(expected)
+  // timingSafeEqual throws on length mismatch — a malformed header must be a
+  // clean 401, not a 500.
+  return a.length === b.length && crypto.timingSafeEqual(a, b)
 }
 
 export async function POST(request: NextRequest) {
@@ -53,11 +57,21 @@ export async function POST(request: NextRequest) {
       .eq("email", email)
   }
 
+  // Canceled = user turned off renewal; access continues until the period
+  // ends, so the plan stays. Expired = the period actually ended — downgrade.
   if (eventType === "subscription.canceled") {
     await supabase
       .from("users")
       .update({ subscription_status: "canceled" })
       .eq("email", email)
+  }
+
+  if (eventType === "subscription.expired") {
+    await supabase
+      .from("users")
+      .update({ plan: "free", subscription_status: "expired" })
+      .eq("email", email)
+      .neq("plan", "lifetime") // never downgrade lifetime purchases
   }
 
   if (eventType === "subscription.past_due") {

@@ -10,7 +10,7 @@ const FAQS = [
   },
   {
     q: "What does “feed Aminta” actually mean?",
-    a: "Every action you take earns XP: Tweet +50, Reply +25, Polish +15, Thread +75, and a Daily Streak +100. That XP levels up your pixel demon through 9 evolutions, from Dormant Demon all the way to Demon King. It's a fun, sticky reason to keep posting.",
+    a: "Publishing earns XP: posts +50, replies +25, polishes +15, and finishing all the daily missions adds +150. That XP levels Aminta through 9 evolutions, from Dormant all the way to its final hidden form. It's a fun, sticky reason to keep posting.",
   },
   {
     q: "Do I need my own API key?",
@@ -22,11 +22,11 @@ const FAQS = [
   },
   {
     q: "Is my data private?",
-    a: "Completely. Your API key, voice profile, and XP all live locally in your browser. There's no Aminta server in the middle. Requests go straight from your browser to your chosen AI provider.",
+    a: "Your API key never leaves your device, and generations go straight from your browser to your AI provider — we never see what you write. When you sign in, your XP, streak, and voice profile sync to your Aminta account so your progress follows you across devices.",
   },
   {
     q: "What happens if I miss a day?",
-    a: "Your streak breaks and the demon starts to fade. It loses its glow until you feed it again. Higher tiers include streak insurance (a freeze) so one busy day doesn't wipe your progress.",
+    a: "Your streak resets — that's the deal. Your XP, level, and evolutions are never lost, so one busy day never wipes real progress.",
   },
   {
     q: "Which AI models can I use?",

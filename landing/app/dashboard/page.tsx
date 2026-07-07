@@ -25,9 +25,6 @@ export default async function DashboardPage() {
     )
   }
 
-  const today = new Date().toISOString().slice(0, 10)
-  const isMissionToday = state?.mission_date === today
-
   return (
     <>
       <Navbar alwaysVisible />
@@ -42,9 +39,14 @@ export default async function DashboardPage() {
           streak={state?.streak ?? 0}
           generationsTotal={state?.generations_total ?? 0}
           dnaCount={(state?.tweet_dna ?? []).length}
-          missionGenerates={isMissionToday ? (state?.mission_generates ?? 0) : 0}
-          missionPublished={isMissionToday ? (state?.mission_published ?? 0) : 0}
+          // Raw values + date: "is this today?" is decided client-side in the
+          // user's LOCAL timezone (the extension writes local dates too).
+          missionDate={state?.mission_date ?? null}
+          missionGenerates={state?.mission_generates ?? 0}
+          missionPublished={state?.mission_published ?? 0}
           plan={profile?.plan ?? "free"}
+          hasState={!!state}
+          lastSyncedAt={state?.updated_at ?? null}
         />
       </main>
       <Footer />

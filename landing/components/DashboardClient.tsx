@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { createClient } from "@/lib/supabase/client"
+import { EXTENSION_URL } from "@/lib/links"
 
 const THRESHOLDS = [0, 300, 750, 1400, 2300, 3500, 5200, 7500, 10500, 14500]
 
@@ -65,21 +66,49 @@ function getLevel(xp: number) {
   return Math.min(level, 9)
 }
 
+function todayLocal(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+}
+
+function relativeTime(iso: string): string {
+  const mins = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60_000))
+  if (mins < 1) return "just now"
+  if (mins < 60) return `${mins}m ago`
+  const hrs = Math.round(mins / 60)
+  if (hrs < 24) return `${hrs}h ago`
+  return `${Math.round(hrs / 24)}d ago`
+}
+
 interface Props {
   user: { email: string; name: string; avatarUrl: string }
   xp: number
   streak: number
   generationsTotal: number
   dnaCount: number
+  missionDate: string | null
   missionGenerates: number
   missionPublished: number
   plan: string
+  hasState: boolean
+  lastSyncedAt: string | null
 }
 
 export default function DashboardClient({
-  user, xp, streak, dnaCount,
-  missionGenerates, missionPublished, plan,
+  user, xp, streak, generationsTotal, dnaCount,
+  missionDate, missionGenerates: missionGeneratesRaw, missionPublished: missionPublishedRaw,
+  plan, hasState, lastSyncedAt,
 }: Props) {
+  // Mission counters only count if they were recorded on the user's local
+  // "today" — the extension stamps mission_date with a local date.
+  const isMissionToday = missionDate === todayLocal()
+  const missionGenerates = isMissionToday ? missionGeneratesRaw : 0
+  const missionPublished = isMissionToday ? missionPublishedRaw : 0
+
+  // No synced state (or a fully empty one) = the extension has never pushed
+  // for this account — guide the user to install/connect it.
+  const needsExtension = !hasState || (xp === 0 && generationsTotal === 0)
+
   const [loggingOut, setLoggingOut] = useState(false)
   const [resetting, setResetting] = useState(false)
   const [resetSent, setResetSent] = useState(false)
@@ -127,7 +156,7 @@ export default function DashboardClient({
   async function handlePasswordReset() {
     setResetting(true)
     await createClient().auth.resetPasswordForEmail(user.email, {
-      redirectTo: `${window.location.origin}/auth/callback`,
+      redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
     })
     setResetSent(true)
     setResetting(false)
@@ -161,7 +190,41 @@ export default function DashboardClient({
             ? `${xpToNext.toLocaleString()} XP until ${next?.name}.`
             : "Maximum level reached."}
         </p>
+        {lastSyncedAt && !needsExtension && (
+          <p className="mt-1 text-xs" style={{ color: "#555" }}>
+            Synced from the extension {relativeTime(lastSyncedAt)}
+          </p>
+        )}
       </div>
+
+      {/* ── Connect-extension banner — shown until the extension first syncs ── */}
+      {needsExtension && (
+        <div style={card} className="p-6 mb-4">
+          <div className="flex items-center gap-3 mb-4">
+            <svg width="24" height="20" viewBox="0 0 16 13" style={{ imageRendering: "pixelated" }}>
+              <rect x="2" y="0" width="2" height="3" fill="#74f7b5" />
+              <rect x="12" y="0" width="2" height="3" fill="#74f7b5" />
+              <rect x="3" y="3" width="10" height="9" fill="#74f7b5" />
+              <rect x="4" y="6" width="2" height="2" fill="#1a1a1a" />
+              <rect x="10" y="6" width="2" height="2" fill="#1a1a1a" />
+            </svg>
+            <p className="font-pixel text-[11px] text-white">Connect the extension to start</p>
+          </div>
+          <ol className="space-y-2 text-sm text-muted mb-5">
+            <li><span className="text-white font-medium">1.</span> Install Aminta from the Chrome Web Store</li>
+            <li><span className="text-white font-medium">2.</span> Pin it, then open the side panel on x.com</li>
+            <li><span className="text-white font-medium">3.</span> Sign in inside the panel with this account ({user.email})</li>
+          </ol>
+          <div className="flex flex-wrap items-center gap-4">
+            <a href={EXTENSION_URL} target="_blank" rel="noopener noreferrer" className="rpg-btn-primary">
+              Get the Extension
+            </a>
+            <span className="text-xs" style={{ color: "#555" }}>
+              Already done this? Publish something with Aminta, then refresh this page.
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* ── Three-card grid ── */}
       <div className="grid lg:grid-cols-3 gap-4">

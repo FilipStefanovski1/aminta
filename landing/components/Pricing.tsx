@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Reveal from "./Reveal";
+import { CREEM_FOUNDER_URL, CREEM_PRO_URL, EXTENSION_URL } from "@/lib/links";
 
 type BillingMode = "monthly" | "lifetime";
 
@@ -21,8 +22,8 @@ const FREE_PLAN = {
     "Insert into X",
     "BYOK (Groq / Gemini / OpenRouter)",
   ],
-  cta: "Get Started",
-  ctaHref: "#get-aminta",
+  cta: "Get the Extension",
+  ctaHref: EXTENSION_URL,
   badge: null,
   highlight: false,
 };
@@ -44,7 +45,7 @@ const PRO_PLAN = {
     "Discord community",
   ],
   cta: "Upgrade to Pro",
-  ctaHref: "https://www.creem.io/test/payment/prod_6l3U3WOanZI0BZl03d6XeP",
+  ctaHref: CREEM_PRO_URL,
   badge: "PRO",
   highlight: true,
 };
@@ -66,7 +67,7 @@ const FOUNDER_PLAN = {
     "Early access to new features",
   ],
   cta: "Claim Founder Access",
-  ctaHref: "https://www.creem.io/test/payment/prod_5BDQkBTIBnVesffOYY7CF6",
+  ctaHref: CREEM_FOUNDER_URL,
   badge: "LIMITED",
   highlight: true,
 };
@@ -255,7 +256,7 @@ export default function Pricing() {
 
         <Reveal className="mt-10 text-center">
           <p className="text-xs text-muted">
-            Free tier requires a Groq or OpenRouter API key.{" "}
+            Every plan uses your own AI key (Groq, Gemini, or OpenRouter — Groq has a free tier).{" "}
             <span className="text-white/50">Your key stays on your device.</span>
           </p>
         </Reveal>

@@ -71,10 +71,10 @@ const STAGES: Stage[] = [
 ];
 
 const REWARDS: [string, string][] = [
-  ["Tweet", "+50 XP"],
+  ["Post", "+50 XP"],
   ["Reply", "+25 XP"],
   ["Polish", "+15 XP"],
-  ["Daily Streak", "+100 XP"],
+  ["Daily missions", "+150 XP"],
 ];
 
 const HEADLINE = "Feed Aminta";
