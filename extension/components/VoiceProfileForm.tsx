@@ -142,6 +142,15 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0 
   const [saved,    setSaved]    = useState(false)
   const [error,    setError]    = useState("")
 
+  // Snapshot of the last-saved (or initially-loaded) profile, used purely to
+  // decide whether the Save/Update button should be visible. Only updates on
+  // mount and right after a successful save — never on every keystroke — so
+  // it stays a stable "what's actually persisted" baseline to diff against.
+  const snapshot = (t: string[], vs: string, vi: string, ex: string[], r: string[]) =>
+    JSON.stringify({ t, vs, vi, ex, r })
+  const baselineRef = useRef(snapshot(topics, voiceStyle, voiceInspiration, examples, rules))
+  const isDirty = baselineRef.current !== snapshot(topics, voiceStyle, voiceInspiration, examples, rules)
+
   // Companion reaction system — drives Sprite animation + transient speech
   const [animCls,  setAnimCls]  = useState("sprite-float aminta-glow")
   const [speech,   setSpeech]   = useState<string | null>(null)
@@ -230,6 +239,7 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0 
       examples:         JSON.stringify(examples),
       customRules:      rules.join("\n"),
     })
+    baselineRef.current = snapshot(topics, voiceStyle, voiceInspiration, examples, rules)
     setSaved(true)
     react("I feel more like you now.", "sprite-celebrate aminta-sparkle")
     setTimeout(() => setSaved(false), 2500)
@@ -605,40 +615,42 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0 
 
       </Card>
 
-      {/* ── Save ── */}
-      <div className="space-y-2 pt-1">
-        {error && (
-          <p className="text-[11px] text-center animate-fade-in" style={{ color: "#f87171" }}>{error}</p>
-        )}
-        {saved && (
-          <p className="font-pixel text-[8px] text-center animate-toast-up" style={{ color: tint }}>
-            Saved ✓ — I feel more like you now.
-          </p>
-        )}
-        <button
-          onClick={save}
-          className="btn-pixel w-full py-3.5 rounded-xl font-pixel text-[9px] text-black active:scale-[0.98] transition-all duration-150"
-          style={{
-            backgroundColor: tint,
-            boxShadow: saved ? `0 0 28px ${tint}55` : `0 2px 14px ${tint}30`,
-          }}>
-          {saved
-            ? "Saved ✓"
-            : learnedCount === 4
-              ? "Update Aminta"
-              : learnedCount === 0
-                ? "Save & Start Teaching"
-                : `Save & Keep Teaching  ${learnedCount}/4`
-          }
-        </button>
-        {learnedCount < 4 && !saved && (
-          <p className="text-[10px] text-center leading-relaxed" style={{ color: C.textDim }}>
-            {learnedCount === 0 && "Start with your topics and a writing tone."}
-            {learnedCount === 1 && "One section done. Each one sharpens my voice."}
-            {learnedCount === 2 && "Writing examples will make the biggest difference."}
-          </p>
-        )}
-      </div>
+      {/* ── Save — only shown once there's something unsaved to act on ── */}
+      {(isDirty || saved) && (
+        <div className="space-y-2 pt-1 animate-fade-in">
+          {error && (
+            <p className="text-[11px] text-center animate-fade-in" style={{ color: "#f87171" }}>{error}</p>
+          )}
+          {saved && (
+            <p className="font-pixel text-[8px] text-center animate-toast-up" style={{ color: tint }}>
+              Saved ✓ — I feel more like you now.
+            </p>
+          )}
+          <button
+            onClick={save}
+            className="btn-pixel w-full py-3.5 rounded-xl font-pixel text-[9px] text-black active:scale-[0.98] transition-all duration-150"
+            style={{
+              backgroundColor: tint,
+              boxShadow: saved ? `0 0 28px ${tint}55` : `0 2px 14px ${tint}30`,
+            }}>
+            {saved
+              ? "Saved ✓"
+              : learnedCount === 4
+                ? "Update Aminta"
+                : learnedCount === 0
+                  ? "Save & Start Teaching"
+                  : `Save & Keep Teaching  ${learnedCount}/4`
+            }
+          </button>
+          {learnedCount < 4 && !saved && (
+            <p className="text-[10px] text-center leading-relaxed" style={{ color: C.textDim }}>
+              {learnedCount === 0 && "Start with your topics and a writing tone."}
+              {learnedCount === 1 && "One section done. Each one sharpens my voice."}
+              {learnedCount === 2 && "Writing examples will make the biggest difference."}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* ── Evolution Archive ── */}
       {(() => {
