@@ -6,8 +6,9 @@ import {
   AuthShell, CARD_STYLE, Field, OAuthButtons, OrDivider, SubmitButton,
   ensureProfile, oauthCallbackUrl, persistExtId, postAuthDestination,
 } from "@/components/auth/AuthShell"
+import posthog from "posthog-js"
 
-// Sign in — email/password + Google/GitHub. Account creation lives on /signup.
+// Sign in — email/password + Google. Account creation lives on /signup.
 
 const isDev = process.env.NODE_ENV !== "production"
 
@@ -76,7 +77,7 @@ export default function LoginPage() {
         setUnconfirmed(true)
         setFormError("Your email isn't verified yet. Check your inbox, or resend the link below.")
       } else if (/invalid login credentials/i.test(error.message)) {
-        setFormError("Wrong email or password. If you signed up with Google or GitHub, use those buttons instead.")
+        setFormError("Wrong email or password. If you signed up with Google, use that button instead.")
       } else {
         setFormError(error.message)
       }
@@ -84,6 +85,11 @@ export default function LoginPage() {
     }
 
     await ensureProfile()
+    const { data: { session } } = await createClient().auth.getSession()
+    if (session) {
+      posthog.identify(session.user.id)
+      posthog.capture("user_logged_in", { method: "email" })
+    }
     window.location.href = postAuthDestination()
   }
 
@@ -97,10 +103,8 @@ export default function LoginPage() {
   }
 
   const handleGoogle = async () => {
+    posthog.capture("google_oauth_initiated", { page: "login" })
     await createClient().auth.signInWithOAuth({ provider: "google", options: { redirectTo: oauthCallbackUrl() } })
-  }
-  const handleGitHub = async () => {
-    await createClient().auth.signInWithOAuth({ provider: "github", options: { redirectTo: oauthCallbackUrl() } })
   }
 
   // Avoid flashing the form while we check for an existing session above —
@@ -117,7 +121,7 @@ export default function LoginPage() {
           <p className="text-[#9a9aa3] text-xs">Welcome back. Aminta missed you.</p>
         </div>
 
-        <OAuthButtons onGoogle={handleGoogle} onGitHub={handleGitHub} />
+        <OAuthButtons onGoogle={handleGoogle} />
 
         <OrDivider />
 

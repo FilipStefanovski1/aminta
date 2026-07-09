@@ -359,10 +359,9 @@ export default function PrivacyPage() {
 
             <Sub title="8.2 Billing">
               <p>
-                We use <strong className="text-white">Stripe</strong> to process subscription
-                payments. When you enter payment details, those details are transmitted directly
-                to Stripe and are never stored on Aminta&apos;s servers. Stripe is PCI-DSS
-                compliant. Privacy policy: stripe.com/privacy
+                Aminta does not currently process any payments — all plans are free. If we
+                introduce paid plans, we will name the payment processor here before any billing
+                begins.
               </p>
             </Sub>
 

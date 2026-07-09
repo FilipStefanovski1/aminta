@@ -340,10 +340,9 @@ export default function TermsPage() {
 
             <Sub title="8.2 Payment Processing">
               <p>
-                Payments are processed by Stripe. By providing payment details, you authorise us
-                to charge your payment method on a recurring basis for the selected plan. All
-                prices are in the currency displayed at checkout and are exclusive of applicable
-                taxes unless stated otherwise.
+                Aminta does not currently process any payments — all plans are free. If paid plans
+                are introduced, this section will name the payment processor and describe how
+                charges are handled before any billing begins.
               </p>
             </Sub>
 

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
+import posthog from "posthog-js"
 import { createClient } from "@/lib/supabase/client"
 import { EXTENSION_URL } from "@/lib/links"
 
@@ -81,7 +82,7 @@ function relativeTime(iso: string): string {
 }
 
 interface Props {
-  user: { email: string; name: string; avatarUrl: string }
+  user: { id: string; email: string; name: string; avatarUrl: string }
   xp: number
   streak: number
   generationsTotal: number
@@ -108,6 +109,13 @@ export default function DashboardClient({
   // No synced state (or a fully empty one) = the extension has never pushed
   // for this account — guide the user to install/connect it.
   const needsExtension = !hasState || (xp === 0 && generationsTotal === 0)
+
+  // Covers the returning-visitor path: signup/login only identify() right
+  // after a fresh auth event, so a user who lands here on an existing
+  // session (the common case) would otherwise stay on an anonymous distinct ID.
+  useEffect(() => {
+    posthog.identify(user.id)
+  }, [user.id])
 
   const [loggingOut, setLoggingOut] = useState(false)
   const [resetting, setResetting] = useState(false)

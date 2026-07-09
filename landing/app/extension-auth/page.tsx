@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
+import posthog from "posthog-js"
 
 export const dynamic = "force-dynamic"
 
@@ -44,6 +45,7 @@ export default function ExtensionAuthPage() {
     // Security: validate the extension ID before sending any tokens.
     if (!isAllowedExtId(extId)) {
       console.error("[Aminta] extension-auth: rejected ext_id:", extId)
+      posthog.capture("extension_auth_failed", { reason: "invalid_extension_id" })
       setErrorDetail("Invalid extension ID.")
       setStatus("forbidden")
       return
@@ -84,6 +86,7 @@ export default function ExtensionAuthPage() {
         if (isDev) console.log("[ext-auth] extension-auth ACK received — ok:", event.data.ok)
         if (event.data.ok) {
           localStorage.removeItem("aminta_ext_id")
+          posthog.capture("extension_auth_completed")
           setStatus("done")
 
           // The extension itself closes this tab (background.ts calls
@@ -98,6 +101,7 @@ export default function ExtensionAuthPage() {
             router.replace("/dashboard")
           }, 1500)
         } else {
+          posthog.capture("extension_auth_failed", { reason: "bridge_error", detail: event.data.error ?? "unknown" })
           setErrorDetail(`Bridge error: ${event.data.error ?? "unknown"}`)
           setStatus("error")
         }
@@ -106,6 +110,7 @@ export default function ExtensionAuthPage() {
       // Timeout in case the content script isn't injected (extension not installed).
       const timeoutId = setTimeout(() => {
         window.removeEventListener("message", onAck)
+        posthog.capture("extension_auth_failed", { reason: "timeout" })
         setErrorDetail("Extension not detected — make sure Aminta is installed and enabled.")
         setStatus("error")
       }, 5000)

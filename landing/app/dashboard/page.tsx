@@ -31,6 +31,7 @@ export default async function DashboardPage() {
       <main className="flex-1">
         <DashboardClient
           user={{
+            id: user.id,
             email: user.email ?? "",
             name: user.user_metadata?.full_name ?? user.user_metadata?.name ?? "",
             avatarUrl: user.user_metadata?.avatar_url ?? "",

@@ -1,6 +1,7 @@
 import { createServiceClient } from "@/lib/supabase/server"
 import { NextResponse, type NextRequest } from "next/server"
 import crypto from "crypto"
+import { getPostHogClient } from "@/lib/posthog-server"
 
 function verifySignature(payload: string, signature: string, secret: string): boolean {
   const expected = crypto
@@ -55,6 +56,14 @@ export async function POST(request: NextRequest) {
         creem_subscription_id: obj.subscription?.id ?? null,
       })
       .eq("email", email)
+
+    const posthog = getPostHogClient()
+    posthog.capture({
+      distinctId: email,
+      event: "subscription_activated",
+      properties: { plan, event_type: eventType },
+    })
+    posthog.identify({ distinctId: email, properties: { plan } })
   }
 
   // Canceled = user turned off renewal; access continues until the period
@@ -64,6 +73,11 @@ export async function POST(request: NextRequest) {
       .from("users")
       .update({ subscription_status: "canceled" })
       .eq("email", email)
+
+    getPostHogClient().capture({
+      distinctId: email,
+      event: "subscription_canceled",
+    })
   }
 
   if (eventType === "subscription.expired") {
@@ -72,6 +86,11 @@ export async function POST(request: NextRequest) {
       .update({ plan: "free", subscription_status: "expired" })
       .eq("email", email)
       .neq("plan", "lifetime") // never downgrade lifetime purchases
+
+    getPostHogClient().capture({
+      distinctId: email,
+      event: "subscription_expired",
+    })
   }
 
   if (eventType === "subscription.past_due") {

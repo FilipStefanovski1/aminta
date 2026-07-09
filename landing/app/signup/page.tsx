@@ -6,6 +6,8 @@ import {
   AuthShell, CARD_STYLE, Field, OAuthButtons, OrDivider, SubmitButton,
   ensureProfile, oauthCallbackUrl, persistExtId, postAuthDestination,
 } from "@/components/auth/AuthShell"
+import { checkSignupEmail } from "@/lib/auth/emailValidation"
+import posthog from "posthog-js"
 
 // Real account creation: name, email, password, confirm, optional referral,
 // terms consent. Email/password via Supabase signUp. If email confirmation is
@@ -28,6 +30,7 @@ export default function SignupPage() {
   const [referral, setReferral] = useState("")
   const [terms, setTerms]       = useState(false)
   const [errors, setErrors]     = useState<FieldErrors>({})
+  const [emailSuggestion, setEmailSuggestion] = useState<string>()
   const [formError, setFormError] = useState("")
   const [loading, setLoading]   = useState(false)
   const [step, setStep]         = useState<"form" | "verify">("form")
@@ -40,7 +43,8 @@ export default function SignupPage() {
       case "name":
         return name.trim() ? undefined : "Enter your name."
       case "email":
-        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ? undefined : "Enter a valid email address."
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return "Enter a valid email address."
+        return checkSignupEmail(email).error
       case "password":
         return password.length >= 8 ? undefined : "Password must be at least 8 characters."
       case "confirm":
@@ -52,6 +56,7 @@ export default function SignupPage() {
 
   function blurValidate(field: keyof FieldErrors) {
     setErrors(prev => ({ ...prev, [field]: validateField(field) }))
+    if (field === "email") setEmailSuggestion(checkSignupEmail(email).suggestion)
   }
 
   function validateAll(): boolean {
@@ -103,11 +108,20 @@ export default function SignupPage() {
     if (data.session) {
       // Email confirmation disabled — user is signed in right now.
       await ensureProfile()
+      posthog.identify(data.session.user.id, { name: name.trim() })
+      posthog.capture("user_signed_up", {
+        method: "email",
+        has_referral_code: !!referral.trim(),
+      })
       window.location.href = postAuthDestination()
       return
     }
 
     // Email confirmation enabled — no session until the link is clicked.
+    posthog.capture("user_signed_up", {
+      method: "email",
+      has_referral_code: !!referral.trim(),
+    })
     setLoading(false)
     setStep("verify")
   }
@@ -122,10 +136,8 @@ export default function SignupPage() {
   }
 
   const handleGoogle = async () => {
+    posthog.capture("google_oauth_initiated", { page: "signup" })
     await createClient().auth.signInWithOAuth({ provider: "google", options: { redirectTo: oauthCallbackUrl() } })
-  }
-  const handleGitHub = async () => {
-    await createClient().auth.signInWithOAuth({ provider: "github", options: { redirectTo: oauthCallbackUrl() } })
   }
 
   if (step === "verify") {
@@ -177,7 +189,7 @@ export default function SignupPage() {
           <p className="text-[#9a9aa3] text-xs">Start growing your audience with Aminta</p>
         </div>
 
-        <OAuthButtons onGoogle={handleGoogle} onGitHub={handleGitHub} />
+        <OAuthButtons onGoogle={handleGoogle} />
 
         <OrDivider />
 
@@ -191,15 +203,31 @@ export default function SignupPage() {
             autoComplete="name"
             error={errors.name}
           />
-          <Field
-            label="Email address"
-            value={email}
-            onChange={setEmail}
-            onBlur={() => blurValidate("email")}
-            placeholder="you@example.com"
-            autoComplete="email"
-            error={errors.email}
-          />
+          <div>
+            <Field
+              label="Email address"
+              value={email}
+              onChange={v => { setEmail(v); setEmailSuggestion(undefined) }}
+              onBlur={() => blurValidate("email")}
+              placeholder="you@example.com"
+              autoComplete="email"
+              error={errors.email}
+            />
+            {emailSuggestion && (
+              <p className="mt-1 text-xs text-[#9a9aa3]">
+                Did you mean{" "}
+                <button
+                  type="button"
+                  onClick={() => { setEmail(emailSuggestion); setEmailSuggestion(undefined) }}
+                  className="underline"
+                  style={{ color: "#74f7b5" }}
+                >
+                  {emailSuggestion}
+                </button>
+                ?
+              </p>
+            )}
+          </div>
           <Field
             label="Password"
             type="password"

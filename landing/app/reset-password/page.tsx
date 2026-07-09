@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client"
 import {
   AuthShell, CARD_STYLE, Field, SubmitButton,
 } from "@/components/auth/AuthShell"
+import posthog from "posthog-js"
 
 // Two modes on one route:
 //   request — no session: enter email → Supabase sends a recovery link
@@ -42,6 +43,7 @@ export default function ResetPasswordPage() {
     })
     setLoading(false)
     if (error) { setFormError(error.message); return }
+    posthog.capture("password_reset_requested")
     setMode("sent")
   }
 
@@ -57,6 +59,7 @@ export default function ResetPasswordPage() {
     const { error } = await createClient().auth.updateUser({ password })
     setLoading(false)
     if (error) { setFormError(error.message); return }
+    posthog.capture("password_updated")
     setMode("done")
   }
 
