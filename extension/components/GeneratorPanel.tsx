@@ -256,7 +256,7 @@ export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, onFirstP
   const xp   = store.xp ?? 0
   const tint = getStageTint(xp)
 
-  const FREE_DAILY_LIMIT = 10
+  const FREE_DAILY_LIMIT = 5
   const isFree = (store.plan ?? "free") === "free"
   const todayGenerations = store.missionDate === todayLocal() ? (store.missionGenerates ?? 0) : 0
   const atFreeLimit = isFree && todayGenerations >= FREE_DAILY_LIMIT
@@ -574,17 +574,8 @@ export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, onFirstP
             {FREE_DAILY_LIMIT}/{FREE_DAILY_LIMIT} free generations used today
           </p>
           <p className="text-[11px] leading-snug" style={{ color: C.textFaint }}>
-            Upgrade to Pro for unlimited generations, or come back tomorrow.
+            Come back tomorrow for more free generations.
           </p>
-          <a
-            href="https://amintaapp.com/#pricing"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block font-pixel text-[8px] px-3 py-1.5 rounded-lg text-black transition-all hover:brightness-110"
-            style={{ backgroundColor: tint }}
-          >
-            Upgrade →
-          </a>
         </div>
       )}
       {!loading && !atFreeLimit && !store.apiKey && (

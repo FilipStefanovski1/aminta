@@ -296,12 +296,6 @@ function SettingsOverlay({
               {syncLine && (
                 <p className="text-[10px] mt-1.5" style={{ color: syncLine.color }}>{syncLine.text}</p>
               )}
-              {plan === "free" && (
-                <a href="https://amintaapp.com/#pricing" target="_blank" rel="noreferrer"
-                  className="text-[10px] underline block mt-1.5" style={{ color: C.mint }}>
-                  Upgrade to Pro →
-                </a>
-              )}
             </div>
           ) : (
             <p className="text-[12px] px-0.5" style={{ color: C.textFaint }}>Not signed in</p>

@@ -72,7 +72,7 @@ export default function LoginScreen({ onSignedIn: _onSignedIn }: Props) {
             {state === "stalled" ? "Try again" : "Sign in on amintaapp.com"}
           </button>
           <p className="text-[10px]" style={{ color: C.textGhost }}>
-            Google · GitHub · Email &amp; password
+            Google · Email &amp; password
           </p>
         </div>
       )}
