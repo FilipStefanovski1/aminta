@@ -11,7 +11,7 @@
 
 export const EXTENSION_URL =
   process.env.NEXT_PUBLIC_EXTENSION_URL ??
-  "https://chromewebstore.google.com" // TODO: replace with real listing URL
+  "https://chromewebstore.google.com/detail/aminta/meebmdkmkimhobegenimhhpafaapjbpb"
 
 export const CREEM_PRO_URL =
   process.env.NEXT_PUBLIC_CREEM_PRO_URL ??
