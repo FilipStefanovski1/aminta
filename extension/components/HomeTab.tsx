@@ -24,6 +24,7 @@ interface Props {
   onCreate: () => void
   onTrain: () => void
   onOpenCompanion?: () => void
+  onOpenSettings?: () => void
   onUpdate?: () => void
   // From the Companion Engine via sidepanel
   animClass: string
@@ -33,7 +34,7 @@ interface Props {
   newlyUnlockedLevel?: number | null
 }
 
-export default function HomeTab({ store, onCreate, onTrain, onOpenCompanion, onUpdate, animClass, animKey, speech, onContext, newlyUnlockedLevel }: Props) {
+export default function HomeTab({ store, onCreate, onTrain, onOpenCompanion, onOpenSettings, onUpdate, animClass, animKey, speech, onContext, newlyUnlockedLevel }: Props) {
   const xp          = store.xp ?? 0
   const currentForm = getForm(xp)
   const level       = getLevel(xp)
@@ -141,6 +142,19 @@ export default function HomeTab({ store, onCreate, onTrain, onOpenCompanion, onU
           backgroundColor: "#0e1018",
         }}>
         <div className="px-4 pt-5 pb-6" style={{ position: "relative" }}>
+          {onOpenSettings && (
+            <button
+              onClick={onOpenSettings}
+              title="Settings"
+              className="absolute top-2.5 right-2.5 w-7 h-7 flex items-center justify-center rounded-full text-[#666] hover:text-[#999] hover:bg-white/10 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+              style={{ zIndex: 3 }}>
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <path d="M5.8 1.5 5.5 3.05c-.35.13-.67.3-.96.51L3.1 3.05 1.7 5.45l1.08.88C2.74 6.55 2.72 6.77 2.72 7s.02.45.06.67L1.7 8.55l1.4 2.4 1.44-.51c.29.21.61.38.96.51l.3 1.55h2.4l.3-1.55c.35-.13.67-.3.96-.51l1.44.51 1.4-2.4-1.08-.88c.04-.22.06-.44.06-.67s-.02-.45-.06-.67l1.08-.88-1.4-2.4-1.44.51c-.29-.21-.61-.38-.96-.51L8.2 1.5H5.8z"
+                  stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
+                <circle cx="7" cy="7" r="1.7" stroke="currentColor" strokeWidth="1.2"/>
+              </svg>
+            </button>
+          )}
           <div className="flex items-center justify-center gap-2 mb-2">
             <p className="font-pixel text-[8px] tracking-widest" style={{ color: tint }}>
               {stage} · Lv.{level}

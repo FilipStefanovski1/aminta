@@ -56,8 +56,6 @@ const RARITY_COLOR: Record<string, string> = {
   LEGENDARY: "#f5d060",
 }
 
-const inputCls = "input-pixel w-full rounded-xl px-3 py-2.5 text-sm"
-
 function InfoTip({ tip }: { tip: string }) {
   const [open, setOpen] = useState(false)
   return (
@@ -72,7 +70,7 @@ function InfoTip({ tip }: { tip: string }) {
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
           <div
-            className="absolute left-0 top-5 z-20 rounded-xl p-3 text-[11px] leading-relaxed w-56"
+            className="absolute right-0 top-5 z-20 rounded-xl p-3 text-[11px] leading-relaxed w-56 max-w-[calc(100vw-32px)]"
             style={{ backgroundColor: "#252528", border: `1px solid ${C.border}`, color: C.text, boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }}>
             {tip}
           </div>
@@ -123,7 +121,10 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0 
   )
   const [newTopic,         setNewTopic]         = useState("")
   const [voiceStyle,       setVoiceStyle]       = useState(initial?.voiceStyle ?? "")
-  const [voiceInspiration, setVoiceInspiration] = useState(initial?.voiceInspiration ?? "")
+  const [voiceInspiration, setVoiceInspiration] = useState<string[]>(() =>
+    (initial?.voiceInspiration ?? "").split(",").map(s => s.trim()).filter(Boolean)
+  )
+  const [newInspiration,   setNewInspiration]   = useState("")
   const [examples,         setExamples]         = useState<string[]>(() => {
     const raw = initial?.examples ?? ""
     if (!raw) return []
@@ -146,7 +147,7 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0 
   // decide whether the Save/Update button should be visible. Only updates on
   // mount and right after a successful save — never on every keystroke — so
   // it stays a stable "what's actually persisted" baseline to diff against.
-  const snapshot = (t: string[], vs: string, vi: string, ex: string[], r: string[]) =>
+  const snapshot = (t: string[], vs: string, vi: string[], ex: string[], r: string[]) =>
     JSON.stringify({ t, vs, vi, ex, r })
   const baselineRef = useRef(snapshot(topics, voiceStyle, voiceInspiration, examples, rules))
   const isDirty = baselineRef.current !== snapshot(topics, voiceStyle, voiceInspiration, examples, rules)
@@ -178,7 +179,7 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0 
     { label: "Topics",           done: topics.length > 0 },
     { label: "Writing tone",     done: !!voiceStyle },
     { label: "Writing examples", done: examples.length >= 3 },
-    { label: "Instincts",        done: !!voiceInspiration.trim() || rules.length > 0 },
+    { label: "Instincts",        done: voiceInspiration.length > 0 || rules.length > 0 },
   ]
   const learnedCount  = STEPS.filter(s => s.done).length
   const confidencePct = Math.round((learnedCount / 4) * 100)
@@ -213,10 +214,14 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0 
     setVoiceStyle(id)
   }
 
-  const handleInspiration = (h: string) => {
-    setVoiceInspiration(h)
-    if (h.trim()) react(`I'll study ${h} and blend their rhythm into yours.`)
+  const addInspiration = (handle?: string) => {
+    const h = (handle ?? newInspiration).trim()
+    if (!h || voiceInspiration.includes(h) || voiceInspiration.length >= 5) return
+    setVoiceInspiration(prev => [...prev, h])
+    setNewInspiration("")
+    react(`I'll study ${h} and blend their rhythm into yours.`)
   }
+  const removeInspiration = (i: number) => setVoiceInspiration(prev => prev.filter((_, j) => j !== i))
 
   const addRule = () => {
     const r = newRule.trim()
@@ -235,7 +240,7 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0 
       niche:            topics.join(", "),
       tone:             voiceStyle,
       voiceStyle,
-      voiceInspiration: voiceInspiration.trim(),
+      voiceInspiration: voiceInspiration.join(", "),
       examples:         JSON.stringify(examples),
       customRules:      rules.join("\n"),
     })
@@ -361,18 +366,7 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0 
                     transform:       active ? "scale(1.015)" : "scale(1)",
                     boxShadow:       active ? `0 0 20px ${tint}20` : "none",
                   }}>
-                  {active && (
-                    <svg
-                      width="7" height="5" viewBox="0 0 7 5"
-                      className="absolute top-2 right-2"
-                      style={{ imageRendering: "pixelated" }}>
-                      <rect x="0" y="2" width="2" height="2" fill={tint} />
-                      <rect x="1" y="3" width="2" height="2" fill={tint} />
-                      <rect x="3" y="1" width="2" height="2" fill={tint} />
-                      <rect x="5" y="0" width="2" height="2" fill={tint} />
-                    </svg>
-                  )}
-                  <p className="font-pixel text-[7px] mb-1 pr-4" style={{ color: active ? tint : C.text }}>{id}</p>
+                  <p className="font-pixel text-[7px] mb-1" style={{ color: active ? tint : C.text }}>{id}</p>
                   <p className="text-[9px] leading-snug" style={{ color: active ? tint + "bb" : C.textDim }}>{desc}</p>
                 </button>
               )
@@ -524,19 +518,56 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0 
         {/* Sound like */}
         <div className="p-4">
           <SectionHead label="Sound like (optional)" tipKey="inspiration" />
-          <input
-            value={voiceInspiration}
-            onChange={e => handleInspiration(e.target.value)}
-            placeholder="@handle"
-            className={inputCls}
-          />
-          {!voiceInspiration.trim() && (
+          {voiceInspiration.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-3">
+              {voiceInspiration.map((handle, i) => (
+                <span
+                  key={i}
+                  className="group/chip inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px]"
+                  style={{ backgroundColor: C.cardInner, border: `1px solid ${C.border}`, color: C.text }}>
+                  {handle}
+                  <button
+                    onClick={() => removeInspiration(i)}
+                    className="opacity-30 group-hover/chip:opacity-80 hover:!opacity-100 transition-opacity leading-none"
+                    style={{ color: C.textDim, fontSize: 14 }}>
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+          {voiceInspiration.length < 5 && (
+            <div
+              className="flex items-center gap-2 rounded-xl px-3 py-2"
+              style={{ backgroundColor: C.cardInner, border: `1px solid ${C.border}` }}>
+              <input
+                value={newInspiration}
+                onChange={e => setNewInspiration(e.target.value)}
+                placeholder={voiceInspiration.length === 0 ? "@handle" : "Add another handle…"}
+                className="flex-1 bg-transparent text-[11px] outline-none min-w-0"
+                style={{ color: C.text }}
+                onKeyDown={e => {
+                  if (e.key === "Enter") { e.preventDefault(); addInspiration() }
+                  if (e.key === "Escape") setNewInspiration("")
+                }}
+              />
+              {newInspiration.trim() && (
+                <button
+                  onClick={() => addInspiration()}
+                  className="font-pixel text-[7px] shrink-0"
+                  style={{ color: tint }}>
+                  Add →
+                </button>
+              )}
+            </div>
+          )}
+          {voiceInspiration.length === 0 && (
             <div className="flex items-center gap-1.5 mt-2 flex-wrap">
               <span className="text-[10px]" style={{ color: C.textDim }}>try:</span>
               {SUGGESTION_HANDLES.map(h => (
                 <button
                   key={h}
-                  onClick={() => handleInspiration(h)}
+                  onClick={() => addInspiration(h)}
                   className="text-[10px] transition-colors"
                   style={{ color: C.textDim }}
                   onMouseEnter={e => { e.currentTarget.style.color = tint }}
@@ -546,7 +577,7 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0 
               ))}
             </div>
           )}
-          {voiceInspiration.trim() && (
+          {voiceInspiration.length > 0 && (
             <p className="text-[10px] mt-2 leading-relaxed" style={{ color: C.textDim }}>
               I'll blend their rhythm into your voice — not their ideas.
             </p>

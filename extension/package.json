@@ -1,7 +1,7 @@
 {
   "name": "aminta",
   "displayName": "Aminta",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Aminta - Your AI writing companion for X.",
   "scripts": {
     "dev": "plasmo dev",

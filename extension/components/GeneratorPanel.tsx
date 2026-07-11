@@ -77,11 +77,20 @@ const MODE_CONFIG: { id: Mode; label: string; sub: string; icon: React.ReactNode
 
 // ─── Platform config ──────────────────────────────────────────────────────────
 
-const PLATFORM_CONFIG: { id: Platform; label: string; icon: React.ReactNode }[] = [
-  { id: "linkedin", label: "LinkedIn",    icon: <LinkedInIcon /> },
+const PLATFORM_CONFIG: { id: Platform; label: string; icon: React.ReactNode; locked?: boolean }[] = [
+  { id: "linkedin", label: "LinkedIn",    icon: <LinkedInIcon />, locked: true },
   { id: "x",        label: "X (Twitter)", icon: <XIcon /> },
-  { id: "threads",  label: "Threads",     icon: <ThreadsIcon /> },
+  { id: "threads",  label: "Threads",     icon: <ThreadsIcon />, locked: true },
 ]
+
+function LockIcon() {
+  return (
+    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="4" y="11" width="16" height="10" rx="2" />
+      <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+    </svg>
+  )
+}
 
 // ─── Tone config ──────────────────────────────────────────────────────────────
 
@@ -409,15 +418,20 @@ export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, onFirstP
             return (
               <button
                 key={p.id}
-                onClick={() => { setPlatform(p.id); reset() }}
+                onClick={p.locked ? undefined : () => { setPlatform(p.id); reset() }}
+                disabled={p.locked}
+                title={p.locked ? "Coming soon" : undefined}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl flex-1 justify-center transition-all text-[10px] font-medium"
                 style={{
                   border: `1.5px solid ${active ? tint : C.border}`,
                   backgroundColor: active ? tint + "18" : C.card,
-                  color: active ? tint : C.textDim,
+                  color: p.locked ? C.textGhost : active ? tint : C.textDim,
+                  cursor: p.locked ? "not-allowed" : "pointer",
+                  opacity: p.locked ? 0.55 : 1,
                 }}>
                 <span style={{ color: active ? tint : C.textGhost }}>{p.icon}</span>
                 <span>{p.label}</span>
+                {p.locked && <LockIcon />}
               </button>
             )
           })}

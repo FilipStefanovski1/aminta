@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react"
 
 import "~style.css"
 
-import { GOOGLE_MODELS, GROQ_MODELS, OPENROUTER_MODELS, SELECT_STYLE } from "~components/ApiKeyForm"
+import { SELECT_STYLE } from "~components/ApiKeyForm"
 import DemonMascot from "~components/DemonMascot"
 import GeneratorPanel from "~components/GeneratorPanel"
 import CompanionPage from "~components/CompanionPage"
@@ -11,7 +11,8 @@ import LoginScreen from "~components/LoginScreen"
 import SetupGate from "~components/SetupGate"
 import VoiceProfileForm from "~components/VoiceProfileForm"
 import { FORMS, getForm, getLevel, getLevelSpan, getStageTint, getXpInLevel, getXpProgress, getNextStage } from "~lib/evolution"
-import { isGoogleKey, isGroqKey, GROQ_DEFAULT, DEPRECATED_GROQ_IDS } from "~lib/ai"
+import { isGroqKey, GROQ_DEFAULT, DEPRECATED_GROQ_IDS } from "~lib/ai"
+import { PROVIDERS, detectProvider } from "~lib/providers"
 import { C } from "~lib/theme"
 import { SpriteMark, XPBar } from "~components/ui"
 import { getStore, setStore, type AmintaStore } from "~lib/storage"
@@ -178,7 +179,7 @@ function SettingsOverlay({
   // ── Plan ────────────────────────────────────────────────────────────────────
   const plan      = store.plan ?? "free"
   const planLabel = plan === "lifetime" ? "FOUNDER" : plan === "pro" ? "PRO" : "FREE"
-  const planColor = plan === "lifetime" ? "#f5d060" : plan === "pro" ? "#74f7b5" : C.textGhost
+  const planColor = plan === "lifetime" ? "#f5d060" : plan === "pro" ? "#74f7b5" : C.textDim
 
   // ── Sync status (written by lib/sync.ts) ────────────────────────────────────
   const [syncLine, setSyncLine] = useState<{ text: string; color: string } | null>(null)
@@ -229,23 +230,14 @@ function SettingsOverlay({
   const [justSaved, setJustSaved] = useState(false)
   const [error,     setError]     = useState("")
 
-  const isGoogle = isGoogleKey(key)
-  const isGroq   = isGroqKey(key)
-  const models   = isGoogle ? GOOGLE_MODELS : isGroq ? GROQ_MODELS : OPENROUTER_MODELS
-
-  const providerName = isGroq ? "Groq" : isGoogle ? "Gemini" : "OpenRouter"
-  const providerDot  = isGroq ? "#f97316" : isGoogle ? "#4a90d9" : "#a78bfa"
-  const providerUrl  = isGroq
-    ? "console.groq.com/keys"
-    : isGoogle
-      ? "aistudio.google.com/apikey"
-      : "openrouter.ai/keys"
+  const provider = detectProvider(key)
+  const models   = provider.models
 
   const isDirty = key.trim() !== (store.apiKey ?? "") || model !== (store.model ?? "")
 
   useEffect(() => {
     if (!models.find(m => m.id === model)) setModel(models[0].id)
-  }, [isGoogle, isGroq]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [provider.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const save = async () => {
     if (!key.trim()) { setError("Paste an API key first."); return }
@@ -288,7 +280,10 @@ function SettingsOverlay({
                     {planLabel}
                   </span>
                   <button onClick={onSignOut}
-                    className="text-[10px] transition-colors text-[#888896] hover:text-red-400">
+                    className="text-[10px] transition-colors"
+                    style={{ color: "#f87171" }}
+                    onMouseEnter={e => { e.currentTarget.style.color = "#ff5c5c" }}
+                    onMouseLeave={e => { e.currentTarget.style.color = "#f87171" }}>
                     Sign out
                   </button>
                 </div>
@@ -339,7 +334,7 @@ function SettingsOverlay({
                   API Key
                 </label>
                 <span className="text-[9px]" style={{ color: "#888896" }}>
-                  <span style={{ color: providerDot }}>●</span>{" "}{providerName}
+                  <span style={{ color: provider.dot }}>●</span>{" "}{provider.name}
                 </span>
               </div>
               <input
@@ -349,8 +344,36 @@ function SettingsOverlay({
                 placeholder="gsk_…  ·  AIza…  ·  sk-or-…"
                 className="input-pixel w-full rounded-lg px-3 py-2 text-[12px]"
               />
+
+              {/* Get an API Key — compact resource row, current provider highlighted */}
+              <div className="flex items-center flex-wrap gap-x-1.5 gap-y-1 mt-2">
+                <span className="text-[9px]" style={{ color: "#55555f" }}>Get a key:</span>
+                {PROVIDERS.map((p, i) => {
+                  const active = p.id === provider.id
+                  return (
+                    <span key={p.id} className="flex items-center gap-1.5">
+                      <a
+                        href={p.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[9px] transition-colors"
+                        style={{ color: active ? C.mint : "#666672" }}
+                        onMouseEnter={e => { if (!active) e.currentTarget.style.color = C.mint }}
+                        onMouseLeave={e => { if (!active) e.currentTarget.style.color = "#666672" }}
+                      >
+                        {p.name}
+                      </a>
+                      {p.free && (
+                        <span className="text-[8px]" style={{ color: active ? C.mint + "99" : "#4a4a55" }}>free</span>
+                      )}
+                      {i < PROVIDERS.length - 1 && <span style={{ color: "#3a3a42" }}>·</span>}
+                    </span>
+                  )
+                })}
+              </div>
+
               <p className="text-[10px] mt-1.5 leading-none" style={{ color: "#666672" }}>
-                {providerUrl} · stored locally
+                Stored locally only.
               </p>
             </div>
 
@@ -369,13 +392,13 @@ function SettingsOverlay({
                   <option key={m.id} value={m.id}>{m.label}</option>
                 ))}
               </select>
-              {isGroq && (() => {
-                const gm = GROQ_MODELS.find(m => m.id === model) ?? GROQ_MODELS[0]
-                return (
+              {provider.id === "groq" && (() => {
+                const gm = models.find(m => m.id === model) ?? models[0]
+                return gm.badge ? (
                   <p className="font-pixel text-[6px] mt-1.5" style={{ color: gm.badgeColor }}>
                     {gm.badge}
                   </p>
-                )
+                ) : null
               })()}
             </div>
           </div>
@@ -394,7 +417,7 @@ function SettingsOverlay({
                 border:          `1px solid ${isDirty ? "transparent" : justSaved ? C.mint + "55" : C.border}`,
                 cursor:          isDirty ? "pointer" : "default",
               }}>
-              {saving ? "Saving…" : isDirty ? "Save Changes" : "✓ Saved"}
+              {saving ? "Saving…" : isDirty ? "Save Changes" : "Saved"}
             </button>
           </div>
         </section>
@@ -691,30 +714,6 @@ function SidePanel() {
           />
         )}
 
-        {/* ── Header ── */}
-        <header className="shrink-0 flex items-center justify-between px-4 py-2.5" style={{ borderBottom: `1px solid ${C.border}` }}>
-          <div className="flex items-center gap-2">
-            <svg width="16" height="13" viewBox="0 0 16 13" style={{ imageRendering: "pixelated" }}>
-              <rect x="2" y="0" width="2" height="3" fill={tint} />
-              <rect x="12" y="0" width="2" height="3" fill={tint} />
-              <rect x="3" y="3" width="10" height="9" fill={tint} />
-              <rect x="4" y="6" width="2" height="2" fill="#1f1f1f" />
-              <rect x="10" y="6" width="2" height="2" fill="#1f1f1f" />
-            </svg>
-            <span className="font-pixel text-[8px]" style={{ color: tint }}>Aminta</span>
-          </div>
-          <button
-            onClick={() => setSettingsOpen(true)}
-            className="w-7 h-7 flex items-center justify-center text-[#444] hover:text-[#888] transition-colors rounded-lg hover:bg-white/5"
-            title="Settings">
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <path d="M5.8 1.5 5.5 3.05c-.35.13-.67.3-.96.51L3.1 3.05 1.7 5.45l1.08.88C2.74 6.55 2.72 6.77 2.72 7s.02.45.06.67L1.7 8.55l1.4 2.4 1.44-.51c.29.21.61.38.96.51l.3 1.55h2.4l.3-1.55c.35-.13.67-.3.96-.51l1.44.51 1.4-2.4-1.08-.88c.04-.22.06-.44.06-.67s-.02-.45-.06-.67l1.08-.88-1.4-2.4-1.44.51c-.29-.21-.61-.38-.96-.51L8.2 1.5H5.8z"
-                stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
-              <circle cx="7" cy="7" r="1.7" stroke="currentColor" strokeWidth="1.2"/>
-            </svg>
-          </button>
-        </header>
-
         {/* ── Content ── */}
         <main className="flex-1 overflow-y-auto overflow-x-hidden">
           <div key={tabKey} className="px-4 py-3 animate-slide-up">
@@ -725,6 +724,7 @@ function SidePanel() {
                 onCreate={() => switchTab("create")}
                 onTrain={() => switchTab("train")}
                 onOpenCompanion={() => setCompanionOpen(true)}
+                onOpenSettings={() => setSettingsOpen(true)}
                 onUpdate={refresh}
                 animClass={animClass}
                 animKey={animKey}
