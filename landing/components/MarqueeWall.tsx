@@ -38,17 +38,6 @@ const CARDS: WallCard[] = [
     avatar: "/testimonials/VictorSaltor.jpeg",
     tag: "Creator",
   },
-  // col 2
-  {
-    id: "fn1",
-    kind: "founder",
-    name: "Filip Stefanovski",
-    role: "Founder",
-    company: "Aminta",
-    review: "Most people don't have a content problem. They have a consistency problem. That's why I built Aminta.",
-    avatar: "/testimonials/filip-stefanovski.jpg",
-    tag: "Founder note",
-  },
   // col 0
   {
     id: "r2",
