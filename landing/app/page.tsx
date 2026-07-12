@@ -1,7 +1,6 @@
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
 import ThreeModes from "@/components/ThreeModes";
-import ScrollDemonProgress from "@/components/ScrollDemonProgress";
 import AmintaEvolutionGrid from "@/components/AmintaEvolutionGrid";
 import Features from "@/components/Features";
 import HowItWorks from "@/components/HowItWorks";
@@ -21,7 +20,6 @@ export default function Home() {
         <Hero />
         <ThreeModes />
         <HowItWorks />
-        <ScrollDemonProgress />
         <AmintaEvolutionGrid />
         <Features />
         <Pricing />

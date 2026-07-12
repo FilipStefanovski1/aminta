@@ -318,6 +318,11 @@ function EvolutionCard({ stage, index }: { stage: EvolutionStage; index: number 
                 <div className="w-24 h-24 grid place-items-center">
                   <span className="font-pixel text-5xl" style={{ color: stage.color, textShadow: `0 0 18px ${stage.color}44` }}>?</span>
                 </div>
+              ) : stage.lv === 4 ? (
+                <div className="aminta-glow">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/excited.gif" alt="Excited Aminta" width={72} height={72} className="pixelated" />
+                </div>
               ) : (
                 <div className="aminta-glow">
                   <AmintaSprite level={stage.lv} size={72} interactive={false} />

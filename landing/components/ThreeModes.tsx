@@ -41,33 +41,6 @@ function SceneTimeline() {
   );
 }
 
-function ScenePanel() {
-  return (
-    <div className="rounded-xl overflow-hidden border border-accent/30 shadow-[0_0_28px_rgba(116,247,181,0.07)] bg-ink">
-      <Chrome />
-      {/* compose area */}
-      <div className="px-3 pt-3 pb-1">
-        <div className="h-1.5 w-24 rounded bg-panel2/40 mb-2" />
-        <div className="h-1.5 w-full rounded bg-panel2/30 mb-1.5" />
-        <div className="h-1.5 w-3/4 rounded bg-panel2/20" />
-      </div>
-      {/* x toolbar */}
-      <div className="flex items-center gap-2 px-3 py-2 border-t border-line/20">
-        {[...Array(5)].map((_, i) => (
-          <div key={i} className="w-3 h-3 rounded-sm bg-panel2/50" />
-        ))}
-        <span className="ml-auto text-[7px] font-bold text-white/30 bg-panel2/50 rounded-full px-2 py-0.5">Post</span>
-      </div>
-      {/* aminta injected bar */}
-      <div className="flex items-center gap-1.5 px-3 py-2 bg-panel2/30 border-t border-accent/20">
-        <span className="bg-accent text-black text-[7px] font-bold rounded px-2 py-0.5">+ Generate</span>
-        <span className="bg-panel2 border border-line/40 text-white/70 text-[7px] font-bold rounded px-2 py-0.5">+ Polish</span>
-        <span className="ml-auto font-pixel text-[7px] text-accent/60">Aminta</span>
-      </div>
-    </div>
-  );
-}
-
 function ScenePublish() {
   return (
     <div className="rounded-xl overflow-hidden border border-accent/50 shadow-[0_0_36px_rgba(116,247,181,0.13)] bg-ink">
@@ -120,9 +93,8 @@ function SceneEvo() {
 
 const STEPS = [
   { num: "01", caption: "You have an idea.", Scene: SceneTimeline },
-  { num: "02", caption: "Aminta helps shape it.", Scene: ScenePanel },
-  { num: "03", caption: "Publish.", Scene: ScenePublish },
-  { num: "04", caption: "Earn XP. Unlock evolutions.", Scene: SceneEvo },
+  { num: "02", caption: "Aminta helps shape it.", Scene: ScenePublish },
+  { num: "03", caption: "Earn XP. Unlock evolutions.", Scene: SceneEvo },
 ] as const;
 
 const XP_ITEMS = [
@@ -150,7 +122,7 @@ export default function ThreeModes() {
         </Reveal>
 
         {/* 4-step story flow */}
-        <div className="mt-16 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-4">
+        <div className="mt-16 grid grid-cols-1 sm:grid-cols-3 gap-6 lg:gap-4">
           {STEPS.map(({ num, caption, Scene }, i) => (
             <Reveal key={num} delay={i * 90}>
               <div className="flex flex-col gap-3">
