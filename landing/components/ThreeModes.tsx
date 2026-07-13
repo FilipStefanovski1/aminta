@@ -31,11 +31,11 @@ function TweetRow({ short }: { short?: boolean }) {
 
 function SceneTimeline() {
   return (
-    <div className="overflow-hidden border border-line/50 shadow-lg">
+    <div className="h-full overflow-hidden border border-line/50 shadow-lg">
       <img
         src="/youhaveanidea%20(1).png"
         alt="X timeline"
-        className="w-full h-auto block"
+        className="w-full h-full object-cover block"
       />
     </div>
   );
@@ -43,17 +43,17 @@ function SceneTimeline() {
 
 function ScenePublish() {
   return (
-    <div className="rounded-xl overflow-hidden border border-accent/50 shadow-[0_0_36px_rgba(116,247,181,0.13)] bg-ink">
+    <div className="h-full flex flex-col rounded-xl overflow-hidden border border-accent/50 shadow-[0_0_36px_rgba(116,247,181,0.13)] bg-ink">
       <Chrome right={<span className="text-[9px] font-pixel text-accent">Aminta</span>} />
-      <div className="grid grid-cols-[1fr_88px]">
-        <div className="p-2.5 border-r border-line/40">
+      <div className="flex-1 grid grid-cols-[1fr_88px]">
+        <div className="p-2.5 border-r border-line/40 flex flex-col justify-center">
           <TweetRow />
           <div className="mt-1 rounded border border-accent/20 bg-panel2/30 px-2 py-2">
             <div className="h-1.5 w-full rounded bg-white/15 mb-1.5" />
             <div className="h-1.5 w-4/5 rounded bg-white/15" />
           </div>
         </div>
-        <div className="p-2 flex flex-col gap-1.5">
+        <div className="p-2 flex flex-col gap-1.5 justify-center">
           <span className="font-pixel text-[8px] text-accent">Aminta</span>
           <div className="rounded bg-panel2/60 border border-line/40 px-1.5 py-1.5 text-[7px] text-white/80 leading-relaxed">
             building in public hits different...
@@ -70,7 +70,7 @@ function ScenePublish() {
 
 function SceneEvo() {
   return (
-    <div className="rounded-xl border border-accent/20 bg-ink p-4 shadow-lg flex flex-col items-center gap-3">
+    <div className="h-full rounded-xl border border-accent/20 bg-ink p-4 shadow-lg flex flex-col items-center justify-center gap-3">
       <DemonMascot
         skin={{ body: "#06d0a8", horn: "#04906e", eye: "#ffffff" }}
         size={52}
@@ -127,7 +127,9 @@ export default function ThreeModes() {
             <Reveal key={num} delay={i * 90}>
               <div className="flex flex-col gap-3">
                 <span className="font-pixel text-[10px] text-muted/40">{num}</span>
-                <Scene />
+                <div className="aspect-[16/10] overflow-hidden rounded-xl">
+                  <Scene />
+                </div>
                 <p className="text-sm text-white/90 font-medium">{caption}</p>
               </div>
             </Reveal>
