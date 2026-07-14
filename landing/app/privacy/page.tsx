@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import LegalNav from "@/components/LegalNav";
-import Footer from "@/components/Footer";
+import LegalHero from "@/components/LegalHero";
 
 export const metadata: Metadata = {
   title: "Privacy Policy — Aminta",
@@ -48,17 +48,14 @@ export default function PrivacyPage() {
       <LegalNav />
 
       <main className="bg-[#0d0d0f] min-h-screen">
-        {/* Hero */}
-        <div className="mx-auto max-w-3xl px-6 pt-12 pb-8">
-          <h1 className="text-2xl font-semibold text-white mb-3">Privacy Policy</h1>
-          <p className="text-[#555] text-sm mb-4">Last updated: June 15, 2026</p>
-          <p className="text-[#888] leading-relaxed text-[0.9375rem]">
+        <LegalHero title="Privacy Policy" effective="June 15, 2026" updated="June 15, 2026">
+          <p>
             This Privacy Policy explains how Aminta collects, uses, stores, and protects your
             information when you use the Aminta Chrome extension and web application. We are
             committed to transparency and to protecting your privacy under applicable law,
             including the EU General Data Protection Regulation (GDPR).
           </p>
-        </div>
+        </LegalHero>
 
         {/* TOC */}
         <div className="mx-auto max-w-3xl px-6 pb-8 border-b border-[#1e1e22]">
@@ -586,8 +583,6 @@ export default function PrivacyPage() {
 
         </div>
       </main>
-
-      <Footer />
     </>
   );
 }

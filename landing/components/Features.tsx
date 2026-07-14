@@ -174,9 +174,6 @@ export default function Features() {
           <h2 className="mt-4 font-pixel text-2xl sm:text-3xl text-white leading-snug">
             Every action trains your demon.
           </h2>
-          <p className="mt-4 text-muted">
-            Six tools. One side panel. Every action earns XP and levels your Aminta.
-          </p>
         </Reveal>
 
         <Reveal className="mt-8" delay={80}>

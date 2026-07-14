@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import LegalNav from "@/components/LegalNav";
-import Footer from "@/components/Footer";
+import LegalHero from "@/components/LegalHero";
 
 export const metadata: Metadata = {
   title: "Refund Policy — Aminta",
@@ -75,14 +75,13 @@ export default function RefundPolicyPage() {
       <LegalNav />
 
       <main className="bg-[#0d0d0f] min-h-screen">
-        {/* Hero */}
-        <div className="mx-auto max-w-3xl px-6 pt-12 pb-8 border-b border-[#1e1e22]">
-          <h1 className="text-2xl font-semibold text-white mb-3">Refund Policy</h1>
-          <p className="text-[#555] text-sm mb-4">Last updated: June 2026</p>
-          <p className="text-[#888] leading-relaxed text-[0.9375rem]">
-            We want you to feel confident trying Aminta. This policy explains when refunds are
-            available, how to request one, and what falls outside our refund window.
-          </p>
+        <div className="border-b border-[#1e1e22]">
+          <LegalHero title="Refund Policy" effective="June 2026" updated="June 2026">
+            <p>
+              We want you to feel confident trying Aminta. This policy explains when refunds are
+              available, how to request one, and what falls outside our refund window.
+            </p>
+          </LegalHero>
         </div>
 
         {/* Content */}
@@ -198,8 +197,6 @@ export default function RefundPolicyPage() {
 
         </div>
       </main>
-
-      <Footer />
     </>
   );
 }

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import LegalNav from "@/components/LegalNav";
-import Footer from "@/components/Footer";
+import LegalHero from "@/components/LegalHero";
 
 export const metadata: Metadata = {
   title: "Terms of Service — Aminta",
@@ -65,19 +65,14 @@ export default function TermsPage() {
       <LegalNav />
 
       <main className="bg-[#0d0d0f] min-h-screen">
-        {/* Hero */}
-        <div className="mx-auto max-w-3xl px-6 pt-12 pb-8">
-          <h1 className="text-2xl font-semibold text-white mb-3">Terms of Service</h1>
-          <p className="text-[#555] text-sm mb-4">
-            Last updated: June 15, 2026
-          </p>
-          <p className="text-[#888] leading-relaxed text-[0.9375rem]">
+        <LegalHero title="Terms of Service" effective="June 15, 2026" updated="June 15, 2026">
+          <p>
             These Terms of Service (&quot;Terms&quot;) govern your access to and use of the Aminta
             Chrome extension and web application (&quot;Service&quot;), operated by an individual
             developer based in Belgium (&quot;Aminta,&quot; &quot;we,&quot; &quot;us,&quot; or
             &quot;our&quot;). By using Aminta, you agree to these Terms. Please read them carefully.
           </p>
-        </div>
+        </LegalHero>
 
         {/* TOC */}
         <div className="mx-auto max-w-3xl px-6 pb-8 border-b border-[#1e1e22]">
@@ -604,8 +599,6 @@ export default function TermsPage() {
 
         </div>
       </main>
-
-      <Footer />
     </>
   );
 }

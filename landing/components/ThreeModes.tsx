@@ -116,9 +116,6 @@ export default function ThreeModes() {
           <h2 className="mt-4 font-pixel text-3xl sm:text-4xl text-white leading-tight max-w-xl">
             Generate without leaving<br className="hidden sm:block" /> the timeline.
           </h2>
-          <p className="mt-4 text-muted text-base max-w-md">
-            Write, reply, and publish directly where you&apos;re already posting.
-          </p>
         </Reveal>
 
         {/* 4-step story flow */}
