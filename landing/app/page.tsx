@@ -4,7 +4,7 @@ import ThreeModes from "@/components/ThreeModes";
 import AmintaEvolutionGrid from "@/components/AmintaEvolutionGrid";
 import Features from "@/components/Features";
 import HowItWorks from "@/components/HowItWorks";
-import MarqueeWall from "@/components/MarqueeWall";
+// import MarqueeWall from "@/components/MarqueeWall"; // disabled: no verifiable paying customers yet (Creem compliance)
 import Pricing from "@/components/Pricing";
 import FAQ from "@/components/FAQ";
 import OnboardingCTA from "@/components/OnboardingCTA";
@@ -24,7 +24,7 @@ export default function Home() {
         <Features />
         <Pricing />
         <OnboardingCTA />
-        <MarqueeWall />
+        {/* <MarqueeWall /> disabled: no verifiable paying customers yet (Creem compliance) */}
         <FAQ />
       </main>
       <Footer />

@@ -31,8 +31,8 @@ const FREE_PLAN = {
 };
 
 const PRO_PLAN = {
-  name: "Aminta Pro",
-  price: "$9",
+  name: "Pro",
+  price: "$8.99",
   billing: "/ month",
   description:
     "Unlimited posting power for creators who want to show up consistently.",
@@ -46,11 +46,11 @@ const PRO_PLAN = {
     "Future premium features",
     "Discord community",
   ],
-  cta: "Coming soon",
+  cta: "Upgrade to Pro",
   ctaHref: CREEM_PRO_URL,
   badge: "PRO",
   highlight: true,
-  disabled: true,
+  disabled: false,
 };
 
 const FOUNDER_PLAN = {
@@ -69,11 +69,11 @@ const FOUNDER_PLAN = {
     "Roadmap voting",
     "Early access to new features",
   ],
-  cta: "Coming soon",
+  cta: "Get Founder Access",
   ctaHref: CREEM_FOUNDER_URL,
   badge: "LIMITED",
   highlight: true,
-  disabled: true,
+  disabled: false,
 };
 
 function Check({ dim = false }: { dim?: boolean }) {
@@ -289,7 +289,11 @@ export default function Pricing() {
             <PricingCard {...FREE_PLAN} onCtaClick={() => posthog.capture("pricing_cta_clicked", { plan: "free", billing_mode: mode })} />
           </Reveal>
           <Reveal delay={80}>
-            <PricingCard key={paidPlan.name} {...paidPlan} />
+            <PricingCard
+              key={paidPlan.name}
+              {...paidPlan}
+              onCtaClick={() => posthog.capture("pricing_cta_clicked", { plan: paidPlan.name, billing_mode: mode })}
+            />
           </Reveal>
         </div>
 
