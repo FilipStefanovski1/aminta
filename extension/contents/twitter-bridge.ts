@@ -3,15 +3,37 @@ import type { PlasmoCSConfig } from "plasmo"
 import { generate as runAI } from "~lib/ai"
 import { buildMessages } from "~lib/prompts"
 import { getStore } from "~lib/storage"
+import { getOrBuildStyleProfile } from "~lib/styleProfile"
 
 export const config: PlasmoCSConfig = {
   matches: ["https://x.com/*", "https://twitter.com/*"]
 }
 
+// Returns the text of whichever tweet the user is actually replying to —
+// NOT just the first tweet on the page. On a thread detail page X stacks
+// the whole ancestor chain above the tweet being replied to (root post,
+// then each reply down to it), so grabbing nodes[0] always returns the
+// root post even when replying to a reply further down. Instead: find the
+// active reply composer, then walk backward through every tweetText node
+// to the closest one that appears BEFORE it in document order — X always
+// renders [ancestor tweets...] -> [tweet being replied to] -> [composer],
+// so the nearest preceding tweetText is the correct target regardless of
+// thread depth.
 function getActiveTweet(): string {
-  const nodes = document.querySelectorAll('[data-testid="tweetText"]')
+  const nodes = Array.from(document.querySelectorAll<HTMLElement>('[data-testid="tweetText"]'))
   if (!nodes.length) return ""
-  return (nodes[0] as HTMLElement).innerText.trim()
+
+  const composer = findTextAreaWrapper()
+  if (composer) {
+    for (let i = nodes.length - 1; i >= 0; i--) {
+      const pos = nodes[i].compareDocumentPosition(composer)
+      // DOCUMENT_POSITION_FOLLOWING on `composer` relative to `nodes[i]`
+      // means nodes[i] comes before composer in the document.
+      if (pos & Node.DOCUMENT_POSITION_FOLLOWING) return nodes[i].innerText.trim()
+    }
+  }
+
+  return nodes[0].innerText.trim()
 }
 
 async function insertImageIntoComposer(dataUrl: string): Promise<boolean> {
@@ -172,12 +194,13 @@ async function runGenerate(bar: HTMLElement, mode: "tweet" | "polish", prefill?:
   bar.querySelectorAll<HTMLButtonElement>("button").forEach(b => { b.disabled = true })
 
   try {
+    const styleProfile = await getOrBuildStyleProfile(store)
     const messages = buildMessages(
       "x",
       mode === "polish" ? "polish" : "tweet",
       store.voice,
       input || "Write a compelling tweet about my niche",
-      store.tweetDNA ?? []
+      styleProfile
     )
     const text = await runAI(store.apiKey, store.model, messages)
 

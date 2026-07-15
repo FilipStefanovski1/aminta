@@ -19,6 +19,82 @@ export interface VoiceProfile {
   customRules: string
 }
 
+// ─── Style Profile ──────────────────────────────────────────────────────
+// A distilled, topic-free description of HOW a user writes — extracted once
+// from their Voice examples + Tweet DNA and cached. Raw examples/DNA are
+// never used directly in generation; only this structured profile is.
+// See lib/styleProfile.ts for extraction/caching logic.
+
+export type Confidence = "hedging" | "balanced" | "assertive" | "declarative"
+export type Energy = "low" | "moderate" | "high" | "intense"
+export type VocabComplexity = "simple" | "casual" | "moderate" | "sophisticated"
+export type Capitalization = "lowercase-leaning" | "standard" | "emphatic-caps"
+export type Directness = "indirect" | "balanced" | "direct" | "blunt"
+
+export interface StyleProfile {
+  confidence: Confidence
+  energy: Energy
+  vocabularyComplexity: VocabComplexity
+  capitalization: Capitalization
+  directness: Directness
+  // free text — always passed through sanitizeStyleText() before storage
+  rhythm: string
+  punctuation: string
+  emojiUsage: string
+  humorStyle: string
+  formattingPreferences: string
+  rhetoricalDevices: string
+  cadence: string
+  // deterministic 0–1 score computed from corpus size — NOT self-reported
+  // by the model. Scales how strongly the profile is applied in prompts.ts.
+  confidenceScore: number
+}
+
+// Source-tagged writing samples used to build a StyleProfile. Only
+// "example" and "tweet_dna" are populated today; "approved_edit" exists so
+// a future feature (capturing user-edited drafts) can extend the corpus
+// without changing extraction/hashing/caching signatures.
+export type StyleCorpusSource = "example" | "tweet_dna" | "approved_edit"
+export interface StyleCorpusEntry {
+  text: string
+  source: StyleCorpusSource
+}
+
+// ─── Templates ──────────────────────────────────────────────────────────
+// A deliberately separate memory from Voice/Style: Voice Training answers
+// "how does this user write," Templates answer "what structures does this
+// user repeatedly use." Templates never feed StyleProfile extraction, and
+// StyleProfile never determines template structure. See lib/templates.ts.
+
+export type TemplateMode = "exact" | "fill" | "generate"
+export type TemplatePlatform = "x" | "linkedin" | "threads" | "any"
+
+export interface TemplateVariable {
+  key: string // normalized: lowercase, [a-z0-9_]+, unique within a template
+  label: string
+  placeholder?: string
+  required: boolean
+  defaultValue?: string
+}
+
+export interface AmintaTemplate {
+  id: string
+  name: string
+  description?: string
+  mode: TemplateMode
+  platform: TemplatePlatform
+  content: string // raw text (exact/fill) or instruction (generate)
+  variables: TemplateVariable[]
+  favorite: boolean
+  tags: string[]
+  usageCount: number
+  // tracked now so a future "you've used this format 6 times" suggestion
+  // engine needs no schema change later — not built in this pass.
+  lastUsedAt?: number
+  createdAt: number
+  updatedAt: number
+}
+
 export type Plan = "free" | "pro" | "lifetime"
 
 export interface AmintaStore {
@@ -29,6 +105,9 @@ export interface AmintaStore {
   bio: string
   interests: string
   tweetDNA: string[]
+  styleProfile: StyleProfile | null
+  styleProfileHash: string
+  templates: AmintaTemplate[]
   onboardingDone: boolean
   xp: number
   generationsTotal: number
@@ -54,6 +133,9 @@ const DEFAULTS: AmintaStore = {
   bio: "",
   interests: "",
   tweetDNA: [],
+  styleProfile: null,
+  styleProfileHash: "",
+  templates: [],
   onboardingDone: false,
   xp: 0,
   generationsTotal: 0,

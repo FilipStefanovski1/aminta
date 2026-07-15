@@ -19,6 +19,7 @@ interface Props {
   currentXP: number
   imageDataUrl?: string | null
   onRegenerate?: () => void
+  onSaveAsTemplate?: (text: string) => void
   onXPAwarded: (
     amount: number,
     levelUp?: { level: number; stage: string },
@@ -26,7 +27,7 @@ interface Props {
   ) => void
 }
 
-export default function OutputCard({ text, mode, platform, currentXP, imageDataUrl, onRegenerate, onXPAwarded }: Props) {
+export default function OutputCard({ text, mode, platform, currentXP, imageDataUrl, onRegenerate, onSaveAsTemplate, onXPAwarded }: Props) {
   const [copied, setCopied] = useState(false)
   const [insertStatus, setInsertStatus] = useState("")
   const [xpStatus, setXpStatus] = useState("")
@@ -156,13 +157,22 @@ export default function OutputCard({ text, mode, platform, currentXP, imageDataU
         </button>
       </div>
 
-      {onRegenerate && (
-        <button
-          onClick={onRegenerate}
-          className="w-full border border-[#1e2028] rounded py-1.5 text-[10px] text-[#555] hover:border-[#333] hover:text-[#888] transition-colors">
-          ↻ Try again
-        </button>
-      )}
+      <div className="flex gap-2">
+        {onRegenerate && (
+          <button
+            onClick={onRegenerate}
+            className="flex-1 border border-[#1e2028] rounded py-1.5 text-[10px] text-[#555] hover:border-[#333] hover:text-[#888] transition-colors">
+            ↻ Try again
+          </button>
+        )}
+        {onSaveAsTemplate && (
+          <button
+            onClick={() => onSaveAsTemplate(text)}
+            className="flex-1 border border-[#1e2028] rounded py-1.5 text-[10px] text-[#555] hover:border-[#333] hover:text-[#888] transition-colors">
+            + Save as template
+          </button>
+        )}
+      </div>
 
       <div className="space-y-0.5">
         {insertStatus && (

@@ -747,6 +747,7 @@ function SidePanel() {
                 onTeach={() => switchTab("train")}
                 onOpenSettings={() => setSettingsOpen(true)}
                 onContext={dispatch}
+                onTemplatesChanged={refresh}
               />
             )}
 

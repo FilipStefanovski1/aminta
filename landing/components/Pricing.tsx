@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import posthog from "posthog-js";
 import Reveal from "./Reveal";
+import { createClient } from "@/lib/supabase/client";
 import { CREEM_FOUNDER_URL, CREEM_PRO_URL, EXTENSION_URL } from "@/lib/links";
 
 type BillingMode = "monthly" | "lifetime";
@@ -230,7 +231,20 @@ function PricingCard({
 
 export default function Pricing() {
   const [mode, setMode] = useState<BillingMode>("monthly");
+  const [userId, setUserId] = useState<string | null>(null);
   const paidPlan = mode === "monthly" ? PRO_PLAN : FOUNDER_PLAN;
+
+  // Tags the Creem checkout with the logged-in user's id so the webhook can
+  // match the payment back to this account without relying on the buyer
+  // typing the exact same email at checkout as their Aminta login.
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getSession().then(({ data }) => setUserId(data.session?.user.id ?? null));
+  }, []);
+
+  const paidCtaHref = userId
+    ? `${paidPlan.ctaHref}${paidPlan.ctaHref.includes("?") ? "&" : "?"}metadata[user_id]=${encodeURIComponent(userId)}`
+    : paidPlan.ctaHref;
 
   function handleBillingMode(next: BillingMode) {
     setMode(next);
@@ -292,6 +306,7 @@ export default function Pricing() {
             <PricingCard
               key={paidPlan.name}
               {...paidPlan}
+              ctaHref={paidCtaHref}
               onCtaClick={() => posthog.capture("pricing_cta_clicked", { plan: paidPlan.name, billing_mode: mode })}
             />
           </Reveal>

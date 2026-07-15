@@ -340,7 +340,7 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0 
                   onClick={addTopic}
                   className="font-pixel text-[7px] shrink-0"
                   style={{ color: tint }}>
-                  Add →
+                  Add
                 </button>
               )}
             </div>
@@ -556,7 +556,7 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0 
                   onClick={() => addInspiration()}
                   className="font-pixel text-[7px] shrink-0"
                   style={{ color: tint }}>
-                  Add →
+                  Add
                 </button>
               )}
             </div>
@@ -632,7 +632,7 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0 
                   onClick={addRule}
                   className="font-pixel text-[7px] shrink-0"
                   style={{ color: tint }}>
-                  Add →
+                  Add
                 </button>
               )}
             </div>

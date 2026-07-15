@@ -29,7 +29,7 @@ const FEATURES: Feature[] = [
     title: "Tweet Polisher",
     desc: "Rough draft in, sharp banger out. Keeps your voice, just tighter.",
     feedback: "Voice refined.",
-    icon: <path d="m12 3 2.2 5 5.3.4-4 3.5 1.2 5.2L12 19.7 7.3 22.6l1.2-5.2-4-3.5 5.3-.4L12 3Z" strokeWidth="2.2" strokeLinejoin="round" />,
+    icon: <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" strokeWidth="1.8" strokeLinejoin="round" />,
   },
   {
     title: "Voice Profile",
@@ -47,7 +47,7 @@ const FEATURES: Feature[] = [
     title: "BYOK API Support",
     desc: "Bring your own key: Groq, OpenRouter, or Gemini. Your key, your cost, your demon.",
     feedback: "Your key. Full control.",
-    icon: <path d="M14 7a4 4 0 1 0-3.8 5.2L4 18.5V21h3l1-1h2v-2h2l1.5-1.5A4 4 0 0 0 14 7Z" strokeWidth="1.9" strokeLinejoin="round" />,
+    icon: <path d="M15.75 5.25a3 3 0 0 1 3 3m3 0a6 6 0 0 1-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1 1 21.75 8.25Z" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />,
   },
 ];
 

@@ -7,11 +7,14 @@ import { getStageTint } from "~lib/evolution"
 import { readActivePost } from "~lib/messaging"
 import { incrementMissionGenerates } from "~lib/missions"
 import { buildMessages, type Mode, type OutputLength, type Platform, type Tone } from "~lib/prompts"
-import type { AmintaStore } from "~lib/storage"
+import { getOrBuildStyleProfile } from "~lib/styleProfile"
+import type { AmintaStore, TemplateMode } from "~lib/storage"
+import type { RunTemplateContext } from "~lib/templates"
 import { C } from "~lib/theme"
 import { incrementGenerations } from "~lib/xp"
 
 import OutputCard from "~components/OutputCard"
+import TemplatesModal from "~components/TemplatesModal"
 import { Sprite } from "~components/ui"
 
 // ─── Platform icons ────────────────────────────────────────────────────────────
@@ -217,6 +220,7 @@ interface Props {
   onTeach?: () => void
   onOpenSettings?: () => void
   onContext?: (event: CompanionEvent) => void
+  onTemplatesChanged?: () => void
 }
 
 // Resize image to max 1024px on longest side and return as JPEG data URL
@@ -242,7 +246,7 @@ async function resizeImage(file: File): Promise<string> {
   })
 }
 
-export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, onFirstPost, initialPlatform = "x", onTeach, onOpenSettings, onContext }: Props) {
+export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, onFirstPost, initialPlatform = "x", onTeach, onOpenSettings, onContext, onTemplatesChanged }: Props) {
   const [platform, setPlatform] = useState<Platform>(initialPlatform)
   const [mode,     setMode]     = useState<Mode>("tweet")
   const [tone,     setTone]     = useState<Tone>("direct")
@@ -257,6 +261,9 @@ export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, onFirstP
   const [imageDataUrl, setImageDataUrl] = useState<string | null>(null)
   const [outputImage, setOutputImage]   = useState<string | null>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
+
+  const [templatesOpen, setTemplatesOpen] = useState(false)
+  const [templatesPrefill, setTemplatesPrefill] = useState<{ content: string; mode: TemplateMode } | undefined>(undefined)
 
   useEffect(() => {
     setPlatform(initialPlatform)
@@ -295,6 +302,38 @@ export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, onFirstP
     if (imageInputRef.current) imageInputRef.current.value = ""
   }
 
+  // Built lazily, right before a template is actually used — StyleProfile is
+  // only fetched here (Exact/Fill templates never need it, so they never pay
+  // for it), and the combined topic/context mirrors the normal generate() input.
+  const getTemplateRunContext = async (): Promise<RunTemplateContext> => {
+    const combined = topic.trim() + (context.trim() ? `\n\nAdditional context: ${context.trim()}` : "")
+    const styleProfile = await getOrBuildStyleProfile(store)
+    return {
+      apiKey: store.apiKey,
+      model: store.model,
+      voice: store.voice,
+      styleProfile,
+      platform,
+      mode,
+      tone,
+      length,
+      topic: combined || "Write a post about this.",
+    }
+  }
+
+  const handleTemplateUsed = (text: string) => {
+    reset()
+    setOutput(text)
+    setOutputImage(null)
+    setGenKey((k) => k + 1)
+    setTemplatesOpen(false)
+  }
+
+  const openSaveAsTemplate = (draftText: string) => {
+    setTemplatesPrefill({ content: draftText, mode: "exact" })
+    setTemplatesOpen(true)
+  }
+
   const generate = async () => {
     reset()
     if (!navigator.onLine) { setError("You're offline — check your connection and try again."); return }
@@ -306,7 +345,8 @@ export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, onFirstP
     onContext?.("generate_start")
     try {
       const topicInput = combined || "Write a post about this image."
-      const messages = buildMessages(platform, mode, store.voice, topicInput, store.tweetDNA ?? [], tone, length)
+      const styleProfile = await getOrBuildStyleProfile(store)
+      const messages = buildMessages(platform, mode, store.voice, topicInput, styleProfile, tone, length)
       const text = imageDataUrl
         ? await generateFromImage(store.apiKey, store.model, messages, imageDataUrl)
         : await runAI(store.apiKey, store.model, messages)
@@ -345,6 +385,20 @@ export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, onFirstP
           <HeaderBubble text="I'll help make it great." />
         </div>
       </div>
+
+      {/* ── Templates entry ── */}
+      <button
+        onClick={() => { setTemplatesPrefill(undefined); setTemplatesOpen(true) }}
+        className="w-full flex items-center justify-center gap-1.5 rounded-xl py-2 text-[10px] font-medium transition-colors"
+        style={{ border: `1px solid ${C.border}`, color: C.textFaint }}>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="3" width="7" height="7" rx="1" />
+          <rect x="14" y="3" width="7" height="7" rx="1" />
+          <rect x="3" y="14" width="7" height="7" rx="1" />
+          <rect x="14" y="14" width="7" height="7" rx="1" />
+        </svg>
+        Templates
+      </button>
 
       {/* ── Mode cards ── */}
       <div className="grid grid-cols-3 gap-2">
@@ -618,11 +672,24 @@ export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, onFirstP
           currentXP={xp}
           imageDataUrl={outputImage}
           onRegenerate={generate}
+          onSaveAsTemplate={openSaveAsTemplate}
           onXPAwarded={(amount, levelUp, firstPost) => {
             onXPAwarded()
             if (levelUp) onLevelUp(levelUp.level, levelUp.stage)
             else if (firstPost) onFirstPost?.(amount)
           }}
+        />
+      )}
+
+      {templatesOpen && (
+        <TemplatesModal
+          store={store}
+          onClose={() => { setTemplatesOpen(false); setTemplatesPrefill(undefined) }}
+          onUse={handleTemplateUsed}
+          onChanged={onTemplatesChanged}
+          getRunContext={getTemplateRunContext}
+          initialView={templatesPrefill ? "editor" : "list"}
+          prefill={templatesPrefill}
         />
       )}
 

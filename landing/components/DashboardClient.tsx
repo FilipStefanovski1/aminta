@@ -290,7 +290,7 @@ export default function DashboardClient({
               disabled={resetting || resetSent}
               className="rpg-btn-secondary w-full"
             >
-              {resetSent ? "Reset email sent ✓" : resetting ? "Sending…" : "Change Password"}
+              {resetSent ? "Reset email sent" : resetting ? "Sending…" : "Change Password"}
             </button>
             <button onClick={handleLogout} disabled={loggingOut} className="rpg-btn-secondary w-full">
               {loggingOut ? "Signing out…" : "Logout"}

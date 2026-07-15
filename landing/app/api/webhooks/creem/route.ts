@@ -36,7 +36,14 @@ export async function POST(request: NextRequest) {
   const email: string | undefined = obj.customer?.email
   const eventType: string = event.eventType ?? event.type ?? ""
 
-  if (!email) return NextResponse.json({ ok: true })
+  // Prefer matching by the Aminta user id we tag onto the checkout URL
+  // (?metadata[user_id]=...) when the buyer clicked Upgrade while logged
+  // in — this can't be broken by a mismatched or mistyped checkout email.
+  // Falls back to email match for buyers who weren't logged in at checkout.
+  const userId: string | undefined = obj.metadata?.user_id
+  const userMatch = userId ? { column: "id", value: userId } : email ? { column: "email", value: email } : null
+
+  if (!userMatch) return NextResponse.json({ ok: true })
 
   // Map Creem event types to plan status
   if (
@@ -55,15 +62,15 @@ export async function POST(request: NextRequest) {
         creem_customer_id: obj.customer?.id,
         creem_subscription_id: obj.subscription?.id ?? null,
       })
-      .eq("email", email)
+      .eq(userMatch.column, userMatch.value)
 
     const posthog = getPostHogClient()
     posthog.capture({
-      distinctId: email,
+      distinctId: email ?? userMatch.value,
       event: "subscription_activated",
       properties: { plan, event_type: eventType },
     })
-    posthog.identify({ distinctId: email, properties: { plan } })
+    posthog.identify({ distinctId: email ?? userMatch.value, properties: { plan } })
   }
 
   // Canceled = user turned off renewal; access continues until the period
@@ -72,10 +79,10 @@ export async function POST(request: NextRequest) {
     await supabase
       .from("users")
       .update({ subscription_status: "canceled" })
-      .eq("email", email)
+      .eq(userMatch.column, userMatch.value)
 
     getPostHogClient().capture({
-      distinctId: email,
+      distinctId: email ?? userMatch.value,
       event: "subscription_canceled",
     })
   }
@@ -84,11 +91,11 @@ export async function POST(request: NextRequest) {
     await supabase
       .from("users")
       .update({ plan: "free", subscription_status: "expired" })
-      .eq("email", email)
+      .eq(userMatch.column, userMatch.value)
       .neq("plan", "lifetime") // never downgrade lifetime purchases
 
     getPostHogClient().capture({
-      distinctId: email,
+      distinctId: email ?? userMatch.value,
       event: "subscription_expired",
     })
   }
@@ -97,7 +104,7 @@ export async function POST(request: NextRequest) {
     await supabase
       .from("users")
       .update({ subscription_status: "past_due" })
-      .eq("email", email)
+      .eq(userMatch.column, userMatch.value)
   }
 
   return NextResponse.json({ ok: true })
