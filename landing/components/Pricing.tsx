@@ -106,6 +106,15 @@ function LockIcon() {
   );
 }
 
+function PixelPlus({ size = 8, className = "" }: { size?: number; className?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 5 5" className={`pixelated ${className}`} aria-hidden>
+      <rect x="2" y="0" width="1" height="5" fill="var(--accent)" />
+      <rect x="0" y="2" width="5" height="1" fill="var(--accent)" />
+    </svg>
+  );
+}
+
 interface CardProps {
   name: string;
   price: string;
@@ -118,16 +127,6 @@ interface CardProps {
   highlight: boolean;
   disabled: boolean;
   onCtaClick?: () => void;
-}
-
-function CryptoIcon() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="10" />
-      <path d="M9 9h6M9 12h6M9 15h4" />
-      <path d="M14 9v2a2 2 0 0 1-2 2" />
-    </svg>
-  );
 }
 
 function PricingCard({
@@ -269,7 +268,7 @@ export default function Pricing() {
         </Reveal>
 
         {/* billing toggle */}
-        <Reveal className="mt-8 flex justify-center">
+        <Reveal className="mt-10 flex justify-center">
           <div className="flex items-center rounded-full border border-line bg-panel p-1 gap-0.5">
             <button
               onClick={() => handleBillingMode("monthly")}
@@ -281,19 +280,35 @@ export default function Pricing() {
             >
               Monthly
             </button>
-            <button
-              onClick={() => handleBillingMode("lifetime")}
-              className={`rounded-full px-5 py-2 text-xs font-semibold transition-all duration-200 ${
-                mode === "lifetime"
-                  ? "bg-accent text-black shadow-[0_2px_12px_rgba(116,247,181,0.3)]"
-                  : "text-muted hover:text-white"
-              }`}
-            >
-              Lifetime{" "}
-              <span className={mode === "lifetime" ? "opacity-70" : "text-accent"}>
-                Best value
-              </span>
-            </button>
+            <div className="relative">
+              <button
+                onClick={() => handleBillingMode("lifetime")}
+                className={`rounded-full px-5 py-2 text-xs font-semibold transition-all duration-200 ${
+                  mode === "lifetime"
+                    ? "bg-accent text-black shadow-[0_2px_12px_rgba(116,247,181,0.3)]"
+                    : "text-muted hover:text-white"
+                }`}
+              >
+                Lifetime
+              </button>
+
+              {/* floating "Best value" badge — centered over Lifetime, overlapping the toggle's top edge by ~50% */}
+              <div className="absolute left-1/2 -translate-x-1/2 -top-2 z-30 pointer-events-none">
+                <Reveal delay={150}>
+                  <div className="pixel-badge-float">
+                    <div className="pixel-badge relative flex items-center bg-accent px-2.5 py-1">
+                      <span className="pixel-badge-tab pixel-badge-tab-left" />
+                      <span className="pixel-badge-tab pixel-badge-tab-right" />
+                      <PixelPlus size={5} className="absolute -top-1.5 -left-2" />
+                      <PixelPlus size={5} className="absolute -top-1.5 -right-2" />
+                      <span className="font-pixel text-[7px] text-black uppercase tracking-wider whitespace-nowrap">
+                        Best Value
+                      </span>
+                    </div>
+                  </div>
+                </Reveal>
+              </div>
+            </div>
           </div>
         </Reveal>
 

@@ -14,7 +14,7 @@ const ANCHORS = [
 
 type DemonStageDetail = { active: boolean; color?: string };
 
-export default function Navbar({ alwaysVisible = false }: { alwaysVisible?: boolean }) {
+export default function Navbar({ alwaysVisible = true }: { alwaysVisible?: boolean }) {
   const [open, setOpen] = useState(false);
   const [demonColor, setDemonColor] = useState<string | null>(null);
   const [visible, setVisible] = useState(alwaysVisible);
@@ -54,7 +54,7 @@ export default function Navbar({ alwaysVisible = false }: { alwaysVisible?: bool
     return () => window.removeEventListener("scroll", onScroll);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const bgColor = demonColor ?? "#74f7b5";
+  const bgColor = demonColor ?? "var(--accent)";
 
   return (
     <header
@@ -75,8 +75,8 @@ export default function Navbar({ alwaysVisible = false }: { alwaysVisible?: bool
               <rect x="2" y="0" width="2" height="3" fill="#0a0a0a" />
               <rect x="12" y="0" width="2" height="3" fill="#0a0a0a" />
               <rect x="3" y="3" width="10" height="9" fill="#0a0a0a" />
-              <rect x="4" y="6" width="2" height="2" fill="#74f7b5" />
-              <rect x="10" y="6" width="2" height="2" fill="#74f7b5" />
+              <rect x="4" y="6" width="2" height="2" fill="var(--accent)" />
+              <rect x="10" y="6" width="2" height="2" fill="var(--accent)" />
             </svg>
           </a>
           <div className="hidden lg:flex items-center gap-6">

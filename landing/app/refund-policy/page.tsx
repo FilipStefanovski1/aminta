@@ -31,7 +31,7 @@ function Section({
 
 function Notice({ children }: { children: React.ReactNode }) {
   return (
-    <div className="my-4 border-l-2 border-[#74f7b5]/30 pl-4 text-[#777] text-sm leading-relaxed">
+    <div className="my-4 border-l-2 border-accent/30 pl-4 text-[#777] text-sm leading-relaxed">
       {children}
     </div>
   );
@@ -65,7 +65,7 @@ function DeniedLi({ children }: { children: React.ReactNode }) {
 
 function Email() {
   return (
-    <span className="font-mono text-[#74f7b5]">hello@amintaapp.com</span>
+    <span className="font-mono text-accent">hello@amintaapp.com</span>
   );
 }
 
@@ -167,7 +167,7 @@ export default function RefundPolicyPage() {
             <div className="mt-8 pt-6 border-t border-[#1e1e22]">
               <p className="text-[#555] text-sm">
                 This Refund Policy is part of our{" "}
-                <a href="/terms" className="text-[#74f7b5] hover:text-white transition-colors">
+                <a href="/terms" className="text-accent hover:text-white transition-colors">
                   Terms of Service
                 </a>
                 . In the event of a conflict, the Terms of Service prevail.
@@ -175,19 +175,19 @@ export default function RefundPolicyPage() {
               <div className="mt-4 flex flex-wrap gap-4 text-sm">
                 <a
                   href="/terms"
-                  className="text-[#74f7b5] hover:text-white transition-colors"
+                  className="text-accent hover:text-white transition-colors"
                 >
                   Terms of Service →
                 </a>
                 <a
                   href="/privacy"
-                  className="text-[#74f7b5] hover:text-white transition-colors"
+                  className="text-accent hover:text-white transition-colors"
                 >
                   Privacy Policy →
                 </a>
                 <a
                   href="/"
-                  className="text-[#666] hover:text-[#74f7b5] transition-colors"
+                  className="text-[#666] hover:text-accent transition-colors"
                 >
                   Back to Aminta →
                 </a>

@@ -503,6 +503,56 @@ body {
   .rpg-btn-primary, .rpg-btn-secondary { transition: none !important; }
 }
 
+/* ── Pixel-stepped badge (e.g. "Best value" ribbon) ─────────── */
+.pixel-badge {
+  clip-path: polygon(
+    6px 0, calc(100% - 6px) 0,
+    calc(100% - 6px) 3px, calc(100% - 3px) 3px,
+    calc(100% - 3px) 6px, 100% 6px,
+    100% calc(100% - 6px),
+    calc(100% - 3px) calc(100% - 6px), calc(100% - 3px) calc(100% - 3px), calc(100% - 6px) calc(100% - 3px),
+    calc(100% - 6px) 100%,
+    6px 100%,
+    6px calc(100% - 3px), 3px calc(100% - 3px), 3px calc(100% - 6px), 0 calc(100% - 6px),
+    0 6px, 3px 6px, 3px 3px, 6px 3px
+  );
+  filter:
+    drop-shadow(1px 0 0 #0a0a0a) drop-shadow(-1px 0 0 #0a0a0a)
+    drop-shadow(0 1px 0 #0a0a0a) drop-shadow(0 -1px 0 #0a0a0a)
+    drop-shadow(2px 0 0 #0a0a0a) drop-shadow(-2px 0 0 #0a0a0a)
+    drop-shadow(0 2px 0 #0a0a0a) drop-shadow(0 -2px 0 #0a0a0a)
+    drop-shadow(0 0 10px rgba(116, 247, 181, 0.45));
+}
+
+/* small RPG-label side tabs that stick out from a .pixel-badge */
+.pixel-badge-tab {
+  position: absolute;
+  top: 50%;
+  width: 5px;
+  height: 6px;
+  background: var(--accent);
+  transform: translateY(-50%);
+  filter:
+    drop-shadow(1px 0 0 #0a0a0a) drop-shadow(-1px 0 0 #0a0a0a)
+    drop-shadow(0 1px 0 #0a0a0a) drop-shadow(0 -1px 0 #0a0a0a);
+}
+.pixel-badge-tab-left { left: -5px; }
+.pixel-badge-tab-right { right: -5px; }
+
+/* subtle continuous float for a floating pixel badge — kept separate from
+   the Reveal wrapper's own entrance transform so the two never fight over
+   the `transform` property on the same element */
+@keyframes pixelBadgeFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2.5px); }
+}
+.pixel-badge-float {
+  animation: pixelBadgeFloat 3s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pixel-badge-float { animation: none; }
+}
+
 /* ── Mobile marquee feed ───────────────────────────────────── */
 .marquee-up-mobile {
   animation: marqueeUp 45s linear infinite;

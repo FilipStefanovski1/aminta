@@ -419,7 +419,7 @@ function AmintaPixelSprite({ skin, eyeShape, mouthShape, browShape, cheeks, chee
       className="pixelated select-none"
       role="img"
       aria-label="Aminta pixel companion"
-      style={{ filter: aura ? `drop-shadow(0 0 ${size / 8}px ${auraColor ?? "#74f7b5"}) drop-shadow(0 0 ${size / 4}px ${auraColor ?? "#74f7b5"})` : undefined, transition: "filter 0.4s ease" }}
+      style={{ filter: aura ? `drop-shadow(0 0 ${size / 8}px ${auraColor ?? "var(--accent)"}) drop-shadow(0 0 ${size / 4}px ${auraColor ?? "var(--accent)"})` : undefined, transition: "filter 0.4s ease" }}
     >
       {pixels.map((p, i) => (
         <rect

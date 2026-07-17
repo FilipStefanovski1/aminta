@@ -27,7 +27,7 @@ function Sub({ title, children }: { title: string; children: React.ReactNode }) 
 
 function Notice({ children }: { children: React.ReactNode }) {
   return (
-    <div className="my-4 border-l-2 border-[#74f7b5]/30 pl-4 text-[#777] text-sm leading-relaxed">
+    <div className="my-4 border-l-2 border-accent/30 pl-4 text-[#777] text-sm leading-relaxed">
       {children}
     </div>
   );
@@ -98,7 +98,7 @@ export default function PrivacyPage() {
               <p className="text-[#888]">Aminta — Belgium</p>
               <p className="text-[#888]">
                 Email:{" "}
-                <span className="font-mono text-[#74f7b5]">hello@amintaapp.com</span>
+                <span className="font-mono text-accent">hello@amintaapp.com</span>
               </p>
             </div>
             <p>
@@ -496,7 +496,7 @@ export default function PrivacyPage() {
             </ul>
             <p className="mt-5">
               To exercise any of these rights, contact us at{" "}
-              <span className="font-mono text-[#74f7b5]">hello@amintaapp.com</span>. We will
+              <span className="font-mono text-accent">hello@amintaapp.com</span>. We will
               respond within 30 days. You also have the right to lodge a complaint with your local
               supervisory authority. In Belgium, this is the{" "}
               <strong className="text-white">
@@ -540,7 +540,7 @@ export default function PrivacyPage() {
             <p>
               If you are a parent or guardian and believe your child has provided us with personal
               information, please contact us at{" "}
-              <span className="font-mono text-[#74f7b5]">hello@amintaapp.com</span>.
+              <span className="font-mono text-accent">hello@amintaapp.com</span>.
             </p>
           </Section>
 
@@ -572,7 +572,7 @@ export default function PrivacyPage() {
               <p className="text-[#888]">Aminta — Belgium</p>
               <p className="text-[#888]">
                 Email:{" "}
-                <span className="font-mono text-[#74f7b5]">hello@amintaapp.com</span>
+                <span className="font-mono text-accent">hello@amintaapp.com</span>
               </p>
               <p className="text-[#555] text-xs pt-1">
                 We aim to respond to all enquiries within 5 business days, and to data subject

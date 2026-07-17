@@ -74,7 +74,7 @@ export default function ResetPasswordPage() {
         {mode === "request" && (
           <>
             <div>
-              <p className="font-pixel text-[9px] tracking-widest mb-1" style={{ color: "#74f7b5" }}>
+              <p className="font-pixel text-[9px] tracking-widest mb-1" style={{ color: "var(--accent)" }}>
                 Reset password
               </p>
               <p className="text-[#9a9aa3] text-xs">
@@ -101,7 +101,7 @@ export default function ResetPasswordPage() {
             <p className="text-white font-semibold text-base">Check your email</p>
             <p className="text-[#9a9aa3] text-sm leading-relaxed">
               If an account exists for{" "}
-              <span style={{ color: "#74f7b5" }}>{email.trim()}</span>, a reset
+              <span style={{ color: "var(--accent)" }}>{email.trim()}</span>, a reset
               link is on its way.
             </p>
           </div>
@@ -110,7 +110,7 @@ export default function ResetPasswordPage() {
         {mode === "update" && (
           <>
             <div>
-              <p className="font-pixel text-[9px] tracking-widest mb-1" style={{ color: "#74f7b5" }}>
+              <p className="font-pixel text-[9px] tracking-widest mb-1" style={{ color: "var(--accent)" }}>
                 New password
               </p>
               <p className="text-[#9a9aa3] text-xs">Choose a new password for your account.</p>
@@ -145,7 +145,7 @@ export default function ResetPasswordPage() {
             <p className="text-white font-semibold text-base">Password updated ✓</p>
             <a href="/dashboard"
               className="inline-block w-full py-3 rounded-lg font-pixel text-[9px] tracking-widest text-black transition-all hover:brightness-110"
-              style={{ background: "#74f7b5" }}>
+              style={{ background: "var(--accent)" }}>
               Go to dashboard
             </a>
           </div>

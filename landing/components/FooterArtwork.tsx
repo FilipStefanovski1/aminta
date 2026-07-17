@@ -20,6 +20,7 @@ import { useEffect, useRef } from "react";
 // this file needs to change.
 const SRC = "/assets/footer/footer-spark-pixel.png";
 const FRAME_MS = 55;
+const FRAME_MS_MOBILE = 90;
 const BRIGHT_THRESHOLD = 140;
 
 function parseHexColor(hex: string): [number, number, number] {
@@ -104,7 +105,7 @@ export default function FooterArtwork() {
     let canvasDiagonal = 1;
     let isMobileFlag = false;
     let frameCounter = 0;
-    let intervalId: ReturnType<typeof setInterval> | undefined;
+    let tickTimeoutId: ReturnType<typeof setTimeout> | undefined;
 
     const pointer = { x: -9999, y: -9999, active: false, strength: 0 };
 
@@ -132,9 +133,9 @@ export default function FooterArtwork() {
       let sh: number;
       if (isMobile) {
         sx = image.width * 0.265625;
-        sy = image.height * 0.322265625;
+        sy = image.height * 0.22;
         sw = image.width * 0.46875;
-        sh = image.height * 0.3515625;
+        sh = image.height * 0.56;
       } else {
         sx = 0;
         sy = 0;
@@ -168,7 +169,8 @@ export default function FooterArtwork() {
       // ── fx canvas: deliberately low internal resolution, stretched to
       // the same CSS rect — this is what keeps the interaction sparse and
       // chunky instead of a dense DPR-resolution dust cloud.
-      const divisor = isMobile ? 2 : 3;
+      // lower internal fx resolution on mobile to cut per-frame pixel work further
+      const divisor = isMobile ? 4 : 3;
       fxCanvas!.width = Math.max(1, Math.floor(cssW / divisor));
       fxCanvas!.height = Math.max(1, Math.floor(cssH / divisor));
       fxCanvas!.style.width = `${cssW}px`;
@@ -281,6 +283,14 @@ export default function FooterArtwork() {
       fxCtx!.putImageData(frame, 0, 0);
     }
 
+    function scheduleTick() {
+      if (destroyed || reduceMotion) return;
+      tickTimeoutId = setTimeout(() => {
+        tick();
+        scheduleTick();
+      }, isMobileFlag ? FRAME_MS_MOBILE : FRAME_MS);
+    }
+
     function toFxCoords(clientX: number, clientY: number) {
       const rect = fxCanvas!.getBoundingClientRect();
       return {
@@ -313,7 +323,7 @@ export default function FooterArtwork() {
       if (destroyed) return;
       buildAll();
       if (!reduceMotion) {
-        intervalId = setInterval(tick, FRAME_MS);
+        scheduleTick();
       }
     };
     image.src = SRC;
@@ -327,7 +337,7 @@ export default function FooterArtwork() {
 
     return () => {
       destroyed = true;
-      if (intervalId) clearInterval(intervalId);
+      if (tickTimeoutId) clearTimeout(tickTimeoutId);
       if (image) image.onload = null;
       io.disconnect();
       ro.disconnect();

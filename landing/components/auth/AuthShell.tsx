@@ -6,9 +6,9 @@
 export function DemonIcon({ size = 32 }: { size?: number }) {
   return (
     <svg width={size} height={Math.round(size * 13 / 16)} viewBox="0 0 16 13" style={{ imageRendering: "pixelated" }}>
-      <rect x="2" y="0" width="2" height="3" fill="#74f7b5" />
-      <rect x="12" y="0" width="2" height="3" fill="#74f7b5" />
-      <rect x="3" y="3" width="10" height="9" fill="#74f7b5" />
+      <rect x="2" y="0" width="2" height="3" fill="var(--accent)" />
+      <rect x="12" y="0" width="2" height="3" fill="var(--accent)" />
+      <rect x="3" y="3" width="10" height="9" fill="var(--accent)" />
       <rect x="4" y="6" width="2" height="2" fill="#1f1f1f" />
       <rect x="10" y="6" width="2" height="2" fill="#1f1f1f" />
     </svg>
@@ -48,10 +48,10 @@ export function AuthShell({
 }) {
   return (
     <div className="relative min-h-screen flex items-center justify-center px-4 py-10 overflow-hidden">
-      <PixelFloat x="8%"  y="12%" size={6} delay="0s"   color="#74f7b5" />
-      <PixelFloat x="15%" y="70%" size={4} delay="1.2s" color="#74f7b5" />
-      <PixelFloat x="80%" y="18%" size={8} delay="0.7s" color="#74f7b5" />
-      <PixelFloat x="88%" y="65%" size={5} delay="2.1s" color="#74f7b5" />
+      <PixelFloat x="8%"  y="12%" size={6} delay="0s"   color="var(--accent)" />
+      <PixelFloat x="15%" y="70%" size={4} delay="1.2s" color="var(--accent)" />
+      <PixelFloat x="80%" y="18%" size={8} delay="0.7s" color="var(--accent)" />
+      <PixelFloat x="88%" y="65%" size={5} delay="2.1s" color="var(--accent)" />
       <PixelFloat x="72%" y="82%" size={4} delay="0.4s" color="#2f6b4f" />
       <PixelFloat x="25%" y="22%" size={5} delay="1.8s" color="#2f6b4f" />
 
@@ -119,7 +119,7 @@ export function Field({
         autoComplete={autoComplete}
         className="w-full px-3 py-2.5 rounded-lg text-sm placeholder-[#3a3a4a] text-white focus:outline-none transition-colors"
         style={{ ...INPUT_STYLE, borderColor: error ? "#f87171" : "#343438" }}
-        onFocus={e => (e.currentTarget.style.borderColor = error ? "#f87171" : "#74f7b5")}
+        onFocus={e => (e.currentTarget.style.borderColor = error ? "#f87171" : "var(--accent)")}
       />
       {error && <p className="text-xs text-red-400 mt-1.5">{error}</p>}
     </div>
@@ -130,7 +130,7 @@ export function SubmitButton({ children, loading, loadingText }: { children: Rea
   return (
     <button type="submit" disabled={loading}
       className="w-full py-3 rounded-lg font-pixel text-[9px] tracking-widest text-black transition-all disabled:opacity-50 hover:brightness-110 active:scale-[0.98]"
-      style={{ background: "#74f7b5" }}>
+      style={{ background: "var(--accent)" }}>
       {loading ? loadingText : children}
     </button>
   )

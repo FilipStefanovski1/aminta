@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, type CSSProperties } from "react";
+import Image from "next/image";
 
 type CardKind = "placeholder" | "xp" | "founder" | "truth";
 
@@ -128,7 +129,7 @@ function Card({ card }: { card: WallCard }) {
   return (
     <div className="marquee-card rounded-xl p-4">
       <div className="flex items-start gap-3">
-        <img
+        <Image
           src={card.avatar}
           alt={`${card.name} profile`}
           width={40}
@@ -212,6 +213,7 @@ export default function MarqueeWall() {
 
   return (
     <section
+      id="testimonials"
       className="relative py-20 md:py-24"
       style={{ ...wallVars, transition: "--wall-accent 450ms ease, --wall-accent-soft 450ms ease, --wall-accent-glow 450ms ease" }}
     >

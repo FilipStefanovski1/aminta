@@ -9,8 +9,11 @@ export default function Hero() {
             Feed Aminta.
             <br />
             <span className="text-accent">Grow on X</span>
-            <span className="block mt-1 text-[0.22em] font-pixel text-white/30 tracking-wide">(for now)</span>
           </h1>
+
+          <p className="mt-5 text-base sm:text-lg text-muted max-w-md">
+            The AI sidekick that writes in your voice, feeds your demon, and grows with every post.
+          </p>
 
           <div className="mt-9 flex flex-col sm:flex-row gap-4">
             <a href="#pricing" className="rpg-btn-primary">
@@ -21,13 +24,18 @@ export default function Hero() {
             </a>
           </div>
 
+          <div className="mt-5 flex items-center gap-2.5">
+            <span className="shrink-0 flex items-center gap-1 rounded-full border border-line px-2.5 py-0.5 font-pixel text-[8px] uppercase tracking-widest text-muted">
+              Open Beta
+            </span>
+          </div>
         </div>
 
         {/* Right: layered product screenshots — same composition at every breakpoint */}
         <div className="relative w-full" style={{ aspectRatio: "15 / 16", overflowX: "clip" }}>
           {/* X compose — back layer */}
           <div className="absolute left-[3%] top-[5%] w-[69%] z-10" style={{ height: "60%" }}>
-            <div className="h-full rounded-xl overflow-hidden border border-accent/20 shadow-[0_20px_60px_-10px_rgba(0,0,0,0.8)]">
+            <div className="h-full rounded-xl overflow-hidden shadow-[0_20px_60px_-10px_rgba(0,0,0,0.8)]">
               <img
                 src="/youhaveanidea%20(1).png"
                 alt="X timeline"

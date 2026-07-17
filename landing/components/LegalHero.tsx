@@ -10,9 +10,9 @@ export default function LegalHero({ title, effective, updated, children }: Legal
     <div className="mx-auto max-w-3xl px-6 pt-16 sm:pt-20 pb-8 text-center">
       <div className="flex justify-center mb-8">
         <svg width="32" height="26" viewBox="0 0 16 13" style={{ imageRendering: "pixelated" }}>
-          <rect x="2" y="0" width="2" height="3" fill="#74f7b5" />
-          <rect x="12" y="0" width="2" height="3" fill="#74f7b5" />
-          <rect x="3" y="3" width="10" height="9" fill="#74f7b5" />
+          <rect x="2" y="0" width="2" height="3" fill="var(--accent)" />
+          <rect x="12" y="0" width="2" height="3" fill="var(--accent)" />
+          <rect x="3" y="3" width="10" height="9" fill="var(--accent)" />
           <rect x="4" y="6" width="2" height="2" fill="#0a0a0a" />
           <rect x="10" y="6" width="2" height="2" fill="#0a0a0a" />
         </svg>

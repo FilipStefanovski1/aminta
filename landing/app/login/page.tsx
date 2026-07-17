@@ -115,7 +115,7 @@ export default function LoginPage() {
     <AuthShell>
       <div className="rounded-2xl p-6 space-y-4" style={CARD_STYLE}>
         <div>
-          <p className="font-pixel text-[9px] tracking-widest mb-1" style={{ color: "#74f7b5" }}>
+          <p className="font-pixel text-[9px] tracking-widest mb-1" style={{ color: "var(--accent)" }}>
             Sign in
           </p>
           <p className="text-[#9a9aa3] text-xs">Welcome back. Aminta missed you.</p>
@@ -145,7 +145,7 @@ export default function LoginPage() {
           />
 
           <div className="flex justify-end">
-            <a href="/reset-password" className="text-xs text-[#888] hover:text-[#74f7b5] transition-colors">
+            <a href="/reset-password" className="text-xs text-[#888] hover:text-accent transition-colors">
               Forgot password?
             </a>
           </div>
@@ -154,7 +154,7 @@ export default function LoginPage() {
           {unconfirmed && (
             <button type="button" onClick={handleResendConfirmation} disabled={resent}
               className="text-xs transition-colors disabled:cursor-not-allowed"
-              style={{ color: resent ? "#555" : "#74f7b5" }}>
+              style={{ color: resent ? "#555" : "var(--accent)" }}>
               {resent ? "Verification email sent ✓" : "Resend verification email"}
             </button>
           )}
@@ -166,7 +166,7 @@ export default function LoginPage() {
       <div className="space-y-2 text-center">
         <p className="text-[#888] text-xs">
           Don&apos;t have an account?{" "}
-          <a href="/signup" className="text-[#74f7b5] hover:text-white transition-colors">Create one</a>
+          <a href="/signup" className="text-accent hover:text-white transition-colors">Create one</a>
         </p>
       </div>
     </AuthShell>

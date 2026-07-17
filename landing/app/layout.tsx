@@ -1,7 +1,8 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Press_Start_2P } from "next/font/google";
 import "./globals.css";
 import CursorTrail from "@/components/CursorTrail";
+import { SoftwareApplicationSchema } from "@/components/StructuredData";
 
 const geist = Geist({
   variable: "--font-geist",
@@ -14,24 +15,31 @@ const pixel = Press_Start_2P({
   subsets: ["latin"],
 });
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#1f1f1f",
+};
+
 export const metadata: Metadata = {
   metadataBase: new URL("https://amintaapp.com"),
   title: "Aminta | Feed Aminta. Grow your socials.",
   description:
     "Aminta is the AI writing sidekick that makes posting addictive. Write posts in your voice, feed your demon, stack XP, and grow your socials.",
+  alternates: {
+    canonical: "/",
+  },
   openGraph: {
     title: "Aminta | Feed Aminta. Grow your socials.",
     description:
       "The AI sidekick that makes posting addictive. Generate posts in your voice, feed Aminta, stack XP, keep your streak alive.",
     type: "website",
-    images: [{ url: "/ogimage.png", width: 1200, height: 630 }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Aminta | Feed Aminta. Grow your socials.",
     description:
       "The AI sidekick that makes posting addictive. Generate posts in your voice, feed Aminta, stack XP, keep your streak alive.",
-    images: ["/ogimage.png"],
   },
   icons: {
     icon: [
@@ -53,6 +61,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geist.variable} ${pixel.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col bg-ink text-[#e7e7ef]">
+        <SoftwareApplicationSchema />
         <CursorTrail />
         <div className="relative z-[1] flex flex-col flex-1">{children}</div>
       </body>

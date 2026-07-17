@@ -114,7 +114,7 @@ function AmintaWidget() {
       className="flex items-center gap-4 mx-auto w-fit px-5 py-3"
       style={{
         background: "#1f1f1f",
-        border: "2px solid #74f7b5",
+        border: "2px solid var(--accent)",
         boxShadow: "3px 3px 0 #000, 0 0 18px rgba(116,247,181,0.15)",
       }}
     >
@@ -132,7 +132,7 @@ function AmintaWidget() {
                 position: "absolute",
                 right: 0,
                 top: 0,
-                color: "#74f7b5",
+                color: "var(--accent)",
                 whiteSpace: "nowrap",
                 pointerEvents: "none",
               }}
@@ -149,14 +149,14 @@ function AmintaWidget() {
             className="h-full bg-accent"
             style={{
               width: `${pct}%`,
-              boxShadow: "0 0 6px #74f7b5",
+              boxShadow: "0 0 6px var(--accent)",
               transition: noTx ? "none" : "width 0.45s cubic-bezier(0.25, 0, 0.5, 1)",
             }}
           />
         </div>
 
         {/* Remaining XP */}
-        <p className="mt-1 font-pixel text-[8px]" style={{ color: "#74f7b5", opacity: 0.6 }}>
+        <p className="mt-1 font-pixel text-[8px]" style={{ color: "var(--accent)", opacity: 0.6 }}>
           {remaining} XP TO LV.{next.lv}
         </p>
       </div>

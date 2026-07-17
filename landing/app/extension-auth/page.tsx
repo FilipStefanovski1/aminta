@@ -134,21 +134,21 @@ export default function ExtensionAuthPage() {
     <div className="min-h-screen flex items-center justify-center bg-[#111] px-4">
       <div className="text-center space-y-4">
         <svg width="32" height="26" viewBox="0 0 16 13" style={{ imageRendering: "pixelated" }}>
-          <rect x="2" y="0" width="2" height="3" fill="#74f7b5" />
-          <rect x="12" y="0" width="2" height="3" fill="#74f7b5" />
-          <rect x="3" y="3" width="10" height="9" fill="#74f7b5" />
+          <rect x="2" y="0" width="2" height="3" fill="var(--accent)" />
+          <rect x="12" y="0" width="2" height="3" fill="var(--accent)" />
+          <rect x="3" y="3" width="10" height="9" fill="var(--accent)" />
           <rect x="4" y="6" width="2" height="2" fill="#111" />
           <rect x="10" y="6" width="2" height="2" fill="#111" />
         </svg>
 
         {status === "sending" && (
-          <p className="font-pixel text-[9px] tracking-widest" style={{ color: "#74f7b5" }}>
+          <p className="font-pixel text-[9px] tracking-widest" style={{ color: "var(--accent)" }}>
             Connecting…
           </p>
         )}
         {status === "done" && (
           <>
-            <p className="font-pixel text-[9px] tracking-widest" style={{ color: "#74f7b5" }}>
+            <p className="font-pixel text-[9px] tracking-widest" style={{ color: "var(--accent)" }}>
               Signed in!
             </p>
             <p className="text-xs text-[#555]">This tab will close, or redirect to your dashboard.</p>

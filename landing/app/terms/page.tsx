@@ -35,7 +35,7 @@ function Warning({ children }: { children: React.ReactNode }) {
 
 function Notice({ children }: { children: React.ReactNode }) {
   return (
-    <div className="my-4 border-l-2 border-[#74f7b5]/30 pl-4 text-[#777] text-sm leading-relaxed">
+    <div className="my-4 border-l-2 border-accent/30 pl-4 text-[#777] text-sm leading-relaxed">
       {children}
     </div>
   );
@@ -385,7 +385,7 @@ export default function TermsPage() {
             </p>
             <p>
               Refund requests should be sent to{" "}
-              <span className="font-mono text-[#74f7b5]">hello@amintaapp.com</span>. We evaluate
+              <span className="font-mono text-accent">hello@amintaapp.com</span>. We evaluate
               all requests on a case-by-case basis.
             </p>
           </Section>
@@ -549,9 +549,9 @@ export default function TermsPage() {
                 If you are a consumer in the EU, you have the right to use the European
                 Commission&apos;s Online Dispute Resolution (ODR) platform for disputes relating
                 to online purchases:{" "}
-                <span className="text-[#74f7b5] font-mono text-sm">ec.europa.eu/consumers/odr</span>.
+                <span className="text-accent font-mono text-sm">ec.europa.eu/consumers/odr</span>.
                 Our contact email for ODR purposes is{" "}
-                <span className="font-mono text-[#74f7b5]">hello@amintaapp.com</span>.
+                <span className="font-mono text-accent">hello@amintaapp.com</span>.
               </p>
             </Sub>
 
@@ -573,7 +573,7 @@ export default function TermsPage() {
               <p className="text-[#888]">Aminta — Belgium</p>
               <p className="text-[#888]">
                 Email:{" "}
-                <span className="font-mono text-[#74f7b5]">hello@amintaapp.com</span>
+                <span className="font-mono text-accent">hello@amintaapp.com</span>
               </p>
               <p className="text-[#555] text-xs pt-1">
                 We aim to respond within 5 business days. For urgent matters relating to abuse,
@@ -587,10 +587,10 @@ export default function TermsPage() {
                 these Terms of Service.
               </p>
               <div className="mt-4 flex flex-wrap gap-4 text-sm">
-                <a href="/privacy" className="text-[#74f7b5] hover:text-white transition-colors">
+                <a href="/privacy" className="text-accent hover:text-white transition-colors">
                   Privacy Policy →
                 </a>
-                <a href="/" className="text-[#666] hover:text-[#74f7b5] transition-colors">
+                <a href="/" className="text-[#666] hover:text-accent transition-colors">
                   Back to Aminta →
                 </a>
               </div>

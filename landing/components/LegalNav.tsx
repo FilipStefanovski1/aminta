@@ -12,9 +12,9 @@ export default function LegalNav() {
       <div className="mx-auto max-w-3xl px-6 h-12 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2 group" aria-label="Aminta home">
           <svg width="20" height="16" viewBox="0 0 16 13" className="shrink-0" style={{ imageRendering: "pixelated" }}>
-            <rect x="2" y="0" width="2" height="3" fill="#74f7b5" />
-            <rect x="12" y="0" width="2" height="3" fill="#74f7b5" />
-            <rect x="3" y="3" width="10" height="9" fill="#74f7b5" />
+            <rect x="2" y="0" width="2" height="3" fill="var(--accent)" />
+            <rect x="12" y="0" width="2" height="3" fill="var(--accent)" />
+            <rect x="3" y="3" width="10" height="9" fill="var(--accent)" />
             <rect x="4" y="6" width="2" height="2" fill="#0a0a0a" />
             <rect x="10" y="6" width="2" height="2" fill="#0a0a0a" />
           </svg>

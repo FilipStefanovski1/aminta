@@ -44,12 +44,12 @@ function rarityFor(lv: number): RarityDef {
 }
 
 const BG: Record<number, string> = {
-  1: "linear-gradient(rgba(5,5,5,0.40),rgba(5,5,5,0.40)), url('/backgrounds/Lvl1.png') center/cover no-repeat",
-  2: "linear-gradient(rgba(5,5,5,0.40),rgba(5,5,5,0.40)), url('/backgrounds/Lvl2.png') center/cover no-repeat",
-  3: "linear-gradient(rgba(5,5,5,0.40),rgba(5,5,5,0.40)), url('/backgrounds/Lvl3.png') center/cover no-repeat",
-  4: "linear-gradient(rgba(5,5,5,0.40),rgba(5,5,5,0.40)), url('/backgrounds/Lvl4.png') center/cover no-repeat",
-  5: "linear-gradient(rgba(5,5,5,0.40),rgba(5,5,5,0.40)), url('/backgrounds/Lvl5.png') center/cover no-repeat",
-  6: "linear-gradient(rgba(5,5,5,0.40),rgba(5,5,5,0.40)), url('/backgrounds/Lvl6.png') center/cover no-repeat",
+  1: "linear-gradient(rgba(5,5,5,0.40),rgba(5,5,5,0.40)), url('/backgrounds/Lvl1.webp') center/cover no-repeat",
+  2: "linear-gradient(rgba(5,5,5,0.40),rgba(5,5,5,0.40)), url('/backgrounds/Lvl2.webp') center/cover no-repeat",
+  3: "linear-gradient(rgba(5,5,5,0.40),rgba(5,5,5,0.40)), url('/backgrounds/Lvl3.webp') center/cover no-repeat",
+  4: "linear-gradient(rgba(5,5,5,0.40),rgba(5,5,5,0.40)), url('/backgrounds/Lvl4.webp') center/cover no-repeat",
+  5: "linear-gradient(rgba(5,5,5,0.40),rgba(5,5,5,0.40)), url('/backgrounds/Lvl5.webp') center/cover no-repeat",
+  6: "linear-gradient(rgba(5,5,5,0.40),rgba(5,5,5,0.40)), url('/backgrounds/Lvl6.webp') center/cover no-repeat",
   7: "linear-gradient(180deg,#0a0c18 0%,#0f0d20 55%,#070610 100%)",
   8: "linear-gradient(180deg,#08040f 0%,#100818 60%,#06030a 100%)",
   9: "linear-gradient(180deg,#18140a 0%,#120f04 55%,#0a0804 100%)",
@@ -354,7 +354,7 @@ function EvolutionCard({ stage, index }: { stage: EvolutionStage; index: number 
 
 export default function AmintaEvolutionGrid() {
   return (
-    <section className="py-20 md:py-28 overflow-hidden">
+    <section id="evolutions" className="py-20 md:py-28 overflow-hidden">
 
       <style>{`
         @keyframes holoSweep {

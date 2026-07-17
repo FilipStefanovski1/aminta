@@ -84,6 +84,13 @@ export default function HowItWorks() {
           ))}
         </div>
 
+        <Reveal delay={360} className="mt-10 text-center">
+          <p className="text-xs text-muted">
+            Bring your own AI key (Groq, Gemini, or OpenRouter).{" "}
+            <span className="text-white/50">Better privacy, lower cost, full control.</span>
+          </p>
+        </Reveal>
+
       </div>
     </section>
   );

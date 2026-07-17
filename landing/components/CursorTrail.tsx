@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { usePathname } from "next/navigation";
 
 // Must match --grid-size in globals.css
 const GRID = 24;
@@ -16,6 +17,8 @@ interface Particle {
 
 export default function CursorTrail() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const pathname = usePathname();
+  const isMarketingPage = pathname === "/";
 
   useEffect(() => {
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -26,6 +29,10 @@ export default function CursorTrail() {
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
+
+    // Canvas 2D can't resolve CSS custom properties, so read the resolved value once.
+    const accentHex = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#74f7b5";
+    const [accentR, accentG, accentB] = [1, 3, 5].map((i) => parseInt(accentHex.slice(i, i + 2), 16));
 
     const resize = () => {
       canvas.width  = window.innerWidth;
@@ -76,15 +83,15 @@ export default function CursorTrail() {
         const vy = p.docY - window.scrollY;
 
         ctx.save();
-        ctx.shadowColor = "#74f7b5";
+        ctx.shadowColor = accentHex;
         ctx.shadowBlur  = 10 * a;
 
         // near-transparent fill — background visible through it
-        ctx.fillStyle = `rgba(116, 247, 181, ${a * 0.07})`;
+        ctx.fillStyle = `rgba(${accentR}, ${accentG}, ${accentB}, ${a * 0.07})`;
         ctx.fillRect(vx, vy, GRID, GRID);
 
         // glowing mint border snapped perfectly to grid
-        ctx.strokeStyle = `rgba(116, 247, 181, ${a * 0.9})`;
+        ctx.strokeStyle = `rgba(${accentR}, ${accentG}, ${accentB}, ${a * 0.9})`;
         ctx.lineWidth   = 1;
         ctx.strokeRect(vx + 0.5, vy + 0.5, GRID - 1, GRID - 1);
 
@@ -102,6 +109,8 @@ export default function CursorTrail() {
       cancelAnimationFrame(raf);
     };
   }, []);
+
+  if (!isMarketingPage) return null;
 
   return (
     <canvas

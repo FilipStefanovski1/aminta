@@ -145,7 +145,7 @@ export default function SignupPage() {
       <AuthShell onBack={() => { setStep("form"); setResent(false) }}>
         <div className="rounded-2xl p-6 space-y-5 text-center" style={CARD_STYLE}>
           <div className="flex justify-center">
-            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#74f7b5" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
               <rect x="2" y="4" width="20" height="16" rx="2" />
               <polyline points="2,4 12,13 22,4" />
             </svg>
@@ -154,7 +154,7 @@ export default function SignupPage() {
             <p className="text-white font-semibold text-base">Check your email</p>
             <p className="text-[#9a9aa3] text-sm leading-relaxed">
               We sent a verification link to{" "}
-              <span style={{ color: "#74f7b5" }}>{email.trim()}</span>.
+              <span style={{ color: "var(--accent)" }}>{email.trim()}</span>.
               <br />
               Click it to activate your account.
             </p>
@@ -166,7 +166,7 @@ export default function SignupPage() {
             <p className="text-[#888] text-sm">Didn&apos;t get it? Check spam, or</p>
             <button onClick={handleResend} disabled={resent}
               className="text-sm font-medium transition-colors disabled:cursor-not-allowed"
-              style={{ color: resent ? "#555" : "#74f7b5" }}>
+              style={{ color: resent ? "#555" : "var(--accent)" }}>
               {resent ? "Email sent ✓" : "Resend verification email"}
             </button>
           </div>
@@ -183,7 +183,7 @@ export default function SignupPage() {
     <AuthShell>
       <div className="rounded-2xl p-6 space-y-4" style={CARD_STYLE}>
         <div>
-          <p className="font-pixel text-[9px] tracking-widest mb-1" style={{ color: "#74f7b5" }}>
+          <p className="font-pixel text-[9px] tracking-widest mb-1" style={{ color: "var(--accent)" }}>
             Create account
           </p>
           <p className="text-[#9a9aa3] text-xs">Start growing your audience with Aminta</p>
@@ -220,7 +220,7 @@ export default function SignupPage() {
                   type="button"
                   onClick={() => { setEmail(emailSuggestion); setEmailSuggestion(undefined) }}
                   className="underline"
-                  style={{ color: "#74f7b5" }}
+                  style={{ color: "var(--accent)" }}
                 >
                   {emailSuggestion}
                 </button>
@@ -261,13 +261,13 @@ export default function SignupPage() {
               type="checkbox"
               checked={terms}
               onChange={e => { setTerms(e.target.checked); setErrors(prev => ({ ...prev, terms: undefined })) }}
-              className="mt-0.5 h-4 w-4 shrink-0 rounded accent-[#74f7b5]"
+              className="mt-0.5 h-4 w-4 shrink-0 rounded accent-accent"
             />
             <span className="text-xs text-[#888] leading-relaxed">
               I agree to the{" "}
-              <a href="/terms" target="_blank" className="text-[#9a9aa3] underline hover:text-[#74f7b5] transition-colors">Terms of Service</a>
+              <a href="/terms" target="_blank" className="text-[#9a9aa3] underline hover:text-accent transition-colors">Terms of Service</a>
               {" "}and{" "}
-              <a href="/privacy" target="_blank" className="text-[#9a9aa3] underline hover:text-[#74f7b5] transition-colors">Privacy Policy</a>
+              <a href="/privacy" target="_blank" className="text-[#9a9aa3] underline hover:text-accent transition-colors">Privacy Policy</a>
             </span>
           </label>
           {errors.terms && <p className="text-xs text-red-400">{errors.terms}</p>}
@@ -276,7 +276,7 @@ export default function SignupPage() {
             <p className="text-xs text-red-400">
               {formError}{" "}
               {formError.includes("already exists") && (
-                <a href="/login" className="underline text-[#74f7b5]">Sign in</a>
+                <a href="/login" className="underline text-accent">Sign in</a>
               )}
             </p>
           )}
@@ -288,7 +288,7 @@ export default function SignupPage() {
       <div className="space-y-2 text-center">
         <p className="text-[#888] text-xs">
           Already have an account?{" "}
-          <a href="/login" className="text-[#74f7b5] hover:text-white transition-colors">Sign in</a>
+          <a href="/login" className="text-accent hover:text-white transition-colors">Sign in</a>
         </p>
       </div>
     </AuthShell>

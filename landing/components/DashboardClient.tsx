@@ -210,9 +210,9 @@ export default function DashboardClient({
         <div style={card} className="p-6 mb-4">
           <div className="flex items-center gap-3 mb-4">
             <svg width="24" height="20" viewBox="0 0 16 13" style={{ imageRendering: "pixelated" }}>
-              <rect x="2" y="0" width="2" height="3" fill="#74f7b5" />
-              <rect x="12" y="0" width="2" height="3" fill="#74f7b5" />
-              <rect x="3" y="3" width="10" height="9" fill="#74f7b5" />
+              <rect x="2" y="0" width="2" height="3" fill="var(--accent)" />
+              <rect x="12" y="0" width="2" height="3" fill="var(--accent)" />
+              <rect x="3" y="3" width="10" height="9" fill="var(--accent)" />
               <rect x="4" y="6" width="2" height="2" fill="#1a1a1a" />
               <rect x="10" y="6" width="2" height="2" fill="#1a1a1a" />
             </svg>
