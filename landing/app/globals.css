@@ -285,52 +285,75 @@ body {
   .nav-cta:hover::after {
     animation: none !important;
   }
-
-  .marquee-track {
-    animation: none !important;
-    transform: none !important;
-  }
 }
 
-/* ── Marquee wall ──────────────────────────────────────────── */
-@keyframes marqueeUp {
-  0% { transform: translateY(0); }
-  100% { transform: translateY(-50%); }
-}
-
-@keyframes marqueeDown {
-  0% { transform: translateY(-50%); }
-  100% { transform: translateY(0); }
-}
-
-
-.marquee-column {
-  height: 560px;
+/* ── Testimonial wall ──────────────────────────────────────── */
+/* One column's visible "window" — overflow:hidden clips the endlessly
+   scrolling track inside it. Height is set inline per-column, targeting a
+   large 700–900px viewport (see TARGET_WINDOW_HEIGHT in MarqueeWall.tsx) so
+   the wall reads as an immersive stream, not a strip cards pass through.
+   The mask fades a modest 48px band at the very top/bottom only — small
+   relative to that height — and never reaches into a card's readable area. */
+.testimonial-col-window {
+  position: relative;
   overflow: hidden;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 48px, #000 calc(100% - 48px), transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 48px, #000 calc(100% - 48px), transparent 100%);
 }
 
-.marquee-fade-edge {
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 11%, #000 89%, transparent 100%);
-  mask-image: linear-gradient(to bottom, transparent 0%, #000 11%, #000 89%, transparent 100%);
-}
-
-.marquee-track {
+/* The scrolling track holds exactly two identical groups back-to-back.
+   Translating by exactly one group's height (+ the gap between the two
+   groups) is mathematically indistinguishable from translating by zero,
+   which is what makes the loop seamless — see MarqueeWall.tsx, which
+   measures the real rendered height of one group and writes it into
+   --marquee-cycle so this works regardless of how tall the cards are.
+   The gap here (between the two groups, i.e. the loop's own seam) is
+   deliberately much larger than the gap between individual cards below —
+   a longer pause before a testimonial resurfaces makes the loop read as
+   "more content below" rather than "here we go again." */
+.testimonial-track {
   display: flex;
   flex-direction: column;
-  gap: 0.9rem;
+  gap: 3rem;
   will-change: transform;
 }
 
-.marquee-up-slow {
-  animation: marqueeUp 38s linear infinite;
+.testimonial-group {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
 }
 
-.marquee-up-fast {
-  animation: marqueeUp 30s linear infinite;
+@keyframes testimonialScrollDown {
+  from { transform: translateY(calc(-1 * var(--marquee-cycle, 0px))); }
+  to   { transform: translateY(0); }
+}
+@keyframes testimonialScrollUp {
+  from { transform: translateY(0); }
+  to   { transform: translateY(calc(-1 * var(--marquee-cycle, 0px))); }
 }
 
-.marquee-down-medium {
-  animation: marqueeDown 34s linear infinite;
+.testimonial-track-down {
+  animation: testimonialScrollDown linear infinite;
+  animation-duration: var(--marquee-duration, 40s);
+}
+.testimonial-track-up {
+  animation: testimonialScrollUp linear infinite;
+  animation-duration: var(--marquee-duration, 40s);
+}
+
+/* Paused while the section is out of view (see MarqueeWall.tsx's
+   IntersectionObserver) or before the first height measurement lands. */
+.testimonial-track-paused {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .testimonial-track-down,
+  .testimonial-track-up {
+    animation: none !important;
+    transform: none !important;
+  }
 }
 
 .marquee-card {
@@ -551,31 +574,6 @@ body {
 }
 @media (prefers-reduced-motion: reduce) {
   .pixel-badge-float { animation: none; }
-}
-
-/* ── Mobile marquee feed ───────────────────────────────────── */
-.marquee-up-mobile {
-  animation: marqueeUp 45s linear infinite;
-}
-
-.mobile-marquee {
-  height: 500px;
-  overflow: hidden;
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 12%, #000 88%, transparent 100%);
-  mask-image: linear-gradient(to bottom, transparent 0%, #000 12%, #000 88%, transparent 100%);
-}
-
-.mobile-marquee .marquee-card {
-  cursor: default;
-  pointer-events: none;
-}
-
-.mobile-marquee .marquee-card:hover {
-  transform: none;
-  border-color: color-mix(in srgb, var(--wall-accent, var(--accent)) 45%, #1f1f1f 55%);
-  box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.45) inset,
-    0 0 14px color-mix(in srgb, var(--wall-accent-glow, var(--accent-glow)) 25%, transparent 75%);
 }
 
 /* ── XP feed animation ─────────────────────────────────────── */

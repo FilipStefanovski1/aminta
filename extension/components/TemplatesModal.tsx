@@ -13,7 +13,7 @@ import {
   updateTemplate,
   type RunTemplateContext,
 } from "~lib/templates"
-import type { AmintaStore, AmintaTemplate, TemplateMode, TemplatePlatform, TemplateVariable } from "~lib/storage"
+import type { AmintaStore, AmintaTemplate, TemplateMode, TemplateVariable } from "~lib/storage"
 import { C } from "~lib/theme"
 
 import { Card, GhostButton, PrimaryButton, SectionLabel } from "~components/ui"
@@ -36,7 +36,6 @@ interface Props {
 }
 
 const MODE_LABEL: Record<TemplateMode, string> = { exact: "Exact", fill: "Fill", generate: "AI" }
-const PLATFORM_LABEL: Record<TemplatePlatform, string> = { x: "X", linkedin: "LinkedIn", threads: "Threads", any: "Any" }
 
 function badge(text: string, color: string) {
   return (
@@ -265,7 +264,6 @@ export default function TemplatesModal({ store, onClose, onUse, onChanged, getRu
         <div className="flex items-center justify-between">
           <div className="flex gap-1.5">
             {badge(MODE_LABEL[t.mode], C.mint)}
-            {badge(PLATFORM_LABEL[t.platform], C.textDim)}
           </div>
           <div className="flex gap-3">
             <button onClick={onEdit} className="text-[10px]" style={{ color: C.textFaint }}>Edit</button>
@@ -293,7 +291,6 @@ function TemplateEditor({
   const [name, setName] = useState(initial?.name ?? "")
   const [description, setDescription] = useState(initial?.description ?? "")
   const [mode, setMode] = useState<TemplateMode>(initial?.mode ?? prefill?.mode ?? "exact")
-  const [platform, setPlatform] = useState<TemplatePlatform>(initial?.platform ?? "any")
   const [content, setContent] = useState(initial?.content ?? prefill?.content ?? "")
   const [variables, setVariables] = useState<TemplateVariable[]>(initial?.variables ?? [])
   const [error, setError] = useState("")
@@ -340,10 +337,10 @@ function TemplateEditor({
     setError("")
 
     if (initial) {
-      await updateTemplate(initial.id, { name: name.trim(), description: description.trim() || undefined, mode, platform, content, variables })
-      onSaved({ ...initial, name: name.trim(), description: description.trim() || undefined, mode, platform, content, variables, updatedAt: Date.now() })
+      await updateTemplate(initial.id, { name: name.trim(), description: description.trim() || undefined, mode, content, variables })
+      onSaved({ ...initial, name: name.trim(), description: description.trim() || undefined, mode, content, variables, updatedAt: Date.now() })
     } else {
-      const t = await createTemplate({ name: name.trim(), description: description.trim() || undefined, mode, platform, content, variables })
+      const t = await createTemplate({ name: name.trim(), description: description.trim() || undefined, mode, content, variables })
       onSaved(t)
     }
   }
@@ -397,28 +394,6 @@ function TemplateEditor({
           {mode === "fill" && "Fill in {{variables}} to complete the post — no AI rewriting."}
           {mode === "generate" && "An instruction — Aminta writes a fresh version using your Style Profile every time."}
         </p>
-      </div>
-
-      <div className="space-y-1.5">
-        <p className="text-[11px] font-medium" style={{ color: C.textFaint }}>Platform</p>
-        <div className="flex gap-1.5">
-          {(["any", "x", "linkedin", "threads"] as TemplatePlatform[]).map((p) => {
-            const active = platform === p
-            return (
-              <button
-                key={p}
-                onClick={() => setPlatform(p)}
-                className="flex-1 rounded-lg py-1.5 text-[10px] font-medium"
-                style={{
-                  border: `1.5px solid ${active ? C.mint : C.border}`,
-                  backgroundColor: active ? C.mint + "18" : C.card,
-                  color: active ? C.mint : C.textDim,
-                }}>
-                {PLATFORM_LABEL[p]}
-              </button>
-            )
-          })}
-        </div>
       </div>
 
       <div className="space-y-1.5">

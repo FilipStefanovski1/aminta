@@ -205,15 +205,20 @@ describe("resolveTemplateContent", () => {
 
 describe("CRUD round-trip", () => {
   it("creates and persists a template", async () => {
-    const t = await createTemplate({ name: "GM post", mode: "exact", platform: "x", content: "gm ☀️" })
+    const t = await createTemplate({ name: "GM post", mode: "exact", content: "gm ☀️" })
     const store = await getStore()
     expect(store.templates).toHaveLength(1)
     expect(store.templates[0].id).toBe(t.id)
     expect(store.templates[0].usageCount).toBe(0)
   })
 
+  it("always tags new templates as the X platform (X is the only supported platform)", async () => {
+    const t = await createTemplate({ name: "GM post", mode: "exact", content: "gm ☀️" })
+    expect(t.platform).toBe("x")
+  })
+
   it("recordTemplateUsage increments usageCount and sets lastUsedAt", async () => {
-    const t = await createTemplate({ name: "GM post", mode: "exact", platform: "x", content: "gm ☀️" })
+    const t = await createTemplate({ name: "GM post", mode: "exact", content: "gm ☀️" })
     await recordTemplateUsage(t.id)
     const store = await getStore()
     expect(store.templates[0].usageCount).toBe(1)

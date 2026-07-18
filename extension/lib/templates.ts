@@ -10,7 +10,7 @@
 import type { ChatMessage } from "~lib/ai"
 import { buildMessages, type Mode, type OutputLength, type Platform, type Tone } from "~lib/prompts"
 import { getStore, setStore } from "~lib/storage"
-import type { AmintaTemplate, StyleProfile, TemplateMode, TemplatePlatform, TemplateVariable, VoiceProfile } from "~lib/storage"
+import type { AmintaTemplate, StyleProfile, TemplateMode, TemplateVariable, VoiceProfile } from "~lib/storage"
 
 // ── CRUD ────────────────────────────────────────────────────────────────
 
@@ -18,7 +18,6 @@ export interface CreateTemplateInput {
   name: string
   description?: string
   mode: TemplateMode
-  platform: TemplatePlatform
   content: string
   variables?: TemplateVariable[]
   favorite?: boolean
@@ -32,7 +31,7 @@ export async function createTemplate(input: CreateTemplateInput): Promise<Aminta
     name: input.name,
     description: input.description,
     mode: input.mode,
-    platform: input.platform,
+    platform: "x",
     content: input.content,
     variables: input.variables ?? [],
     favorite: input.favorite ?? false,

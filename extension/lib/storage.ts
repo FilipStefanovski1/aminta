@@ -67,7 +67,13 @@ export interface StyleCorpusEntry {
 // StyleProfile never determines template structure. See lib/templates.ts.
 
 export type TemplateMode = "exact" | "fill" | "generate"
-export type TemplatePlatform = "x" | "linkedin" | "threads" | "any"
+// "any" is kept alongside "x" even though X is the only supported platform —
+// it's still the value written for templates saved before this field had any
+// UI, and dropping it would make that data fail to type-check on read.
+// Older stored templates may carry a stale "linkedin"/"threads" value from
+// when multi-platform was supported; those are simply never displayed or
+// filtered on anymore (see TemplatesModal.tsx) rather than migrated in place.
+export type TemplatePlatform = "x" | "any"
 
 export interface TemplateVariable {
   key: string // normalized: lowercase, [a-z0-9_]+, unique within a template

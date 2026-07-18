@@ -1,6 +1,8 @@
 # Aminta — Chrome Extension Context
 
-Aminta is a Chrome side-panel extension that lives inside X (Twitter) and LinkedIn. It generates posts, replies, and polished drafts in the user's own voice, inserts them directly into the composer, and runs an XP / evolution system to reward consistent posting.
+Aminta is a Chrome side-panel extension that lives inside X (Twitter). It generates posts, replies, and polished drafts in the user's own voice, inserts them directly into the composer, and runs an XP / evolution system to reward consistent posting.
+
+X is the only supported platform — there is no platform picker in the UI. `lib/prompts.ts`'s `Platform` type is a single-value union (`"x"`) kept only so call sites that need a `Platform` argument (buildMessages, readActivePost, insertText/insertImage) still type-check; it's never a place multi-platform branching happens anymore.
 
 ---
 
@@ -13,12 +15,8 @@ Aminta is a Chrome side-panel extension that lives inside X (Twitter) and Linked
 | `reply` | Writes a reply given a tweet/post as context | 25 XP |
 | `polish` | Rewrites a rough draft, keeping the user's voice | 15 XP |
 
-### Platforms
-| Platform | Character limit | Content script |
-|---|---|---|
-| `x` | 280 | `contents/twitter-bridge.ts` |
-| `linkedin` | 3000 | `contents/linkedin-bridge.ts` |
-| `threads` | 500 | (no inject — clipboard fallback) |
+### Platform
+X only — 280 character limit, `contents/twitter-bridge.ts`.
 
 ### Tones
 `direct` · `witty` · `analytical` · `inspiring`
@@ -56,8 +54,8 @@ Vision (image-to-text) is supported on Gemini and OpenRouter. **Groq does not su
 
 ### XP rules
 - Awarded on **Insert** (not on Generate) to incentivise publishing. If direct
-  insert fails (wrong tab, LinkedIn/Threads), the clipboard fallback still
-  awards XP — no platform is locked out of progression
+  insert fails (e.g. wrong tab), the clipboard fallback still awards XP —
+  the user is never locked out of progression
 - Each generated text is hashed — same post can only award XP once (`earnedHashes[]`)
 - Daily cap: **500 XP per day**
 - All "today" logic (cap, streak, missions, free limit) uses **local calendar
@@ -138,12 +136,6 @@ One-time reward of **+200 XP** when the user completes all 4:
 - `insertImageIntoComposer(dataUrl)` — tries X's hidden file input first, falls back to synthetic paste event
 - Sends `AMINTA_INSERT` / `AMINTA_GENERATE` messages to the side panel via `chrome.runtime`
 
-### `contents/linkedin-bridge.ts`
-- Runs on `linkedin.com/*`
-- Detects the active post in the feed for Reply mode (read-only context scraping)
-- Tracks `lastEditor` (the focused contenteditable) for future Insert support
-- **Insert into LinkedIn is not yet implemented** — falls back to clipboard copy on Insert
-
 ---
 
 ## Storage (`lib/storage.ts`)
@@ -222,8 +214,6 @@ onboardingDone  — boolean
 ---
 
 ## Known Limitations / Not Yet Built
-- **LinkedIn Insert** — content script can read context but cannot inject text into LinkedIn's composer. Currently falls back to clipboard copy.
-- **Threads** — no content script; Threads platform uses clipboard fallback only.
 - **Thread mode** — multi-tweet thread generation is listed as "coming soon" in pricing but not implemented.
 - **Multiple Amintas** — one voice profile per account; multi-profile support not built.
 - **Saved content** — no draft/history storage.

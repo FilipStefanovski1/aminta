@@ -36,6 +36,24 @@ function getActiveTweet(): string {
   return nodes[0].innerText.trim()
 }
 
+// Bar-scoped, strict version of getActiveTweet(): returns "" (never falls
+// back to nodes[0]) when `bar`'s composer has no preceding tweetText, which
+// is exactly the signal that this bar is a new-post composer rather than a
+// reply. Used by the inline toolbar to auto-detect reply context.
+function getReplyTargetText(bar: HTMLElement): string {
+  const nodes = Array.from(document.querySelectorAll<HTMLElement>('[data-testid="tweetText"]'))
+  if (!nodes.length) return ""
+
+  const composer = findTextAreaWrapper(bar)
+  if (!composer) return ""
+
+  for (let i = nodes.length - 1; i >= 0; i--) {
+    const pos = nodes[i].compareDocumentPosition(composer)
+    if (pos & Node.DOCUMENT_POSITION_FOLLOWING) return nodes[i].innerText.trim()
+  }
+  return ""
+}
+
 async function insertImageIntoComposer(dataUrl: string): Promise<boolean> {
   try {
     const res = await fetch(dataUrl)
@@ -72,21 +90,38 @@ async function insertImageIntoComposer(dataUrl: string): Promise<boolean> {
 }
 
 function findTextAreaWrapper(bar?: HTMLElement): HTMLElement | null {
-  // Prefer the textarea in the same compose container as the bar (modal vs sidebar disambiguation)
+  // Prefer the textarea in the same compose container as the bar (modal vs
+  // sidebar disambiguation). `bar`'s immediate parent is enough for the
+  // inline reply composer, but the reply MODAL ("Post your reply" popup)
+  // nests the toolbar and the textarea under a shared ancestor a few levels
+  // further up — so walk up from the bar looking for the nearest ancestor
+  // whose subtree contains a tweetTextarea node, instead of assuming the
+  // direct parent is close enough.
   if (bar) {
-    const relative = bar.parentElement?.querySelector<HTMLElement>('[data-testid="tweetTextarea_0"]')
-    if (relative) return relative
+    let scope: HTMLElement | null = bar.parentElement
+    for (let depth = 0; scope && depth < 8; depth++) {
+      const relative = scope.querySelector<HTMLElement>('[data-testid^="tweetTextarea_"]')
+      if (relative) return relative
+      scope = scope.parentElement
+    }
   }
   // Fall back: focused composer, then first in DOM
-  const focused = document.activeElement?.closest<HTMLElement>('[data-testid="tweetTextarea_0"]')
-  return focused ?? document.querySelector<HTMLElement>('[data-testid="tweetTextarea_0"]')
+  const focused = document.activeElement?.closest<HTMLElement>('[data-testid^="tweetTextarea_"]')
+  return focused ?? document.querySelector<HTMLElement>('[data-testid^="tweetTextarea_"]')
+}
+
+// The actual typing surface, not the wrapper — the wrapper also contains
+// X's fake placeholder text ("Post your reply") as a real DOM node, which
+// would otherwise make an empty composer read as non-empty.
+function getComposerBox(bar?: HTMLElement): HTMLElement | null {
+  const wrapper = findTextAreaWrapper(bar)
+  if (!wrapper) return null
+  return (wrapper.querySelector('[contenteditable="true"]') ?? wrapper) as HTMLElement
 }
 
 function insertIntoComposer(text: string, bar?: HTMLElement): boolean {
-  const wrapper = findTextAreaWrapper(bar)
-  if (!wrapper) return false
-
-  const box = (wrapper.querySelector('[contenteditable="true"]') ?? wrapper) as HTMLElement
+  const box = getComposerBox(bar)
+  if (!box) return false
 
   // Focus without triggering blur on the box itself. The Insert button already
   // has mousedown:preventDefault so focus never left the box in that flow.
@@ -163,15 +198,20 @@ async function saveKeyword(raw: string): Promise<void> {
 const BAR_ATTR = "data-aminta-bar"
 
 function getComposerText(bar?: HTMLElement): string {
-  const wrapper = findTextAreaWrapper(bar)
-  return wrapper ? wrapper.innerText.trim() : ""
+  const box = getComposerBox(bar)
+  return box ? box.innerText.trim() : ""
 }
 
 function setBarStatus(bar: HTMLElement, msg: string, isError = false) {
   const status = bar.querySelector<HTMLSpanElement>(".aminta-status")
   if (status) {
     status.textContent = msg
-    status.style.color = isError ? "#f87171" : "#555"
+    // Idle label ("Aminta") stays dim via the container's own inline style;
+    // any status we actively set here is feedback the user needs to see, so
+    // it must be legible against the dark bar (#555 on #1f1f1f was
+    // effectively invisible and made successful generations look like they
+    // silently did nothing).
+    status.style.color = isError ? "#f87171" : "#74f7b5"
   }
 }
 
@@ -182,10 +222,21 @@ async function runGenerate(bar: HTMLElement, mode: "tweet" | "polish", prefill?:
 
   const composerText = getComposerText(bar)
 
+  // Reply auto-detection: if Generate is clicked with nothing typed and no
+  // keyword chip selected, and this bar's composer sits right under a tweet
+  // (i.e. it's a reply box, not the "what's happening" box), use that
+  // tweet as context and write an actual reply instead of a generic post.
+  const replyTarget = mode === "tweet" && !composerText && !prefill ? getReplyTargetText(bar) : ""
+  const isReply = !!replyTarget
+
   let input = ""
+  let promptMode: "tweet" | "reply" | "polish" = mode
   if (mode === "polish") {
     input = composerText
     if (!input) { setBarStatus(bar, "Type a draft first", true); return }
+  } else if (isReply) {
+    promptMode = "reply"
+    input = replyTarget
   } else {
     input = prefill ?? composerText
   }
@@ -197,23 +248,31 @@ async function runGenerate(bar: HTMLElement, mode: "tweet" | "polish", prefill?:
     const styleProfile = await getOrBuildStyleProfile(store)
     const messages = buildMessages(
       "x",
-      mode === "polish" ? "polish" : "tweet",
+      promptMode,
       store.voice,
       input || "Write a compelling tweet about my niche",
       styleProfile
     )
     const text = await runAI(store.apiKey, store.model, messages)
 
-    // Copy to clipboard — never touches the composer DOM, never races with
-    // X's focus/blur handlers. Insertion is the sidepanel's job.
-    navigator.clipboard.writeText(text).then(() => {
-      setBarStatus(bar, "Copied ✦ — paste with ⌘V", false)
-      if (mode === "tweet" && input) {
+    const inserted = insertIntoComposer(text, bar)
+    if (inserted) {
+      setBarStatus(bar, "Inserted ✦", false)
+      if (mode === "tweet" && input && !isReply) {
         saveKeyword(input).then(() => renderKeywords(bar))
       }
-    }).catch(() => {
-      setBarStatus(bar, "Done — use Aminta sidebar to insert", false)
-    })
+    } else {
+      // Composer wasn't reachable (e.g. focus moved away) — clipboard is
+      // the fallback, not the default path.
+      navigator.clipboard.writeText(text).then(() => {
+        setBarStatus(bar, "Copied ✦ — paste with ⌘V", false)
+        if (mode === "tweet" && input && !isReply) {
+          saveKeyword(input).then(() => renderKeywords(bar))
+        }
+      }).catch(() => {
+        setBarStatus(bar, "Done — use Aminta sidebar to insert", false)
+      })
+    }
   } catch (e) {
     setBarStatus(bar, e instanceof Error ? e.message : "Error", true)
   } finally {

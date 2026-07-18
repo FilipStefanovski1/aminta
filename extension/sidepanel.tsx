@@ -19,16 +19,9 @@ import { getStore, setStore, type AmintaStore } from "~lib/storage"
 import { getAuthSession, clearAuthSession, type AuthSession } from "~lib/auth"
 import { pullFromCloud, pushToCloud } from "~lib/sync"
 import { handleAuthUserChanged } from "~lib/accountScope"
-import type { Platform } from "~lib/prompts"
 import { useCompanion } from "~hooks/useCompanion"
 
 type Tab = "home" | "create" | "train"
-
-function detectPlatform(url: string): Platform {
-  if (url.includes("linkedin.com")) return "linkedin"
-  if (url.includes("threads.net"))  return "threads"
-  return "x"
-}
 
 // ─── Level-up / first-post modal ─────────────────────────────────────────────
 
@@ -527,7 +520,6 @@ function SidePanel() {
   const [settingsOpen, setSettingsOpen]   = useState(false)
   const [companionOpen, setCompanionOpen] = useState(false)
   const grqMigrated = useRef(false)
-  const [detectedPlatform, setDetectedPlatform] = useState<Platform>("x")
   const [authChecked, setAuthChecked]   = useState(false)
   const [isLoggedIn, setIsLoggedIn]     = useState(false)
   const [session, setSession]           = useState<AuthSession | null>(null)
@@ -608,18 +600,6 @@ function SidePanel() {
     setIsLoggedIn(false)
     setSettingsOpen(false)
   }
-
-  useEffect(() => {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      const url = tabs[0]?.url ?? ""
-      setDetectedPlatform(detectPlatform(url))
-    })
-    const listener = (tabId: number, info: chrome.tabs.TabChangeInfo) => {
-      if (info.url) setDetectedPlatform(detectPlatform(info.url))
-    }
-    chrome.tabs.onUpdated.addListener(listener)
-    return () => chrome.tabs.onUpdated.removeListener(listener)
-  }, [])
 
   useEffect(() => { refresh() }, [])
   useEffect(() => () => clearTimeout(newlyUnlockedTimer.current), [])
@@ -737,7 +717,6 @@ function SidePanel() {
             {tab === "create" && (
               <GeneratorPanel
                 store={store}
-                initialPlatform={detectedPlatform}
                 onXPAwarded={async () => { await refresh(); pushToCloud(); dispatch("insert") }}
                 onLevelUp={(level, stage) => { setLevelUpData({ level, stage }); dispatch("level_up") }}
                 onFirstPost={(amount) => {

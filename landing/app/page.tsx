@@ -1,6 +1,5 @@
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
-import Positioning from "@/components/Positioning";
 import ThreeModes from "@/components/ThreeModes";
 import AmintaEvolutionGrid from "@/components/AmintaEvolutionGrid";
 import Features from "@/components/Features";
@@ -21,7 +20,6 @@ export default function Home() {
       <Navbar />
       <main className="flex-1">
         <Hero />
-        <Positioning />
         <ThreeModes />
         <HowItWorks />
         <AmintaEvolutionGrid />

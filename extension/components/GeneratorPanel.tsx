@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+import { useRef, useState } from "react"
 
 import { generate as runAI, generateFromImage, isGroqKey } from "~lib/ai"
 import type { CompanionEvent } from "~lib/companion"
@@ -16,32 +16,6 @@ import { incrementGenerations } from "~lib/xp"
 import OutputCard from "~components/OutputCard"
 import TemplatesModal from "~components/TemplatesModal"
 import { Sprite } from "~components/ui"
-
-// ─── Platform icons ────────────────────────────────────────────────────────────
-
-function LinkedInIcon() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
-    </svg>
-  )
-}
-
-function XIcon() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.213 5.567 5.95-5.567zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-    </svg>
-  )
-}
-
-function ThreadsIcon() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 192 192" fill="currentColor">
-      <path d="M141.537 88.9883C140.71 88.5919 139.87 88.2104 139.019 87.8451C137.537 60.5382 122.616 44.905 97.5619 44.745C97.4484 44.7443 97.3355 44.7443 97.222 44.7443C82.2364 44.7443 69.7731 51.1406 62.102 62.7807L75.881 72.2328C81.6116 63.5383 90.6052 61.6848 97.2286 61.6848C97.3051 61.6848 97.3819 61.6848 97.4576 61.6855C105.707 61.7381 111.932 64.1366 115.961 68.814C118.893 72.2193 120.854 76.925 121.825 82.8638C114.511 81.6207 106.601 81.2385 98.145 81.7233C74.3247 83.0954 59.0111 96.9879 60.0396 116.292C60.5615 126.084 65.4397 134.508 73.775 140.011C80.8224 144.663 89.899 146.938 99.3323 146.423C111.79 145.74 121.563 140.987 128.381 132.296C133.559 125.696 136.834 117.143 138.28 106.366C144.217 109.949 148.617 114.664 151.047 120.332C155.179 129.967 155.42 145.8 142.501 158.708C131.182 170.016 117.576 174.908 97.0135 175.059C74.2042 174.89 56.9538 167.575 45.7381 153.317C35.2355 139.966 29.8077 120.682 29.6052 96C29.8077 71.3178 35.2355 52.0336 45.7381 38.6827C56.9538 24.4249 74.2039 17.11 97.0132 16.9405C119.988 17.1113 137.539 24.4614 149.184 38.788C154.894 45.8136 159.199 54.6488 162.037 64.9503L178.184 60.6422C174.744 47.9622 169.331 37.0357 161.965 27.974C147.036 9.60668 125.202 0.195148 97.0695 0H96.9569C68.8816 0.19447 47.2921 9.6418 32.7883 28.0793C19.8819 44.4864 13.2244 67.3157 13.0007 95.9325L13 96L13.0007 96.0675C13.2244 124.684 19.8819 147.514 32.7883 163.921C47.2921 182.358 68.8816 191.806 96.9569 192H97.0695C122.03 191.827 139.624 185.292 154.118 170.811C173.081 151.866 172.51 128.119 166.26 113.541C161.776 103.087 153.227 94.5962 141.537 88.9883ZM98.4405 129.507C88.0005 130.095 77.1544 125.409 76.6196 115.372C76.2232 107.93 81.9158 99.626 99.0812 98.6368C101.047 98.5234 102.976 98.468 104.871 98.468C111.106 98.468 116.939 99.0737 122.242 100.233C120.264 124.935 108.662 128.946 98.4405 129.507Z" />
-    </svg>
-  )
-}
 
 // ─── Mode config ───────────────────────────────────────────────────────────────
 
@@ -78,22 +52,11 @@ const MODE_CONFIG: { id: Mode; label: string; sub: string; icon: React.ReactNode
   },
 ]
 
-// ─── Platform config ──────────────────────────────────────────────────────────
-
-const PLATFORM_CONFIG: { id: Platform; label: string; icon: React.ReactNode; locked?: boolean }[] = [
-  { id: "linkedin", label: "LinkedIn",    icon: <LinkedInIcon />, locked: true },
-  { id: "x",        label: "X (Twitter)", icon: <XIcon /> },
-  { id: "threads",  label: "Threads",     icon: <ThreadsIcon />, locked: true },
-]
-
-function LockIcon() {
-  return (
-    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="4" y="11" width="16" height="10" rx="2" />
-      <path d="M8 11V7a4 4 0 0 1 8 0v4" />
-    </svg>
-  )
-}
+// X is the only supported platform — kept as an explicit constant (rather
+// than React state) purely so call sites that still expect a `Platform`
+// value (buildMessages, readActivePost, OutputCard, template run context)
+// don't need a separate single-value special case.
+const PLATFORM: Platform = "x"
 
 // ─── Tone config ──────────────────────────────────────────────────────────────
 
@@ -165,22 +128,10 @@ const LENGTH_CONFIG: { id: OutputLength; label: string; desc: string }[] = [
 
 // ─── Placeholder map ─────────────────────────────────────────────────────────
 
-const TOPIC_PLACEHOLDER: Record<Platform, Record<Mode, string>> = {
-  x: {
-    tweet:  "A topic, angle, or spark…",
-    reply:  "Paste the tweet you're replying to…",
-    polish: "Paste your rough draft…",
-  },
-  linkedin: {
-    tweet:  "e.g. AI tools, personal branding, growth…",
-    reply:  "Paste the LinkedIn post you're commenting on…",
-    polish: "Paste your draft…",
-  },
-  threads: {
-    tweet:  "A topic, angle, or spark…",
-    reply:  "Paste the post you're replying to…",
-    polish: "Paste your rough draft…",
-  },
+const TOPIC_PLACEHOLDER: Record<Mode, string> = {
+  tweet:  "A topic, angle, or spark…",
+  reply:  "Paste the tweet you're replying to…",
+  polish: "Paste your rough draft…",
 }
 
 // ─── Header speech bubble ─────────────────────────────────────────────────────
@@ -216,7 +167,6 @@ interface Props {
   onXPAwarded: () => void
   onLevelUp: (level: number, stage: string) => void
   onFirstPost?: (amount: number) => void
-  initialPlatform?: Platform
   onTeach?: () => void
   onOpenSettings?: () => void
   onContext?: (event: CompanionEvent) => void
@@ -246,8 +196,7 @@ async function resizeImage(file: File): Promise<string> {
   })
 }
 
-export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, onFirstPost, initialPlatform = "x", onTeach, onOpenSettings, onContext, onTemplatesChanged }: Props) {
-  const [platform, setPlatform] = useState<Platform>(initialPlatform)
+export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, onFirstPost, onTeach, onOpenSettings, onContext, onTemplatesChanged }: Props) {
   const [mode,     setMode]     = useState<Mode>("tweet")
   const [tone,     setTone]     = useState<Tone>("direct")
   const [length,   setLength]   = useState<OutputLength>("medium")
@@ -265,10 +214,6 @@ export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, onFirstP
   const [templatesOpen, setTemplatesOpen] = useState(false)
   const [templatesPrefill, setTemplatesPrefill] = useState<{ content: string; mode: TemplateMode } | undefined>(undefined)
 
-  useEffect(() => {
-    setPlatform(initialPlatform)
-  }, [initialPlatform])
-
   const xp   = store.xp ?? 0
   const tint = getStageTint(xp)
 
@@ -281,7 +226,7 @@ export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, onFirstP
 
   const pull = async () => {
     setError("")
-    const res = await readActivePost(platform)
+    const res = await readActivePost(PLATFORM)
     if (res.ok && res.text) setTopic(res.text)
     else setError(res.error ?? "Couldn't read the post.")
   }
@@ -313,7 +258,7 @@ export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, onFirstP
       model: store.model,
       voice: store.voice,
       styleProfile,
-      platform,
+      platform: PLATFORM,
       mode,
       tone,
       length,
@@ -346,7 +291,7 @@ export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, onFirstP
     try {
       const topicInput = combined || "Write a post about this image."
       const styleProfile = await getOrBuildStyleProfile(store)
-      const messages = buildMessages(platform, mode, store.voice, topicInput, styleProfile, tone, length)
+      const messages = buildMessages(PLATFORM, mode, store.voice, topicInput, styleProfile, tone, length)
       const text = imageDataUrl
         ? await generateFromImage(store.apiKey, store.model, messages, imageDataUrl)
         : await runAI(store.apiKey, store.model, messages)
@@ -463,35 +408,6 @@ export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, onFirstP
         </div>
       )}
 
-      {/* ── Platform pills ── */}
-      <div className="space-y-1.5">
-        <p className="text-[11px] font-medium" style={{ color: C.textFaint }}>Platform</p>
-        <div className="flex gap-2">
-          {PLATFORM_CONFIG.map((p) => {
-            const active = platform === p.id
-            return (
-              <button
-                key={p.id}
-                onClick={p.locked ? undefined : () => { setPlatform(p.id); reset() }}
-                disabled={p.locked}
-                title={p.locked ? "Coming soon" : undefined}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl flex-1 justify-center transition-all text-[10px] font-medium"
-                style={{
-                  border: `1.5px solid ${active ? tint : C.border}`,
-                  backgroundColor: active ? tint + "18" : C.card,
-                  color: p.locked ? C.textGhost : active ? tint : C.textDim,
-                  cursor: p.locked ? "not-allowed" : "pointer",
-                  opacity: p.locked ? 0.55 : 1,
-                }}>
-                <span style={{ color: active ? tint : C.textGhost }}>{p.icon}</span>
-                <span>{p.label}</span>
-                {p.locked && <LockIcon />}
-              </button>
-            )
-          })}
-        </div>
-      </div>
-
       {/* ── Topic input ── */}
       <div className="space-y-1.5">
         <p className="text-[11px] font-medium" style={{ color: C.textFaint }}>{topicLabel}</p>
@@ -500,7 +416,7 @@ export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, onFirstP
             value={topic}
             onChange={(e) => setTopic(e.target.value)}
             rows={3}
-            placeholder={TOPIC_PLACEHOLDER[platform][mode]}
+            placeholder={TOPIC_PLACEHOLDER[mode]}
             className="input-pixel w-full rounded-xl px-3 py-2.5 text-sm resize-none"
             style={{ paddingBottom: "22px" }}
           />
@@ -668,7 +584,7 @@ export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, onFirstP
           key={genKey}
           text={output}
           mode={mode}
-          platform={platform}
+          platform={PLATFORM}
           currentXP={xp}
           imageDataUrl={outputImage}
           onRegenerate={generate}

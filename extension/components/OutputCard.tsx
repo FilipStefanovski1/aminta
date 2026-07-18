@@ -6,11 +6,7 @@ import { incrementMissionPublished, recordStreak } from "~lib/missions"
 import type { Mode, Platform } from "~lib/prompts"
 import { hashText, tryAwardXP, XP_PER_MODE } from "~lib/xp"
 
-const CHAR_LIMITS: Record<Platform, number> = {
-  x: 280,
-  linkedin: 3000,
-  threads: 500,
-}
+const X_CHAR_LIMIT = 280
 
 interface Props {
   text: string
@@ -49,15 +45,15 @@ export default function OutputCard({ text, mode, platform, currentXP, imageDataU
     setXpStatus("")
 
     // delivered = the text reached the user (composer OR clipboard).
-    // XP is awarded either way — LinkedIn/Threads and "wrong tab" users must
-    // not be locked out of the entire progression loop.
+    // XP is awarded either way — a "wrong tab" user must not be locked out
+    // of the entire progression loop.
     let delivered = false
 
     const res = await insertText(platform, text)
     if (res.ok) {
       delivered = true
       // Insert image after text if one was provided
-      if (imageDataUrl && platform === "x") {
+      if (imageDataUrl) {
         setInsertStatus("Inserting image…")
         const imgRes = await insertImage(platform, imageDataUrl)
         if (!imgRes.ok) {
@@ -76,11 +72,7 @@ export default function OutputCard({ text, mode, platform, currentXP, imageDataU
       try {
         await navigator.clipboard.writeText(text)
         delivered = true
-        setInsertStatus(
-          platform === "x"
-            ? `${res.error ? res.error + " " : ""}Copied instead — paste it into the composer. XP still counts.`
-            : "Copied to your clipboard — paste it into the composer. XP still counts."
-        )
+        setInsertStatus(`${res.error ? res.error + " " : ""}Copied instead — paste it into the composer. XP still counts.`)
       } catch {
         setInsertStatus("Insert failed — use Copy and paste it manually.")
       }
@@ -121,8 +113,7 @@ export default function OutputCard({ text, mode, platform, currentXP, imageDataU
     setTimeout(() => setXpStatus(""), 3000)
   }
 
-  const insertLabel = platform === "linkedin" ? "Insert into LinkedIn" : "Insert into X"
-  const charLimit = CHAR_LIMITS[platform]
+  const charLimit = X_CHAR_LIMIT
   const charCount = text.length
   const charColor = charCount > charLimit ? "#f87171" : charCount > charLimit * 0.9 ? "#fbbf24" : "#444"
 
@@ -153,7 +144,7 @@ export default function OutputCard({ text, mode, platform, currentXP, imageDataU
         <button
           onClick={insert}
           className="btn-pixel flex-1 bg-mint text-black rounded py-2 font-pixel text-[8px] active:scale-[0.97]">
-          {insertLabel}
+          Insert into X
         </button>
       </div>
 

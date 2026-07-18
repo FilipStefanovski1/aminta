@@ -116,6 +116,9 @@ export default function ThreeModes() {
           <h2 className="mt-4 font-pixel text-3xl sm:text-4xl text-white leading-tight max-w-xl">
             Generate without leaving<br className="hidden sm:block" /> the timeline.
           </h2>
+          <p className="mt-3 text-sm sm:text-base text-muted max-w-xl">
+            Not another scheduler, not a generic AI writer — Aminta lives inside X and learns how you write.
+          </p>
         </Reveal>
 
         {/* 4-step story flow */}
