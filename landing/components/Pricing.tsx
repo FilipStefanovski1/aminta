@@ -267,12 +267,17 @@ export default function Pricing() {
           </h2>
         </Reveal>
 
-        {/* billing toggle */}
+        {/* billing toggle — the badge is a child of the Lifetime slot itself
+            (not a separate row above the whole bar), positioned with
+            `bottom-full` + a margin. That means its position is computed
+            entirely from the Lifetime slot's own box — no hardcoded top
+            offset to keep in sync with the badge's height — so it reads as
+            one attached component instead of a badge floating near a toggle. */}
         <Reveal className="mt-10 flex justify-center">
-          <div className="flex items-center rounded-full border border-line bg-panel p-1 gap-0.5">
+          <div className="flex items-center rounded-full border border-line bg-panel p-1.5 h-14 w-full max-w-[320px]">
             <button
               onClick={() => handleBillingMode("monthly")}
-              className={`rounded-full px-5 py-2 text-xs font-semibold transition-all duration-200 ${
+              className={`flex-1 h-full m-0.5 flex items-center justify-center rounded-full text-xs font-semibold transition-all duration-200 ${
                 mode === "monthly"
                   ? "bg-accent text-black shadow-[0_2px_12px_rgba(116,247,181,0.3)]"
                   : "text-muted hover:text-white"
@@ -280,10 +285,11 @@ export default function Pricing() {
             >
               Monthly
             </button>
-            <div className="relative">
+
+            <div className="relative flex-1 h-full m-0.5">
               <button
                 onClick={() => handleBillingMode("lifetime")}
-                className={`rounded-full px-5 py-2 text-xs font-semibold transition-all duration-200 ${
+                className={`w-full h-full flex items-center justify-center rounded-full text-xs font-semibold transition-all duration-200 ${
                   mode === "lifetime"
                     ? "bg-accent text-black shadow-[0_2px_12px_rgba(116,247,181,0.3)]"
                     : "text-muted hover:text-white"
@@ -292,16 +298,19 @@ export default function Pricing() {
                 Lifetime
               </button>
 
-              {/* floating "Best value" badge — centered over Lifetime, overlapping the toggle's top edge by ~50% */}
-              <div className="absolute left-1/2 -translate-x-1/2 -top-2 z-30 pointer-events-none">
+              {/* mb-4 (16px), not mb-2 — this wrapper is itself inset 8px from
+                  the track's visible top edge (track p-1.5 + this slot's
+                  m-0.5), so the badge needs that much extra margin to land
+                  a true 6–8px gap below the track's actual border. */}
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-4 pointer-events-none">
                 <Reveal delay={150}>
                   <div className="pixel-badge-float">
-                    <div className="pixel-badge relative flex items-center bg-accent px-2.5 py-1">
+                    <div className="pixel-badge relative flex items-center justify-center bg-accent px-2.5 h-[22px]">
                       <span className="pixel-badge-tab pixel-badge-tab-left" />
                       <span className="pixel-badge-tab pixel-badge-tab-right" />
                       <PixelPlus size={5} className="absolute -top-1.5 -left-2" />
                       <PixelPlus size={5} className="absolute -top-1.5 -right-2" />
-                      <span className="font-pixel text-[7px] text-black uppercase tracking-wider whitespace-nowrap">
+                      <span className="font-pixel text-[6.5px] text-black uppercase tracking-wider whitespace-nowrap">
                         Best Value
                       </span>
                     </div>

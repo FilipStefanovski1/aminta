@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 
-import { FORMS, LEVEL_THRESHOLDS, getLevel, getStageTint } from "~lib/evolution"
+import { getStageTint } from "~lib/evolution"
 import type { AmintaStore, VoiceProfile } from "~lib/storage"
 import { C } from "~lib/theme"
-import { Card, Sprite, SpriteMark } from "~components/ui"
+import { Card, Sprite } from "~components/ui"
 
 interface Props {
   store: AmintaStore
@@ -47,14 +47,6 @@ const MEMORY_LESSONS = [
 ]
 
 const SUGGESTION_HANDLES = ["@naval", "@sama", "@levelsio", "@paulg"]
-
-const RARITY_COLOR: Record<string, string> = {
-  COMMON:    "#8ca0b0",
-  UNCOMMON:  "#40e898",
-  RARE:      "#40b0ff",
-  EPIC:      "#c0a0ff",
-  LEGENDARY: "#f5d060",
-}
 
 function InfoTip({ tip }: { tip: string }) {
   const [open, setOpen] = useState(false)
@@ -682,61 +674,6 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0 
           )}
         </div>
       )}
-
-      {/* ── Evolution Archive ── */}
-      {(() => {
-        const xp           = store.xp ?? 0
-        const currentLevel = getLevel(xp)
-        const nextLevel    = currentLevel < FORMS.length ? currentLevel + 1 : null
-        return (
-          <div className="space-y-2 animate-card-in" style={{ animationDelay: "60ms" }}>
-            <p className="text-[9px] uppercase tracking-[0.1em] px-1 pt-2" style={{ color: C.textDim }}>Evolution Archive</p>
-            {FORMS.map((form) => {
-              const unlocked  = currentLevel >= form.level
-              const isCurrent = currentLevel === form.level
-              const isNext    = form.level === nextLevel
-              const show      = form.revealed || unlocked
-              return (
-                <div
-                  key={form.level}
-                  className="flex items-center gap-3 rounded-xl px-3 py-2"
-                  style={{
-                    position: "relative",
-                    overflow: "hidden",
-                    backgroundColor: isCurrent ? form.color + "0e" : C.card,
-                    border: `1px solid ${isCurrent ? form.color + "55" : isNext ? form.color + "33" : C.border}`,
-                    opacity: unlocked ? 1 : 0.5,
-                  }}>
-                  <div className="shrink-0" style={{ filter: unlocked ? "none" : "grayscale(1)" }}>
-                    {show
-                      ? <SpriteMark tint={form.color} size={22} />
-                      : <div className="w-[22px] h-[18px] flex items-center justify-center font-pixel text-[10px]" style={{ color: C.textGhost }}>?</div>}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-pixel text-[7px]" style={{ color: show ? (unlocked ? form.color : C.textDim) : C.textGhost }}>
-                      {show ? form.name : "???"}
-                    </p>
-                    {show && (
-                      <p className="text-[9px] mt-0.5 uppercase tracking-[0.04em]" style={{ color: RARITY_COLOR[form.rarity] + "88" }}>
-                        {form.rarity}
-                      </p>
-                    )}
-                  </div>
-                  <div className="shrink-0">
-                    {isCurrent
-                      ? <span className="font-pixel text-[6px] px-1.5 py-0.5 rounded" style={{ backgroundColor: form.color, color: "#000" }}>NOW</span>
-                      : unlocked
-                        ? <span className="font-bold leading-none" style={{ color: form.color, fontSize: 16 }}>✓</span>
-                        : isNext
-                          ? <span className="font-pixel text-[6px]" style={{ color: tint }}>+{LEVEL_THRESHOLDS[form.level - 1] - xp} XP</span>
-                          : <span className="font-pixel text-[5px]" style={{ color: C.textGhost }}>Lv.{form.level}</span>}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )
-      })()}
 
     </div>
   )

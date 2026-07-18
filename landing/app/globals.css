@@ -544,7 +544,7 @@ body {
     drop-shadow(0 1px 0 #0a0a0a) drop-shadow(0 -1px 0 #0a0a0a)
     drop-shadow(2px 0 0 #0a0a0a) drop-shadow(-2px 0 0 #0a0a0a)
     drop-shadow(0 2px 0 #0a0a0a) drop-shadow(0 -2px 0 #0a0a0a)
-    drop-shadow(0 0 10px rgba(116, 247, 181, 0.45));
+    drop-shadow(0 0 7px rgba(116, 247, 181, 0.32));
 }
 
 /* small RPG-label side tabs that stick out from a .pixel-badge */
