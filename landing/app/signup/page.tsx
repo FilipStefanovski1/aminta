@@ -91,7 +91,7 @@ export default function SignupPage() {
       setLoading(false)
       setFormError(
         /already registered/i.test(error.message)
-          ? "An account with this email already exists — sign in instead."
+          ? "An account with this email already exists. Sign in instead."
           : error.message
       )
       return
@@ -101,7 +101,7 @@ export default function SignupPage() {
     // user with no identities. Treat it as "account exists".
     if (data.user && data.user.identities?.length === 0) {
       setLoading(false)
-      setFormError("An account with this email already exists — sign in instead.")
+      setFormError("An account with this email already exists. Sign in instead.")
       return
     }
 
@@ -173,7 +173,7 @@ export default function SignupPage() {
         </div>
 
         <p className="text-center text-[#666] text-xs">
-          You can close this tab after verifying — then sign in.
+          You can close this tab after verifying, then sign in.
         </p>
       </AuthShell>
     )

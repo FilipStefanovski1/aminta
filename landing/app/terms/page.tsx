@@ -3,7 +3,7 @@ import LegalNav from "@/components/LegalNav";
 import LegalHero from "@/components/LegalHero";
 
 export const metadata: Metadata = {
-  title: "Terms of Service — Aminta",
+  title: "Terms of Service | Aminta",
   description: "Terms and conditions for using the Aminta Chrome extension and web application. Governed by Belgian law.",
 };
 
@@ -132,7 +132,7 @@ export default function TermsPage() {
             <p>Key features include, but are not limited to:</p>
             <ul className="mt-3 space-y-2">
               <Li>Tweet Generator, Reply Generator, and Post Polisher</Li>
-              <Li>Voice Profile — personalised tone and style configuration</Li>
+              <Li>Voice Profile: personalised tone and style configuration</Li>
               <Li>Content Ideas and inspiration tools</Li>
               <Li>One-click insertion into social platform composers</Li>
               <Li>XP system and Aminta companion progression</Li>
@@ -335,7 +335,7 @@ export default function TermsPage() {
 
             <Sub title="8.2 Payment Processing">
               <p>
-                Aminta does not currently process any payments — all plans are free. If paid plans
+                Aminta does not currently process any payments. All plans are free. If paid plans
                 are introduced, this section will name the payment processor and describe how
                 charges are handled before any billing begins.
               </p>
@@ -499,8 +499,8 @@ export default function TermsPage() {
             <Sub title="13.3 Effect of Termination">
               <p>
                 Upon termination, your right to access and use the Service ceases immediately.
-                Provisions that by their nature should survive termination — including Sections 6,
-                7, 11, 12, and 15 — will survive. We are not obligated to provide you with your
+                Provisions that by their nature should survive termination, including Sections 6,
+                7, 11, 12, and 15, will survive. We are not obligated to provide you with your
                 data following termination for cause, but we will fulfil any legal data access
                 obligations.
               </p>
@@ -570,7 +570,7 @@ export default function TermsPage() {
               regarding the Service:
             </p>
             <div className="mt-4 text-sm space-y-1.5">
-              <p className="text-[#888]">Aminta — Belgium</p>
+              <p className="text-[#888]">Aminta, Belgium</p>
               <p className="text-[#888]">
                 Email:{" "}
                 <span className="font-mono text-accent">hello@amintaapp.com</span>

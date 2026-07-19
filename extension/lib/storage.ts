@@ -103,6 +103,16 @@ export interface AmintaTemplate {
 
 export type Plan = "free" | "pro" | "lifetime"
 
+// A generate-and-insert that hasn't been confirmed as a real X post yet.
+// Queued by queuePendingXP() on insert, consumed by resolvePendingXP() once
+// twitter-publish-detector.ts confirms a successful publish. See lib/xp.ts.
+export interface PendingXPRecord {
+  hash: string
+  amount: number
+  mode: "tweet" | "reply" | "polish"
+  createdAt: number
+}
+
 export interface AmintaStore {
   apiKey: string
   model: string
@@ -127,6 +137,7 @@ export interface AmintaStore {
   missionGenerates: number
   missionPublished: number
   plan: Plan
+  pendingXP: PendingXPRecord[]
 }
 
 export const DEFAULT_MODEL = "google/gemini-flash-1.5"
@@ -155,6 +166,7 @@ const DEFAULTS: AmintaStore = {
   missionGenerates: 0,
   missionPublished: 0,
   plan: "free",
+  pendingXP: [],
 }
 
 export async function getStore(): Promise<AmintaStore> {

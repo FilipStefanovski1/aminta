@@ -1,4 +1,6 @@
 import { handleAuthUserChanged } from "./lib/accountScope"
+import { incrementMissionPublished, recordStreak } from "./lib/missions"
+import { resolvePendingXP } from "./lib/xp"
 
 export {}
 
@@ -54,6 +56,26 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     })
 
   return true // keep port open for async sendResponse
+})
+
+// Confirmed-publish signal, relayed from twitter-publish-detector.ts (MAIN
+// world, watches X's own network calls) via twitter-bridge.ts (ISOLATED
+// world, has chrome.runtime access). Resolves whichever insert was queued
+// most recently (see lib/xp.ts) into real XP/streak/mission credit — an
+// organic post with nothing queued resolves to null and awards nothing.
+chrome.runtime.onMessage.addListener((msg, _sender, _sendResponse) => {
+  if (msg?.type !== "AMINTA_POST_PUBLISHED") return false
+
+  resolvePendingXP()
+    .then(async (result) => {
+      if (!result) return
+      await recordStreak()
+      await incrementMissionPublished()
+      chrome.runtime.sendMessage({ type: "AMINTA_XP_AWARDED", ...result }).catch(() => {})
+    })
+    .catch((err) => console.error("[Aminta bg] resolvePendingXP failed:", err))
+
+  return false // fire-and-forget — no sendResponse expected
 })
 
 // Receive auth token from amintaapp.com/extension-auth after the user completes

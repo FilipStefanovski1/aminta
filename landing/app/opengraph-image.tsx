@@ -4,7 +4,7 @@ import path from "path"
 
 // Node runtime needed to read local font file
 export const runtime = "nodejs"
-export const alt = "Aminta — Feed it. Grow on X."
+export const alt = "Aminta: Feed it. Grow on X."
 export const size = { width: 1200, height: 630 }
 export const contentType = "image/png"
 

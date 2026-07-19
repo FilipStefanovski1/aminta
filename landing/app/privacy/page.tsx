@@ -3,7 +3,7 @@ import LegalNav from "@/components/LegalNav";
 import LegalHero from "@/components/LegalHero";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy — Aminta",
+  title: "Privacy Policy | Aminta",
   description: "How Aminta collects, uses, and protects your data. GDPR-compliant privacy policy for the Aminta Chrome extension and web application.",
 };
 
@@ -95,7 +95,7 @@ export default function PrivacyPage() {
               EU data protection law, the data controller is:
             </p>
             <div className="mt-3 text-sm space-y-1.5">
-              <p className="text-[#888]">Aminta — Belgium</p>
+              <p className="text-[#888]">Aminta, Belgium</p>
               <p className="text-[#888]">
                 Email:{" "}
                 <span className="font-mono text-accent">hello@amintaapp.com</span>
@@ -123,8 +123,8 @@ export default function PrivacyPage() {
 
             <Sub title="2.2 User-Generated Content">
               <p>
-                Aminta processes text you provide as input — such as topics, draft posts, reply
-                targets, and instructions — to generate AI-assisted content. This input is
+                Aminta processes text you provide as input, such as topics, draft posts, reply
+                targets, and instructions, to generate AI-assisted content. This input is
                 transmitted to your chosen AI provider (see §8) to fulfill the request. We do not
                 permanently store the raw text of your prompts or generated outputs unless you
                 explicitly save them within the application.
@@ -160,7 +160,7 @@ export default function PrivacyPage() {
 
             <Sub title="2.6 API Keys">
               <p>
-                If you choose to use your own API keys (Bring Your Own Key — BYOK), those keys are
+                If you choose to use your own API keys (Bring Your Own Key, BYOK), those keys are
                 stored exclusively in your browser&apos;s local storage. They are never transmitted
                 to Aminta&apos;s servers. API requests made using your keys go directly from your
                 browser to the respective AI provider. You are solely responsible for managing and
@@ -244,7 +244,7 @@ export default function PrivacyPage() {
               <strong className="text-white">Generated content belongs to you.</strong> Aminta
               does not claim ownership over content produced using your prompts or Voice Profile.
               You are responsible for reviewing AI-generated content before publishing it.
-              AI outputs may be inaccurate, incomplete, or unsuitable — always review before use.
+              AI outputs may be inaccurate, incomplete, or unsuitable. Always review before use.
             </Notice>
           </Section>
 
@@ -325,25 +325,25 @@ export default function PrivacyPage() {
               <ul className="mt-2 space-y-2">
                 <Li>
                   <span>
-                    <strong className="text-white">OpenRouter</strong> — routes requests to various
+                    <strong className="text-white">OpenRouter</strong>: routes requests to various
                     underlying AI models. Privacy policy: openrouter.ai/privacy
                   </span>
                 </Li>
                 <Li>
                   <span>
-                    <strong className="text-white">Groq</strong> — fast inference provider.
+                    <strong className="text-white">Groq</strong>: fast inference provider.
                     Privacy policy: groq.com/privacy
                   </span>
                 </Li>
                 <Li>
                   <span>
-                    <strong className="text-white">Google Gemini</strong> — AI models by Google.
+                    <strong className="text-white">Google Gemini</strong>: AI models by Google.
                     Privacy policy: policies.google.com/privacy
                   </span>
                 </Li>
                 <Li>
                   <span>
-                    <strong className="text-white">OpenAI</strong> — AI models including GPT
+                    <strong className="text-white">OpenAI</strong>: AI models including GPT
                     series. Privacy policy: openai.com/privacy
                   </span>
                 </Li>
@@ -356,7 +356,7 @@ export default function PrivacyPage() {
 
             <Sub title="8.2 Billing">
               <p>
-                Aminta does not currently process any payments — all plans are free. If we
+                Aminta does not currently process any payments. All plans are free. If we
                 introduce paid plans, we will name the payment processor here before any billing
                 begins.
               </p>
@@ -508,8 +508,8 @@ export default function PrivacyPage() {
 
           <Section id="transfers" label="§ 12" title="International Data Transfers">
             <p>
-              Some of our third-party service providers — in particular AI model providers such as
-              OpenRouter, Groq, and OpenAI — are based in the United States. When you use these
+              Some of our third-party service providers, in particular AI model providers such as
+              OpenRouter, Groq, and OpenAI, are based in the United States. When you use these
               services, your prompt data is transferred to the United States.
             </p>
             <p>
@@ -569,7 +569,7 @@ export default function PrivacyPage() {
               how we handle your personal data, please contact us:
             </p>
             <div className="mt-4 text-sm space-y-1.5">
-              <p className="text-[#888]">Aminta — Belgium</p>
+              <p className="text-[#888]">Aminta, Belgium</p>
               <p className="text-[#888]">
                 Email:{" "}
                 <span className="font-mono text-accent">hello@amintaapp.com</span>

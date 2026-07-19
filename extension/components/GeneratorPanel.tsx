@@ -164,9 +164,6 @@ function HeaderBubble({ text }: { text: string }) {
 
 interface Props {
   store: AmintaStore
-  onXPAwarded: () => void
-  onLevelUp: (level: number, stage: string) => void
-  onFirstPost?: (amount: number) => void
   onTeach?: () => void
   onOpenSettings?: () => void
   onContext?: (event: CompanionEvent) => void
@@ -196,7 +193,7 @@ async function resizeImage(file: File): Promise<string> {
   })
 }
 
-export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, onFirstPost, onTeach, onOpenSettings, onContext, onTemplatesChanged }: Props) {
+export default function GeneratorPanel({ store, onTeach, onOpenSettings, onContext, onTemplatesChanged }: Props) {
   const [mode,     setMode]     = useState<Mode>("tweet")
   const [tone,     setTone]     = useState<Tone>("direct")
   const [length,   setLength]   = useState<OutputLength>("medium")
@@ -281,9 +278,9 @@ export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, onFirstP
 
   const generate = async () => {
     reset()
-    if (!navigator.onLine) { setError("You're offline — check your connection and try again."); return }
+    if (!navigator.onLine) { setError("You're offline. Check your connection and try again."); return }
     if (!store.apiKey) { setError("Add your AI key in Settings first."); return }
-    if (!store.voice)  { setError("Teach Aminta your voice first — go to Teach."); return }
+    if (!store.voice)  { setError("Teach Aminta your voice first. Go to Teach."); return }
     const combined = topic.trim() + (context.trim() ? `\n\nAdditional context: ${context.trim()}` : "")
     if (!combined && !imageDataUrl) { setError("Give Aminta something to work with."); return }
     setLoading(true)
@@ -371,7 +368,7 @@ export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, onFirstP
         <div className="space-y-1.5">
           <p className="text-[11px] font-medium" style={{ color: C.textFaint }}>
             Photo{" "}
-            <span style={{ color: C.textGhost, fontWeight: 400 }}>(optional — AI will write about it)</span>
+            <span style={{ color: C.textGhost, fontWeight: 400 }}>(optional, AI will write about it)</span>
           </p>
           {imageDataUrl ? (
             <div className="relative rounded-xl overflow-hidden border border-line/50">
@@ -585,15 +582,9 @@ export default function GeneratorPanel({ store, onXPAwarded, onLevelUp, onFirstP
           text={output}
           mode={mode}
           platform={PLATFORM}
-          currentXP={xp}
           imageDataUrl={outputImage}
           onRegenerate={generate}
           onSaveAsTemplate={openSaveAsTemplate}
-          onXPAwarded={(amount, levelUp, firstPost) => {
-            onXPAwarded()
-            if (levelUp) onLevelUp(levelUp.level, levelUp.stage)
-            else if (firstPost) onFirstPost?.(amount)
-          }}
         />
       )}
 

@@ -190,11 +190,11 @@ function SettingsOverlay({
       })()
       switch (d.sync_status) {
         case "offline":
-          setSyncLine({ text: "Offline — progress saved on this device", color: "#f5b50a" }); break
+          setSyncLine({ text: "Offline. Progress saved on this device", color: "#f5b50a" }); break
         case "error":
-          setSyncLine({ text: "Sync issue — will retry after your next post", color: "#f5b50a" }); break
+          setSyncLine({ text: "Sync issue. Will retry after your next post", color: "#f5b50a" }); break
         case "signed_out":
-          setSyncLine({ text: "Session expired — sign in to keep syncing", color: "#f87171" }); break
+          setSyncLine({ text: "Session expired. Sign in to keep syncing", color: "#f87171" }); break
         default:
           setSyncLine(ago ? { text: `Synced ${ago}`, color: "#666672" } : null)
       }
@@ -604,6 +604,30 @@ function SidePanel() {
   useEffect(() => { refresh() }, [])
   useEffect(() => () => clearTimeout(newlyUnlockedTimer.current), [])
 
+  // Confirmed-publish XP/level-up feedback. Fired by background.ts once
+  // twitter-publish-detector.ts confirms an actual X post went out — not on
+  // insert. This listener lives at the top level (not inside GeneratorPanel/
+  // OutputCard) because the publish confirmation can arrive well after the
+  // user has switched tabs, so it must work regardless of what's mounted.
+  useEffect(() => {
+    const listener = (msg: { type?: string; amount?: number; levelUp?: { level: number; stage: string }; firstPost?: boolean }) => {
+      if (msg?.type !== "AMINTA_XP_AWARDED") return
+      refresh().then(() => {
+        pushToCloud()
+        dispatch("insert")
+        if (msg.levelUp) {
+          setLevelUpData({ level: msg.levelUp.level, stage: msg.levelUp.stage })
+          dispatch("level_up")
+        } else if (msg.firstPost) {
+          setLevelUpData({ level: 1, stage: "Dormant", firstPost: true, amount: msg.amount })
+          dispatch("level_up")
+        }
+      })
+    }
+    chrome.runtime.onMessage.addListener(listener)
+    return () => chrome.runtime.onMessage.removeListener(listener)
+  }, [dispatch])
+
   // One-time migration: silently upgrade deprecated Groq model IDs to the new default.
   useEffect(() => {
     if (!store || grqMigrated.current) return
@@ -717,12 +741,6 @@ function SidePanel() {
             {tab === "create" && (
               <GeneratorPanel
                 store={store}
-                onXPAwarded={async () => { await refresh(); pushToCloud(); dispatch("insert") }}
-                onLevelUp={(level, stage) => { setLevelUpData({ level, stage }); dispatch("level_up") }}
-                onFirstPost={(amount) => {
-                  setLevelUpData({ level: 1, stage: "Dormant", firstPost: true, amount })
-                  dispatch("level_up")
-                }}
                 onTeach={() => switchTab("train")}
                 onOpenSettings={() => setSettingsOpen(true)}
                 onContext={dispatch}

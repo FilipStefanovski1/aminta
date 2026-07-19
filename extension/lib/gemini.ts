@@ -57,7 +57,7 @@ export async function callGemini(
     if (e instanceof DOMException && e.name === "TimeoutError") {
       throw new Error("Gemini took too long to respond. Try again in a moment.")
     }
-    throw new Error("Network error — check your internet connection.")
+    throw new Error("Network error. Check your internet connection.")
   }
 
   if (!res.ok) {
@@ -75,7 +75,7 @@ export async function callGemini(
     }
     if (res.status === 429) {
       throw new Error(
-        `Rate limited (429). ${detail || "Free tier limit — wait ~30s and retry, or switch model in Settings."}`
+        `Rate limited (429). ${detail || "Free tier limit. Wait ~30s and retry, or switch model in Settings."}`
       )
     }
     throw new Error(`Gemini error ${res.status}. ${detail}`.trim())

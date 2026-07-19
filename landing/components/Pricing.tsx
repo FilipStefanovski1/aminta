@@ -338,7 +338,7 @@ export default function Pricing() {
 
         <Reveal className="mt-10 text-center">
           <p className="text-xs text-muted">
-            Every plan uses your own AI key (Groq, Gemini, or OpenRouter — Groq has a free tier).{" "}
+            Every plan uses your own AI key (Groq, Gemini, or OpenRouter). Groq has a free tier.{" "}
             <span className="text-white/50">Your key stays on your device.</span>
           </p>
         </Reveal>

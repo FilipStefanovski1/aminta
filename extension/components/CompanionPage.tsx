@@ -173,9 +173,9 @@ export default function CompanionPage({ store, animClass, animKey, speech, onClo
               Growth
             </p>
             {([
-              ["Posts written",    generationsTotal > 0 ? `${generationsTotal}` : "—"],
-              ["Training samples", dnaCount > 0 ? `${dnaCount}` : "—"],
-              ["Current streak",   streak > 0 ? `${streak}d` : "—"],
+              ["Posts written",    `${generationsTotal}`],
+              ["Training samples", `${dnaCount}`],
+              ["Current streak",   `${streak}d`],
               ["XP today",         xpToday > 0 ? `+${xpToday}` : "0"],
               ["Total XP",         `${xp}`],
             ] as [string, string][]).map(([label, value], i) => (

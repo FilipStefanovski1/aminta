@@ -193,7 +193,7 @@ export default function DashboardClient({
         </h1>
         <p className="mt-2 text-muted">
           Your companion is{" "}
-          <span className="font-medium text-white">LV.{level} — {form.name}</span>.{" "}
+          <span className="font-medium text-white">LV.{level}: {form.name}</span>.{" "}
           {level < 9
             ? `${xpToNext.toLocaleString()} XP until ${next?.name}.`
             : "Maximum level reached."}

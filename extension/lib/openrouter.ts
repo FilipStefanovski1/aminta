@@ -40,7 +40,7 @@ export async function callOpenAICompat(
     if (e instanceof DOMException && e.name === "TimeoutError") {
       throw new Error(`${label} took too long to respond. Try again, or pick a faster model in Settings.`)
     }
-    throw new Error("Network error — check your internet connection.")
+    throw new Error("Network error. Check your internet connection.")
   }
 
   if (!res.ok) {

@@ -85,7 +85,7 @@ const TONE_OPTIONS: { id: string; desc: string }[] = [
   { id: "Witty",             desc: "Sharp, dry, quick with a line." },
   { id: "Funny",             desc: "Goes for the laugh." },
   { id: "Playful",           desc: "Light and fun, doesn't take itself seriously." },
-  { id: "Motivational",      desc: "Energy and momentum — pushes the reader forward." },
+  { id: "Motivational",      desc: "Energy and momentum. Pushes the reader forward." },
   { id: "Inspirational",     desc: "Uplifting, focused on what's possible." },
   { id: "Curious",           desc: "Asks questions and explores out loud." },
   { id: "Thought-provoking", desc: "Leaves the reader thinking after they scroll past." },
@@ -159,13 +159,17 @@ const TOTAL = 7
 function Dots({ current }: { current: number }) {
   return (
     <div className="flex items-center gap-1.5 justify-center">
-      {Array.from({ length: TOTAL }).map((_, i) => (
-        <span key={i} className="rounded-full transition-all"
-          style={{
-            width: i === current ? 14 : 6, height: 6,
-            backgroundColor: i <= current ? C.mint : C.border,
-          }} />
-      ))}
+      {Array.from({ length: TOTAL }).map((_, i) => {
+        const isCurrent = i === current
+        const isDone    = i < current
+        return (
+          <span key={i} className="rounded-full transition-all"
+            style={{
+              width: isCurrent ? 16 : 6, height: 6,
+              backgroundColor: isCurrent ? C.mint : isDone ? C.mint + "80" : C.border,
+            }} />
+        )
+      })}
     </div>
   )
 }
@@ -197,6 +201,10 @@ export default function OnboardingWizard({ store, onDone }: Props) {
   const [faqOpen, setFaqOpen] = useState(false)
 
   const next = () => setStep(s => s + 1)
+  // Step 5 is a 2.2s auto-advancing transition ("learning your voice…"), not
+  // a real step — going back from step 6 must skip straight to step 4, or
+  // the auto-advance effect below would immediately forward past it again.
+  const back = () => setStep(current => (current === 6 ? 4 : Math.max(0, current - 1)))
   const addExample = () => { if (draft.trim()) { setExamples(p => [...p, draft.trim()]); setDraft("") } }
 
   // ── Topic chip logic ──
@@ -290,7 +298,19 @@ export default function OnboardingWizard({ store, onDone }: Props) {
     <div className="absolute inset-0 flex flex-col px-5 py-6" style={{ backgroundColor: C.bg }}>
 
       {/* Progress */}
-      <div className="shrink-0 mb-8">
+      <div className="shrink-0 mb-8 relative flex items-center justify-center" style={{ minHeight: 16 }}>
+        {step > 0 && (
+          <button
+            type="button"
+            onClick={back}
+            aria-label="Back"
+            className="absolute left-0 font-pixel text-[7px] uppercase tracking-widest transition-colors"
+            style={{ color: C.textDim }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = C.text }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = C.textDim }}>
+            ‹ Back
+          </button>
+        )}
         <Dots current={step} />
       </div>
 
@@ -299,15 +319,15 @@ export default function OnboardingWizard({ store, onDone }: Props) {
         {/* ── 0 · Welcome ── */}
         {step === 0 && (
           <div className="animate-slide-up flex flex-col items-center text-center pt-6">
-            <Sprite xp={0} size={96} />
-            <div className="mt-6">
-              <SpeechBubble text="hi. i'm aminta." />
+            <SpeechBubble text="hi. i'm aminta." />
+            <div className="mt-4">
+              <Sprite xp={0} size={96} />
             </div>
             <h2 className="font-pixel text-[11px] mt-8 leading-relaxed" style={{ color: C.text }}>
               I help creators<br />stay consistent.
             </h2>
             <p className="text-[12px] mt-3 leading-relaxed" style={{ color: C.textDim }}>
-              You write. You post. I grow.<br />Let's learn your voice — takes a minute.
+              You write. You post. I grow.<br />Let's learn your voice. Takes a minute.
             </p>
           </div>
         )}
@@ -376,7 +396,7 @@ export default function OnboardingWizard({ store, onDone }: Props) {
               </div>
 
               <p className="text-[11px] mt-3 leading-relaxed" style={{ color: C.textDim }}>
-                Pick a few or type your own — up to {MAX_TOPICS}.
+                Pick a few or type your own, up to {MAX_TOPICS}.
               </p>
             </Card>
           </div>
@@ -414,7 +434,7 @@ export default function OnboardingWizard({ store, onDone }: Props) {
                 <div className="mt-3 pt-2.5 space-y-1" style={{ borderTop: `1px solid ${C.border}` }}>
                   {tones.map(t => (
                     <p key={t} className="text-[11px] leading-relaxed" style={{ color: C.textDim }}>
-                      <span style={{ color: C.mint }}>{t}</span> — {TONE_DESC[t] ?? ""}
+                      <span style={{ color: C.mint }}>{t}</span>: {TONE_DESC[t] ?? ""}
                     </p>
                   ))}
                 </div>
@@ -468,9 +488,9 @@ export default function OnboardingWizard({ store, onDone }: Props) {
                 Aminta runs using your own AI provider, so your prompts stay private and under your control. You can use:
               </p>
               <ul className="mt-2 space-y-1">
-                <li className="text-[11px] leading-relaxed" style={{ color: C.textDim }}>• <span style={{ color: C.text }}>Groq</span> — recommended, free, fastest</li>
-                <li className="text-[11px] leading-relaxed" style={{ color: C.textDim }}>• <span style={{ color: C.text }}>Google Gemini</span> — free tier</li>
-                <li className="text-[11px] leading-relaxed" style={{ color: C.textDim }}>• <span style={{ color: C.text }}>OpenRouter</span> — hundreds of models</li>
+                <li className="text-[11px] leading-relaxed" style={{ color: C.textDim }}>• <span style={{ color: C.text }}>Groq</span>: recommended, free, fastest</li>
+                <li className="text-[11px] leading-relaxed" style={{ color: C.textDim }}>• <span style={{ color: C.text }}>Google Gemini</span>: free tier</li>
+                <li className="text-[11px] leading-relaxed" style={{ color: C.textDim }}>• <span style={{ color: C.text }}>OpenRouter</span>: hundreds of models</li>
                 <li className="text-[11px] leading-relaxed" style={{ color: C.textDim }}>• Your existing API key, if you already have one</li>
               </ul>
             </div>
@@ -492,12 +512,12 @@ export default function OnboardingWizard({ store, onDone }: Props) {
 
               {malformed && (
                 <p className="text-[11px] mt-2 leading-relaxed" style={{ color: "#f5b50a" }}>
-                  That doesn't look like a complete API key — double check you copied the whole thing.
+                  That doesn't look like a complete API key. Double check you copied the whole thing.
                 </p>
               )}
 
               <div className="mt-3 pt-3 space-y-1.5" style={{ borderTop: `1px solid ${C.border}` }}>
-                <p className="text-[11px] font-medium" style={{ color: C.mint }}>✓ Recommended: Groq — free, fastest</p>
+                <p className="text-[11px] font-medium" style={{ color: C.mint }}>✓ Recommended: Groq, free, fastest</p>
                 <a href="https://console.groq.com/keys" target="_blank" rel="noreferrer"
                   className="text-[11px] underline block" style={{ color: C.mint }}>
                   Get a free API key →
@@ -539,20 +559,32 @@ export default function OnboardingWizard({ store, onDone }: Props) {
         {/* ── 5 · Learning ── */}
         {step === 5 && (
           <div className="animate-slide-up flex flex-col items-center text-center pt-10">
-            <Sprite xp={0} size={96} animClass="sprite-react aminta-glow" />
-            <div className="mt-6">
-              <SpeechBubble text="learning your voice…" />
+            <SpeechBubble text="learning your voice…" />
+            <div className="mt-4">
+              <Sprite xp={0} size={96} animClass="sprite-react aminta-glow" />
             </div>
             <p className="text-[12px] mt-8" style={{ color: C.textDim }}>Getting ready to write with you.</p>
           </div>
         )}
 
-        {/* ── 6 · Go to X — the payoff screen ── */}
+        {/* ── 6 · Go to X, the payoff screen ── */}
         {step === 6 && (
           <div className="animate-slide-up flex flex-col items-center text-center pt-1">
 
-            {/* Mascot — final evolved form, larger, with ambient particles */}
-            <div className="relative flex items-center justify-center" style={{ width: 132, height: 132 }}>
+            <h2 className="font-pixel text-[11px] leading-relaxed" style={{ color: C.text }}>
+              Find me on X.
+            </h2>
+
+            <p className="text-[12px] mt-2" style={{ color: C.textDim }}>
+              Open <span style={{ color: C.text }}>x.com</span> and start writing.
+            </p>
+
+            <div className="mt-3">
+              <SpeechBubble text="let's cook." />
+            </div>
+
+            {/* Mascot, reacting to the bubble above it — final evolved form, larger, with ambient particles */}
+            <div className="relative flex items-center justify-center mt-3" style={{ width: 132, height: 132 }}>
               {AMBIENT_PARTICLES.map((p, i) => {
                 const rad = (p.angle * Math.PI) / 180
                 const dx  = Math.cos(rad) * p.dist
@@ -570,24 +602,13 @@ export default function OnboardingWizard({ store, onDone }: Props) {
               <DemonMascot skin={FINAL_FORM.skin} size={112} className="sprite-float aminta-glow" />
             </div>
 
-            <div className="mt-3">
-              <SpeechBubble text="let's cook." />
-            </div>
-
-            <h2 className="font-pixel text-[11px] mt-4 leading-relaxed" style={{ color: C.text }}>
-              Find me on X.
-            </h2>
-
             {/* Visual instruction card */}
-            <Card className="w-full text-left mt-3" style={{ padding: 12 }}>
-              <p className="text-[11px] leading-relaxed mb-2.5" style={{ color: C.textDim }}>
-                Open <span style={{ color: C.text }}>x.com</span> and start writing.
-              </p>
+            <Card className="w-full text-left mt-2" style={{ padding: 12 }}>
               <div className="space-y-1.5">
                 {[
                   "Generate appears under the composer",
                   "Polish improves your draft",
-                  "Every published post feeds Aminta",
+                  "Every published post earns XP",
                   "XP evolves your companion",
                 ].map((row) => (
                   <div key={row} className="flex items-center gap-2">
@@ -628,7 +649,7 @@ export default function OnboardingWizard({ store, onDone }: Props) {
 
             {/* Pro tip */}
             <p className="text-[11px] leading-relaxed mt-2.5" style={{ color: C.textDim }}>
-              💡 Pro tip: Generate first, polish second — your voice improves over time.
+              💡 Pro tip: Generate first, polish second. Your voice improves over time.
             </p>
           </div>
         )}

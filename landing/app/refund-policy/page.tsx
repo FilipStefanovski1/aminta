@@ -3,7 +3,7 @@ import LegalNav from "@/components/LegalNav";
 import LegalHero from "@/components/LegalHero";
 
 export const metadata: Metadata = {
-  title: "Refund Policy — Aminta",
+  title: "Refund Policy | Aminta",
   description:
     "Aminta's refund policy for monthly subscriptions and lifetime plans. Learn when refunds are available and how to request one.",
 };

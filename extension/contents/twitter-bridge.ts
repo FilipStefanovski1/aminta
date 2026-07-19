@@ -217,7 +217,7 @@ function setBarStatus(bar: HTMLElement, msg: string, isError = false) {
 
 async function runGenerate(bar: HTMLElement, mode: "tweet" | "polish", prefill?: string) {
   const store = await getStore()
-  if (!store.apiKey) { setBarStatus(bar, "No API key — open Aminta Settings", true); return }
+  if (!store.apiKey) { setBarStatus(bar, "No API key. Open Aminta Settings", true); return }
   if (!store.voice)  { setBarStatus(bar, "Train Aminta first", true); return }
 
   const composerText = getComposerText(bar)
@@ -265,12 +265,12 @@ async function runGenerate(bar: HTMLElement, mode: "tweet" | "polish", prefill?:
       // Composer wasn't reachable (e.g. focus moved away) — clipboard is
       // the fallback, not the default path.
       navigator.clipboard.writeText(text).then(() => {
-        setBarStatus(bar, "Copied ✦ — paste with ⌘V", false)
+        setBarStatus(bar, "Copied ✦, paste with ⌘V", false)
         if (mode === "tweet" && input && !isReply) {
           saveKeyword(input).then(() => renderKeywords(bar))
         }
       }).catch(() => {
-        setBarStatus(bar, "Done — use Aminta sidebar to insert", false)
+        setBarStatus(bar, "Done. Use Aminta sidebar to insert", false)
       })
     }
   } catch (e) {
@@ -432,6 +432,21 @@ function startObserver() {
 
 startObserver()
 
+// ─── Publish detection relay ───────────────────────────────────────────────────
+// twitter-publish-detector.ts runs in the MAIN world (no chrome.* access) and
+// posts a message here when it confirms a real X post went out. This script
+// runs ISOLATED on the same page, so it can see that postMessage and hand it
+// off to the extension via chrome.runtime — but only after validating every
+// field, since MAIN-world messages are still just page-originated data.
+window.addEventListener("message", (event) => {
+  if (event.source !== window) return
+  if (event.origin !== window.location.origin) return
+  if (event.data?.source !== "aminta-publish-detector") return
+  if (event.data?.type !== "AMINTA_TWEET_PUBLISHED") return
+
+  chrome.runtime.sendMessage({ type: "AMINTA_POST_PUBLISHED", ts: event.data.ts }).catch(() => {})
+})
+
 // ─── Extension message handler ────────────────────────────────────────────────
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
@@ -448,7 +463,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     const ok = insertIntoComposer(msg.text)
     sendResponse(ok
       ? { ok: true }
-      : { ok: false, error: "Couldn't insert — click inside the X compose box first, then try again." }
+      : { ok: false, error: "Couldn't insert. Click inside the X compose box first, then try again." }
     )
     return true
   }

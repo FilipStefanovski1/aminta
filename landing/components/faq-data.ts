@@ -9,7 +9,7 @@ export const FAQS = [
   },
   {
     q: "Is Aminta finished?",
-    a: "Aminta is in open beta — the core loop is solid and it's free to use while we build. New features ship regularly, and beta feedback directly shapes what gets built next.",
+    a: "Aminta is in open beta. The core loop is solid and it's free to use while we build. New features ship regularly, and beta feedback directly shapes what gets built next.",
   },
   {
     q: "What does “feed Aminta” actually mean?",
@@ -25,11 +25,11 @@ export const FAQS = [
   },
   {
     q: "Is my data private?",
-    a: "Your API key never leaves your device, and generations go straight from your browser to your AI provider — we never see what you write. When you sign in, your XP, streak, and voice profile sync to your Aminta account so your progress follows you across devices.",
+    a: "Your API key never leaves your device, and generations go straight from your browser to your AI provider. We never see what you write. When you sign in, your XP, streak, and voice profile sync to your Aminta account so your progress follows you across devices.",
   },
   {
     q: "What happens if I miss a day?",
-    a: "Your streak resets — that's the deal. Your XP, level, and evolutions are never lost, so one busy day never wipes real progress.",
+    a: "Your streak resets, that's the deal. Your XP, level, and evolutions are never lost, so one busy day never wipes real progress.",
   },
   {
     q: "Which AI models can I use?",
@@ -37,6 +37,6 @@ export const FAQS = [
   },
   {
     q: "Can I cancel anytime?",
-    a: "Yep. Monthly cancels anytime — no lock-in. Lifetime is a one-time payment; pay once and feed Aminta forever.",
+    a: "Yep. Monthly cancels anytime, no lock-in. Lifetime is a one-time payment; pay once and feed Aminta forever.",
   },
 ];

@@ -31,10 +31,10 @@ const STYLE_PREVIEWS: Record<string, string> = {
 }
 
 const INFO_TIPS: Record<string, string> = {
-  niche:       "Be specific — 'crypto' is too broad, 'DeFi protocol security' is useful. Aminta uses this to stay on-topic when generating.",
+  niche:       "Be specific. 'crypto' is too broad, 'DeFi protocol security' is useful. Aminta uses this to stay on-topic when generating.",
   voice:       "Pick the style closest to how you actually write, not how you want to write. Aminta mimics your current voice, not an ideal one.",
   examples:    "Paste 3–5 real posts you've written. The more authentic, the better Aminta learns your patterns.",
-  inspiration: "An X handle whose writing style you admire. Aminta blends their rhythm into your voice — not their content.",
+  inspiration: "An X handle whose writing style you admire. Aminta blends their rhythm into your voice, not their content.",
   rules:       "Things Aminta must never do. Examples: 'no hashtags', 'keep under 200 chars', 'never say leverage'.",
 }
 
@@ -401,7 +401,7 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0 
                 ? "One more example and I'll start understanding your pacing."
                 : examples.length === 2
                   ? "One more and I'll have enough to write in your voice."
-                  : `${examples.length} memories — I'm beginning to understand how you write.`
+                  : `${examples.length} memories. I'm beginning to understand how you write.`
             }
           </p>
 
@@ -571,7 +571,7 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0 
           )}
           {voiceInspiration.length > 0 && (
             <p className="text-[10px] mt-2 leading-relaxed" style={{ color: C.textDim }}>
-              I'll blend their rhythm into your voice — not their ideas.
+              I'll blend their rhythm into your voice, not their ideas.
             </p>
           )}
         </div>
@@ -646,7 +646,7 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0 
           )}
           {saved && (
             <p className="font-pixel text-[8px] text-center animate-toast-up" style={{ color: tint }}>
-              Saved ✓ — I feel more like you now.
+              Saved ✓. I feel more like you now.
             </p>
           )}
           <button

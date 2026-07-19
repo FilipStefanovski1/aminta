@@ -240,7 +240,7 @@ export default function HomeTab({ store, onCreate, onTrain, onOpenCompanion, onO
       {/* ── STATS — flat row ── */}
       <div className="flex items-center animate-card-in rounded-2xl" style={{ animationDelay: "60ms", backgroundColor: C.card, border: `1px solid ${C.border}` }}>
         {([
-          { label: "Streak", value: streak > 0 ? `${streak}d` : "—" },
+          { label: "Streak", value: `${streak}d` },
           { label: "Today",  value: xpToday > 0 ? `+${xpToday}` : "0" },
           { label: "Plan",   value: planLabel },
         ] as { label: string; value: string }[]).map(({ label, value }, i, arr) => (

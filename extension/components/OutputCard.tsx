@@ -1,10 +1,8 @@
 import { useState } from "react"
 
-import { getForm, getLevel } from "~lib/evolution"
 import { insertImage, insertText } from "~lib/messaging"
-import { incrementMissionPublished, recordStreak } from "~lib/missions"
 import type { Mode, Platform } from "~lib/prompts"
-import { hashText, tryAwardXP, XP_PER_MODE } from "~lib/xp"
+import { hashText, queuePendingXP, XP_PER_MODE } from "~lib/xp"
 
 const X_CHAR_LIMIT = 280
 
@@ -12,22 +10,14 @@ interface Props {
   text: string
   mode: Mode
   platform: Platform
-  currentXP: number
   imageDataUrl?: string | null
   onRegenerate?: () => void
   onSaveAsTemplate?: (text: string) => void
-  onXPAwarded: (
-    amount: number,
-    levelUp?: { level: number; stage: string },
-    firstPost?: boolean
-  ) => void
 }
 
-export default function OutputCard({ text, mode, platform, currentXP, imageDataUrl, onRegenerate, onSaveAsTemplate, onXPAwarded }: Props) {
+export default function OutputCard({ text, mode, platform, imageDataUrl, onRegenerate, onSaveAsTemplate }: Props) {
   const [copied, setCopied] = useState(false)
   const [insertStatus, setInsertStatus] = useState("")
-  const [xpStatus, setXpStatus] = useState("")
-  const [xpEarned, setXpEarned] = useState(false)
 
   const copy = async () => {
     try {
@@ -35,82 +25,47 @@ export default function OutputCard({ text, mode, platform, currentXP, imageDataU
       setCopied(true)
       setTimeout(() => setCopied(false), 1500)
     } catch {
-      setInsertStatus("Copy failed — select manually.")
+      setInsertStatus("Copy failed. Select manually.")
       setTimeout(() => setInsertStatus(""), 3000)
     }
   }
 
   const insert = async () => {
     setInsertStatus("")
-    setXpStatus("")
-
-    // delivered = the text reached the user (composer OR clipboard).
-    // XP is awarded either way — a "wrong tab" user must not be locked out
-    // of the entire progression loop.
-    let delivered = false
 
     const res = await insertText(platform, text)
     if (res.ok) {
-      delivered = true
-      // Insert image after text if one was provided
+      // Text actually reached X's composer — queue it for XP. It only
+      // becomes real XP once twitter-publish-detector.ts confirms the post
+      // was actually published, not just inserted.
+      queuePendingXP(hashText(text), XP_PER_MODE[mode], mode)
+
       if (imageDataUrl) {
         setInsertStatus("Inserting image…")
         const imgRes = await insertImage(platform, imageDataUrl)
         if (!imgRes.ok) {
-          setInsertStatus("Text inserted. Image failed — attach manually.")
+          setInsertStatus("Text inserted. Image failed, attach manually.")
           setTimeout(() => setInsertStatus(""), 4000)
         } else {
-          setInsertStatus("Inserted ✓")
-          setTimeout(() => setInsertStatus(""), 2000)
+          setInsertStatus("Inserted into X. Publish to earn XP.")
+          setTimeout(() => setInsertStatus(""), 3000)
         }
       } else {
-        setInsertStatus("Inserted ✓")
-        setTimeout(() => setInsertStatus(""), 2000)
+        setInsertStatus("Inserted into X. Publish to earn XP.")
+        setTimeout(() => setInsertStatus(""), 3000)
       }
     } else {
-      // Clipboard fallback so the user is never stuck
+      // Clipboard fallback so the user is never stuck — but Aminta can't
+      // reliably associate a manual paste with the eventual post, so this
+      // never queues XP. Only an actual composer insert does.
       try {
         await navigator.clipboard.writeText(text)
-        delivered = true
-        setInsertStatus(`${res.error ? res.error + " " : ""}Copied instead — paste it into the composer. XP still counts.`)
+        setInsertStatus(`${res.error ? res.error + " " : ""}Copied. Open an X composer and paste it manually.`)
       } catch {
-        setInsertStatus("Insert failed — use Copy and paste it manually.")
+        setInsertStatus("Insert failed. Use Copy and paste it manually.")
       }
       setTimeout(() => setInsertStatus(""), 6000)
     }
-
-    if (!delivered) return
-
-    const hash = hashText(text)
-    const xpRes = await tryAwardXP(hash, XP_PER_MODE[mode])
-
-    if ("error" in xpRes) {
-      setXpStatus(
-        xpRes.error === "already_claimed"
-          ? "XP already claimed for this post."
-          : "Daily XP limit reached. Come back tomorrow."
-      )
-    } else {
-      setXpStatus(`+${xpRes.awarded} XP`)
-      setXpEarned(true)
-
-      const prevXP = currentXP
-      const newXP = xpRes.total
-      const oldLevel = getLevel(prevXP)
-      const newLevel = getLevel(newXP)
-      const firstPost = prevXP === 0
-
-      await recordStreak()
-      await incrementMissionPublished()
-
-      if (newLevel > oldLevel) {
-        onXPAwarded(xpRes.awarded, { level: newLevel, stage: getForm(newXP).name })
-      } else {
-        onXPAwarded(xpRes.awarded, undefined, firstPost)
-      }
-    }
-
-    setTimeout(() => setXpStatus(""), 3000)
   }
 
   const charLimit = X_CHAR_LIMIT
@@ -168,11 +123,6 @@ export default function OutputCard({ text, mode, platform, currentXP, imageDataU
       <div className="space-y-0.5">
         {insertStatus && (
           <p className="text-[10px] text-[#555] animate-fade-in">{insertStatus}</p>
-        )}
-        {xpStatus && (
-          <p className={`font-pixel animate-fade-in ${xpEarned ? "text-mint text-[12px]" : "text-[#555] text-[10px]"}`}>
-            {xpStatus}
-          </p>
         )}
       </div>
     </div>

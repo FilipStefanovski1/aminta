@@ -55,7 +55,7 @@ export default function ExtensionAuthPage() {
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) {
-        setErrorDetail("No session — sign-in did not complete.")
+        setErrorDetail("No session. Sign-in did not complete.")
         setStatus("error")
         return
       }
@@ -111,7 +111,7 @@ export default function ExtensionAuthPage() {
       const timeoutId = setTimeout(() => {
         window.removeEventListener("message", onAck)
         posthog.capture("extension_auth_failed", { reason: "timeout" })
-        setErrorDetail("Extension not detected — make sure Aminta is installed and enabled.")
+        setErrorDetail("Extension not detected. Make sure Aminta is installed and enabled.")
         setStatus("error")
       }, 5000)
 
