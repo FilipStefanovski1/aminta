@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
+import { hasProAccess } from "@/lib/entitlements"
 
 export default async function WelcomePage() {
   const supabase = await createClient()
@@ -9,11 +10,12 @@ export default async function WelcomePage() {
 
   const { data: profile } = await supabase
     .from("users")
-    .select("plan")
+    .select("plan, subscription_status")
     .eq("id", user.id)
     .single()
 
   const plan = profile?.plan ?? "free"
+  const entitled = hasProAccess(profile ?? {})
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#111] px-4">
@@ -31,7 +33,7 @@ export default async function WelcomePage() {
         </div>
 
         <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-2xl p-6 space-y-4">
-          {plan === "free" ? (
+          {!entitled ? (
             <>
               <p className="text-white text-sm font-medium">You&apos;re signed in</p>
               <p className="text-[#555] text-xs leading-relaxed">

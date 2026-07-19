@@ -12,6 +12,7 @@ import {
   getXpInLevel,
   getXpProgress,
 } from "~lib/evolution"
+import { hasProAccess, planLabel as computePlanLabel } from "~lib/entitlements"
 import { getMissionProgress, tryCompleteDailyMissions } from "~lib/missions"
 import type { AmintaStore } from "~lib/storage"
 import { C } from "~lib/theme"
@@ -45,6 +46,7 @@ export default function HomeTab({ store, onCreate, onTrain, onOpenCompanion, onO
   const xpToday     = store.xpToday ?? 0
   const streak      = store.streak ?? 0
   const plan        = store.plan ?? "free"
+  const entitled    = hasProAccess({ plan: store.plan, subscriptionStatus: store.subscriptionStatus })
   const mission     = getMissionProgress(store)
   const nextLevel   = level < FORMS.length ? level + 1 : null
 
@@ -104,7 +106,7 @@ export default function HomeTab({ store, onCreate, onTrain, onOpenCompanion, onO
 
   useEffect(() => () => clearTimeout(toastTimer.current), [])
 
-  const planLabel = plan === "lifetime" ? "FOUNDER" : plan === "pro" ? "PRO" : "FREE"
+  const planLabel = computePlanLabel({ plan: store.plan, subscriptionStatus: store.subscriptionStatus })
 
   return (
     <div className="space-y-4 pb-6">
@@ -159,12 +161,12 @@ export default function HomeTab({ store, onCreate, onTrain, onOpenCompanion, onO
             <p className="font-pixel text-[8px] tracking-widest" style={{ color: tint }}>
               {stage} · Lv.{level}
             </p>
-            {plan !== "free" && (
+            {entitled && (
               <span className="font-pixel text-[6px] px-1.5 py-0.5 rounded" style={{
                 backgroundColor: plan === "lifetime" ? "#f5d060" : tint,
                 color: "#000",
               }}>
-                {plan === "lifetime" ? "FOUNDER" : "PRO"}
+                {planLabel}
               </span>
             )}
           </div>

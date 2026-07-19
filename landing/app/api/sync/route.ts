@@ -44,15 +44,24 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  // Fetch plan from users table using service role (bypasses RLS)
+  // Fetch plan from users table using service role (bypasses RLS).
+  // subscription_status travels alongside plan so the extension's
+  // hasProAccess() can make the same entitlement decision the dashboard and
+  // pricing page make — without it, the extension has no way to know a
+  // "pro" row is actually past its paid period until the webhook flips
+  // `plan` back to "free" on subscription.expired.
   const service = await createServiceClient()
   const { data: profile } = await service
     .from("users")
-    .select("plan")
+    .select("plan, subscription_status")
     .eq("id", user.id)
     .single()
 
-  return NextResponse.json({ ...(data ?? {}), plan: profile?.plan ?? "free" })
+  return NextResponse.json({
+    ...(data ?? {}),
+    plan: profile?.plan ?? "free",
+    subscription_status: profile?.subscription_status ?? null,
+  })
 }
 
 export async function POST(request: NextRequest) {

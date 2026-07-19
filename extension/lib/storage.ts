@@ -137,6 +137,10 @@ export interface AmintaStore {
   missionGenerates: number
   missionPublished: number
   plan: Plan
+  // Mirrors Supabase users.subscription_status — synced alongside plan (see
+  // lib/sync.ts). Used together with `plan` by lib/entitlements.ts; never
+  // set locally, always trusted from the cloud like `plan` itself.
+  subscriptionStatus: string | null
   pendingXP: PendingXPRecord[]
 }
 
@@ -166,6 +170,7 @@ const DEFAULTS: AmintaStore = {
   missionGenerates: 0,
   missionPublished: 0,
   plan: "free",
+  subscriptionStatus: null,
   pendingXP: [],
 }
 

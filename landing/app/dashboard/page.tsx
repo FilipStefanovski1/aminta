@@ -13,7 +13,7 @@ export default async function DashboardPage() {
 
   const [{ data: state }, { data: profile }] = await Promise.all([
     supabase.from("aminta_state").select("*").eq("user_id", user.id).single(),
-    supabase.from("users").select("plan").eq("id", user.id).single(),
+    supabase.from("users").select("plan, subscription_status").eq("id", user.id).single(),
   ])
 
   // Create a default row if none exists so extension upserts land on an
@@ -46,6 +46,7 @@ export default async function DashboardPage() {
           missionGenerates={state?.mission_generates ?? 0}
           missionPublished={state?.mission_published ?? 0}
           plan={profile?.plan ?? "free"}
+          subscriptionStatus={profile?.subscription_status ?? null}
           hasState={!!state}
           lastSyncedAt={state?.updated_at ?? null}
         />

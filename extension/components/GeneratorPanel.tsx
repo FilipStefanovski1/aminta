@@ -4,6 +4,7 @@ import { generate as runAI, generateFromImage, isGroqKey } from "~lib/ai"
 import type { CompanionEvent } from "~lib/companion"
 import { todayLocal } from "~lib/dates"
 import { getStageTint } from "~lib/evolution"
+import { hasProAccess } from "~lib/entitlements"
 import { readActivePost } from "~lib/messaging"
 import { incrementMissionGenerates } from "~lib/missions"
 import { buildMessages, type Mode, type OutputLength, type Platform, type Tone } from "~lib/prompts"
@@ -215,7 +216,7 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
   const tint = getStageTint(xp)
 
   const FREE_DAILY_LIMIT = 5
-  const isFree = (store.plan ?? "free") === "free"
+  const isFree = !hasProAccess({ plan: store.plan, subscriptionStatus: store.subscriptionStatus })
   const todayGenerations = store.missionDate === todayLocal() ? (store.missionGenerates ?? 0) : 0
   const atFreeLimit = isFree && todayGenerations >= FREE_DAILY_LIMIT
 

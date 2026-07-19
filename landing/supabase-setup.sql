@@ -35,7 +35,12 @@ CREATE TABLE IF NOT EXISTS public.users (
   creem_customer_id      text,
   creem_subscription_id  text,
   created_at             timestamptz NOT NULL DEFAULT now(),
-  updated_at             timestamptz NOT NULL DEFAULT now()
+  updated_at             timestamptz NOT NULL DEFAULT now(),
+  -- A paid plan must always have a paid_via — enforced at the DB level so
+  -- this can't drift even via a manual table-editor edit. See
+  -- supabase-migration-plan-integrity.sql for the reasoning and the
+  -- backfill needed if this is added to an existing project.
+  CONSTRAINT users_plan_requires_paid_via CHECK (plan = 'free' OR paid_via IS NOT NULL)
 );
 
 -- public.aminta_state

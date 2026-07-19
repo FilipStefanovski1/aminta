@@ -11,6 +11,7 @@ import LoginScreen from "~components/LoginScreen"
 import SetupGate from "~components/SetupGate"
 import VoiceProfileForm from "~components/VoiceProfileForm"
 import { FORMS, getForm, getLevel, getLevelSpan, getStageTint, getXpInLevel, getXpProgress, getNextStage } from "~lib/evolution"
+import { planLabel as computePlanLabel } from "~lib/entitlements"
 import { isGroqKey, GROQ_DEFAULT, DEPRECATED_GROQ_IDS } from "~lib/ai"
 import { PROVIDERS, detectProvider } from "~lib/providers"
 import { C } from "~lib/theme"
@@ -170,9 +171,8 @@ function SettingsOverlay({
   onSignOut: () => void
 }) {
   // ── Plan ────────────────────────────────────────────────────────────────────
-  const plan      = store.plan ?? "free"
-  const planLabel = plan === "lifetime" ? "FOUNDER" : plan === "pro" ? "PRO" : "FREE"
-  const planColor = plan === "lifetime" ? "#f5d060" : plan === "pro" ? "#74f7b5" : C.textDim
+  const planLabel = computePlanLabel({ plan: store.plan, subscriptionStatus: store.subscriptionStatus })
+  const planColor = planLabel === "FOUNDER" ? "#f5d060" : planLabel === "PRO" ? "#74f7b5" : C.textDim
 
   // ── Sync status (written by lib/sync.ts) ────────────────────────────────────
   const [syncLine, setSyncLine] = useState<{ text: string; color: string } | null>(null)

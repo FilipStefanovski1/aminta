@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import posthog from "posthog-js"
 import { createClient } from "@/lib/supabase/client"
 import { EXTENSION_URL } from "@/lib/links"
+import { hasProAccess } from "@/lib/entitlements"
 
 const THRESHOLDS = [0, 300, 750, 1400, 2300, 3500, 5200, 7500, 10500, 14500]
 
@@ -91,6 +92,7 @@ interface Props {
   missionGenerates: number
   missionPublished: number
   plan: string
+  subscriptionStatus: string | null
   hasState: boolean
   lastSyncedAt: string | null
 }
@@ -98,8 +100,9 @@ interface Props {
 export default function DashboardClient({
   user, xp, streak, generationsTotal, dnaCount,
   missionDate, missionGenerates: missionGeneratesRaw, missionPublished: missionPublishedRaw,
-  plan, hasState, lastSyncedAt,
+  plan, subscriptionStatus, hasState, lastSyncedAt,
 }: Props) {
+  const entitled = hasProAccess({ plan, subscription_status: subscriptionStatus })
   // Mission counters only count if they were recorded on the user's local
   // "today" — the extension stamps mission_date with a local date.
   const isMissionToday = missionDate === todayLocal()
@@ -260,9 +263,9 @@ export default function DashboardClient({
             </div>
             <span className="font-pixel text-[8px] px-2.5 py-1"
               style={{
-                background: plan === "free" ? "#222" : `${form.color}18`,
-                color: plan === "free" ? "#555" : form.color,
-                border: `2px solid ${plan === "free" ? "#333" : form.color + "40"}`,
+                background: entitled ? `${form.color}18` : "#222",
+                color: entitled ? form.color : "#555",
+                border: `2px solid ${entitled ? form.color + "40" : "#333"}`,
                 boxShadow: "2px 2px 0 #000",
               }}>
               {plan.toUpperCase()}

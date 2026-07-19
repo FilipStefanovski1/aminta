@@ -5,6 +5,7 @@ import posthog from "posthog-js";
 import Reveal from "./Reveal";
 import { createClient } from "@/lib/supabase/client";
 import { CREEM_FOUNDER_URL, CREEM_PRO_URL, EXTENSION_URL } from "@/lib/links";
+import { hasProAccess, type UserSubscriptionState } from "@/lib/entitlements";
 
 type BillingMode = "monthly" | "lifetime";
 
@@ -126,6 +127,10 @@ interface CardProps {
   badge: string | null;
   highlight: boolean;
   disabled: boolean;
+  // True when the logged-in user already has this tier (or better) — swaps
+  // the checkout CTA for a "you already have this" state instead of asking
+  // an already-paying customer to buy it again.
+  ownsThis?: boolean;
   onCtaClick?: () => void;
 }
 
@@ -140,9 +145,10 @@ function PricingCard({
   badge,
   highlight,
   disabled,
+  ownsThis,
   onCtaClick,
 }: CardProps) {
-  const isExternal = ctaHref.startsWith("http");
+  const isExternal = !ownsThis && ctaHref.startsWith("http");
   const locked = disabled && highlight;
 
   return (
@@ -164,12 +170,12 @@ function PricingCard({
         <p className="font-pixel text-[10px] uppercase tracking-widest text-muted">
           {name}
         </p>
-        {badge && (
+        {(badge || ownsThis) && (
           <span className={`shrink-0 flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-pixel text-[8px] uppercase tracking-widest ${
             locked ? "border-line bg-white/5 text-muted" : "border-accent/30 bg-accent/10 text-accent"
           }`}>
             {locked && <LockIcon />}
-            {badge}
+            {ownsThis ? "Your Plan" : badge}
           </span>
         )}
       </div>
@@ -186,7 +192,15 @@ function PricingCard({
 
       <p className="mt-4 text-sm text-muted leading-relaxed">{description}</p>
 
-      {disabled ? (
+      {ownsThis ? (
+        <a
+          href="/dashboard"
+          onClick={onCtaClick}
+          className="mt-7 flex items-center justify-center gap-1.5 rounded-xl py-3 text-sm font-semibold border border-accent/40 bg-accent/10 text-accent transition-all duration-200 hover:bg-accent/15"
+        >
+          You already have this, manage in Dashboard
+        </a>
+      ) : disabled ? (
         <span
           className="mt-7 flex items-center justify-center gap-1.5 rounded-xl py-3 text-sm font-semibold border border-line text-muted/50 cursor-not-allowed"
           aria-disabled="true"
@@ -231,15 +245,36 @@ function PricingCard({
 export default function Pricing() {
   const [mode, setMode] = useState<BillingMode>("monthly");
   const [userId, setUserId] = useState<string | null>(null);
+  const [profile, setProfile] = useState<UserSubscriptionState | null>(null);
   const paidPlan = mode === "monthly" ? PRO_PLAN : FOUNDER_PLAN;
 
   // Tags the Creem checkout with the logged-in user's id so the webhook can
   // match the payment back to this account without relying on the buyer
-  // typing the exact same email at checkout as their Aminta login.
+  // typing the exact same email at checkout as their Aminta login. Also
+  // fetches plan/subscription_status so an already-paying user isn't shown
+  // a checkout button for a plan they already have — this was previously
+  // missing entirely, which is why the account in the bug report kept
+  // seeing "Upgrade to Pro" despite being Pro everywhere else.
   useEffect(() => {
     const supabase = createClient();
-    supabase.auth.getSession().then(({ data }) => setUserId(data.session?.user.id ?? null));
+    supabase.auth.getSession().then(async ({ data }) => {
+      const uid = data.session?.user.id ?? null;
+      setUserId(uid);
+      if (!uid) return;
+      const { data: row } = await supabase
+        .from("users")
+        .select("plan, subscription_status")
+        .eq("id", uid)
+        .single();
+      if (row) setProfile(row);
+    });
   }, []);
+
+  const entitled = hasProAccess(profile ?? {});
+  const currentPlan = profile?.plan ?? "free";
+  const ownsPro = entitled && (currentPlan === "pro" || currentPlan === "lifetime");
+  const ownsFounder = entitled && currentPlan === "lifetime";
+  const ownsSelectedTier = mode === "monthly" ? ownsPro : ownsFounder;
 
   const paidCtaHref = userId
     ? `${paidPlan.ctaHref}${paidPlan.ctaHref.includes("?") ? "&" : "?"}metadata[user_id]=${encodeURIComponent(userId)}`
@@ -331,6 +366,7 @@ export default function Pricing() {
               key={paidPlan.name}
               {...paidPlan}
               ctaHref={paidCtaHref}
+              ownsThis={ownsSelectedTier}
               onCtaClick={() => posthog.capture("pricing_cta_clicked", { plan: paidPlan.name, billing_mode: mode })}
             />
           </Reveal>

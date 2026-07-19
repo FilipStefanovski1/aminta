@@ -175,6 +175,7 @@ export async function pullFromCloud(): Promise<{ cloudXp: number } | void> {
     streak?: number
     streak_date?: string
     plan?: AmintaStore["plan"]
+    subscription_status?: string | null
     voice_profile?: AmintaStore["voice"]
     display_name?: string
     bio?: string
@@ -219,8 +220,12 @@ export async function pullFromCloud(): Promise<{ cloudXp: number } | void> {
   }
   // else: local is newer — keep local streak untouched
 
-  // Always trust cloud for plan — Supabase users table is the source of truth
+  // Always trust cloud for plan/subscription_status — Supabase users table
+  // is the source of truth. subscription_status is written even when null
+  // (a real "no status" from the server), unlike the other cloud fields
+  // below which only overwrite local when the cloud value is truthy.
   if (data.plan) patch.plan = data.plan
+  if ("subscription_status" in data) patch.subscriptionStatus = data.subscription_status ?? null
 
   // Only overwrite these if cloud has them and local doesn't
   if (!local.voice && data.voice_profile)      patch.voice = data.voice_profile
