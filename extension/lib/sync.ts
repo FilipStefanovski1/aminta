@@ -1,5 +1,5 @@
 import { getAuthSession, refreshAuthSession, type AuthSession } from "./auth"
-import { getStore, setStore, type AmintaStore } from "./storage"
+import { getStore, setStore, type AmintaStore, type AmintaTemplate } from "./storage"
 
 const API_URL = "https://amintaapp.com/api/sync"
 
@@ -116,6 +116,9 @@ export async function pushToCloud(): Promise<void> {
     mission_generates: store.missionGenerates,
     mission_published: store.missionPublished,
     voice_profile: store.voice,
+    style_profile: store.styleProfile,
+    style_profile_hash: store.styleProfileHash,
+    templates: store.templates,
     tweet_dna: store.tweetDNA,
     display_name: store.displayName,
     bio: store.bio,
@@ -177,6 +180,9 @@ export async function pullFromCloud(): Promise<{ cloudXp: number } | void> {
     plan?: AmintaStore["plan"]
     subscription_status?: string | null
     voice_profile?: AmintaStore["voice"]
+    style_profile?: AmintaStore["styleProfile"]
+    style_profile_hash?: string
+    templates?: AmintaTemplate[]
     display_name?: string
     bio?: string
     interests?: string
@@ -234,6 +240,31 @@ export async function pullFromCloud(): Promise<{ cloudXp: number } | void> {
   if (!local.interests && data.interests)      patch.interests = data.interests
   if ((!local.tweetDNA?.length) && data.tweet_dna?.length) patch.tweetDNA = data.tweet_dna
   if (!local.onboardingDone && data.onboarding_done)       patch.onboardingDone = data.onboarding_done
+
+  // Style profile is a cache (always regenerable from voice + tweet DNA via
+  // getOrBuildStyleProfile), not a source of truth — same "fill if local is
+  // empty" rule as voice/bio/etc above, never overwrite a cache the user's
+  // current device already has.
+  if (!local.styleProfile && data.style_profile) {
+    patch.styleProfile = data.style_profile
+    patch.styleProfileHash = data.style_profile_hash ?? ""
+  }
+
+  // Templates: union by id, newer updatedAt wins per id. This can't detect
+  // "deleted on device A, never pulled by device B" — a template removed
+  // elsewhere can resurrect if device B still has its own local copy and
+  // pushes before pulling that deletion. Same class of tradeoff as the
+  // earned-hashes union above: favors never silently losing a template over
+  // handling every delete race perfectly.
+  if (data.templates?.length) {
+    const byId = new Map<string, AmintaTemplate>()
+    for (const t of local.templates ?? []) byId.set(t.id, t)
+    for (const t of data.templates) {
+      const existing = byId.get(t.id)
+      if (!existing || t.updatedAt > existing.updatedAt) byId.set(t.id, t)
+    }
+    patch.templates = Array.from(byId.values())
+  }
 
   if (epoch !== currentSyncEpoch()) {
     // The account changed again while we were computing the merge above

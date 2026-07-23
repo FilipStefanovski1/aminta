@@ -3,7 +3,6 @@
 create table public.users (
   id uuid references auth.users(id) on delete cascade primary key,
   email text,
-  wallet_address text,
   plan text not null default 'free',
   paid_via text,
   subscription_status text,
@@ -28,6 +27,9 @@ create table public.aminta_state (
   mission_generates integer default 0,
   mission_published integer default 0,
   voice_profile jsonb,
+  style_profile jsonb,
+  style_profile_hash text default '',
+  templates jsonb default '[]'::jsonb,
   tweet_dna text[] default '{}',
   display_name text default '',
   bio text default '',

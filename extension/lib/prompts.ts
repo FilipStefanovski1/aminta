@@ -96,6 +96,8 @@ function systemX(voice: VoiceProfile, styleProfile: StyleProfile | null, templat
     voiceBlock(voice, styleProfile, templateInstruction),
     "RULES:",
     "- Keep it under 280 characters unless explicitly asked otherwise.",
+    "- Write complete, grammatically correct sentences with normal punctuation (periods, commas) unless the WRITING STYLE section above explicitly says the user's own posts drop punctuation — don't infer that from brevity alone.",
+    "- Never run two separate thoughts together with no separator. Each sentence ends before the next begins.",
     "- No hashtags unless their examples use them.",
     "- No emojis unless their examples use them.",
     '- Never say "as an AI". Sound human.',
@@ -123,7 +125,7 @@ export function buildMessages(
   if (mode === "tweet") {
     user = `Write ONE original X post about this topic:\n"""${trimmed}"""`
   } else if (mode === "reply") {
-    user = `Someone posted this on X:\n"""${trimmed}"""\nWrite ONE short, engaging reply in my voice that adds value or wit.`
+    user = `Someone posted this on X:\n"""${trimmed}"""\nWrite ONE short, engaging reply in my voice. Pick ONE specific detail, number, or claim from their post and react to it directly — agree, push back, add a fact, or riff on it with wit. Do not write a generic compliment that just restates their post back to them.`
   } else {
     user = `Here is my rough draft for an X post:\n"""${trimmed}"""\nRewrite it to be cleaner, punchier and more readable. PRESERVE my meaning and voice. Do not add new ideas.`
   }
