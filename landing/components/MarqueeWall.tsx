@@ -112,6 +112,9 @@ function Card({ card }: { card: WallCard }) {
 }
 
 // Target scroll speed — 8–12px/s range, smooth and almost unnoticeable.
+// Desktop's default. Mobile/tablet get a faster speed passed explicitly
+// (see MarqueeWall below) — a 3-column desktop wall reads as busy at the
+// same speed a 1–2 column mobile/tablet wall reads as sluggish.
 const SPEED_PX_PER_SEC = 10;
 // Curated, not exhaustive: ~2–3 fully readable cards per column (~7–9 total
 // across 3 columns) rather than a tall window trying to show everything at
@@ -124,10 +127,12 @@ function MarqueeColumn({
   cards,
   direction,
   active,
+  speedPxPerSec = SPEED_PX_PER_SEC,
 }: {
   cards: WallCard[];
   direction: "up" | "down";
   active: boolean;
+  speedPxPerSec?: number;
 }) {
   const trackRef = useRef<HTMLDivElement>(null);
   const groupRef = useRef<HTMLDivElement>(null);
@@ -161,7 +166,7 @@ function MarqueeColumn({
   // target (safety net, not the normal case now that every column gets the
   // full card set) — never the other way around.
   const windowHeight = ready ? Math.min(TARGET_WINDOW_HEIGHT, cycle) : TARGET_WINDOW_HEIGHT;
-  const duration = ready ? cycle / SPEED_PX_PER_SEC : 0;
+  const duration = ready ? cycle / speedPxPerSec : 0;
 
   return (
     <div className="testimonial-col-window" style={{ height: windowHeight }}>
@@ -225,13 +230,13 @@ export default function MarqueeWall() {
             was a static list before, which read as dead/broken next to the
             animated wall on every wider breakpoint. */}
         <div className="mt-6 sm:hidden">
-          <MarqueeColumn cards={CARDS} direction="up" active={inView} />
+          <MarqueeColumn cards={CARDS} direction="up" active={inView} speedPxPerSec={16} />
         </div>
 
         {/* Tablet: 2 columns, subtle opposite-direction scroll */}
         <div className="mt-6 sm:mt-8 hidden sm:grid lg:hidden grid-cols-2 gap-4">
-          <MarqueeColumn cards={columns2[0]} direction="down" active={inView} />
-          <MarqueeColumn cards={columns2[1]} direction="up" active={inView} />
+          <MarqueeColumn cards={columns2[0]} direction="down" active={inView} speedPxPerSec={16} />
+          <MarqueeColumn cards={columns2[1]} direction="up" active={inView} speedPxPerSec={16} />
         </div>
 
         {/* Desktop: 3 columns, subtle opposite-direction scroll */}
