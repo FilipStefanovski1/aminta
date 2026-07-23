@@ -264,14 +264,6 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
     }
   }
 
-  const handleTemplateUsed = (text: string) => {
-    reset()
-    setOutput(text)
-    setOutputImage(null)
-    setGenKey((k) => k + 1)
-    setTemplatesOpen(false)
-  }
-
   const openSaveAsTemplate = (draftText: string) => {
     setTemplatesPrefill({ content: draftText, mode: "exact" })
     setTemplatesOpen(true)
@@ -593,7 +585,6 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
         <TemplatesModal
           store={store}
           onClose={() => { setTemplatesOpen(false); setTemplatesPrefill(undefined) }}
-          onUse={handleTemplateUsed}
           onChanged={onTemplatesChanged}
           getRunContext={getTemplateRunContext}
           initialView={templatesPrefill ? "editor" : "list"}

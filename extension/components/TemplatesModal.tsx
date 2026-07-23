@@ -13,6 +13,7 @@ import {
   updateTemplate,
   type RunTemplateContext,
 } from "~lib/templates"
+import { insertText } from "~lib/messaging"
 import type { AmintaStore, AmintaTemplate, TemplateMode, TemplateVariable } from "~lib/storage"
 import { C } from "~lib/theme"
 
@@ -23,7 +24,6 @@ type View = "list" | "editor" | "use"
 interface Props {
   store: AmintaStore
   onClose: () => void
-  onUse: (text: string) => void
   // Templates persist directly to chrome.storage.local (see lib/templates.ts),
   // bypassing the sidepanel's own in-memory store state. Call this after
   // every mutation so that state gets refreshed — otherwise the next time
@@ -47,13 +47,18 @@ function badge(text: string, color: string) {
   )
 }
 
-export default function TemplatesModal({ store, onClose, onUse, onChanged, getRunContext, initialView = "list", prefill }: Props) {
+export default function TemplatesModal({ store, onClose, onChanged, getRunContext, initialView = "list", prefill }: Props) {
   const [view, setView] = useState<View>(prefill ? "editor" : initialView)
   const [editing, setEditing] = useState<AmintaTemplate | null>(null)
   const [usingTemplate, setUsingTemplate] = useState<AmintaTemplate | null>(null)
   const [templates, setTemplates] = useState<AmintaTemplate[]>(store.templates)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState("")
+  // Which card's "Use Template" button is mid-insert — scoped per-template
+  // (not a single global flag) so only that one button disables/shows
+  // "Inserting…", and so a click on it can never fire twice concurrently.
+  const [insertingId, setInsertingId] = useState<string | null>(null)
+  const [toast, setToast] = useState("")
 
   const refresh = (next: AmintaTemplate[]) => setTemplates(next)
 
@@ -74,12 +79,6 @@ export default function TemplatesModal({ store, onClose, onUse, onChanged, getRu
     setView("editor")
   }
 
-  function openUse(t: AmintaTemplate) {
-    setError("")
-    setUsingTemplate(t)
-    setView("use")
-  }
-
   async function handleToggleFavorite(id: string) {
     await toggleFavorite(id)
     refresh(templates.map((t) => (t.id === id ? { ...t, favorite: !t.favorite } : t)))
@@ -90,6 +89,57 @@ export default function TemplatesModal({ store, onClose, onUse, onChanged, getRu
     await deleteTemplate(id)
     refresh(templates.filter((t) => t.id !== id))
     onChanged?.()
+  }
+
+  // Delivers resolved template text into the active X composer (reusing the
+  // exact same bridge OutputCard's "Insert into X" uses — twitter-bridge.ts's
+  // insertIntoComposer, which handles contenteditable, paste-based insertion,
+  // focus, and cursor placement correctly already). Returns whether it
+  // actually landed, so callers can decide what happens next.
+  async function insertIntoXComposer(templateId: string, text: string): Promise<boolean> {
+    const res = await insertText("x", text)
+    if (!res.ok) {
+      setError("Open an X composer first")
+      return false
+    }
+    await recordTemplateUsage(templateId)
+    onChanged?.()
+    return true
+  }
+
+  function celebrateAndClose() {
+    setToast("Template inserted")
+    setTimeout(onClose, 900)
+  }
+
+  // The "Use Template" button's handler. Tries to resolve the template with
+  // no user input first (covers Exact always, and Fill/Generate whenever
+  // every variable already has a default) — only if something is genuinely
+  // missing does it fall back to the variable-input screen.
+  async function handleUseTemplate(t: AmintaTemplate) {
+    if (insertingId) return // a click is already in flight — ignore
+    setError("")
+    setInsertingId(t.id)
+    try {
+      const ctx = await getRunContext()
+      const result = await runTemplate(t, {}, ctx, defaultRunTemplateDeps)
+      if (result.ok === false) {
+        if (result.missing.length > 0) {
+          setUsingTemplate(t)
+          setView("use")
+          return
+        }
+        setError("Couldn't use this template. Check your voice profile and API key.")
+        return
+      }
+      const delivered = await insertIntoXComposer(t.id, result.text)
+      if (delivered) celebrateAndClose()
+    } catch (e) {
+      console.error("[Aminta] template insert failed:", e)
+      setError("Couldn't insert template")
+    } finally {
+      setInsertingId(null)
+    }
   }
 
   return (
@@ -118,7 +168,8 @@ export default function TemplatesModal({ store, onClose, onUse, onChanged, getRu
             all={all}
             onCreate={openCreate}
             onEdit={openEdit}
-            onUse={openUse}
+            onUseTemplate={handleUseTemplate}
+            insertingId={insertingId}
             onToggleFavorite={handleToggleFavorite}
             onDelete={handleDelete}
           />
@@ -153,15 +204,15 @@ export default function TemplatesModal({ store, onClose, onUse, onChanged, getRu
                   setError(
                     result.missing.length
                       ? `Missing required field${result.missing.length > 1 ? "s" : ""}: ${result.missing.map((m) => m.label).join(", ")}`
-                      : "Couldn't use this template — check your voice profile and API key."
+                      : "Couldn't use this template. Check your voice profile and API key."
                   )
                   return
                 }
-                await recordTemplateUsage(usingTemplate.id)
-                onChanged?.()
-                onUse(result.text)
+                const delivered = await insertIntoXComposer(usingTemplate.id, result.text)
+                if (delivered) celebrateAndClose()
               } catch (e) {
-                setError(e instanceof Error ? e.message : "Something went wrong.")
+                console.error("[Aminta] template insert failed:", e)
+                setError("Couldn't insert template")
               } finally {
                 setBusy(false)
               }
@@ -169,6 +220,14 @@ export default function TemplatesModal({ store, onClose, onUse, onChanged, getRu
           />
         )}
       </div>
+
+      {toast && (
+        <div
+          className="absolute left-1/2 -translate-x-1/2 bottom-6 z-50 px-4 py-2 rounded-full font-pixel text-[9px] text-black shadow-lg animate-toast-up"
+          style={{ backgroundColor: C.mint }}>
+          {toast}
+        </div>
+      )}
     </div>
   )
 
@@ -178,7 +237,8 @@ export default function TemplatesModal({ store, onClose, onUse, onChanged, getRu
     all,
     onCreate,
     onEdit,
-    onUse,
+    onUseTemplate,
+    insertingId,
     onToggleFavorite,
     onDelete,
   }: {
@@ -187,10 +247,15 @@ export default function TemplatesModal({ store, onClose, onUse, onChanged, getRu
     all: AmintaTemplate[]
     onCreate: () => void
     onEdit: (t: AmintaTemplate) => void
-    onUse: (t: AmintaTemplate) => void
+    onUseTemplate: (t: AmintaTemplate) => void
+    insertingId: string | null
     onToggleFavorite: (id: string) => void
     onDelete: (id: string) => void
   }) {
+    // "Recent" and "My Templates" both render straight from the same
+    // `templates` state array (filtered/sorted, never cloned) — a template
+    // that appears in both sections is the same object with the same id, so
+    // its card in either section calls the exact same handlers below.
     return (
       <div className="space-y-5">
         <PrimaryButton onClick={onCreate}>+ New Template</PrimaryButton>
@@ -206,7 +271,7 @@ export default function TemplatesModal({ store, onClose, onUse, onChanged, getRu
             <SectionLabel>⭐ Favorites</SectionLabel>
             <div className="space-y-2">
               {favorites.map((t) => (
-                <TemplateCard key={t.id} t={t} onUse={() => onUse(t)} onEdit={() => onEdit(t)} onToggleFavorite={() => onToggleFavorite(t.id)} onDelete={() => onDelete(t.id)} />
+                <TemplateCard key={t.id} t={t} inserting={insertingId === t.id} onUseTemplate={() => onUseTemplate(t)} onEdit={() => onEdit(t)} onToggleFavorite={() => onToggleFavorite(t.id)} onDelete={() => onDelete(t.id)} />
               ))}
             </div>
           </div>
@@ -217,7 +282,7 @@ export default function TemplatesModal({ store, onClose, onUse, onChanged, getRu
             <SectionLabel>🕒 Recent</SectionLabel>
             <div className="space-y-2">
               {recent.map((t) => (
-                <TemplateCard key={t.id} t={t} onUse={() => onUse(t)} onEdit={() => onEdit(t)} onToggleFavorite={() => onToggleFavorite(t.id)} onDelete={() => onDelete(t.id)} />
+                <TemplateCard key={t.id} t={t} inserting={insertingId === t.id} onUseTemplate={() => onUseTemplate(t)} onEdit={() => onEdit(t)} onToggleFavorite={() => onToggleFavorite(t.id)} onDelete={() => onDelete(t.id)} />
               ))}
             </div>
           </div>
@@ -228,7 +293,7 @@ export default function TemplatesModal({ store, onClose, onUse, onChanged, getRu
             <SectionLabel>My Templates</SectionLabel>
             <div className="space-y-2">
               {all.map((t) => (
-                <TemplateCard key={t.id} t={t} onUse={() => onUse(t)} onEdit={() => onEdit(t)} onToggleFavorite={() => onToggleFavorite(t.id)} onDelete={() => onDelete(t.id)} />
+                <TemplateCard key={t.id} t={t} inserting={insertingId === t.id} onUseTemplate={() => onUseTemplate(t)} onEdit={() => onEdit(t)} onToggleFavorite={() => onToggleFavorite(t.id)} onDelete={() => onDelete(t.id)} />
               ))}
             </div>
           </div>
@@ -239,13 +304,15 @@ export default function TemplatesModal({ store, onClose, onUse, onChanged, getRu
 
   function TemplateCard({
     t,
-    onUse,
+    inserting,
+    onUseTemplate,
     onEdit,
     onToggleFavorite,
     onDelete,
   }: {
     t: AmintaTemplate
-    onUse: () => void
+    inserting: boolean
+    onUseTemplate: () => void
     onEdit: () => void
     onToggleFavorite: () => void
     onDelete: () => void
@@ -253,21 +320,28 @@ export default function TemplatesModal({ store, onClose, onUse, onChanged, getRu
     return (
       <Card className="space-y-2" pad>
         <div className="flex items-start justify-between gap-2">
-          <button onClick={onUse} className="flex-1 text-left">
-            <p className="text-[12px] font-semibold" style={{ color: C.text }}>{t.name}</p>
+          <div className="flex-1 min-w-0">
+            <p className="text-[12px] font-semibold truncate" style={{ color: C.text }}>{t.name}</p>
             {t.description && <p className="text-[10px] mt-0.5" style={{ color: C.textFaint }}>{t.description}</p>}
-          </button>
+          </div>
           <button onClick={onToggleFavorite} className="text-[13px] shrink-0" style={{ color: t.favorite ? C.mint : C.textGhost }}>
             {t.favorite ? "★" : "☆"}
           </button>
         </div>
-        <div className="flex items-center justify-between">
-          <div className="flex gap-1.5">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex gap-1.5 shrink-0">
             {badge(MODE_LABEL[t.mode], C.mint)}
           </div>
-          <div className="flex gap-3">
+          <div className="flex items-center gap-3 flex-wrap justify-end ml-auto">
             <button onClick={onEdit} className="text-[10px]" style={{ color: C.textFaint }}>Edit</button>
             <button onClick={onDelete} className="text-[10px]" style={{ color: "#f87171" }}>Delete</button>
+            <button
+              onClick={onUseTemplate}
+              disabled={inserting}
+              className="btn-pixel px-3 py-1.5 rounded-lg font-pixel text-[8px] text-black disabled:opacity-60 disabled:cursor-wait transition-opacity shrink-0"
+              style={{ backgroundColor: C.mint }}>
+              {inserting ? "Inserting…" : "Use Template"}
+            </button>
           </div>
         </div>
       </Card>
@@ -390,9 +464,9 @@ function TemplateEditor({
           })}
         </div>
         <p className="text-[9px]" style={{ color: C.textGhost }}>
-          {mode === "exact" && "Inserted exactly as written — no AI rewriting."}
-          {mode === "fill" && "Fill in {{variables}} to complete the post — no AI rewriting."}
-          {mode === "generate" && "An instruction — Aminta writes a fresh version using your Style Profile every time."}
+          {mode === "exact" && "Inserted exactly as written, no AI rewriting."}
+          {mode === "fill" && "Fill in {{variables}} to complete the post, no AI rewriting."}
+          {mode === "generate" && "An instruction. Aminta writes a fresh version using your Style Profile every time."}
         </p>
       </div>
 
