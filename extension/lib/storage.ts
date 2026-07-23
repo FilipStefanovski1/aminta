@@ -117,6 +117,8 @@ export interface AmintaStore {
   apiKey: string
   model: string
   voice: VoiceProfile | null
+  companionName: string
+  avatarDataUrl: string
   displayName: string
   bio: string
   interests: string
@@ -150,6 +152,8 @@ const DEFAULTS: AmintaStore = {
   apiKey: "",
   model: DEFAULT_MODEL,
   voice: null,
+  companionName: "",
+  avatarDataUrl: "",
   displayName: "",
   bio: "",
   interests: "",
@@ -186,7 +190,11 @@ export async function setStore(patch: Partial<AmintaStore>): Promise<void> {
 // Device-scoped: tied to this browser/install, not to whoever is signed in.
 // Everything else in AmintaStore is account-scoped and must never survive
 // a switch to a different Supabase auth user.
-const DEVICE_SCOPED_KEYS = new Set<keyof AmintaStore>(["apiKey", "model"])
+// companionName/avatarDataUrl aren't synced to the cloud (no schema column,
+// purely a local nicety) — device-scoped so they survive
+// clearAccountScopedState() on sign-out instead of silently vanishing with
+// nothing to restore them from.
+const DEVICE_SCOPED_KEYS = new Set<keyof AmintaStore>(["apiKey", "model", "companionName", "avatarDataUrl"])
 
 export const ACCOUNT_SCOPED_KEYS = (Object.keys(DEFAULTS) as (keyof AmintaStore)[])
   .filter((k) => !DEVICE_SCOPED_KEYS.has(k))

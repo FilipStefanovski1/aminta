@@ -137,6 +137,33 @@ const DIALOGUE_TABLE: DialogueSelector[] = [
   ]},
 ]
 
+// ─── Level-based idle rotation ──────────────────────────────────────────────
+// The resting speech bubble (no active event) cycles through 3 lines per
+// level, matching that level's form/personality from lib/evolution.ts, so it
+// always reads as "in character" instead of a generic/mismatched idle line.
+// Level 10 reuses the Ascended (level 9) persona — FORMS has no 10th form,
+// same cap getForm() already applies — with lines that read as "mastered"
+// rather than repeating level 9's lines verbatim.
+const LEVEL_LINES: Record<number, [string, string, string]> = {
+  1:  ["just woke up.", "still learning who you are.", "feed me something real."],
+  2:  ["i'm starting to notice your rhythm.", "getting curious about your voice.", "show me more."],
+  3:  ["posting feels good now.", "we're finding our groove.", "i like where this is going."],
+  4:  ["i'm hungry for the next one.", "let's keep this going.", "give me something to work with."],
+  5:  ["i know your tricks by now.", "let's have some fun with this one.", "i've got a few ideas of my own."],
+  6:  ["i write like you on a good day.", "calm. sharp. ready.", "let's make this one count."],
+  7:  ["something in me is changing.", "there's more here than before.", "let's keep pushing forward."],
+  8:  ["i barely recognize myself anymore.", "something ancient is waking up.", "we've come a long way together."],
+  9:  ["this is the final form.", "few voices ever get here.", "i know your voice better than you do."],
+  10: ["there's nothing left to prove.", "we mastered this together.", "still hungry for more."],
+}
+
+// index is any incrementing counter (e.g. a 4s tick) — wrapped to 0..2.
+export function getLevelIdleLine(xp: number, index: number): string {
+  const level = Math.min(getLevel(xp), 10)
+  const lines = LEVEL_LINES[level]
+  return lines[((index % 3) + 3) % 3]
+}
+
 // ─── Internals ────────────────────────────────────────────────────────────────
 
 function pickLine(lines: DialogueLine[], store: AmintaStore): string {

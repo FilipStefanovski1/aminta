@@ -14,9 +14,9 @@ const TONE_GUIDE: Record<Tone, string> = {
 }
 
 const LENGTH_GUIDE: Record<OutputLength, string> = {
-  short:  "LENGTH PREFERENCE: Write short. One tight idea, expressed as directly as possible. Cut every sentence that isn't essential. This is a style choice — not a character counter.",
-  medium: "LENGTH PREFERENCE: Write at a balanced length. Make your point clearly and give it room to breathe, but don't pad. Default density.",
-  long:   "LENGTH PREFERENCE: Write long. Develop the idea — give context, reasoning, or examples that earn the length. Every sentence should add something real. Don't pad, but don't cut for the sake of brevity either.",
+  short:  "LENGTH PREFERENCE: Write exactly ONE sentence, one tight idea expressed as directly as possible. Cut everything that isn't essential.",
+  medium: "LENGTH PREFERENCE: Write exactly TWO short paragraphs (separated by a line break). Make your point clearly and give it room to breathe, but don't pad.",
+  long:   "LENGTH PREFERENCE: Write exactly THREE short paragraphs (separated by line breaks). Develop the idea — give context, reasoning, or examples that earn the length. Don't pad for the sake of it.",
 }
 
 // Content/style hierarchy: topic comes exclusively from the current

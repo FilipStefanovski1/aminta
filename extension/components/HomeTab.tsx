@@ -3,8 +3,6 @@ import { useEffect, useRef, useState } from "react"
 import type { CompanionEvent } from "~lib/companion"
 import { deriveMood } from "~lib/companion"
 import {
-  FORMS,
-  LEVEL_THRESHOLDS,
   getForm,
   getLevelSpan,
   getLevel,
@@ -16,8 +14,7 @@ import { hasProAccess, planLabel as computePlanLabel } from "~lib/entitlements"
 import { getMissionProgress, tryCompleteDailyMissions } from "~lib/missions"
 import type { AmintaStore } from "~lib/storage"
 import { C } from "~lib/theme"
-import DemonMascot from "~components/DemonMascot"
-import { Card, Sprite, SpeechBubble, SpriteMark, XPBar } from "~components/ui"
+import { Card, Sprite, SpeechBubble, XPBar } from "~components/ui"
 
 
 interface Props {
@@ -32,10 +29,9 @@ interface Props {
   animKey: number
   speech: string
   onContext?: (event: CompanionEvent) => void
-  newlyUnlockedLevel?: number | null
 }
 
-export default function HomeTab({ store, onCreate, onTrain, onOpenCompanion, onOpenSettings, onUpdate, animClass, animKey, speech, onContext, newlyUnlockedLevel }: Props) {
+export default function HomeTab({ store, onCreate, onTrain, onOpenCompanion, onOpenSettings, onUpdate, animClass, animKey, speech, onContext }: Props) {
   const xp          = store.xp ?? 0
   const currentForm = getForm(xp)
   const level       = getLevel(xp)
@@ -48,7 +44,6 @@ export default function HomeTab({ store, onCreate, onTrain, onOpenCompanion, onO
   const plan        = store.plan ?? "free"
   const entitled    = hasProAccess({ plan: store.plan, subscriptionStatus: store.subscriptionStatus })
   const mission     = getMissionProgress(store)
-  const nextLevel   = level < FORMS.length ? level + 1 : null
 
   // Floating XP — shown above the sprite when XP increases
   const prevXP = useRef(xp)
@@ -159,7 +154,7 @@ export default function HomeTab({ store, onCreate, onTrain, onOpenCompanion, onO
           )}
           <div className="flex items-center justify-center gap-2 mb-2">
             <p className="font-pixel text-[8px] tracking-widest" style={{ color: tint }}>
-              {stage} · Lv.{level}
+              {stage}
             </p>
             {entitled && (
               <span className="font-pixel text-[6px] px-1.5 py-0.5 rounded" style={{
@@ -231,10 +226,10 @@ export default function HomeTab({ store, onCreate, onTrain, onOpenCompanion, onO
         </div>
         <div className="px-4 py-3" style={{ borderTop: `1px solid ${C.border}` }}>
           <button
-            onClick={onCreate}
+            onClick={() => { chrome.tabs.create({ url: "https://x.com/compose/post" }); onCreate() }}
             className="btn-pixel w-full py-3 rounded-xl font-pixel text-[9px] text-black"
             style={{ backgroundColor: tint }}>
-            Create with Aminta →
+            Create with Aminta
           </button>
         </div>
       </Card>
@@ -252,77 +247,6 @@ export default function HomeTab({ store, onCreate, onTrain, onOpenCompanion, onO
           </div>
         ))}
       </div>
-
-      {/* ── NEXT EVOLUTION ── */}
-      {nextLevel ? (() => {
-        const nextForm  = FORMS[nextLevel - 1]
-        const xpToNext  = LEVEL_THRESHOLDS[nextLevel - 1] - xp
-        const isNew     = newlyUnlockedLevel === level
-        return (
-          <Card
-            pad={false}
-            className="animate-card-in overflow-hidden"
-            style={{
-              animationDelay: "90ms",
-              boxShadow: isNew ? `0 0 22px ${currentForm.color}44` : undefined,
-            }}>
-            <div className="px-4 pt-3.5 pb-4">
-              <p className="font-pixel text-[7px] uppercase tracking-widest mb-3" style={{ color: C.textDim }}>Next Evolution</p>
-
-              {/* Current ← → Next */}
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex flex-col items-center gap-1.5">
-                  <div className="aminta-glow">
-                    <DemonMascot skin={currentForm.skin} size={52} />
-                  </div>
-                  <p className="font-pixel text-[7px]" style={{ color: currentForm.color }}>
-                    {currentForm.name}{isNew ? " ✦" : ""}
-                  </p>
-                </div>
-                <div className="flex flex-col items-center gap-1.5" style={{ opacity: 0.38 }}>
-                  {nextForm.revealed
-                    ? <DemonMascot skin={nextForm.skin} size={52} />
-                    : <div className="flex items-center justify-center font-pixel text-[16px]"
-                        style={{ width: 52, height: 42, color: C.textGhost }}>?</div>}
-                  <p className="font-pixel text-[7px]" style={{ color: nextForm.color }}>
-                    {nextForm.revealed ? nextForm.name : "???"}
-                  </p>
-                </div>
-              </div>
-
-              {/* XP progress */}
-              <div className="mb-3">
-                <XPBar progress={progress} tint={tint} />
-                <div className="flex items-center justify-between mt-2">
-                  <span className="font-pixel text-[8px]" style={{ color: C.textDim }}>Lv.{level}</span>
-                  <span className="font-pixel text-[7px]" style={{ color: tint }}>
-                    {xpToNext} XP until {nextForm.revealed ? nextForm.name : "next form"}
-                  </span>
-                </div>
-              </div>
-
-              {/* Companion link */}
-              <button
-                onClick={onOpenCompanion}
-                className="flex items-center gap-1.5 font-pixel text-[8px] opacity-60 hover:opacity-100 transition-opacity"
-                style={{ color: tint }}>
-                Open Aminta
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                  <path d="M2.5 6h7M6.5 3l3 3-3 3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </button>
-            </div>
-          </Card>
-        )
-      })() : (
-        <Card className="animate-card-in text-center" style={{ animationDelay: "90ms" }}>
-          <div className="aminta-glow flex justify-center mb-2">
-            <SpriteMark tint={tint} size={28} />
-          </div>
-          <p className="font-pixel text-[8px] mb-1" style={{ color: tint }}>{currentForm.name}</p>
-          <p className="text-[11px]" style={{ color: C.textDim }}>Max level reached. Legend status.</p>
-        </Card>
-      )}
 
     </div>
   )

@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from "react"
+import { createPortal } from "react-dom"
 
 import {
   createTemplate,
@@ -142,11 +143,16 @@ export default function TemplatesModal({ store, onClose, onChanged, getRunContex
     }
   }
 
-  return (
-    // fixed (not absolute) — GeneratorPanel, where this mounts, is a
-    // scrollable, variable-height, non-positioned container, unlike the
-    // sidepanel root that SettingsOverlay/CompanionPage anchor to. fixed
-    // guarantees full-viewport coverage regardless of mount depth.
+  return createPortal(
+    // Portaled straight to <body> — GeneratorPanel, where this mounts, sits
+    // inside sidepanel.tsx's animated tab-content wrapper
+    // (`animate-slide-up`, `animation: ... both`), which keeps a persisted
+    // `transform: translateY(0)` after the animation ends. Any transform on
+    // an ancestor — even an identity one — creates a new containing block
+    // for `position: fixed` descendants, so without the portal this modal
+    // was clipped to that wrapper's box instead of the real viewport,
+    // leaving the true page top (and whatever renders behind it) exposed
+    // above the modal's header.
     <div className="fixed inset-0 z-40 flex flex-col animate-slide-up" style={{ backgroundColor: C.bg }}>
       <div className="flex items-center justify-between px-4 py-3 shrink-0" style={{ borderBottom: `1px solid ${C.border}` }}>
         <p className="font-pixel text-[9px]" style={{ color: C.text }}>
@@ -228,7 +234,8 @@ export default function TemplatesModal({ store, onClose, onChanged, getRunContex
           {toast}
         </div>
       )}
-    </div>
+    </div>,
+    document.body
   )
 
   function TemplateList({

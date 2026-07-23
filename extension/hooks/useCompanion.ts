@@ -16,7 +16,7 @@ import {
   type CompanionState,
   type Expression,
 } from "~lib/companion"
-import { resolveDialogue } from "~lib/dialogue"
+import { getLevelIdleLine, resolveDialogue } from "~lib/dialogue"
 import { emitCompanionEvent } from "~hooks/companionBus"
 import type { AmintaStore } from "~lib/storage"
 
@@ -42,6 +42,16 @@ export function useCompanion(store: AmintaStore | null): {
   expressionRef.current = expression
 
   const resetTimer = useRef<ReturnType<typeof setTimeout>>()
+
+  // Resting-state speech: while nothing is actively happening (expression
+  // idle — no wave/thinking/celebrating/error in progress), the bubble
+  // cycles through that level's 3 lines every 4s instead of sitting on
+  // whatever the last dispatched event happened to say.
+  const [idleTick, setIdleTick] = useState(0)
+  useEffect(() => {
+    const iv = setInterval(() => setIdleTick(t => t + 1), 4000)
+    return () => clearInterval(iv)
+  }, [])
 
   const dispatch = useCallback((event: CompanionEvent) => {
     const currentExpr  = expressionRef.current
@@ -94,8 +104,16 @@ export function useCompanion(store: AmintaStore | null): {
   const mood     = deriveMood(store)
   // Memoize speech so Math.random() only re-rolls when the event or mood changes,
   // not on every store update or unrelated render (which caused double bubble-pops).
+  // While resting (expression idle, nothing actively happening), the bubble
+  // is driven by the level-line rotation (idleTick) instead — a reaction to
+  // insert/mission_complete/etc. always wins for the duration of its own
+  // expression window, then control returns to the rotation once it clears.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const speech   = useMemo(() => store ? resolveDialogue(lastEvent, mood, store) : "...", [lastEvent, mood])
+  const speech   = useMemo(() => {
+    if (!store) return "..."
+    if (expression === "idle") return getLevelIdleLine(store.xp ?? 0, idleTick)
+    return resolveDialogue(lastEvent, mood, store)
+  }, [expression, idleTick, lastEvent, mood])
   const animClass = ANIMATION_CSS[state.animationId]
 
   return { state, speech, animClass, animKey, dispatch }

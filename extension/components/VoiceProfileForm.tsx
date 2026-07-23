@@ -50,20 +50,38 @@ const SUGGESTION_HANDLES = ["@naval", "@sama", "@levelsio", "@paulg"]
 
 function InfoTip({ tip }: { tip: string }) {
   const [open, setOpen] = useState(false)
+  const btnRef = useRef<HTMLButtonElement>(null)
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
+
+  // Section labels vary in width, so the icon's horizontal position drifts
+  // from card to card — anchoring the tooltip to a fixed side of the icon
+  // (left-0 or right-0) overflows the panel whenever the icon happens to
+  // land near that edge. Position it as `fixed` instead, computed from the
+  // icon's real on-screen position and clamped to stay inside the panel.
+  useEffect(() => {
+    if (!open || !btnRef.current) return
+    const rect  = btnRef.current.getBoundingClientRect()
+    const WIDTH = 224 // w-56
+    const MARGIN = 12
+    const left = Math.min(Math.max(rect.left, MARGIN), window.innerWidth - WIDTH - MARGIN)
+    setPos({ top: rect.bottom + 6, left })
+  }, [open])
+
   return (
     <span className="relative inline-flex items-center ml-1.5">
       <button
+        ref={btnRef}
         onClick={() => setOpen(v => !v)}
         className="w-[14px] h-[14px] rounded-full flex items-center justify-center text-[8px] font-bold leading-none"
         style={{ border: `1px solid ${C.border}`, color: C.textDim }}>
         i
       </button>
-      {open && (
+      {open && pos && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
           <div
-            className="absolute right-0 top-5 z-20 rounded-xl p-3 text-[11px] leading-relaxed w-56 max-w-[calc(100vw-32px)]"
-            style={{ backgroundColor: "#252528", border: `1px solid ${C.border}`, color: C.text, boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }}>
+            className="fixed z-20 rounded-xl p-3 text-[11px] leading-relaxed w-56"
+            style={{ top: pos.top, left: pos.left, backgroundColor: "#252528", border: `1px solid ${C.border}`, color: C.text, boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }}>
             {tip}
           </div>
         </>
@@ -453,11 +471,11 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0 
             )}
 
             {adding ? (
-              <div className="rounded-xl p-3" style={{ backgroundColor: C.cardInner, border: `1px solid ${tint}44` }}>
+              <div className="rounded-xl p-2.5" style={{ backgroundColor: C.cardInner, border: `1px solid ${tint}44` }}>
                 <textarea
                   value={newPost}
                   onChange={e => setNewPost(e.target.value)}
-                  rows={3}
+                  rows={2}
                   placeholder="Paste something you've actually written…"
                   autoFocus
                   className="w-full text-[12px] bg-transparent resize-none outline-none leading-relaxed"
@@ -467,13 +485,13 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0 
                     if (e.key === "Escape") { setNewPost(""); setAdding(false) }
                   }}
                 />
-                <div className="flex items-center gap-3 mt-2 pt-2" style={{ borderTop: `1px solid ${C.borderSoft}` }}>
+                <div className="flex items-center gap-3 mt-1.5 pt-1.5" style={{ borderTop: `1px solid ${C.borderSoft}` }}>
                   <button
                     onClick={addExample}
                     disabled={!newPost.trim()}
                     className="font-pixel text-[8px] disabled:opacity-30 transition-opacity"
                     style={{ color: tint }}>
-                    Save memory →
+                    Save memory
                   </button>
                   <button
                     onClick={() => { setNewPost(""); setAdding(false) }}
@@ -481,7 +499,6 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0 
                     style={{ color: C.textDim }}>
                     Cancel
                   </button>
-                  <span className="font-pixel text-[6px] ml-auto" style={{ color: C.textDim }}>⌘↵ to save</span>
                 </div>
               </div>
             ) : examples.length < 5 ? (

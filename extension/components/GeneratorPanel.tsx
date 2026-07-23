@@ -122,9 +122,9 @@ const TONE_CONFIG: { id: Tone; label: string; desc: string; icon: React.ReactNod
 // ─── Length config ────────────────────────────────────────────────────────────
 
 const LENGTH_CONFIG: { id: OutputLength; label: string; desc: string }[] = [
-  { id: "short",  label: "Short",  desc: "Tight. Punchy." },
-  { id: "medium", label: "Medium", desc: "Balanced."      },
-  { id: "long",   label: "Long",   desc: "Developed."     },
+  { id: "short",  label: "Short",  desc: "1 sentence"   },
+  { id: "medium", label: "Medium", desc: "2 paragraphs" },
+  { id: "long",   label: "Long",   desc: "3 paragraphs" },
 ]
 
 // ─── Placeholder map ─────────────────────────────────────────────────────────
@@ -321,39 +321,39 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
         </div>
       </div>
 
-      {/* ── Templates entry ── */}
-      <button
-        onClick={() => { setTemplatesPrefill(undefined); setTemplatesOpen(true) }}
-        className="w-full flex items-center justify-center gap-1.5 rounded-xl py-2 text-[10px] font-medium transition-colors"
-        style={{ border: `1px solid ${C.border}`, color: C.textFaint }}>
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="3" y="3" width="7" height="7" rx="1" />
-          <rect x="14" y="3" width="7" height="7" rx="1" />
-          <rect x="3" y="14" width="7" height="7" rx="1" />
-          <rect x="14" y="14" width="7" height="7" rx="1" />
-        </svg>
-        Templates
-      </button>
-
-      {/* ── Mode cards ── */}
-      <div className="grid grid-cols-3 gap-2">
+      {/* ── Mode + Templates, icon-only circular buttons in a row ── */}
+      <div className="flex items-center justify-between px-2">
         {MODE_CONFIG.map((m) => {
           const active = mode === m.id
           return (
             <button
               key={m.id}
               onClick={() => { if (mode !== m.id) { setMode(m.id); reset() } }}
-              className="flex flex-col items-start gap-1.5 rounded-xl p-3 text-left transition-all"
+              title={m.label}
+              className="flex items-center justify-center rounded-full transition-all"
               style={{
+                width: 48,
+                height: 48,
                 backgroundColor: active ? tint : C.card,
                 border: `1.5px solid ${active ? tint : C.border}`,
-                color: active ? "#000" : C.text,
+                color: active ? "#000" : C.textFaint,
               }}>
-              <span style={{ color: active ? "#000" : C.textFaint, lineHeight: 1 }}>{m.icon}</span>
-              <span className="font-semibold text-[11px]">{m.label}</span>
+              {m.icon}
             </button>
           )
         })}
+        <button
+          onClick={() => { setTemplatesPrefill(undefined); setTemplatesOpen(true) }}
+          title="Templates"
+          className="flex items-center justify-center rounded-full transition-colors"
+          style={{ width: 48, height: 48, backgroundColor: C.card, border: `1.5px solid ${C.border}`, color: C.textFaint }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="7" height="7" rx="1" />
+            <rect x="14" y="3" width="7" height="7" rx="1" />
+            <rect x="3" y="14" width="7" height="7" rx="1" />
+            <rect x="14" y="14" width="7" height="7" rx="1" />
+          </svg>
+        </button>
       </div>
 
       {/* ── Image upload ── (hidden for Groq keys — Groq has no vision support) */}
@@ -499,7 +499,7 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
               <button
                 key={l.id}
                 onClick={() => setLength(l.id)}
-                className="flex-1 flex flex-col items-center gap-0.5 py-2 transition-all"
+                className="flex-1 flex items-center justify-center py-2.5 transition-all"
                 style={{
                   backgroundColor: active ? tint + "18" : "transparent",
                   borderRight: i < LENGTH_CONFIG.length - 1 ? `1px solid ${C.border}` : undefined,
@@ -507,9 +507,6 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
                 }}>
                 <span className="text-[10px] font-semibold" style={{ color: active ? tint : C.textDim }}>
                   {l.label}
-                </span>
-                <span className="text-[8px]" style={{ color: active ? tint + "cc" : C.textFaint }}>
-                  {l.desc}
                 </span>
               </button>
             )

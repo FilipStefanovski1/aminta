@@ -7,7 +7,7 @@ export function SoftwareApplicationSchema() {
     "@type": "SoftwareApplication",
     name: "Aminta",
     description:
-      "Aminta is the AI writing sidekick that makes posting addictive. Write posts in your voice, feed your demon, stack XP, and grow your socials.",
+      "Aminta is the AI writing sidekick that makes posting on X addictive. Write posts in your voice, feed your demon, stack XP, and grow on X.",
     url: "https://amintaapp.com",
     applicationCategory: "BrowserApplication",
     operatingSystem: "Chrome",

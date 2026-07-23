@@ -10,12 +10,12 @@ import HomeTab from "~components/HomeTab"
 import LoginScreen from "~components/LoginScreen"
 import SetupGate from "~components/SetupGate"
 import VoiceProfileForm from "~components/VoiceProfileForm"
-import { FORMS, getForm, getLevel, getLevelSpan, getStageTint, getXpInLevel, getXpProgress, getNextStage } from "~lib/evolution"
+import { GhostButton, PrimaryButton } from "~components/ui"
+import { FORMS, getStageTint } from "~lib/evolution"
 import { planLabel as computePlanLabel } from "~lib/entitlements"
 import { isGroqKey, GROQ_DEFAULT, DEPRECATED_GROQ_IDS } from "~lib/ai"
 import { PROVIDERS, detectProvider } from "~lib/providers"
 import { C } from "~lib/theme"
-import { SpriteMark, XPBar } from "~components/ui"
 import { getStore, setStore, type AmintaStore } from "~lib/storage"
 import { getAuthSession, clearAuthSession, type AuthSession } from "~lib/auth"
 import { pullFromCloud, pushToCloud } from "~lib/sync"
@@ -155,6 +155,31 @@ function LevelUpModal({ data, onDismiss }: { data: LevelUpData; onDismiss: () =>
 
 // ─── Settings overlay ─────────────────────────────────────────────────────────
 
+// Center-crop to a square and downscale — avatars are shown small, and
+// chrome.storage.local has a 10MB total quota, so this keeps a full-res
+// phone photo from eating a meaningful chunk of it.
+async function cropAvatarSquare(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+    img.onload = () => {
+      const SIZE = 128
+      const side = Math.min(img.width, img.height)
+      const sx = (img.width - side) / 2
+      const sy = (img.height - side) / 2
+      const canvas = document.createElement("canvas")
+      canvas.width = SIZE
+      canvas.height = SIZE
+      const ctx = canvas.getContext("2d")!
+      ctx.drawImage(img, sx, sy, side, side, 0, 0, SIZE, SIZE)
+      URL.revokeObjectURL(url)
+      resolve(canvas.toDataURL("image/jpeg", 0.85))
+    }
+    img.onerror = reject
+    img.src = url
+  })
+}
+
 function SettingsOverlay({
   store,
   onSave,
@@ -171,8 +196,9 @@ function SettingsOverlay({
   onSignOut: () => void
 }) {
   // ── Plan ────────────────────────────────────────────────────────────────────
-  const planLabel = computePlanLabel({ plan: store.plan, subscriptionStatus: store.subscriptionStatus })
-  const planColor = planLabel === "FOUNDER" ? "#f5d060" : planLabel === "PRO" ? "#74f7b5" : C.textDim
+  const planLabel  = computePlanLabel({ plan: store.plan, subscriptionStatus: store.subscriptionStatus })
+  const planColor  = planLabel === "FOUNDER" ? "#f5d060" : planLabel === "PRO" ? "#74f7b5" : C.textDim
+  const avatarTint = getStageTint(store.xp ?? 0)
 
   // ── Sync status (written by lib/sync.ts) ────────────────────────────────────
   const [syncLine, setSyncLine] = useState<{ text: string; color: string } | null>(null)
@@ -207,14 +233,20 @@ function SettingsOverlay({
     return () => chrome.storage.local.onChanged.removeListener(listener)
   }, [])
 
-  // ── Evolution data (read-only) ───────────────────────────────────────────────
-  const xp        = store.xp ?? 0
-  const form      = getForm(xp)
-  const level     = getLevel(xp)
-  const xpInLevel = getXpInLevel(xp)
-  const levelSpan = getLevelSpan(xp)
-  const progress  = getXpProgress(xp)
-  const nextStage = getNextStage(xp)
+  // ── Avatar ──────────────────────────────────────────────────────────────────
+  const avatarInputRef = useRef<HTMLInputElement>(null)
+  const [avatarError, setAvatarError] = useState("")
+
+  const handleAvatarFile = async (file: File) => {
+    if (!file.type.startsWith("image/")) { setAvatarError("Please select an image file."); return }
+    try {
+      const dataUrl = await cropAvatarSquare(file)
+      setAvatarError("")
+      await onSave({ avatarDataUrl: dataUrl })
+    } catch {
+      setAvatarError("Couldn't load that image.")
+    }
+  }
 
   // ── AI / key state ──────────────────────────────────────────────────────────
   const [key,       setKey]       = useState(store.apiKey ?? "")
@@ -264,54 +296,65 @@ function SettingsOverlay({
           <p className={sectionLabel} style={{ color: "#666672" }}>Account</p>
 
           {session ? (
-            <div className="rounded-xl px-3 py-2" style={{ backgroundColor: C.card, border: `1px solid ${C.border}` }}>
-              <div className="flex items-center justify-between gap-2 min-w-0">
-                <p className="text-[12px] truncate leading-none" style={{ color: C.text }}>{session.email}</p>
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className="font-pixel text-[6px] px-1.5 py-0.5 rounded"
-                    style={{ backgroundColor: planColor + "1a", color: planColor, border: `1px solid ${planColor}33` }}>
-                    {planLabel}
-                  </span>
-                  <button onClick={onSignOut}
-                    className="text-[10px] transition-colors"
-                    style={{ color: "#f87171" }}
-                    onMouseEnter={e => { e.currentTarget.style.color = "#ff5c5c" }}
-                    onMouseLeave={e => { e.currentTarget.style.color = "#f87171" }}>
-                    Sign out
-                  </button>
+            <div className="rounded-xl p-3" style={{ backgroundColor: C.card, border: `1px solid ${C.border}` }}>
+              <div className="flex items-center gap-3 min-w-0">
+                {/* Avatar — tap to upload a photo (cropped/downscaled locally,
+                    stored as a data URL — device-only, no backend needed).
+                    Falls back to an initial letter, tinted to the current
+                    evolution color, when no photo has been set. */}
+                <button
+                  onClick={() => avatarInputRef.current?.click()}
+                  title="Change photo"
+                  className="shrink-0 relative rounded-full overflow-hidden group"
+                  style={{ width: 40, height: 40, border: `2px solid ${avatarTint}55` }}>
+                  {store.avatarDataUrl ? (
+                    <img src={store.avatarDataUrl} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <div
+                      className="w-full h-full flex items-center justify-center font-pixel text-[13px]"
+                      style={{ backgroundColor: avatarTint + "22", color: avatarTint }}>
+                      {session.email?.[0]?.toUpperCase() ?? "?"}
+                    </div>
+                  )}
+                  <div
+                    className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    style={{ backgroundColor: "rgba(0,0,0,0.55)" }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                    </svg>
+                  </div>
+                </button>
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) handleAvatarFile(f) }}
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <p className="text-[12px] truncate leading-none" style={{ color: C.text }}>{session.email}</p>
+                    <span className="font-pixel text-[6px] px-1.5 py-0.5 rounded shrink-0"
+                      style={{ backgroundColor: planColor + "1a", color: planColor, border: `1px solid ${planColor}33` }}>
+                      {planLabel}
+                    </span>
+                  </div>
+                  {syncLine && (
+                    <p className="text-[10px] mt-1" style={{ color: syncLine.color }}>{syncLine.text}</p>
+                  )}
                 </div>
               </div>
-              {syncLine && (
-                <p className="text-[10px] mt-1.5" style={{ color: syncLine.color }}>{syncLine.text}</p>
-              )}
+              {avatarError && <p className="font-pixel text-[7px] text-red-400 mt-2">{avatarError}</p>}
+              <button
+                onClick={onSignOut}
+                className="btn-pixel w-full mt-3 py-1.5 rounded-lg font-pixel text-[7px]"
+                style={{ backgroundColor: "#2a1616", color: "#f87171", border: "2px solid #000", boxShadow: "2px 2px 0 #000" }}>
+                Sign out
+              </button>
             </div>
           ) : (
             <p className="text-[12px] px-0.5" style={{ color: C.textFaint }}>Not signed in</p>
           )}
-        </section>
-
-        {/* ── YOUR AMINTA ── */}
-        <section className="space-y-1.5">
-          <p className={sectionLabel} style={{ color: "#666672" }}>Your Aminta</p>
-          <div className="rounded-xl px-3 py-3" style={{ backgroundColor: C.card, border: `1px solid ${C.border}` }}>
-            <div className="flex items-center gap-3">
-              {/* Static soft glow — no pulse, idle float only */}
-              <div className="sprite-float shrink-0" style={{ filter: `drop-shadow(0 0 8px ${form.color}30)` }}>
-                <SpriteMark tint={form.color} size={30} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-baseline justify-between mb-2">
-                  <p className="font-pixel text-[8px]" style={{ color: form.color }}>{form.name}</p>
-                  <p className="font-pixel text-[7px]" style={{ color: "#888896" }}>Lv. {level}</p>
-                </div>
-                <XPBar progress={progress} tint={form.color} />
-                <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                  <span className="font-pixel text-[7px]" style={{ color: "#888896" }}>{xpInLevel} / {levelSpan} XP</span>
-                  {nextStage && <span className="text-[10px]" style={{ color: "#666672" }}>· next: {nextStage.name}</span>}
-                </div>
-              </div>
-            </div>
-          </div>
         </section>
 
         {/* ── AMINTA BRAIN ── dominant card: heavier border + elevated bg ── */}
@@ -338,29 +381,31 @@ function SettingsOverlay({
                 className="input-pixel w-full rounded-lg px-3 py-2 text-[12px]"
               />
 
-              {/* Get an API Key — compact resource row, current provider highlighted */}
-              <div className="flex items-center flex-wrap gap-x-1.5 gap-y-1 mt-2">
-                <span className="text-[9px]" style={{ color: "#55555f" }}>Get a key:</span>
-                {PROVIDERS.map((p, i) => {
+              {/* Get an API Key — label on its own line so the three chips have
+                  room to sit on one row instead of wrapping one-per-line. */}
+              <p className="text-[9px] mt-2.5" style={{ color: "#55555f" }}>Get a key:</p>
+              <div className="flex items-center flex-wrap gap-1.5 mt-1">
+                {PROVIDERS.map((p) => {
                   const active = p.id === provider.id
                   return (
-                    <span key={p.id} className="flex items-center gap-1.5">
-                      <a
-                        href={p.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[9px] transition-colors"
-                        style={{ color: active ? C.mint : "#666672" }}
-                        onMouseEnter={e => { if (!active) e.currentTarget.style.color = C.mint }}
-                        onMouseLeave={e => { if (!active) e.currentTarget.style.color = "#666672" }}
-                      >
-                        {p.name}
-                      </a>
+                    <a
+                      key={p.id}
+                      href={p.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn-pixel flex items-center gap-1 rounded-md px-1.5 py-1 text-[8px]"
+                      style={{
+                        backgroundColor: active ? C.mint : "#2a2a30",
+                        border: "2px solid #000",
+                        boxShadow: "2px 2px 0 #000",
+                        color: active ? "#000" : "#ccccd2",
+                      }}
+                    >
+                      {p.name}
                       {p.free && (
-                        <span className="text-[8px]" style={{ color: active ? C.mint + "99" : "#4a4a55" }}>free</span>
+                        <span className="text-[7px]" style={{ color: active ? "#00000099" : "#8a8a92" }}>free</span>
                       )}
-                      {i < PROVIDERS.length - 1 && <span style={{ color: "#3a3a42" }}>·</span>}
-                    </span>
+                    </a>
                   )
                 })}
               </div>
@@ -393,50 +438,45 @@ function SettingsOverlay({
                   </p>
                 ) : null
               })()}
+              {error && <p className="font-pixel text-[7px] text-red-400 mt-2.5">{error}</p>}
+
+              {/* Save — inline under Model, part of the same card */}
+              {isDirty ? (
+                <PrimaryButton onClick={!saving ? save : undefined} className="mt-3 !py-2 text-[8px]" disabled={saving}>
+                  {saving ? "Saving…" : "Save Changes"}
+                </PrimaryButton>
+              ) : (
+                <button
+                  disabled
+                  className="w-full mt-3 py-2 rounded-lg font-pixel text-[8px] cursor-default"
+                  style={{
+                    backgroundColor: "transparent",
+                    color: justSaved ? C.mint : "#666672",
+                    border: `1px solid ${justSaved ? C.mint + "55" : C.border}`,
+                  }}>
+                  Saved
+                </button>
+              )}
             </div>
-          </div>
-
-          {error && <p className="font-pixel text-[7px] text-red-400 px-0.5">{error}</p>}
-
-          {/* Save — right-aligned, not full-width */}
-          <div className="flex justify-end">
-            <button
-              onClick={isDirty && !saving ? save : undefined}
-              className="py-1.5 px-4 rounded-lg font-pixel text-[8px] transition-all duration-150"
-              style={{
-                minWidth:        100,
-                backgroundColor: isDirty ? C.mint : "transparent",
-                color:           isDirty ? "#000" : justSaved ? C.mint : "#666672",
-                border:          `1px solid ${isDirty ? "transparent" : justSaved ? C.mint + "55" : C.border}`,
-                cursor:          isDirty ? "pointer" : "default",
-              }}>
-              {saving ? "Saving…" : isDirty ? "Save Changes" : "Saved"}
-            </button>
           </div>
         </section>
 
-        {/* ── ADVANCED ── */}
+        {/* ── ADVANCED ── same card treatment as Account, for consistent section weight */}
         <section className="space-y-1.5">
           <p className={sectionLabel} style={{ color: "#666672" }}>Advanced</p>
-          <button
-            onClick={() => { onClose(); onResetOnboarding() }}
-            className="flex items-center gap-2 text-[11px] transition-colors text-[#666672] hover:text-[#aaaaaa]">
-            <span>↺</span>
-            <span>Restart setup wizard</span>
-          </button>
+          <div className="rounded-xl p-3" style={{ backgroundColor: C.card, border: `1px solid ${C.border}` }}>
+            <GhostButton onClick={() => { onClose(); onResetOnboarding() }} className="!py-2 text-[8px]">
+              Restart setup wizard
+            </GhostButton>
+          </div>
         </section>
 
       </div>
 
       {/* ── Footer ── */}
-      <div className="px-4 py-2.5 flex items-center gap-3 shrink-0" style={{ borderTop: `1px solid ${C.border}` }}>
-        <span className="text-[10px] text-[#555560]">v0.1</span>
-        <span className="text-[10px] text-[#555560]">·</span>
+      <div className="px-4 py-2.5 flex items-center justify-center gap-3 shrink-0" style={{ borderTop: `1px solid ${C.border}` }}>
         <a href="https://x.com/amintaapp" target="_blank" rel="noreferrer"
           className="text-[10px] text-[#555560] hover:text-white transition-colors">X</a>
-        <span className="text-[10px] text-[#555560]">·</span>
-        <a href="https://www.linkedin.com/company/amintaapp/" target="_blank" rel="noreferrer"
-          className="text-[10px] text-[#555560] hover:text-white transition-colors">LinkedIn</a>
         <span className="text-[10px] text-[#555560]">·</span>
         <a href="https://amintaapp.com" target="_blank" rel="noreferrer"
           className="text-[10px] text-[#555560] hover:text-white transition-colors">Help</a>
@@ -657,7 +697,6 @@ function SidePanel() {
         <div className="sprite-jump" style={{ filter: "drop-shadow(0 0 12px #74f7b566)" }}>
           <DemonMascot skin={SPLASH_SKIN} size={64} />
         </div>
-        <p className="font-pixel text-[7px] text-[#74f7b5]/40 tracking-widest">AMINTA</p>
       </div>
     )
   }
@@ -702,8 +741,8 @@ function SidePanel() {
             store={store}
             animClass={animClass}
             animKey={animKey}
-            speech={speech}
             onClose={() => setCompanionOpen(false)}
+            onSave={update}
             newlyUnlockedLevel={newlyUnlockedLevel}
           />
         )}
@@ -734,7 +773,6 @@ function SidePanel() {
                 animKey={animKey}
                 speech={speech}
                 onContext={dispatch}
-                newlyUnlockedLevel={newlyUnlockedLevel}
               />
             )}
 

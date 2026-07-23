@@ -1,3 +1,5 @@
+import { useState } from "react"
+
 import { deriveMood } from "~lib/companion"
 import {
   FORMS,
@@ -21,24 +23,31 @@ const RARITY_COLOR: Record<string, string> = {
   LEGENDARY: "#f5d060",
 }
 
-const MOOD_BLURB: Record<string, string> = {
-  idle:       "Content and ready to create.",
-  pre_evolve: "Something is stirring. A change is very close.",
-  hungry:     "Waiting for today's first post. Let's write something.",
-  sleeping:   "Resting. But still here.",
-}
-
 interface Props {
   store: AmintaStore
   animClass: string
   animKey: number
-  speech: string
   onClose: () => void
+  onSave: (patch: Partial<AmintaStore>) => Promise<void>
   newlyUnlockedLevel?: number | null
 }
 
-export default function CompanionPage({ store, animClass, animKey, speech, onClose, newlyUnlockedLevel }: Props) {
+export default function CompanionPage({ store, animClass, animKey, onClose, onSave, newlyUnlockedLevel }: Props) {
   const xp          = store.xp ?? 0
+  const companionName = store.companionName?.trim() || "Aminta"
+  const [editingName, setEditingName] = useState(false)
+  const [nameDraft,   setNameDraft]   = useState(companionName)
+
+  function startEditingName() {
+    setNameDraft(companionName)
+    setEditingName(true)
+  }
+
+  async function saveName() {
+    const next = nameDraft.trim().slice(0, 20)
+    setEditingName(false)
+    if (next && next !== companionName) await onSave({ companionName: next })
+  }
   const tint        = getStageTint(xp)
   const currentForm = getForm(xp)
   const level       = getLevel(xp)
@@ -64,7 +73,7 @@ export default function CompanionPage({ store, animClass, animKey, speech, onClo
           onClick={onClose}
           className="flex items-center gap-1.5 font-pixel text-[7px] opacity-60 hover:opacity-100 transition-opacity"
           style={{ color: tint }}>
-          ← Back
+          Back
         </button>
         <span className="flex-1 font-pixel text-[8px] text-center" style={{ color: C.textDim }}>
           Aminta
@@ -81,8 +90,36 @@ export default function CompanionPage({ store, animClass, animKey, speech, onClo
           <div className="flex flex-col items-center text-center gap-3">
             <Sprite key={animKey} xp={xp} size={112} animClass={animClass} />
             <div>
-              <p className="font-pixel text-[12px]" style={{ color: tint }}>{currentForm.name}</p>
-              <p className="font-pixel text-[7px] mt-1" style={{ color: C.textDim }}>Level {level}</p>
+              {editingName ? (
+                <input
+                  autoFocus
+                  value={nameDraft}
+                  onChange={(e) => setNameDraft(e.target.value)}
+                  onBlur={saveName}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") saveName()
+                    if (e.key === "Escape") setEditingName(false)
+                  }}
+                  maxLength={20}
+                  className="bg-transparent outline-none border-b font-pixel text-[14px] text-center"
+                  style={{ color: tint, borderColor: tint }}
+                />
+              ) : (
+                <button
+                  onClick={startEditingName}
+                  className="flex items-center gap-1.5 font-pixel text-[14px] hover:opacity-80 transition-opacity"
+                  style={{ color: tint }}>
+                  {/* Balances the icon's width on the right so the name text
+                      itself lands dead-center under the sprite, not the
+                      whole name+icon group. */}
+                  <svg width="11" height="11" viewBox="0 0 24 24" style={{ visibility: "hidden" }} aria-hidden="true" />
+                  {companionName}
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity={0.6}>
+                    <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                  </svg>
+                </button>
+              )}
+              <p className="font-pixel text-[7px] mt-1.5" style={{ color: C.textDim }}>{currentForm.name} · Level {level}</p>
             </div>
             <div className="w-full">
               <XPBar progress={progress} tint={tint} />
@@ -95,16 +132,6 @@ export default function CompanionPage({ store, animClass, animKey, speech, onClo
             </div>
             <p className="text-[12px] leading-relaxed" style={{ color: C.textDim }}>
               {currentForm.blurb}
-            </p>
-          </div>
-
-          {/* ── Current Mood ── */}
-          <div className="rounded-2xl p-4" style={{ backgroundColor: C.card, border: `1px solid ${C.border}` }}>
-            <p className="font-pixel text-[7px] uppercase tracking-widest mb-2" style={{ color: C.textDim }}>
-              Current Mood
-            </p>
-            <p className="text-[12px] leading-relaxed" style={{ color: C.text }}>
-              "{speech || MOOD_BLURB[mood] || MOOD_BLURB.idle}"
             </p>
           </div>
 
