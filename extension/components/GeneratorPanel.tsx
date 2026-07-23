@@ -306,7 +306,13 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
                         "What's this about?"
 
   return (
-    <div className="space-y-4 pb-4">
+    // Overrides the --mint CSS var (used by .input-pixel:focus in style.css)
+    // to the current evolution tint, just within this panel — everything
+    // else here (mode circles, tone card, Generate button) already themes
+    // to `tint`, so the textarea focus ring was the one thing still hardcoded
+    // to mint regardless of level/color. Scoped locally so Settings/Train/
+    // Templates keep the real mint default.
+    <div className="space-y-4 pb-4" style={{ "--mint": tint } as React.CSSProperties}>
 
       {/* ── Header ── */}
       <div className="flex items-start justify-between gap-2 pt-1">

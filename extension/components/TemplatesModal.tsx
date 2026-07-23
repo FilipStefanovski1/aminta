@@ -15,6 +15,7 @@ import {
   type RunTemplateContext,
 } from "~lib/templates"
 import { insertText } from "~lib/messaging"
+import { getStageTint } from "~lib/evolution"
 import type { AmintaStore, AmintaTemplate, TemplateMode, TemplateVariable } from "~lib/storage"
 import { C } from "~lib/theme"
 
@@ -49,6 +50,11 @@ function badge(text: string, color: string) {
 }
 
 export default function TemplatesModal({ store, onClose, onChanged, getRunContext, initialView = "list", prefill }: Props) {
+  // Matches the rest of the app's evolution-tint theming (GeneratorPanel's
+  // mode circles/tone card/Generate button, Settings' avatar/active
+  // provider chip) instead of a hardcoded mint that ignores the user's
+  // actual level color.
+  const tint = getStageTint(store.xp ?? 0)
   const [view, setView] = useState<View>(prefill ? "editor" : initialView)
   const [editing, setEditing] = useState<AmintaTemplate | null>(null)
   const [usingTemplate, setUsingTemplate] = useState<AmintaTemplate | null>(null)
@@ -183,6 +189,7 @@ export default function TemplatesModal({ store, onClose, onChanged, getRunContex
 
         {view === "editor" && (
           <TemplateEditor
+            tint={tint}
             initial={editing}
             prefill={prefill}
             onCancel={() => setView("list")}
@@ -196,6 +203,7 @@ export default function TemplatesModal({ store, onClose, onChanged, getRunContex
 
         {view === "use" && usingTemplate && (
           <TemplateUseForm
+            tint={tint}
             template={usingTemplate}
             busy={busy}
             error={error}
@@ -230,7 +238,7 @@ export default function TemplatesModal({ store, onClose, onChanged, getRunContex
       {toast && (
         <div
           className="absolute left-1/2 -translate-x-1/2 bottom-6 z-50 px-4 py-2 rounded-full font-pixel text-[9px] text-black shadow-lg animate-toast-up"
-          style={{ backgroundColor: C.mint }}>
+          style={{ backgroundColor: tint }}>
           {toast}
         </div>
       )}
@@ -265,7 +273,7 @@ export default function TemplatesModal({ store, onClose, onChanged, getRunContex
     // its card in either section calls the exact same handlers below.
     return (
       <div className="space-y-5">
-        <PrimaryButton onClick={onCreate}>+ New Template</PrimaryButton>
+        <PrimaryButton onClick={onCreate} tint={tint}>+ New Template</PrimaryButton>
 
         {templates.length === 0 && (
           <p className="text-[11px] text-center py-6" style={{ color: C.textFaint }}>
@@ -331,13 +339,13 @@ export default function TemplatesModal({ store, onClose, onChanged, getRunContex
             <p className="text-[12px] font-semibold truncate" style={{ color: C.text }}>{t.name}</p>
             {t.description && <p className="text-[10px] mt-0.5" style={{ color: C.textFaint }}>{t.description}</p>}
           </div>
-          <button onClick={onToggleFavorite} className="text-[13px] shrink-0" style={{ color: t.favorite ? C.mint : C.textGhost }}>
+          <button onClick={onToggleFavorite} className="text-[13px] shrink-0" style={{ color: t.favorite ? tint : C.textGhost }}>
             {t.favorite ? "★" : "☆"}
           </button>
         </div>
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <div className="flex gap-1.5 shrink-0">
-            {badge(MODE_LABEL[t.mode], C.mint)}
+            {badge(MODE_LABEL[t.mode], tint)}
           </div>
           <div className="flex items-center gap-3 flex-wrap justify-end ml-auto">
             <button onClick={onEdit} className="text-[10px]" style={{ color: C.textFaint }}>Edit</button>
@@ -346,7 +354,7 @@ export default function TemplatesModal({ store, onClose, onChanged, getRunContex
               onClick={onUseTemplate}
               disabled={inserting}
               className="btn-pixel px-3 py-1.5 rounded-lg font-pixel text-[8px] text-black disabled:opacity-60 disabled:cursor-wait transition-opacity shrink-0"
-              style={{ backgroundColor: C.mint }}>
+              style={{ backgroundColor: tint }}>
               {inserting ? "Inserting…" : "Use Template"}
             </button>
           </div>
@@ -359,11 +367,13 @@ export default function TemplatesModal({ store, onClose, onChanged, getRunContex
 // ─── Editor ─────────────────────────────────────────────────────────────
 
 function TemplateEditor({
+  tint,
   initial,
   prefill,
   onCancel,
   onSaved,
 }: {
+  tint: string
   initial: AmintaTemplate | null
   prefill?: { content: string; mode: TemplateMode }
   onCancel: () => void
@@ -461,9 +471,9 @@ function TemplateEditor({
                 onClick={() => setMode(m)}
                 className="rounded-xl py-2.5 text-[10px] font-semibold transition-all"
                 style={{
-                  backgroundColor: active ? C.mint + "18" : C.card,
-                  border: `1.5px solid ${active ? C.mint : C.border}`,
-                  color: active ? C.mint : C.textDim,
+                  backgroundColor: active ? tint + "18" : C.card,
+                  border: `1.5px solid ${active ? tint : C.border}`,
+                  color: active ? tint : C.textDim,
                 }}>
                 {MODE_LABEL[m]}
               </button>
@@ -483,7 +493,7 @@ function TemplateEditor({
             {mode === "generate" ? "Instruction" : "Content"}
           </p>
           {supportsVariables && (
-            <button onClick={convertSelection} className="text-[10px]" style={{ color: C.mint }}>
+            <button onClick={convertSelection} className="text-[10px]" style={{ color: tint }}>
               Convert selection → variable
             </button>
           )}
@@ -550,7 +560,7 @@ function TemplateEditor({
 
       <div className="flex gap-2 pt-1">
         <GhostButton onClick={onCancel} className="flex-1">Cancel</GhostButton>
-        <PrimaryButton onClick={save} className="flex-1">Save</PrimaryButton>
+        <PrimaryButton onClick={save} tint={tint} className="flex-1">Save</PrimaryButton>
       </div>
     </div>
   )
@@ -559,12 +569,14 @@ function TemplateEditor({
 // ─── Use flow (variable input, or a simple confirm for no-variable templates) ─
 
 function TemplateUseForm({
+  tint,
   template,
   busy,
   error,
   onCancel,
   onSubmit,
 }: {
+  tint: string
   template: AmintaTemplate
   busy: boolean
   error: string
@@ -608,7 +620,7 @@ function TemplateUseForm({
 
       <div className="flex gap-2 pt-1">
         <GhostButton onClick={onCancel} className="flex-1">Cancel</GhostButton>
-        <PrimaryButton onClick={() => onSubmit(values)} disabled={busy} className="flex-1">
+        <PrimaryButton onClick={() => onSubmit(values)} disabled={busy} tint={tint} className="flex-1">
           {busy ? "…" : template.mode === "generate" ? "Generate" : "Use template"}
         </PrimaryButton>
       </div>

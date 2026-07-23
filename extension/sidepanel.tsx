@@ -381,11 +381,19 @@ function SettingsOverlay({
                 className="input-pixel w-full rounded-lg px-3 py-2 text-[12px]"
               />
 
-              {/* Get an API Key — label on its own line so the three chips have
-                  room to sit on one row instead of wrapping one-per-line. */}
+              {/* Get an API Key — label on its own line so the chips have room
+                  to sit on one row instead of wrapping one-per-line. Display
+                  order is Groq/OpenRouter/Google (short chips first) rather
+                  than PROVIDERS' own order — that array's order is load-
+                  bearing for detectProvider()'s catch-all match and must not
+                  change, but nothing stops the two short labels (Groq,
+                  OpenRouter) from sitting adjacent here so they read left to
+                  right on the first row, with the longer "Google AI Studio"
+                  wrapping to its own line below instead of splitting them. */}
               <p className="text-[9px] mt-2.5" style={{ color: "#55555f" }}>Get a key:</p>
               <div className="flex items-center flex-wrap gap-1.5 mt-1">
-                {PROVIDERS.map((p) => {
+                {(["groq", "openrouter", "google"] as const).map((id) => {
+                  const p = PROVIDERS.find((x) => x.id === id)!
                   const active = p.id === provider.id
                   return (
                     <a
@@ -395,7 +403,7 @@ function SettingsOverlay({
                       rel="noopener noreferrer"
                       className="btn-pixel flex items-center gap-1 rounded-md px-1.5 py-1 text-[8px]"
                       style={{
-                        backgroundColor: active ? C.mint : "#2a2a30",
+                        backgroundColor: active ? avatarTint : "#2a2a30",
                         border: "2px solid #000",
                         boxShadow: "2px 2px 0 #000",
                         color: active ? "#000" : "#ccccd2",
@@ -442,7 +450,7 @@ function SettingsOverlay({
 
               {/* Save — inline under Model, part of the same card */}
               {isDirty ? (
-                <PrimaryButton onClick={!saving ? save : undefined} className="mt-3 !py-2 text-[8px]" disabled={saving}>
+                <PrimaryButton onClick={!saving ? save : undefined} tint={avatarTint} className="mt-3 !py-2 text-[8px]" disabled={saving}>
                   {saving ? "Saving…" : "Save Changes"}
                 </PrimaryButton>
               ) : (
@@ -451,8 +459,8 @@ function SettingsOverlay({
                   className="w-full mt-3 py-2 rounded-lg font-pixel text-[8px] cursor-default"
                   style={{
                     backgroundColor: "transparent",
-                    color: justSaved ? C.mint : "#666672",
-                    border: `1px solid ${justSaved ? C.mint + "55" : C.border}`,
+                    color: justSaved ? avatarTint : "#666672",
+                    border: `1px solid ${justSaved ? avatarTint + "55" : C.border}`,
                   }}>
                   Saved
                 </button>

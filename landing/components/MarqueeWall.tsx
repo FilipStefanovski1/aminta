@@ -221,9 +221,11 @@ export default function MarqueeWall() {
           </h2>
         </div>
 
-        {/* Mobile: single static column, normal document flow, no animation */}
-        <div className="mt-6 flex flex-col gap-3.5 sm:hidden">
-          {CARDS.map((card) => <Card key={card.id} card={card} />)}
+        {/* Mobile: single column, same subtle auto-scroll as tablet/desktop —
+            was a static list before, which read as dead/broken next to the
+            animated wall on every wider breakpoint. */}
+        <div className="mt-6 sm:hidden">
+          <MarqueeColumn cards={CARDS} direction="up" active={inView} />
         </div>
 
         {/* Tablet: 2 columns, subtle opposite-direction scroll */}
