@@ -42,3 +42,16 @@ export function planLabel(user: UserSubscriptionState): "FREE" | "PRO" | "FOUNDE
   if (plan === "pro" && hasProAccess(user)) return "PRO"
   return "FREE"
 }
+
+// Whether this user should get Included AI (Aminta's own backend-held
+// provider key) instead of needing to BYOK. `aiIncludedOverride` is the
+// mechanism for "Gifted" access — plan stays 'free' (so the
+// users_plan_requires_paid_via CHECK constraint is never touched by a
+// non-purchase), the override just adds the entitlement on top. This is the
+// ONLY place that should compute this — app/api/generate/route.ts imports
+// it rather than re-deriving hasProAccess()+override inline.
+export function aiIncluded(
+  user: UserSubscriptionState & { ai_included_override?: boolean | null }
+): boolean {
+  return hasProAccess(user) || !!user.ai_included_override
+}

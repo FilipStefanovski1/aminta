@@ -74,9 +74,20 @@ export async function callGemini(
       )
     }
     if (res.status === 429) {
-      throw new Error(
-        `Rate limited (429). ${detail || "Free tier limit. Wait ~30s and retry, or switch model in Settings."}`
-      )
+      // Google's raw quota error is a wall of repeated metric/URL text —
+      // pull out just what's actionable instead of dumping it verbatim.
+      // "limit: 0" specifically means this Google Cloud project has no
+      // free-tier quota granted at all (a billing/project setup issue on
+      // Google's side, not a normal "you posted too fast" rate limit).
+      const retryMatch = detail.match(/retry in ([\d.]+)s/i)
+      const retrySeconds = retryMatch ? Math.ceil(parseFloat(retryMatch[1])) : null
+      const zeroQuota = /limit:\s*0\b/i.test(detail)
+      const hint = zeroQuota
+        ? "Your Google AI Studio project has no free-tier quota for this model. Check aistudio.google.com/apikey (billing/quota), or switch to a different model or provider in Settings."
+        : retrySeconds
+          ? `Free tier limit hit. Retry in ~${retrySeconds}s, or switch model in Settings.`
+          : "Free tier limit hit. Wait ~30s and retry, or switch model in Settings."
+      throw new Error(`Rate limited (429). ${hint}`)
     }
     throw new Error(`Gemini error ${res.status}. ${detail}`.trim())
   }

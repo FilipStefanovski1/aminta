@@ -5,6 +5,10 @@ import type { Platform } from "~lib/prompts"
 export interface BridgeResponse {
   ok: boolean
   text?: string
+  // Media images (pbs.twimg.com/media/...) attached to the same post as
+  // `text`, deduped/normalized/capped at 4 by lib/tweetMedia.ts. Only
+  // populated by GET_ACTIVE_TWEET — undefined for other message types.
+  imageUrls?: string[]
   error?: string
 }
 

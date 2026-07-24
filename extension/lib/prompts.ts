@@ -115,7 +115,12 @@ export function buildMessages(
   styleProfile: StyleProfile | null = null,
   tone: Tone = "direct",
   length: OutputLength = "medium",
-  templateInstruction?: string
+  templateInstruction?: string,
+  // Reply mode only. When true, the tweet has one or more images attached
+  // (sent alongside this call as vision parts — see lib/ai.ts's
+  // generateFromImage) and the prompt below is written for that combined
+  // input instead of assuming `input` is the whole post.
+  hasImages?: boolean
 ): ChatMessage[] {
   const toneNote = `\nTONE DIRECTION: ${TONE_GUIDE[tone]}\n${LENGTH_GUIDE[length]}`
   const trimmed = input.trim()
@@ -125,7 +130,9 @@ export function buildMessages(
   if (mode === "tweet") {
     user = `Write ONE original X post about this topic:\n"""${trimmed}"""`
   } else if (mode === "reply") {
-    user = `Someone posted this on X:\n"""${trimmed}"""\nWrite ONE short, engaging reply in my voice. Pick ONE specific detail, number, or claim from their post and react to it directly — agree, push back, add a fact, or riff on it with wit. Do not write a generic compliment that just restates their post back to them.`
+    user = hasImages
+      ? `Someone posted this on X. Their post includes one or more images attached below, alongside this caption:\n"""${trimmed || "(no caption text)"}"""\nLook at the images first — they may carry more of the actual meaning than the caption does (a meme, a screenshot, a chart, a location, a visual joke, a flex post). Understand what the image(s) and caption say TOGETHER, then write ONE short, engaging reply in my voice that reacts to that combined meaning — agree, push back, riff on it, or add something specific. Do not just describe what's in the image. Return only the reply text.`
+      : `Someone posted this on X:\n"""${trimmed}"""\nWrite ONE short, engaging reply in my voice. Pick ONE specific detail, number, or claim from their post and react to it directly — agree, push back, add a fact, or riff on it with wit. Do not write a generic compliment that just restates their post back to them.`
   } else {
     user = `Here is my rough draft for an X post:\n"""${trimmed}"""\nRewrite it to be cleaner, punchier and more readable. PRESERVE my meaning and voice. Do not add new ideas.`
   }

@@ -363,11 +363,54 @@ function SettingsOverlay({
 
           <div className="rounded-xl overflow-hidden" style={{ backgroundColor: "#262628", border: "1px solid #404048" }}>
 
+            {/* AI Provider — only shown to accounts the backend actually
+                entitles (store.aiIncluded, synced from the server's
+                aiIncluded() — see lib/sync.ts). Free/BYOK-only users never
+                see this; there's nothing to choose. Writes providerMode
+                directly via onSave (same immediate-persist pattern as the
+                avatar upload above), which lib/entitlements.ts's
+                shouldUseIncludedAi() already reads everywhere generation is
+                dispatched — no other wiring needed for this to take effect. */}
+            {store.aiIncluded && (
+              <div className="px-3.5 pt-3.5 pb-3" style={{ borderBottom: `1px solid ${C.borderSoft}` }}>
+                <label className="text-[9px] uppercase tracking-[0.06em] block mb-1.5" style={{ color: "#888896" }}>
+                  AI Provider
+                </label>
+                <div className="flex rounded-lg overflow-hidden" style={{ border: `1.5px solid ${C.border}` }}>
+                  <button
+                    onClick={() => onSave({ providerMode: "included" })}
+                    className="flex-1 py-2 font-pixel text-[8px] transition-colors"
+                    style={{
+                      backgroundColor: store.providerMode !== "byok" ? avatarTint : "transparent",
+                      color: store.providerMode !== "byok" ? "#000" : "#888896",
+                    }}>
+                    Included
+                  </button>
+                  <button
+                    onClick={() => onSave({ providerMode: "byok" })}
+                    className="flex-1 py-2 font-pixel text-[8px] transition-colors"
+                    style={{
+                      backgroundColor: store.providerMode === "byok" ? avatarTint : "transparent",
+                      color: store.providerMode === "byok" ? "#000" : "#888896",
+                    }}>
+                    My API Key
+                  </button>
+                </div>
+                <p className="text-[10px] mt-1.5 leading-snug" style={{ color: "#666672" }}>
+                  {store.providerMode === "byok"
+                    ? "Using your own API key below."
+                    : "Included in your plan — no API key needed."}
+                </p>
+              </div>
+            )}
+
             {/* API Key */}
             <div className="px-3.5 pt-3.5 pb-3">
               <div className="flex items-center justify-between mb-1.5">
                 <label className="text-[9px] uppercase tracking-[0.06em]" style={{ color: "#888896" }}>
-                  API Key
+                  API Key {store.aiIncluded && store.providerMode !== "byok" && (
+                    <span className="normal-case" style={{ color: "#55555f" }}>(optional)</span>
+                  )}
                 </label>
                 <span className="text-[9px]" style={{ color: "#888896" }}>
                   <span style={{ color: provider.dot }}>●</span>{" "}{provider.name}

@@ -51,7 +51,7 @@ const LINK_CLASS =
 
 export default function Footer() {
   return (
-    <footer className="relative mb-3 sm:mb-4 overflow-hidden rounded-b-2xl border border-line bg-black">
+    <footer className="relative overflow-hidden border border-line bg-black">
       <div className="relative z-10 mx-auto max-w-7xl px-6 pt-10 sm:pt-12 md:pt-14">
         <div className="grid grid-cols-1 sm:grid-cols-3 items-center gap-6 sm:gap-4">
           {/* left: socials */}

@@ -42,6 +42,7 @@
     "host_permissions": [
       "https://x.com/*",
       "https://twitter.com/*",
+      "https://pbs.twimg.com/*",
       "https://openrouter.ai/*",
       "https://api.groq.com/*",
       "https://generativelanguage.googleapis.com/*",

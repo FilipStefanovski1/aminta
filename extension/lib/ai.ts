@@ -57,15 +57,20 @@ export function generate(
   return callOpenRouter(apiKey, model, messages)
 }
 
-// Generate from an image — injects the image into the last user message as a vision part.
+// Generate from one or more images — injects them into the last user
+// message as vision parts, all images first then the caption text (so a
+// multi-image reply sees every photo before the text framing them).
 export function generateFromImage(
   apiKey: string,
   model: string,
   messages: ChatMessage[],
-  imageDataUrl: string
+  imageDataUrls: string[]
 ): Promise<string> {
   if (isGroqKey(apiKey)) {
     throw new Error("Vision isn't supported with Groq keys. Switch to a Gemini or OpenRouter key in Settings.")
+  }
+  if (imageDataUrls.length === 0) {
+    throw new Error("No images to send.")
   }
 
   const visionMessages: ChatMessage[] = messages.map((m, i) => {
@@ -74,7 +79,10 @@ export function generateFromImage(
       return {
         ...m,
         content: [
-          { type: "image_url" as const, image_url: { url: imageDataUrl, detail: "low" as const } },
+          ...imageDataUrls.map((url) => ({
+            type: "image_url" as const,
+            image_url: { url, detail: "low" as const },
+          })),
           { type: "text" as const, text },
         ],
       }

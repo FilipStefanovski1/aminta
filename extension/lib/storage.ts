@@ -143,6 +143,20 @@ export interface AmintaStore {
   // lib/sync.ts). Used together with `plan` by lib/entitlements.ts; never
   // set locally, always trusted from the cloud like `plan` itself.
   subscriptionStatus: string | null
+  // Canonical "does this account get Included AI" flag, pulled verbatim from
+  // the backend's aiIncluded() (see lib/sync.ts) — NOT derived locally from
+  // `plan`/`subscriptionStatus`. This is what makes gifted access
+  // (plan='free' + ai_included_override=true server-side) actually route to
+  // Included AI: storeHasProAccess(store) alone can never see that override,
+  // since it only exists in the users table, never synced into `plan`
+  // itself. Always trust the cloud, like `plan`/`subscriptionStatus`.
+  aiIncluded: boolean
+  // Local UI preference, device-scoped (see DEVICE_SCOPED_KEYS below) — lets
+  // an aiIncluded user opt back into BYOK once that toggle ships, without
+  // touching dispatch logic again. No settings UI writes this yet; every
+  // aiIncluded user defaults to "included". See lib/entitlements.ts's
+  // shouldUseIncludedAi().
+  providerMode: "included" | "byok"
   pendingXP: PendingXPRecord[]
 }
 
@@ -175,6 +189,8 @@ const DEFAULTS: AmintaStore = {
   missionPublished: 0,
   plan: "free",
   subscriptionStatus: null,
+  aiIncluded: false,
+  providerMode: "included",
   pendingXP: [],
 }
 
@@ -194,7 +210,7 @@ export async function setStore(patch: Partial<AmintaStore>): Promise<void> {
 // purely a local nicety) — device-scoped so they survive
 // clearAccountScopedState() on sign-out instead of silently vanishing with
 // nothing to restore them from.
-const DEVICE_SCOPED_KEYS = new Set<keyof AmintaStore>(["apiKey", "model", "companionName", "avatarDataUrl"])
+const DEVICE_SCOPED_KEYS = new Set<keyof AmintaStore>(["apiKey", "model", "companionName", "avatarDataUrl", "providerMode"])
 
 export const ACCOUNT_SCOPED_KEYS = (Object.keys(DEFAULTS) as (keyof AmintaStore)[])
   .filter((k) => !DEVICE_SCOPED_KEYS.has(k))

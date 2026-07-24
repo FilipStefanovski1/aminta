@@ -179,6 +179,7 @@ export async function pullFromCloud(): Promise<{ cloudXp: number } | void> {
     streak_date?: string
     plan?: AmintaStore["plan"]
     subscription_status?: string | null
+    ai_included?: boolean
     voice_profile?: AmintaStore["voice"]
     style_profile?: AmintaStore["styleProfile"]
     style_profile_hash?: string
@@ -232,6 +233,10 @@ export async function pullFromCloud(): Promise<{ cloudXp: number } | void> {
   // below which only overwrite local when the cloud value is truthy.
   if (data.plan) patch.plan = data.plan
   if ("subscription_status" in data) patch.subscriptionStatus = data.subscription_status ?? null
+  // aiIncluded is the canonical Included-AI entitlement (plan/override
+  // resolved server-side via lib/entitlements.ts's aiIncluded()) — always
+  // trust the cloud here too, same reasoning as plan/subscription_status.
+  if ("ai_included" in data) patch.aiIncluded = !!data.ai_included
 
   // Only overwrite these if cloud has them and local doesn't
   if (!local.voice && data.voice_profile)      patch.voice = data.voice_profile

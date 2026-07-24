@@ -1,13 +1,16 @@
 import { useRef, useState } from "react"
 
 import { generate as runAI, generateFromImage, isGroqKey } from "~lib/ai"
+import { backendGenerate, dispatchGenerate } from "~lib/backendGenerate"
 import type { CompanionEvent } from "~lib/companion"
 import { todayLocal } from "~lib/dates"
 import { getStageTint } from "~lib/evolution"
-import { hasProAccess } from "~lib/entitlements"
+import { shouldUseIncludedAi } from "~lib/entitlements"
+import { fetchImageAsDataUrl } from "~lib/images"
 import { readActivePost } from "~lib/messaging"
 import { incrementMissionGenerates } from "~lib/missions"
-import { buildMessages, type Mode, type OutputLength, type Platform, type Tone } from "~lib/prompts"
+import type { Mode, OutputLength, Platform, Tone } from "~lib/prompts"
+import { generateReply } from "~lib/replyGeneration"
 import { getOrBuildStyleProfile } from "~lib/styleProfile"
 import type { AmintaStore, TemplateMode } from "~lib/storage"
 import type { RunTemplateContext } from "~lib/templates"
@@ -208,6 +211,11 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
   const [imageDataUrl, setImageDataUrl] = useState<string | null>(null)
   const [outputImage, setOutputImage]   = useState<string | null>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
+  // Images pulled from the post being replied to (distinct from
+  // `imageDataUrl`, which is a user-uploaded photo for tweet mode) — see
+  // pull() and lib/replyGeneration.ts.
+  const [postImageUrls, setPostImageUrls]   = useState<string[]>([])
+  const [analyzingImage, setAnalyzingImage] = useState(false)
 
   const [templatesOpen, setTemplatesOpen] = useState(false)
   const [templatesPrefill, setTemplatesPrefill] = useState<{ content: string; mode: TemplateMode } | undefined>(undefined)
@@ -216,7 +224,17 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
   const tint = getStageTint(xp)
 
   const FREE_DAILY_LIMIT = 5
-  const isFree = !hasProAccess({ plan: store.plan, subscriptionStatus: store.subscriptionStatus })
+  // aiIncluded, not hasProAccess() — hasProAccess() only knows plan==='pro'/
+  // 'lifetime', so a gifted user (plan stays 'free', entitled via
+  // ai_included_override) would otherwise get capped at the free daily
+  // limit and never reach the 60/day Included AI quota the backend already
+  // grants them. aiIncluded is synced straight from the backend's own
+  // aiIncluded() and correctly covers pro/lifetime/gifted alike (see
+  // lib/entitlements.ts's shouldUseIncludedAi header comment). Deliberately
+  // NOT shouldUseIncludedAi(store) — this is the plan-level "unlimited
+  // generations" perk, which should still apply even if the user has
+  // switched providerMode to BYOK.
+  const isFree = !store.aiIncluded
   const todayGenerations = store.missionDate === todayLocal() ? (store.missionGenerates ?? 0) : 0
   const atFreeLimit = isFree && todayGenerations >= FREE_DAILY_LIMIT
 
@@ -225,8 +243,12 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
   const pull = async () => {
     setError("")
     const res = await readActivePost(PLATFORM)
-    if (res.ok && res.text) setTopic(res.text)
-    else setError(res.error ?? "Couldn't read the post.")
+    if (res.ok) {
+      if (res.text) setTopic(res.text)
+      setPostImageUrls(res.imageUrls ?? [])
+    } else {
+      setError(res.error ?? "Couldn't read the post.")
+    }
   }
 
   const handleImageFile = async (file: File) => {
@@ -272,19 +294,63 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
   const generate = async () => {
     reset()
     if (!navigator.onLine) { setError("You're offline. Check your connection and try again."); return }
-    if (!store.apiKey) { setError("Add your AI key in Settings first."); return }
+    if (!store.apiKey && !shouldUseIncludedAi(store)) { setError("Add your AI key in Settings first."); return }
     if (!store.voice)  { setError("Teach Aminta your voice first. Go to Teach."); return }
     const combined = topic.trim() + (context.trim() ? `\n\nAdditional context: ${context.trim()}` : "")
-    if (!combined && !imageDataUrl) { setError("Give Aminta something to work with."); return }
+    const hasPostImages = mode === "reply" && postImageUrls.length > 0
+    if (!combined && !imageDataUrl && !hasPostImages) { setError("Give Aminta something to work with."); return }
     setLoading(true)
     onContext?.("generate_start")
     try {
-      const topicInput = combined || "Write a post about this image."
       const styleProfile = await getOrBuildStyleProfile(store)
-      const messages = buildMessages(PLATFORM, mode, store.voice, topicInput, styleProfile, tone, length)
-      const text = imageDataUrl
-        ? await generateFromImage(store.apiKey, store.model, messages, imageDataUrl)
-        : await runAI(store.apiKey, store.model, messages)
+
+      // Reply to a post with attached images — routes through the
+      // image-aware orchestrator (lib/replyGeneration.ts), which decides
+      // whether the provider supports vision, fetches/converts the images,
+      // and falls back to a normal text-only reply on any failure. The
+      // generateText/generateFromImages deps below ignore the pre-built
+      // `messages` array replyGeneration.ts passes them and instead close
+      // over the structured fields already in scope here — for Included-AI
+      // users that means the backend rebuilds the prompt itself server-side
+      // (never trusting a client-built prompt string) rather than being
+      // handed replyGeneration.ts's local buildMessages() output.
+      if (hasPostImages) {
+        setAnalyzingImage(true)
+        const result = await generateReply(
+          store.apiKey, store.model, store.voice, combined, postImageUrls,
+          styleProfile, tone, length,
+          {
+            isGroqKey,
+            fetchImageAsDataUrl,
+            generateText: (apiKey, model, messages) =>
+              shouldUseIncludedAi(store)
+                ? backendGenerate({ generationMode: "reply", input: combined, voice: store.voice!, styleProfile, tone, length })
+                : runAI(apiKey, model, messages),
+            generateFromImages: (apiKey, model, messages, images) =>
+              shouldUseIncludedAi(store)
+                ? backendGenerate({ generationMode: "reply", input: combined, voice: store.voice!, styleProfile, tone, length, images, hasImages: true })
+                : generateFromImage(apiKey, model, messages, images),
+          }
+        )
+        setOutput(result.text)
+        setOutputImage(null)
+        setGenKey(k => k + 1)
+        await incrementGenerations()
+        await incrementMissionGenerates()
+        onContext?.("generate_end")
+        return
+      }
+
+      const topicInput = combined || "Write a post about this image."
+      const text = await dispatchGenerate(store, {
+        generationMode: mode,
+        input: topicInput,
+        voice: store.voice,
+        styleProfile,
+        tone,
+        length,
+        images: imageDataUrl ? [imageDataUrl] : undefined,
+      })
       setOutput(text)
       setOutputImage(imageDataUrl)
       setGenKey(k => k + 1)
@@ -296,10 +362,11 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
       onContext?.("api_error")
     } finally {
       setLoading(false)
+      setAnalyzingImage(false)
     }
   }
 
-  const canGenerate = !!store.apiKey && !!store.voice && (!!topic.trim() || !!imageDataUrl) && !atFreeLimit
+  const canGenerate = (!!store.apiKey || shouldUseIncludedAi(store)) && !!store.voice && (!!topic.trim() || !!imageDataUrl || postImageUrls.length > 0) && !atFreeLimit
   const topicLabel =
     mode === "reply"  ? "Who are we replying to?" :
     mode === "polish" ? "Your draft"               :
@@ -334,7 +401,7 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
           return (
             <button
               key={m.id}
-              onClick={() => { if (mode !== m.id) { setMode(m.id); reset() } }}
+              onClick={() => { if (mode !== m.id) { setMode(m.id); reset(); setPostImageUrls([]) } }}
               title={m.label}
               className="flex items-center justify-center rounded-full transition-all"
               style={{
@@ -427,6 +494,11 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
             style={{ border: `1px solid ${C.border}`, color: C.textFaint }}>
             ↑ Pull from page
           </button>
+        )}
+        {mode === "reply" && postImageUrls.length > 0 && (
+          <p className="text-[10px] animate-fade-in" style={{ color: tint }}>
+            {postImageUrls.length} image{postImageUrls.length > 1 ? "s" : ""} found on this post — Aminta will look at {postImageUrls.length > 1 ? "them" : "it"} too.
+          </p>
         )}
       </div>
 
@@ -528,7 +600,7 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
           loading ? "cursor-wait opacity-80" : !canGenerate ? "opacity-40 cursor-not-allowed" : ""
         }`}
         style={{ backgroundColor: tint }}>
-        {loading ? (
+        {analyzingImage ? "Analyzing image…" : loading ? (
           <span className="dot-wave flex items-center justify-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-black/60" />
             <span className="w-1.5 h-1.5 rounded-full bg-black/60" />
@@ -555,14 +627,14 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
           </p>
         </div>
       )}
-      {!loading && !atFreeLimit && !store.apiKey && (
+      {!loading && !atFreeLimit && !store.apiKey && !shouldUseIncludedAi(store) && (
         <p className="text-[11px] animate-fade-in px-1" style={{ color: C.textFaint }}>
           Add your AI key in{" "}
           <button onClick={onOpenSettings} className="underline" style={{ color: C.text }}>Settings</button>
           {" "}to start generating.
         </p>
       )}
-      {!loading && !atFreeLimit && store.apiKey && !store.voice && (
+      {!loading && !atFreeLimit && (!!store.apiKey || shouldUseIncludedAi(store)) && !store.voice && (
         <p className="text-[11px] animate-fade-in px-1" style={{ color: C.textFaint }}>
           Go to{" "}
           <button onClick={onTeach} className="underline" style={{ color: C.text }}>Train</button>

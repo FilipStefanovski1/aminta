@@ -46,3 +46,31 @@ export function planLabel(user: UserSubscriptionState): "FREE" | "PRO" | "FOUNDE
 export function storeHasProAccess(store: Pick<AmintaStore, "plan" | "subscriptionStatus">): boolean {
   return hasProAccess({ plan: store.plan, subscriptionStatus: store.subscriptionStatus })
 }
+
+// THE single routing decision for "does this generate call go to Aminta's
+// backend or straight to the user's own BYOK key." Every call site that
+// dispatches a generation (backendGenerate.ts, GeneratorPanel.tsx,
+// TemplatesModal.tsx, twitter-bridge.ts, styleProfile.ts) must go through
+// this, not storeHasProAccess() or a local plan/subscriptionStatus check.
+//
+// Two reasons this is a distinct function from storeHasProAccess():
+//  1. `aiIncluded` is the canonical, backend-computed entitlement (synced
+//     via lib/sync.ts from the server's aiIncluded(), which also covers
+//     gifted access: plan='free' + ai_included_override=true). A gifted
+//     user is NOT storeHasProAccess() — that check only knows about
+//     plan==='pro'/'lifetime' — so routing on storeHasProAccess() alone
+//     silently stuck gifted users on BYOK even though the backend would
+//     authorize them.
+//  2. `providerMode` is a per-device UI toggle (Settings → AI Provider, see
+//     sidepanel.tsx's SettingsOverlay — shown only when store.aiIncluded is
+//     true; every aiIncluded user defaults to "included" until they switch
+//     it). Centralizing the check here means that toggle only ever has to
+//     set `store.providerMode`; every dispatch call site already reads
+//     through this function and needed no further changes when it shipped.
+//
+// The backend independently re-verifies entitlement on every request
+// regardless of what this returns (see app/api/generate/route.ts) — this
+// is a client-side UX routing hint only, never a security boundary.
+export function shouldUseIncludedAi(store: Pick<AmintaStore, "aiIncluded" | "providerMode">): boolean {
+  return !!store.aiIncluded && store.providerMode !== "byok"
+}

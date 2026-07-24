@@ -3,7 +3,6 @@ import { createPortal } from "react-dom"
 
 import {
   createTemplate,
-  defaultRunTemplateDeps,
   deleteTemplate,
   deleteVariableEverywhere,
   extractVariables,
@@ -13,10 +12,14 @@ import {
   toggleFavorite,
   updateTemplate,
   type RunTemplateContext,
+  type RunTemplateDeps,
 } from "~lib/templates"
+import { backendGenerate } from "~lib/backendGenerate"
+import { shouldUseIncludedAi } from "~lib/entitlements"
 import { insertText } from "~lib/messaging"
 import { getStageTint } from "~lib/evolution"
-import type { AmintaStore, AmintaTemplate, TemplateMode, TemplateVariable } from "~lib/storage"
+import { buildMessages, type Mode, type OutputLength, type Tone } from "~lib/prompts"
+import type { AmintaStore, AmintaTemplate, StyleProfile, TemplateMode, TemplateVariable, VoiceProfile } from "~lib/storage"
 import { C } from "~lib/theme"
 
 import { Card, GhostButton, PrimaryButton, SectionLabel } from "~components/ui"
@@ -39,6 +42,56 @@ interface Props {
 
 const MODE_LABEL: Record<TemplateMode, string> = { exact: "Exact", fill: "Fill", generate: "AI" }
 
+// Included-AI users route the "generate"-mode template call through the
+// backend instead of BYOK. lib/templates.ts's generateAI dep only receives
+// (apiKey, model, messages) — a pre-built prompt string, never trusted
+// server-side — so this wraps buildMessages to capture the structured
+// fields runTemplate() resolved (mode/topic/instruction/tone/length/voice/
+// styleProfile) and, when entitled, calls backendGenerate with those
+// instead of forwarding the client-built messages. BYOK keeps calling
+// generate() exactly as before — zero behavior change for that path.
+function makeRunTemplateDeps(store: AmintaStore): RunTemplateDeps {
+  let lastArgs: {
+    mode: Mode
+    voice: VoiceProfile
+    topic: string
+    styleProfile: StyleProfile | null
+    tone: Tone
+    length: OutputLength
+    instruction?: string
+  } | null = null
+
+  return {
+    buildMessages: (platform, mode, voice, topic, styleProfile, tone, length, templateInstruction, hasImages) => {
+      lastArgs = { mode, voice, topic, styleProfile, tone, length, instruction: templateInstruction }
+      return buildMessages(platform, mode, voice, topic, styleProfile, tone, length, templateInstruction, hasImages)
+    },
+    generateAI: async (apiKey, model, messages) => {
+      if (shouldUseIncludedAi(store) && lastArgs) {
+        return backendGenerate({
+          generationMode: lastArgs.mode,
+          input: lastArgs.topic,
+          voice: lastArgs.voice,
+          styleProfile: lastArgs.styleProfile,
+          tone: lastArgs.tone,
+          length: lastArgs.length,
+          templateInstruction: lastArgs.instruction,
+        })
+      }
+      const { generate } = await import("~lib/ai")
+      return generate(apiKey, model, messages)
+    },
+    incrementGenerations: async () => {
+      const { incrementGenerations } = await import("~lib/xp")
+      return incrementGenerations()
+    },
+    incrementMissionGenerates: async () => {
+      const { incrementMissionGenerates } = await import("~lib/missions")
+      return incrementMissionGenerates()
+    },
+  }
+}
+
 function badge(text: string, color: string) {
   return (
     <span
@@ -55,6 +108,7 @@ export default function TemplatesModal({ store, onClose, onChanged, getRunContex
   // provider chip) instead of a hardcoded mint that ignores the user's
   // actual level color.
   const tint = getStageTint(store.xp ?? 0)
+  const runTemplateDeps = useMemo(() => makeRunTemplateDeps(store), [store])
   const [view, setView] = useState<View>(prefill ? "editor" : initialView)
   const [editing, setEditing] = useState<AmintaTemplate | null>(null)
   const [usingTemplate, setUsingTemplate] = useState<AmintaTemplate | null>(null)
@@ -129,7 +183,7 @@ export default function TemplatesModal({ store, onClose, onChanged, getRunContex
     setInsertingId(t.id)
     try {
       const ctx = await getRunContext()
-      const result = await runTemplate(t, {}, ctx, defaultRunTemplateDeps)
+      const result = await runTemplate(t, {}, ctx, runTemplateDeps)
       if (result.ok === false) {
         if (result.missing.length > 0) {
           setUsingTemplate(t)
@@ -213,7 +267,7 @@ export default function TemplatesModal({ store, onClose, onChanged, getRunContex
               setError("")
               try {
                 const ctx = await getRunContext()
-                const result = await runTemplate(usingTemplate, values, ctx, defaultRunTemplateDeps)
+                const result = await runTemplate(usingTemplate, values, ctx, runTemplateDeps)
                 if (result.ok === false) {
                   setError(
                     result.missing.length

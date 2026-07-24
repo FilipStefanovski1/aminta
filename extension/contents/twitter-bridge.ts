@@ -1,57 +1,77 @@
 import type { PlasmoCSConfig } from "plasmo"
 
-import { generate as runAI } from "~lib/ai"
-import { buildMessages } from "~lib/prompts"
+import { dispatchGenerate } from "~lib/backendGenerate"
+import { shouldUseIncludedAi } from "~lib/entitlements"
 import { getStore } from "~lib/storage"
 import { getOrBuildStyleProfile } from "~lib/styleProfile"
+import { processTweetImageUrls } from "~lib/tweetMedia"
 
 export const config: PlasmoCSConfig = {
   matches: ["https://x.com/*", "https://twitter.com/*"]
 }
 
-// Returns the text of whichever tweet the user is actually replying to —
-// NOT just the first tweet on the page. On a thread detail page X stacks
-// the whole ancestor chain above the tweet being replied to (root post,
-// then each reply down to it), so grabbing nodes[0] always returns the
-// root post even when replying to a reply further down. Instead: find the
-// active reply composer, then walk backward through every tweetText node
-// to the closest one that appears BEFORE it in document order — X always
-// renders [ancestor tweets...] -> [tweet being replied to] -> [composer],
-// so the nearest preceding tweetText is the correct target regardless of
-// thread depth.
-function getActiveTweet(): string {
-  const nodes = Array.from(document.querySelectorAll<HTMLElement>('[data-testid="tweetText"]'))
-  if (!nodes.length) return ""
+const isDev = (() => {
+  try { return !("update_url" in chrome.runtime.getManifest()) } catch { return false }
+})()
 
-  const composer = findTextAreaWrapper()
+// Finds whichever tweetText node the user is actually replying to — NOT
+// just the first tweet on the page. On a thread detail page X stacks the
+// whole ancestor chain above the tweet being replied to (root post, then
+// each reply down to it), so grabbing nodes[0] always returns the root post
+// even when replying to a reply further down. Instead: find the active
+// reply composer, then walk backward through every tweetText node to the
+// closest one that appears BEFORE it in document order — X always renders
+// [ancestor tweets...] -> [tweet being replied to] -> [composer], so the
+// nearest preceding tweetText is the correct target regardless of thread
+// depth.
+//
+// `strict`: when true, returns null (never falls back to nodes[0]) if
+// `bar`'s composer has no preceding tweetText — that's exactly the signal
+// that this bar is a new-post composer rather than a reply. Used by the
+// inline toolbar to auto-detect reply context without misfiring on a
+// plain "what's happening" box.
+function findActiveTweetTextNode(bar?: HTMLElement, strict = false): HTMLElement | null {
+  const nodes = Array.from(document.querySelectorAll<HTMLElement>('[data-testid="tweetText"]'))
+  if (!nodes.length) return null
+
+  const composer = findTextAreaWrapper(bar)
   if (composer) {
     for (let i = nodes.length - 1; i >= 0; i--) {
       const pos = nodes[i].compareDocumentPosition(composer)
       // DOCUMENT_POSITION_FOLLOWING on `composer` relative to `nodes[i]`
       // means nodes[i] comes before composer in the document.
-      if (pos & Node.DOCUMENT_POSITION_FOLLOWING) return nodes[i].innerText.trim()
+      if (pos & Node.DOCUMENT_POSITION_FOLLOWING) return nodes[i]
     }
+  } else if (strict) {
+    return null
   }
 
-  return nodes[0].innerText.trim()
+  return strict ? null : nodes[0]
 }
 
-// Bar-scoped, strict version of getActiveTweet(): returns "" (never falls
-// back to nodes[0]) when `bar`'s composer has no preceding tweetText, which
-// is exactly the signal that this bar is a new-post composer rather than a
-// reply. Used by the inline toolbar to auto-detect reply context.
+function getActiveTweet(): string {
+  return findActiveTweetTextNode()?.innerText.trim() ?? ""
+}
+
 function getReplyTargetText(bar: HTMLElement): string {
-  const nodes = Array.from(document.querySelectorAll<HTMLElement>('[data-testid="tweetText"]'))
-  if (!nodes.length) return ""
+  return findActiveTweetTextNode(bar, true)?.innerText.trim() ?? ""
+}
 
-  const composer = findTextAreaWrapper(bar)
-  if (!composer) return ""
+// Images attached to the same tweet as the matched tweetText node — scoped
+// to that tweet's <article> so avatars, surrounding posts, and (for a
+// reply-with-quote-tweet) anything outside this specific post never leak
+// in. A quote-tweet embedded INSIDE this article is treated as part of
+// this post's own content, not a "surrounding" post, since it's genuinely
+// part of what's being replied to.
+function extractTweetImages(textNode: HTMLElement | null): string[] {
+  const article = textNode?.closest("article")
+  if (!article) return []
+  const srcs = Array.from(article.querySelectorAll<HTMLImageElement>("img[src]")).map((img) => img.src)
+  return processTweetImageUrls(srcs)
+}
 
-  for (let i = nodes.length - 1; i >= 0; i--) {
-    const pos = nodes[i].compareDocumentPosition(composer)
-    if (pos & Node.DOCUMENT_POSITION_FOLLOWING) return nodes[i].innerText.trim()
-  }
-  return ""
+function getActiveTweetImages(): string[] {
+  return extractTweetImages(findActiveTweetTextNode())
 }
 
 async function insertImageIntoComposer(dataUrl: string): Promise<boolean> {
@@ -217,7 +237,7 @@ function setBarStatus(bar: HTMLElement, msg: string, isError = false) {
 
 async function runGenerate(bar: HTMLElement, mode: "tweet" | "polish", prefill?: string) {
   const store = await getStore()
-  if (!store.apiKey) { setBarStatus(bar, "No API key. Open Aminta Settings", true); return }
+  if (!store.apiKey && !shouldUseIncludedAi(store)) { setBarStatus(bar, "No API key. Open Aminta Settings", true); return }
   if (!store.voice)  { setBarStatus(bar, "Train Aminta first", true); return }
 
   const composerText = getComposerText(bar)
@@ -246,14 +266,14 @@ async function runGenerate(bar: HTMLElement, mode: "tweet" | "polish", prefill?:
 
   try {
     const styleProfile = await getOrBuildStyleProfile(store)
-    const messages = buildMessages(
-      "x",
-      promptMode,
-      store.voice,
-      input || "Write a compelling tweet about my niche",
-      styleProfile
-    )
-    const text = await runAI(store.apiKey, store.model, messages)
+    const text = await dispatchGenerate(store, {
+      generationMode: promptMode,
+      input: input || "Write a compelling tweet about my niche",
+      voice: store.voice,
+      styleProfile,
+      tone: "direct",
+      length: "medium",
+    })
 
     const inserted = insertIntoComposer(text, bar)
     if (inserted) {
@@ -452,8 +472,12 @@ window.addEventListener("message", (event) => {
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg?.type === "GET_ACTIVE_TWEET") {
     const text = getActiveTweet()
-    sendResponse(text
-      ? { ok: true, text }
+    const imageUrls = getActiveTweetImages()
+    if (isDev) console.log("[Aminta] GET_ACTIVE_TWEET — detected images:", imageUrls.length)
+    // An image-only post (meme, screenshot) has no caption text but is
+    // still a valid pull — only fail when we found neither.
+    sendResponse(text || imageUrls.length > 0
+      ? { ok: true, text, imageUrls }
       : { ok: false, error: "No tweet found on screen. Scroll a tweet into view, or paste it manually." }
     )
     return true

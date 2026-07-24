@@ -58,7 +58,7 @@ export default function Navbar({ alwaysVisible = true }: { alwaysVisible?: boole
 
   return (
     <header
-      className="fixed top-0 inset-x-0 z-50 border-b-4 border-black"
+      className="fixed top-0 inset-x-0 z-50"
       style={{
         backgroundColor: bgColor,
         transition: "background-color 0.5s ease, transform 0.3s ease, opacity 0.3s ease",
