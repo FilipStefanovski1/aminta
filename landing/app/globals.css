@@ -307,14 +307,15 @@ body {
    which is what makes the loop seamless — see MarqueeWall.tsx, which
    measures the real rendered height of one group and writes it into
    --marquee-cycle so this works regardless of how tall the cards are.
-   The gap here (between the two groups, i.e. the loop's own seam) is
-   deliberately much larger than the gap between individual cards below —
-   a longer pause before a testimonial resurfaces makes the loop read as
-   "more content below" rather than "here we go again." */
+   This gap (between the two groups, i.e. the loop's own seam) must match
+   .testimonial-group's card gap exactly — a larger seam gap was tried but
+   it lands at a different scroll position in each column (columns start
+   at different rotation offsets), so it reads as random inconsistent
+   spacing between cards rather than a deliberate pause. */
 .testimonial-track {
   display: flex;
   flex-direction: column;
-  gap: 3rem;
+  gap: 1.25rem;
   will-change: transform;
 }
 
@@ -376,7 +377,11 @@ body {
 }
 
 .marquee-card:hover {
-  transform: translateY(-4px) scale(1.012);
+  /* No scale() here — .testimonial-col-window clips overflow flush against
+     the card's own width (no horizontal padding), so scaling up pushed the
+     left/right border past that clip boundary and it visibly disappeared.
+     The vertical lift alone still reads as a hover response. */
+  transform: translateY(-4px);
   border-color: color-mix(in srgb, var(--wall-accent, var(--accent)) 72%, #1f1f1f 28%);
   box-shadow:
     0 0 0 1px rgba(0, 0, 0, 0.45) inset,
