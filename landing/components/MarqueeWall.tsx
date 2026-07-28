@@ -68,6 +68,13 @@ const CARDS: WallCard[] = [
     review: "You don't need to post every day. You just need to stay visible. Aminta makes that surprisingly easy.",
     avatar: "/testimonials/samuel-naumovski.jpeg",
   },
+  {
+    id: "m1",
+    name: "Mila Vukikjevikj",
+    role: "Creator",
+    review: "I always knew what I wanted to say, just never how to say it. Aminta writes it the way I actually talk.",
+    avatar: "/testimonials/MILAX.jpg",
+  },
 ];
 
 function rotate<T>(arr: T[], offset: number): T[] {

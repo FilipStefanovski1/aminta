@@ -1,51 +1,47 @@
 import { Fragment } from "react";
 import Reveal from "./Reveal";
-import AmintaSprite from "./AmintaSprite";
+import { LearningIcon, PublishIcon, WritingIcon } from "./HowItWorksIcons";
 
 const STEPS = [
   {
-    n: "01",
-    title: "Train Aminta",
-    desc: "Teach your niche, tone, and best posts once. Everything it writes sounds like you.",
-    reward: "Voice locked in",
-    level: 1,
+    n: "1",
+    title: "Learn Your Voice",
+    desc: "Connect your X account once. Aminta studies how you write and builds a voice profile from your tone, vocabulary, and opinions.",
+    Icon: LearningIcon,
   },
   {
-    n: "02",
-    title: "Generate & post",
-    desc: "Open the side panel, write replies or posts in your voice, insert into X with one click.",
-    reward: "+50 XP per post",
-    level: 3,
+    n: "2",
+    title: "Write Like You",
+    desc: "Generate tweets, replies, and threads that sound like you, not generic AI. Every suggestion matches your writing style.",
+    Icon: WritingIcon,
   },
   {
-    n: "03",
-    title: "Feed & evolve",
-    desc: "Publishing earns XP, keeps your streak alive, and levels up your demon.",
-    reward: "Streak secured",
-    level: 5,
+    n: "3",
+    title: "Publish Faster",
+    desc: "Make small edits if you want, then publish straight to X. Spend less time writing and more time growing your audience.",
+    Icon: PublishIcon,
   },
 ];
 
 function StepCard({ step, index }: { step: (typeof STEPS)[0]; index: number }) {
+  const { Icon } = step;
   return (
     <Reveal delay={index * 120} className="h-full">
-      <div className="flex flex-col h-full px-6 py-8 border border-line/50 bg-panel/40 hover:border-accent/30 hover:bg-panel/60 transition-colors duration-300">
-        <span className="font-pixel text-[9px] text-accent/40 tracking-widest">{step.n}</span>
+      <div className="how-card group flex h-full flex-col items-center px-8 py-10 text-center">
+        <span className="how-badge flex items-center justify-center self-start">
+          <span className="font-pixel text-[11px] text-accent">{step.n}</span>
+        </span>
 
-        <div className="mt-6 flex justify-center">
-          <AmintaSprite level={step.level} interactive={false} size={56} />
+        <div className="mt-6 flex h-[90px] items-center justify-center">
+          <Icon className="how-icon-float h-[90px] w-[90px] text-accent" />
         </div>
 
-        <h3 className="mt-6 font-pixel text-[13px] text-white text-center leading-snug">
+        <h3 className="mt-6 font-pixel text-[13px] leading-snug text-accent sm:text-[15px]">
           {step.title}
         </h3>
 
-        <p className="mt-3 text-sm text-muted text-center leading-relaxed flex-1">
+        <p className="mt-4 font-mono text-[15px] leading-relaxed text-[#b3b3b3] sm:text-base">
           {step.desc}
-        </p>
-
-        <p className="mt-6 font-pixel text-[9px] text-accent/60 text-center tracking-wide">
-          ◈ {step.reward}
         </p>
       </div>
     </Reveal>
@@ -54,19 +50,22 @@ function StepCard({ step, index }: { step: (typeof STEPS)[0]; index: number }) {
 
 function Connector() {
   return (
-    <div className="hidden md:flex items-center justify-center px-2 shrink-0">
-      <div className="flex gap-1.5">
-        {[0.2, 0.35, 0.5, 0.35, 0.2].map((o, i) => (
-          <div key={i} className="w-1.5 h-1.5 rounded-full bg-accent" style={{ opacity: o }} />
-        ))}
-      </div>
+    <div className="hidden lg:flex items-center justify-center px-3 shrink-0">
+      <span className="how-chevron font-pixel text-lg leading-none">&gt;</span>
     </div>
   );
 }
 
 export default function HowItWorks() {
   return (
-    <section id="how-it-works" className="py-20 md:py-28 scroll-mt-20">
+    <section id="how-it-works" className="relative py-20 md:py-28 scroll-mt-20">
+      {/* soft ambient glow behind the cards */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-[420px] w-[900px] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-40 blur-[120px]"
+        style={{ background: "var(--accent-soft)" }}
+      />
+
       <div className="mx-auto max-w-5xl px-5">
         <Reveal className="text-center max-w-xl mx-auto">
           <p className="font-pixel text-xs text-accent uppercase tracking-widest">The loop</p>
@@ -75,7 +74,7 @@ export default function HowItWorks() {
           </h2>
         </Reveal>
 
-        <div className="mt-14 grid md:grid-cols-[1fr_auto_1fr_auto_1fr] gap-4 md:gap-0 items-stretch">
+        <div className="mt-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[1fr_auto_1fr_auto_1fr] gap-6 lg:gap-0 items-stretch">
           {STEPS.map((s, i) => (
             <Fragment key={s.n}>
               <StepCard step={s} index={i} />
@@ -83,14 +82,6 @@ export default function HowItWorks() {
             </Fragment>
           ))}
         </div>
-
-        <Reveal delay={360} className="mt-10 text-center">
-          <p className="text-xs text-muted">
-            Bring your own AI key (Groq, Gemini, or OpenRouter).{" "}
-            <span className="text-white/50">Better privacy, lower cost, full control.</span>
-          </p>
-        </Reveal>
-
       </div>
     </section>
   );

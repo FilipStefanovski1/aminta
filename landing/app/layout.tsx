@@ -1,11 +1,16 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Press_Start_2P } from "next/font/google";
+import { Geist, Geist_Mono, Press_Start_2P } from "next/font/google";
 import "./globals.css";
 import CursorTrail from "@/components/CursorTrail";
 import { SoftwareApplicationSchema } from "@/components/StructuredData";
 
 const geist = Geist({
   variable: "--font-geist",
+  subsets: ["latin"],
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
   subsets: ["latin"],
 });
 
@@ -59,7 +64,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${geist.variable} ${pixel.variable} h-full antialiased`}>
+    <html lang="en" className={`${geist.variable} ${geistMono.variable} ${pixel.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col bg-ink text-[#e7e7ef]">
         <SoftwareApplicationSchema />
         <CursorTrail />
