@@ -6,6 +6,7 @@
 // real network/provider.
 import { buildMessages, type OutputLength, type Tone } from "~lib/prompts"
 import type { ChatMessage } from "~lib/ai"
+import { cleanGenerationOutput } from "~lib/textCleanup"
 import type { StyleProfile, VoiceProfile } from "~lib/storage"
 
 const isDev = (() => {
@@ -42,7 +43,7 @@ export async function generateReply(
 
   const textOnly = async (fellBackToText: boolean, imagesFetched = 0): Promise<GenerateReplyResult> => {
     const messages = buildMessages("x", "reply", voice, input, styleProfile, tone, length)
-    const text = await deps.generateText(apiKey, model, messages)
+    const text = cleanGenerationOutput(await deps.generateText(apiKey, model, messages))
     return { text, usedMultimodal: false, imagesDetected, imagesFetched, fellBackToText }
   }
 
@@ -65,7 +66,7 @@ export async function generateReply(
 
   try {
     const messages = buildMessages("x", "reply", voice, input, styleProfile, tone, length, undefined, true)
-    const text = await deps.generateFromImages(apiKey, model, messages, dataUrls)
+    const text = cleanGenerationOutput(await deps.generateFromImages(apiKey, model, messages, dataUrls))
     if (isDev) console.log("[Aminta] reply generated via multimodal path", { imagesUsed: dataUrls.length, model })
     return { text, usedMultimodal: true, imagesDetected, imagesFetched: dataUrls.length, fellBackToText: false }
   } catch (e) {

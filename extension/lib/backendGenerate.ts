@@ -10,6 +10,7 @@ import { getDeviceId } from "~lib/deviceId"
 import { shouldUseIncludedAi } from "~lib/entitlements"
 import { generate as runAI, generateFromImage } from "~lib/ai"
 import { buildMessages, type Mode, type OutputLength, type Tone } from "~lib/prompts"
+import { cleanGenerationOutput } from "~lib/textCleanup"
 import type { AmintaStore, StyleProfile, VoiceProfile } from "~lib/storage"
 
 const API_URL = "https://amintaapp.com/api/generate"
@@ -98,7 +99,14 @@ export async function backendGenerate(args: BackendGenerateArgs): Promise<string
   const requestId = crypto.randomUUID()
   const json = await postGenerate({ ...args, requestId })
   if (!json.text) throw new Error("Empty response from the server.")
-  return json.text
+  // style_profile mode returns raw JSON (parsed client-side by
+  // lib/styleProfile.ts's parseStyleProfile) — post-generation text cleanup
+  // (label/quote stripping, punctuation normalization) would corrupt it, so
+  // only apply it to actual post/reply/polish/template output. The backend
+  // already runs the same cleanup server-side (see landing/lib/ai/
+  // textCleanup.ts) before returning — this is a second, harmless pass in
+  // case the two ever drift, not the primary cleanup step.
+  return args.generationMode === "style_profile" ? json.text : cleanGenerationOutput(json.text)
 }
 
 // Dispatcher for the direct call sites in GeneratorPanel.tsx (tweet/polish,
@@ -122,7 +130,8 @@ export async function dispatchGenerate(store: AmintaStore, args: TextGenerateArg
     args.templateInstruction,
     args.hasImages
   )
-  return args.images && args.images.length > 0
-    ? generateFromImage(store.apiKey, store.model, messages, args.images)
-    : runAI(store.apiKey, store.model, messages)
+  const raw = args.images && args.images.length > 0
+    ? await generateFromImage(store.apiKey, store.model, messages, args.images)
+    : await runAI(store.apiKey, store.model, messages)
+  return cleanGenerationOutput(raw)
 }

@@ -16,6 +16,7 @@ import { buildMessages, buildStyleProfileMessages, withImages, type Mode, type O
 import { checkAndIncrementRateLimits, claimConcurrencySlot, clearInflight } from "@/lib/ai/rateLimit"
 import { loadUserEntitlement, resolveLimits, checkQuota, claimRequestId, completeUsageLog, estimateCostUsd } from "@/lib/ai/quota"
 import { validateImages, validateCorpus, hashedClientIp, isAllowedOrigin, MAX_REQUEST_BODY_BYTES } from "@/lib/ai/security"
+import { cleanGenerationOutput } from "@/lib/ai/textCleanup"
 
 export const runtime = "nodejs"
 
@@ -221,7 +222,11 @@ export async function POST(request: NextRequest) {
 
     const result = await callGemini(messages)
     const latencyMs = Date.now() - startedAt
-    const outputChars = result.text.length
+    // style_profile returns raw JSON for client-side parsing — cleanup
+    // (label/quote stripping, punctuation normalization) is only valid for
+    // actual post/reply/polish/template text.
+    const outputText = isStyleProfile ? result.text : cleanGenerationOutput(result.text)
+    const outputChars = outputText.length
     const inputChars = isStyleProfile ? 200 : (body.input?.length ?? 0)
     const cost = estimateCostUsd(inputChars, outputChars, {
       inputTokens: result.inputTokens,
@@ -232,7 +237,7 @@ export async function POST(request: NextRequest) {
     // never only the char-count estimate.
     await completeUsageLog(rowId, {
       status: "success",
-      resultText: result.text,
+      resultText: outputText,
       latencyMs,
       outputTokensEst: result.outputTokens,
       inputTokens: result.inputTokens,
@@ -243,7 +248,7 @@ export async function POST(request: NextRequest) {
     })
     await clearInflight(requestId)
 
-    return NextResponse.json({ text: result.text })
+    return NextResponse.json({ text: outputText })
   } catch (e) {
     // Detailed error goes to server logs; the client only ever sees a
     // generic message — never forward provider internals outward.

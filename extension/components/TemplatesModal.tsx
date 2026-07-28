@@ -19,6 +19,7 @@ import { shouldUseIncludedAi } from "~lib/entitlements"
 import { insertText } from "~lib/messaging"
 import { getStageTint } from "~lib/evolution"
 import { buildMessages, type Mode, type OutputLength, type Tone } from "~lib/prompts"
+import { cleanGenerationOutput } from "~lib/textCleanup"
 import type { AmintaStore, AmintaTemplate, StyleProfile, TemplateMode, TemplateVariable, VoiceProfile } from "~lib/storage"
 import { C } from "~lib/theme"
 
@@ -79,7 +80,7 @@ function makeRunTemplateDeps(store: AmintaStore): RunTemplateDeps {
         })
       }
       const { generate } = await import("~lib/ai")
-      return generate(apiKey, model, messages)
+      return cleanGenerationOutput(await generate(apiKey, model, messages))
     },
     incrementGenerations: async () => {
       const { incrementGenerations } = await import("~lib/xp")

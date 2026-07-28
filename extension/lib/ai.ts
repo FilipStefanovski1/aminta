@@ -43,6 +43,13 @@ function normalizeGroqModel(model: string): string {
   return model
 }
 
+// Deliberately returns the raw provider text, uncleaned — this function is
+// shared by post/reply/polish generation AND style-profile JSON extraction
+// (lib/styleProfile.ts's extractStyleProfile()), and text cleanup (label/
+// quote stripping, punctuation normalization) is only valid for the former.
+// Post-generation call sites (lib/backendGenerate.ts's dispatchGenerate(),
+// lib/replyGeneration.ts, TemplatesModal.tsx's generate-mode deps) apply
+// lib/textCleanup.ts's cleanGenerationOutput() themselves.
 export function generate(
   apiKey: string,
   model: string,
