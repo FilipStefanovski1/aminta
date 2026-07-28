@@ -1,4 +1,4 @@
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 import { generate as runAI, generateFromImage, isGroqKey } from "~lib/ai"
 import { backendGenerate, dispatchGenerate } from "~lib/backendGenerate"
@@ -138,6 +138,49 @@ const TOPIC_PLACEHOLDER: Record<Mode, string> = {
   polish: "Paste your rough draft…",
 }
 
+// ─── Rotating topic-field examples (tweet mode only) ───────────────────────
+// The empty topic field's whole job is to convince someone they don't need
+// a finished thought to use Aminta — a static instruction ("a topic, angle,
+// or spark") describes that bar without ever showing it. These are the
+// fragments that actually clear that bar: short, notes-style, the kind of
+// half-thing a founder/builder/active X user has lying around, never a
+// polished sentence. Curated on purpose, not padded to a round number.
+const TOPIC_EXAMPLES: string[] = [
+  // startup
+  "cap table", "fundraising", "burn rate", "co-founder split",
+  // AI
+  "AI thought", "prompt engineering", "context windows", "hallucinations",
+  // building
+  "shipping fast", "technical debt", "refactor", "side project",
+  // growth
+  "growth loop", "viral moment", "referral program", "weird growth spike",
+  // product
+  "feature idea", "roadmap", "onboarding drop-off", "product-market fit",
+  // bugs
+  "bug", "timezone bug", "flaky test",
+  // users
+  "users", "support tickets", "churn",
+  // pricing
+  "pricing", "free tier", "discount",
+  // marketing
+  "marketing", "cold outreach", "content calendar",
+  // random observations
+  "coffee", "meeting", "startup lesson", "late night thoughts",
+]
+
+// Fisher-Yates — used as a shuffle-bag (consume front-to-back, reshuffle
+// once exhausted) so the rotation shows every fragment once before any
+// repeat, instead of plain Math.random() risking the same word twice in a
+// row.
+function shuffledCopy<T>(items: T[]): T[] {
+  const copy = [...items]
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[copy[i], copy[j]] = [copy[j], copy[i]]
+  }
+  return copy
+}
+
 // ─── Header speech bubble ─────────────────────────────────────────────────────
 
 function HeaderBubble({ text }: { text: string }) {
@@ -219,6 +262,84 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
 
   const [templatesOpen, setTemplatesOpen] = useState(false)
   const [templatesPrefill, setTemplatesPrefill] = useState<{ content: string; mode: TemplateMode } | undefined>(undefined)
+
+  // ── Rotating topic-field placeholder (tweet mode only) ──────────────────
+  // See the CSS comment on .topic-placeholder in style.css for the fade
+  // mechanism itself. State/refs here only track WHICH fragment is shown
+  // and WHETHER it's mid-fade; the actual opacity animation is CSS-driven.
+  const [rotatingPlaceholder, setRotatingPlaceholder] = useState(
+    () => TOPIC_EXAMPLES[Math.floor(Math.random() * TOPIC_EXAMPLES.length)]
+  )
+  const [placeholderDim, setPlaceholderDim] = useState(false)
+  const [topicFocused, setTopicFocused] = useState(false)
+  // Computed once — this component's lifetime is a single side-panel
+  // session, no need to react to the preference changing mid-session
+  // (matches the landing app's existing prefers-reduced-motion checks).
+  const [reducedMotion] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  )
+  // Shuffle-bag: consumed front-to-back so every fragment shows once
+  // before any repeat, reshuffled once exhausted. Refs, not state — the
+  // bag itself never needs to trigger a render, only the currently
+  // displayed fragment does.
+  const placeholderBagRef = useRef<string[]>([])
+  const placeholderBagIndexRef = useRef(0)
+  const placeholderTimeoutRef = useRef<ReturnType<typeof setTimeout>>()
+
+  // Reset: fires once whenever the topic field becomes empty (including on
+  // mount) — draws a fresh shuffled bag (or, under reduced motion, a
+  // single fresh random fragment) so each "empty again" moment starts from
+  // a genuinely new random point instead of resuming a stale sequence.
+  useEffect(() => {
+    if (mode !== "tweet" || topic.length !== 0) return
+    if (reducedMotion) {
+      setRotatingPlaceholder(TOPIC_EXAMPLES[Math.floor(Math.random() * TOPIC_EXAMPLES.length)])
+      return
+    }
+    const bag = shuffledCopy(TOPIC_EXAMPLES)
+    placeholderBagRef.current = bag
+    placeholderBagIndexRef.current = 1
+    setPlaceholderDim(false)
+    setRotatingPlaceholder(bag[0])
+  }, [mode, topic, reducedMotion])
+
+  // Rotation loop: fixed 3.5s hold, fade out (380ms) -> swap the complete
+  // placeholder text while invisible -> fade back in (380ms). Paused
+  // (nothing scheduled) while focused, while non-empty, outside tweet
+  // mode, or under reduced motion — resumes with a fresh 3.5s hold once
+  // those conditions clear again.
+  useEffect(() => {
+    if (mode !== "tweet" || topic.length !== 0 || topicFocused || reducedMotion) return
+
+    const HOLD_MS = 3_500
+    const FADE_MS = 380
+    let cancelled = false
+
+    const scheduleNext = () => {
+      placeholderTimeoutRef.current = setTimeout(() => {
+        if (cancelled) return
+        setPlaceholderDim(true)
+        placeholderTimeoutRef.current = setTimeout(() => {
+          if (cancelled) return
+          if (placeholderBagIndexRef.current >= placeholderBagRef.current.length) {
+            placeholderBagRef.current = shuffledCopy(TOPIC_EXAMPLES)
+            placeholderBagIndexRef.current = 0
+          }
+          setRotatingPlaceholder(placeholderBagRef.current[placeholderBagIndexRef.current])
+          placeholderBagIndexRef.current += 1
+          setPlaceholderDim(false)
+          scheduleNext()
+        }, FADE_MS)
+      }, HOLD_MS)
+    }
+
+    scheduleNext()
+
+    return () => {
+      cancelled = true
+      clearTimeout(placeholderTimeoutRef.current)
+    }
+  }, [mode, topic, topicFocused, reducedMotion])
 
   const xp   = store.xp ?? 0
   const tint = getStageTint(xp)
@@ -473,14 +594,17 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
 
       {/* ── Topic input ── */}
       <div className="space-y-1.5">
-        <p className="text-[11px] font-medium" style={{ color: C.textFaint }}>{topicLabel}</p>
+        <label htmlFor="topic-input" className="block text-[11px] font-medium" style={{ color: C.textFaint }}>{topicLabel}</label>
         <div className="relative">
           <textarea
+            id="topic-input"
             value={topic}
             onChange={(e) => setTopic(e.target.value)}
+            onFocus={() => setTopicFocused(true)}
+            onBlur={() => setTopicFocused(false)}
             rows={3}
-            placeholder={TOPIC_PLACEHOLDER[mode]}
-            className="input-pixel w-full rounded-xl px-3 py-2.5 text-sm resize-none"
+            placeholder={mode === "tweet" ? rotatingPlaceholder : TOPIC_PLACEHOLDER[mode]}
+            className={`input-pixel topic-placeholder w-full rounded-xl px-3 py-2.5 text-sm resize-none${mode === "tweet" && placeholderDim ? " placeholder-dim" : ""}`}
             style={{ paddingBottom: "22px" }}
           />
           <span className="absolute bottom-2 right-3 text-[9px]" style={{ color: C.textGhost }}>

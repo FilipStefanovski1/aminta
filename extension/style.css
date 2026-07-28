@@ -58,6 +58,20 @@ html, body {
   border-color: var(--mint);
 }
 
+/* Topic field's rotating placeholder examples (GeneratorPanel.tsx, tweet
+   mode only) — fades the current placeholder to 0, the JS swaps in the
+   next complete fragment while invisible, then fades back to 1. Only one
+   placeholder value exists at a time; this is a fade out/in, not a
+   cross-fade between two. Scoped to this one field so the context
+   textarea below it (also .input-pixel) is unaffected. */
+.topic-placeholder::placeholder {
+  transition: opacity 380ms ease;
+  opacity: 1;
+}
+.topic-placeholder.placeholder-dim::placeholder {
+  opacity: 0;
+}
+
 /* ── Motion system ─────────────────────────────────────────── */
 @keyframes slideUpIn {
   from { opacity: 0; transform: translateY(10px); }
@@ -235,4 +249,5 @@ html, body {
   .demon-eye,
   .demon-eye-r,
   .dot-wave span { animation: none !important; }
+  .topic-placeholder::placeholder { transition: none; }
 }
