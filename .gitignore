@@ -26,3 +26,11 @@ next-env.d.ts
 
 # vercel
 .vercel
+
+# build outputs
+.next/
+dist/
+coverage/
+
+# evaluation artifacts
+eval/outputs/
