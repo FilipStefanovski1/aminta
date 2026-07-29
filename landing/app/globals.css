@@ -291,49 +291,51 @@ body {
 
 /* ── Testimonial wall ──────────────────────────────────────── */
 /* One column's visible "window" — overflow:hidden clips the endlessly
-   scrolling track inside it. Height is set inline per-column, targeting a
-   large 700–900px viewport (see TARGET_WINDOW_HEIGHT in MarqueeWall.tsx) so
-   the wall reads as an immersive stream, not a strip cards pass through.
-   The mask fades a modest 48px band at the very top/bottom only — small
-   relative to that height — and never reaches into a card's readable area. */
+   scrolling track inside it. The mask fades a short band at the very
+   top/bottom only, short enough that it never covers a fully-visible card —
+   the window height (see TARGET_WINDOW_HEIGHT in MarqueeWall.tsx) is always
+   comfortably taller than the mask bands. */
 .testimonial-col-window {
   position: relative;
   overflow: hidden;
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 48px, #000 calc(100% - 48px), transparent 100%);
-  mask-image: linear-gradient(to bottom, transparent 0, #000 48px, #000 calc(100% - 48px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 20px, #000 calc(100% - 20px), transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 20px, #000 calc(100% - 20px), transparent 100%);
 }
 
-/* The scrolling track holds exactly two identical groups back-to-back.
-   Translating by exactly one group's height (+ the gap between the two
-   groups) is mathematically indistinguishable from translating by zero,
-   which is what makes the loop seamless — see MarqueeWall.tsx, which
+/* The scrolling track holds exactly two identical groups back-to-back —
+   the minimum DOM duplication a seamless loop needs. Translating by exactly
+   one group's height (+ the gap between the two groups) is mathematically
+   indistinguishable from translating by zero — see MarqueeWall.tsx, which
    measures the real rendered height of one group and writes it into
    --marquee-cycle so this works regardless of how tall the cards are.
-   This gap (between the two groups, i.e. the loop's own seam) must match
-   .testimonial-group's card gap exactly — a larger seam gap was tried but
-   it lands at a different scroll position in each column (columns start
-   at different rotation offsets), so it reads as random inconsistent
-   spacing between cards rather than a deliberate pause. */
+   This gap must match .testimonial-group's card gap exactly, or the loop
+   seam reads as inconsistent spacing between cards.
+   Performance: this is the ONLY element that animates, and it only ever
+   animates `transform` (translate3d) — never top/margin/height/filter/
+   opacity/box-shadow — so the browser can composite it on the GPU without
+   any per-frame layout or paint work. will-change + translateZ(0) promote
+   it to its own layer up front instead of on first animation frame. */
 .testimonial-track {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 0.875rem;
   will-change: transform;
+  transform: translateZ(0);
 }
 
 .testimonial-group {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 0.875rem;
 }
 
 @keyframes testimonialScrollDown {
-  from { transform: translateY(calc(-1 * var(--marquee-cycle, 0px))); }
-  to   { transform: translateY(0); }
+  from { transform: translate3d(0, calc(-1 * var(--marquee-cycle, 0px)), 0); }
+  to   { transform: translate3d(0, 0, 0); }
 }
 @keyframes testimonialScrollUp {
-  from { transform: translateY(0); }
-  to   { transform: translateY(calc(-1 * var(--marquee-cycle, 0px))); }
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(0, calc(-1 * var(--marquee-cycle, 0px)), 0); }
 }
 
 .testimonial-track-down {
@@ -359,18 +361,18 @@ body {
   }
 }
 
+/* Neutral near-black — no backdrop-filter (expensive to recompute on a
+   continuously-transformed element, and the main source of the earlier
+   "laggy" feel) and no heavy glow (the earlier accent-tinted box-shadow at
+   large blur radii read as a navy/blue haze against the dark grid). */
 .marquee-card {
   position: relative;
-  background: rgba(12, 12, 14, 0.62);
-  border: 1px solid color-mix(in srgb, var(--wall-accent, var(--accent)) 45%, #1f1f1f 55%);
-  box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.45) inset,
-    0 0 14px color-mix(in srgb, var(--wall-accent-glow, var(--accent-glow)) 25%, transparent 75%);
-  backdrop-filter: blur(4px);
+  background: rgba(15, 15, 15, 0.92);
+  border: 1px solid color-mix(in srgb, var(--wall-accent, var(--accent)) 30%, #2b2b2b 70%);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.3) inset;
   transition:
     transform 180ms ease,
-    border-color 180ms ease,
-    box-shadow 220ms ease;
+    border-color 180ms ease;
 }
 
 .marquee-card:focus-visible {
@@ -384,10 +386,7 @@ body {
      left/right border past that clip boundary and it visibly disappeared.
      The vertical lift alone still reads as a hover response. */
   transform: translateY(-4px);
-  border-color: color-mix(in srgb, var(--wall-accent, var(--accent)) 72%, #1f1f1f 28%);
-  box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.45) inset,
-    0 0 20px color-mix(in srgb, var(--wall-accent-glow, var(--accent-glow)) 46%, transparent 54%);
+  border-color: color-mix(in srgb, var(--wall-accent, var(--accent)) 55%, #2b2b2b 45%);
 }
 
 /* ── RPG hero buttons ──────────────────────────────────────── */
