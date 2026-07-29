@@ -6,6 +6,7 @@ import {
   AuthShell, CARD_STYLE, Field, OAuthButtons, OrDivider, SubmitButton,
   ensureProfile, oauthCallbackUrl, persistExtId, postAuthDestination,
 } from "@/components/auth/AuthShell"
+import { AUTH_PROVIDERS } from "@/lib/authProviders"
 import { checkSignupEmail } from "@/lib/auth/emailValidation"
 import posthog from "posthog-js"
 
@@ -194,11 +195,13 @@ export default function SignupPage() {
           <p className="font-pixel text-[9px] tracking-widest mb-1" style={{ color: "var(--accent)" }}>
             Create account
           </p>
-          <p className="text-[#9a9aa3] text-xs">Start growing your audience with Aminta</p>
+          <p className="text-[#9a9aa3] text-xs">Connect your X account to start training your AI companion.</p>
         </div>
 
-        <OAuthButtons onGoogle={handleGoogle} onX={handleX} />
+        <OAuthButtons onGoogle={handleGoogle} onX={handleX} showGoogle={AUTH_PROVIDERS.google} showX={AUTH_PROVIDERS.x} />
 
+        {AUTH_PROVIDERS.email && (
+        <>
         <OrDivider />
 
         <form onSubmit={handleSubmit} className="space-y-3" noValidate>
@@ -291,6 +294,8 @@ export default function SignupPage() {
 
           <SubmitButton loading={loading} loadingText="Creating account…">Create account</SubmitButton>
         </form>
+        </>
+        )}
       </div>
 
       <div className="space-y-2 text-center">

@@ -1,30 +1,9 @@
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 import { NextResponse, type NextRequest } from "next/server"
-import { createServiceClient } from "@/lib/supabase/server"
+import { ensureProfile } from "@/lib/auth/ensureProfile"
 
 const isDev = process.env.NODE_ENV !== "production"
-
-// Idempotent: guarantees public.users + aminta_state exist for every account
-// that completes OAuth or email confirmation — no partial accounts.
-async function ensureProfile(user: { id: string; email?: string; user_metadata?: Record<string, unknown> }) {
-  try {
-    const service = await createServiceClient()
-    const fullName =
-      (user.user_metadata?.full_name as string | undefined) ??
-      (user.user_metadata?.name as string | undefined) ?? ""
-    await Promise.all([
-      service.from("users").upsert(
-        { id: user.id, email: user.email, plan: "free" },
-        { onConflict: "id", ignoreDuplicates: true }
-      ),
-      service.from("aminta_state").upsert(
-        { user_id: user.id, xp: 0, streak: 0, generations_total: 0, display_name: fullName || null },
-        { onConflict: "user_id", ignoreDuplicates: true }
-      ),
-    ])
-  } catch { /* non-fatal — the dashboard self-heals aminta_state */ }
-}
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)

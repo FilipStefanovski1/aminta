@@ -3,6 +3,8 @@ import { useEffect, useState } from "react"
 import type { AmintaStore, VoiceProfile } from "~lib/storage"
 import { C } from "~lib/theme"
 import { isGoogleKey, isGroqKey } from "~lib/ai"
+import { dispatchGenerate } from "~lib/backendGenerate"
+import { shouldUseIncludedAi } from "~lib/entitlements"
 import { FORMS } from "~lib/evolution"
 import DemonMascot from "~components/DemonMascot"
 import { Card, PrimaryButton, SectionLabel, Sprite, SpeechBubble } from "~components/ui"
@@ -24,6 +26,19 @@ interface Props {
   store: AmintaStore
   onDone: (patch: Partial<AmintaStore>) => Promise<void>
 }
+
+// ─── Intent (step 1) ────────────────────────────────────────────────────────
+// Purely a UI seed for the early demo generation below — never persisted to
+// AmintaStore/synced/backed by a new field. Its only job is picking a
+// starting prompt so the very first generation has *something* to write
+// about before any real customization (topics/tone/examples) exists.
+
+const INTENT_OPTIONS = [
+  { id: "posts",   label: "Write posts",   desc: "Create something from scratch.",   seed: "an introduction post about who you are and what you're building" },
+  { id: "replies", label: "Reply to posts", desc: "Respond to conversations.",        seed: "a post about jumping into more conversations on X" },
+  { id: "grow",    label: "Grow on X",      desc: "Ideas, strategy and consistency.", seed: "a post about showing up consistently on X" },
+] as const
+type IntentId = typeof INTENT_OPTIONS[number]["id"]
 
 // ─── Topics ────────────────────────────────────────────────────────────────
 
@@ -154,7 +169,22 @@ const PROVIDER_INFO: Record<ProviderInfoKey, { title: string; points: string[]; 
   },
 }
 
-const TOTAL = 7
+// Step order — value before customization, not after:
+//   0 Welcome
+//   1 Intent            (seeds the step-3 demo generation only)
+//   2 Choose your AI     (BYOK only — see next()/back() below: Included AI
+//                         accounts never see this step at all, not even
+//                         briefly, since shouldUseIncludedAi() already tells
+//                         us up front there's nothing to ask for)
+//   3 Generate first post (moved early — value before any setup investment)
+//   4 "Now make Aminta sound more like you" (transition into customization)
+//   5 Topics
+//   6 Tone
+//   7 Examples ("what sounds exactly like you")
+//   8 Learning (auto-advancing transition — now makes sense: real voice data exists)
+//   9 Payoff — confirms progress, no XP/progression framing (that's an
+//     in-product mechanic users discover later, not an onboarding concept)
+const TOTAL = 10
 
 function Dots({ current }: { current: number }) {
   return (
@@ -179,6 +209,9 @@ const inputCls = "input-pixel w-full rounded-xl px-3 py-3 text-sm"
 export default function OnboardingWizard({ store, onDone }: Props) {
   const [step, setStep] = useState(0)
 
+  // ── Intent ──
+  const [intent, setIntent] = useState<IntentId | "">("")
+
   // ── Topics ──
   const [topics, setTopics]     = useState<string[]>(() =>
     parseTopics(store.voice?.niche || store.interests || "")
@@ -194,17 +227,49 @@ export default function OnboardingWizard({ store, onDone }: Props) {
     const raw = store.voice?.examples ?? ""
     return raw ? raw.split("\n").filter(s => s.trim()) : []
   })
+
+  // First name only — reads more natural than the full display name in a
+  // one-line greeting. Skips the generic "Aminta user" fallback (ensureProfile's
+  // neutral default for an account with no usable name) rather than greeting
+  // someone by that literal string.
+  const greetName = (() => {
+    const dn = store.displayName?.trim()
+    if (!dn || dn === "Aminta user") return ""
+    return dn.split(/\s+/)[0]
+  })()
   const [draft, setDraft] = useState("")
   const [apiKey, setApiKey] = useState(store.apiKey || "")
   const [finishing, setFinishing] = useState(false)
   const [providerInfoOpen, setProviderInfoOpen] = useState<ProviderInfoKey | null>(null)
   const [faqOpen, setFaqOpen] = useState(false)
 
-  const next = () => setStep(s => s + 1)
-  // Step 5 is a 2.2s auto-advancing transition ("learning your voice…"), not
-  // a real step — going back from step 6 must skip straight to step 4, or
+  // Same entitlement check dispatchGenerate() itself uses (lib/entitlements.ts)
+  // — if it's true, dispatchGenerate ignores apiKey entirely and calls the
+  // Included-AI backend instead, so the "Choose your AI" step has nothing to
+  // ask for and the first-post generation never needs a key at all.
+  const includedAi = shouldUseIncludedAi(store)
+
+  // ── First post (step 3) ──
+  // Reuses dispatchGenerate() exactly as GeneratorPanel does — no new AI
+  // plumbing. Runs here BEFORE topics/tone/examples exist yet (that's the
+  // point — value before setup), seeded only by the intent picked in step 1.
+  const [firstPost, setFirstPost] = useState("")
+  const [generating, setGenerating] = useState(false)
+  const [generateError, setGenerateError] = useState("")
+  const [copied, setCopied] = useState(false)
+
+  // Step 2 ("Choose your AI") is skipped entirely for Included AI accounts —
+  // reuses the same `includedAi` value computed once below (see
+  // shouldUseIncludedAi import), never a second/duplicate entitlement check.
+  // Step 8 is a 2.2s auto-advancing transition ("learning your voice…"), not
+  // a real step — going back from step 9 must skip straight to step 7, or
   // the auto-advance effect below would immediately forward past it again.
-  const back = () => setStep(current => (current === 6 ? 4 : Math.max(0, current - 1)))
+  const next = () => setStep(s => (s === 1 && includedAi ? 3 : s + 1))
+  const back = () => setStep(current => {
+    if (current === 9) return 7
+    if (current === 3 && includedAi) return 1
+    return Math.max(0, current - 1)
+  })
   const addExample = () => { if (draft.trim()) { setExamples(p => [...p, draft.trim()]); setDraft("") } }
 
   // ── Topic chip logic ──
@@ -271,13 +336,68 @@ export default function OnboardingWizard({ store, onDone }: Props) {
   // ── AI key ──
   const provider   = detectProvider(apiKey)
   const malformed  = looksMalformed(apiKey)
+  const canGenerate = includedAi || !!apiKey.trim()
 
-  // Auto-advance the "learning" screen to the final "go to X" step
+  // Auto-advance the "learning" screen into the payoff step
   useEffect(() => {
-    if (step !== 5) return
-    const t = setTimeout(() => setStep(6), 2200)
+    if (step !== 8) return
+    const t = setTimeout(() => setStep(9), 2200)
     return () => clearTimeout(t)
   }, [step])
+
+  // Fire the demo generation as soon as the step is reached, so there's
+  // already something on screen rather than a blank state waiting for a
+  // click. Only runs once per visit to the step (guarded by firstPost/
+  // generating being empty) — going Back and Continue again won't
+  // re-generate or double-fire.
+  useEffect(() => {
+    if (step !== 3 || firstPost || generating) return
+    if (!canGenerate) return // no key, not entitled — nothing to generate with
+    generateFirstPost()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step])
+
+  async function generateFirstPost() {
+    setGenerating(true)
+    setGenerateError("")
+    try {
+      // Topics/tone/examples don't exist yet at this point in the flow by
+      // design — the voice profile here is intentionally near-empty, same
+      // as any first-time GeneratorPanel use before Train has been touched.
+      const voice: VoiceProfile = {
+        niche: "",
+        tone: "",
+        voiceStyle: "",
+        examples: "",
+        voiceInspiration: store.voice?.voiceInspiration || "",
+        customRules: store.voice?.customRules || "",
+      }
+      const seed = INTENT_OPTIONS.find(o => o.id === intent)?.seed ?? "an introduction post"
+      const text = await dispatchGenerate(
+        { ...store, apiKey },
+        {
+          generationMode: "tweet",
+          input: seed,
+          voice,
+          styleProfile: null,
+          tone: "direct",
+          length: "short",
+        }
+      )
+      setFirstPost(text)
+    } catch (err) {
+      setGenerateError(err instanceof Error ? err.message : "Couldn't generate a post right now.")
+    } finally {
+      setGenerating(false)
+    }
+  }
+
+  async function copyFirstPost() {
+    if (!firstPost) return
+    await navigator.clipboard.writeText(firstPost)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   const finish = async (openX: boolean) => {
     if (finishing) return
@@ -316,24 +436,244 @@ export default function OnboardingWizard({ store, onDone }: Props) {
 
       <div className="flex-1 overflow-y-auto">
 
-        {/* ── 0 · Welcome ── */}
+        {/* ── 0 · Welcome ──
+            store.displayName is already populated by this point via the
+            existing pullFromCloud() sync — set at signup by ensureProfile()
+            from the X profile's name (see supabase-migration-x-first-
+            profiles.sql). No new auth plumbing, no new API call: this is
+            data the login already produced, just read for the first time
+            here. Falls back to the generic greeting if it hasn't landed yet
+            or resolved to the neutral "Aminta user" default. */}
         {step === 0 && (
           <div className="animate-slide-up flex flex-col items-center text-center pt-6">
-            <SpeechBubble text="hi. i'm aminta." />
+            <SpeechBubble text={greetName ? `welcome, ${greetName} 👋` : "hi. i'm aminta."} />
             <div className="mt-4">
               <Sprite xp={0} size={96} />
             </div>
             <h2 className="font-pixel text-[11px] mt-8 leading-relaxed" style={{ color: C.text }}>
-              I help creators<br />stay consistent.
+              Let&apos;s show you<br />what I can do.
             </h2>
             <p className="text-[12px] mt-3 leading-relaxed" style={{ color: C.textDim }}>
-              You write. You post. I grow.<br />Let's learn your voice. Takes a minute.
+              One quick question, then I&apos;ll write<br />something for you.
             </p>
           </div>
         )}
 
-        {/* ── 1 · Topic ── */}
+        {/* ── 1 · Intent ── */}
         {step === 1 && (
+          <div className="animate-slide-up space-y-5">
+            <h2 className="font-pixel text-[11px] leading-relaxed" style={{ color: C.text }}>
+              What are you trying<br />to do today?
+            </h2>
+            <Card>
+              <div className="space-y-2">
+                {INTENT_OPTIONS.map((opt) => {
+                  const active = intent === opt.id
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => setIntent(opt.id)}
+                      className="w-full text-left px-3.5 py-3 rounded-xl border transition-all active:scale-[0.98]"
+                      style={{
+                        borderColor: active ? C.mint : C.border,
+                        backgroundColor: active ? C.mint + "16" : "transparent",
+                      }}>
+                      <p className="text-[12px] font-medium" style={{ color: active ? C.mint : C.text }}>{opt.label}</p>
+                      <p className="text-[11px] mt-0.5" style={{ color: active ? C.mint : C.textDim }}>{opt.desc}</p>
+                    </button>
+                  )
+                })}
+              </div>
+            </Card>
+          </div>
+        )}
+
+        {/* ── 2 · Choose your AI ──
+            Entitled (Included AI) accounts skip the key entirely — this is
+            exactly the check dispatchGenerate() itself makes, so there's
+            never a mismatch between what this step asks for and what
+            generation actually needs. */}
+        {step === 2 && (
+          <div className="animate-slide-up space-y-5">
+            {includedAi ? (
+              <>
+                <div>
+                  <h2 className="font-pixel text-[11px] leading-relaxed" style={{ color: C.text }}>
+                    You&apos;re ready.
+                  </h2>
+                  <p className="text-[12px] mt-3 leading-relaxed" style={{ color: C.textDim }}>
+                    AI generation is already included.<br /><br />Let&apos;s write something.
+                  </p>
+                </div>
+                <Card>
+                  <p className="text-[12px] leading-relaxed font-medium" style={{ color: C.mint }}>
+                    ✓ AI generation included on your plan
+                  </p>
+                </Card>
+              </>
+            ) : (
+              <>
+                <div>
+                  <h2 className="font-pixel text-[11px] leading-relaxed" style={{ color: C.text }}>
+                    Choose your AI
+                  </h2>
+                  <p className="text-[12px] mt-3 leading-relaxed" style={{ color: C.textDim }}>
+                    Aminta runs using your own AI model, so your prompts stay private and under your control. You can use:
+                  </p>
+                  <ul className="mt-2 space-y-1">
+                    <li className="text-[11px] leading-relaxed" style={{ color: C.textDim }}>• <span style={{ color: C.text }}>Groq</span>: recommended, free, fastest</li>
+                    <li className="text-[11px] leading-relaxed" style={{ color: C.textDim }}>• <span style={{ color: C.text }}>Google Gemini</span>: free tier</li>
+                    <li className="text-[11px] leading-relaxed" style={{ color: C.textDim }}>• <span style={{ color: C.text }}>OpenRouter</span>: hundreds of models</li>
+                    <li className="text-[11px] leading-relaxed" style={{ color: C.textDim }}>• Your existing API key, if you already have one</li>
+                  </ul>
+                </div>
+
+                <Card>
+                  <SectionLabel>AI key</SectionLabel>
+
+                  <div className="relative">
+                    <input type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} autoFocus
+                      placeholder="Paste your API key..." className={`${inputCls} ${provider !== "unknown" ? "pr-20" : ""}`} />
+                    {provider !== "unknown" && (
+                      <span
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-semibold px-2 py-1 rounded-md"
+                        style={{ backgroundColor: PROVIDER_COLOR[provider] + "22", color: PROVIDER_COLOR[provider] }}>
+                        {PROVIDER_LABEL[provider]}
+                      </span>
+                    )}
+                  </div>
+
+                  {malformed && (
+                    <p className="text-[11px] mt-2 leading-relaxed" style={{ color: "#f5b50a" }}>
+                      That doesn't look like a complete API key. Double check you copied the whole thing.
+                    </p>
+                  )}
+
+                  <div className="mt-3 pt-3 space-y-1.5" style={{ borderTop: `1px solid ${C.border}` }}>
+                    <p className="text-[11px] font-medium" style={{ color: C.mint }}>✓ Recommended: Groq, free, fastest</p>
+                    <a href="https://console.groq.com/keys" target="_blank" rel="noreferrer"
+                      className="text-[11px] underline block" style={{ color: C.mint }}>
+                      Get a free API key →
+                    </a>
+                  </div>
+
+                  <div className="flex items-center gap-3 mt-3">
+                    <button onClick={() => setProviderInfoOpen("gemini")}
+                      className="text-[11px] underline transition-colors" style={{ color: C.textDim }}>
+                      Use Gemini instead
+                    </button>
+                    <button onClick={() => setProviderInfoOpen("openrouter")}
+                      className="text-[11px] underline transition-colors" style={{ color: C.textDim }}>
+                      Use OpenRouter instead
+                    </button>
+                  </div>
+
+                  {/* Collapsible FAQ */}
+                  <div className="mt-3 pt-3" style={{ borderTop: `1px solid ${C.border}` }}>
+                    <button onClick={() => setFaqOpen(v => !v)}
+                      className="w-full flex items-center justify-between text-[11px] font-medium" style={{ color: C.textDim }}>
+                      <span>Why do I need my own API key?</span>
+                      <span style={{ transform: faqOpen ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}>▾</span>
+                    </button>
+                    {faqOpen && (
+                      <p className="text-[11px] mt-2 leading-relaxed" style={{ color: C.textDim }}>
+                        It keeps your prompts private, lets you choose your favorite model, and avoids monthly AI costs built into subscriptions.
+                      </p>
+                    )}
+                  </div>
+                </Card>
+
+                <p className="text-[11px] leading-relaxed" style={{ color: C.textDim }}>
+                  You can always add or change your AI model in Settings.
+                </p>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* ── 3 · Generate your first post ──
+            Runs dispatchGenerate() (auto-fired on entry, see the useEffect
+            above) seeded only by the step-1 intent — topics/tone/examples
+            don't exist yet on purpose, this is the value-before-setup step.
+            If step 2 was skipped with no key and no entitlement, there's
+            nothing to generate with; shown as its own state, not a silent
+            failure. */}
+        {step === 3 && (
+          <div className="animate-slide-up flex flex-col items-center text-center pt-6">
+            {!canGenerate && (
+              <>
+                <h2 className="font-pixel text-[11px] leading-relaxed" style={{ color: C.text }}>
+                  Your first post.
+                </h2>
+                <Card className="w-full text-left mt-5">
+                  <p className="text-[12px] leading-relaxed" style={{ color: C.textDim }}>
+                    You skipped adding an AI model, so I don&apos;t have anything to write with yet.
+                    Add one anytime in Settings, then come find me in the panel.
+                  </p>
+                </Card>
+              </>
+            )}
+
+            {canGenerate && generating && (
+              <div className="mt-8 flex flex-col items-center gap-3">
+                <Sprite xp={0} size={96} animClass="sprite-react aminta-glow" />
+                <p className="font-pixel text-[8px] tracking-widest" style={{ color: C.mint }}>one sec...</p>
+              </div>
+            )}
+
+            {canGenerate && !generating && generateError && (
+              <>
+                <h2 className="font-pixel text-[11px] leading-relaxed" style={{ color: C.text }}>
+                  Your first post.
+                </h2>
+                <Card className="w-full text-left mt-5">
+                  <p className="text-[12px] leading-relaxed" style={{ color: "#f5b50a" }}>{generateError}</p>
+                  <button onClick={generateFirstPost}
+                    className="mt-3 text-[11px] underline font-medium" style={{ color: C.mint }}>
+                    Try again
+                  </button>
+                </Card>
+              </>
+            )}
+
+            {canGenerate && !generating && !generateError && firstPost && (
+              <>
+                <h2 className="font-pixel text-[11px] leading-relaxed" style={{ color: C.text }}>
+                  I&apos;d post something like this.
+                </h2>
+                <Card className="w-full text-left mt-5">
+                  <SectionLabel>Generated</SectionLabel>
+                  <p className="text-[13px] leading-relaxed mt-2" style={{ color: "#ccc" }}>{firstPost}</p>
+                  <button onClick={copyFirstPost}
+                    className="w-full rounded-xl py-2.5 mt-3 text-[11px] font-semibold transition-colors"
+                    style={{ border: `1px dashed ${C.mint}88`, color: C.mint }}>
+                    {copied ? "Copied ✓" : "Copy"}
+                  </button>
+                </Card>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* ── 4 · Transition into customization ── */}
+        {step === 4 && (
+          <div className="animate-slide-up flex flex-col items-center text-center pt-10">
+            <SpeechBubble text="not bad, right?" />
+            <div className="mt-4">
+              <Sprite xp={0} size={96} />
+            </div>
+            <h2 className="font-pixel text-[11px] mt-8 leading-relaxed" style={{ color: C.text }}>
+              Now make Aminta<br />sound more like you.
+            </h2>
+            <p className="text-[12px] mt-3 leading-relaxed" style={{ color: C.textDim }}>
+              A few quick questions. Takes less than a minute.
+            </p>
+          </div>
+        )}
+
+        {/* ── 5 · Topic ── */}
+        {step === 5 && (
           <div className="animate-slide-up space-y-5">
             <h2 className="font-pixel text-[11px] leading-relaxed" style={{ color: C.text }}>
               What do you<br />write about?
@@ -402,8 +742,8 @@ export default function OnboardingWizard({ store, onDone }: Props) {
           </div>
         )}
 
-        {/* ── 2 · Sound ── */}
-        {step === 2 && (
+        {/* ── 6 · Sound ── */}
+        {step === 6 && (
           <div className="animate-slide-up space-y-5">
             <h2 className="font-pixel text-[11px] leading-relaxed" style={{ color: C.text }}>
               How do you<br />usually sound?
@@ -443,19 +783,19 @@ export default function OnboardingWizard({ store, onDone }: Props) {
           </div>
         )}
 
-        {/* ── 3 · Examples ── */}
-        {step === 3 && (
+        {/* ── 7 · Examples ── */}
+        {step === 7 && (
           <div className="animate-slide-up space-y-5">
             <div>
               <h2 className="font-pixel text-[11px] leading-relaxed" style={{ color: C.text }}>
-                Show me a few<br />things you wrote.
+                What&apos;s one post that<br />sounds exactly like you?
               </h2>
-              <p className="text-[12px] mt-3" style={{ color: C.textDim }}>Paste 3 of your posts. This is how I learn you.</p>
+              <p className="text-[12px] mt-3" style={{ color: C.textDim }}>One is enough to start. This is how I learn you — add more anytime.</p>
             </div>
             <Card>
               <div className="flex items-center justify-between mb-2">
                 <SectionLabel>Your posts</SectionLabel>
-                <span className="text-[11px] font-medium" style={{ color: examples.length >= 3 ? C.mint : C.textDim }}>{examples.length}/3+</span>
+                <span className="text-[11px] font-medium" style={{ color: examples.length >= 1 ? C.mint : C.textDim }}>{examples.length} added</span>
               </div>
               <div className="space-y-2">
                 {examples.map((p, i) => (
@@ -477,87 +817,8 @@ export default function OnboardingWizard({ store, onDone }: Props) {
           </div>
         )}
 
-        {/* ── 4 · Connect AI ── */}
-        {step === 4 && (
-          <div className="animate-slide-up space-y-5">
-            <div>
-              <h2 className="font-pixel text-[11px] leading-relaxed" style={{ color: C.text }}>
-                One last thing.
-              </h2>
-              <p className="text-[12px] mt-3 leading-relaxed" style={{ color: C.textDim }}>
-                Aminta runs using your own AI provider, so your prompts stay private and under your control. You can use:
-              </p>
-              <ul className="mt-2 space-y-1">
-                <li className="text-[11px] leading-relaxed" style={{ color: C.textDim }}>• <span style={{ color: C.text }}>Groq</span>: recommended, free, fastest</li>
-                <li className="text-[11px] leading-relaxed" style={{ color: C.textDim }}>• <span style={{ color: C.text }}>Google Gemini</span>: free tier</li>
-                <li className="text-[11px] leading-relaxed" style={{ color: C.textDim }}>• <span style={{ color: C.text }}>OpenRouter</span>: hundreds of models</li>
-                <li className="text-[11px] leading-relaxed" style={{ color: C.textDim }}>• Your existing API key, if you already have one</li>
-              </ul>
-            </div>
-
-            <Card>
-              <SectionLabel>AI key</SectionLabel>
-
-              <div className="relative">
-                <input type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} autoFocus
-                  placeholder="Paste your API key..." className={`${inputCls} ${provider !== "unknown" ? "pr-20" : ""}`} />
-                {provider !== "unknown" && (
-                  <span
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-semibold px-2 py-1 rounded-md"
-                    style={{ backgroundColor: PROVIDER_COLOR[provider] + "22", color: PROVIDER_COLOR[provider] }}>
-                    {PROVIDER_LABEL[provider]}
-                  </span>
-                )}
-              </div>
-
-              {malformed && (
-                <p className="text-[11px] mt-2 leading-relaxed" style={{ color: "#f5b50a" }}>
-                  That doesn't look like a complete API key. Double check you copied the whole thing.
-                </p>
-              )}
-
-              <div className="mt-3 pt-3 space-y-1.5" style={{ borderTop: `1px solid ${C.border}` }}>
-                <p className="text-[11px] font-medium" style={{ color: C.mint }}>✓ Recommended: Groq, free, fastest</p>
-                <a href="https://console.groq.com/keys" target="_blank" rel="noreferrer"
-                  className="text-[11px] underline block" style={{ color: C.mint }}>
-                  Get a free API key →
-                </a>
-              </div>
-
-              <div className="flex items-center gap-3 mt-3">
-                <button onClick={() => setProviderInfoOpen("gemini")}
-                  className="text-[11px] underline transition-colors" style={{ color: C.textDim }}>
-                  Use Gemini instead
-                </button>
-                <button onClick={() => setProviderInfoOpen("openrouter")}
-                  className="text-[11px] underline transition-colors" style={{ color: C.textDim }}>
-                  Use OpenRouter instead
-                </button>
-              </div>
-
-              {/* Collapsible FAQ */}
-              <div className="mt-3 pt-3" style={{ borderTop: `1px solid ${C.border}` }}>
-                <button onClick={() => setFaqOpen(v => !v)}
-                  className="w-full flex items-center justify-between text-[11px] font-medium" style={{ color: C.textDim }}>
-                  <span>Why do I need my own API key?</span>
-                  <span style={{ transform: faqOpen ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}>▾</span>
-                </button>
-                {faqOpen && (
-                  <p className="text-[11px] mt-2 leading-relaxed" style={{ color: C.textDim }}>
-                    It keeps your prompts private, lets you choose your favorite model, and avoids monthly AI costs built into subscriptions.
-                  </p>
-                )}
-              </div>
-            </Card>
-
-            <p className="text-[11px] leading-relaxed" style={{ color: C.textDim }}>
-              You can always add or change your provider in Settings.
-            </p>
-          </div>
-        )}
-
-        {/* ── 5 · Learning ── */}
-        {step === 5 && (
+        {/* ── 8 · Learning ── */}
+        {step === 8 && (
           <div className="animate-slide-up flex flex-col items-center text-center pt-10">
             <SpeechBubble text="learning your voice…" />
             <div className="mt-4">
@@ -567,24 +828,24 @@ export default function OnboardingWizard({ store, onDone }: Props) {
           </div>
         )}
 
-        {/* ── 6 · Go to X, the payoff screen ── */}
-        {step === 6 && (
-          <div className="animate-slide-up flex flex-col items-center text-center pt-1">
+        {/* ── 9 · Payoff — confirms progress, no XP/progression framing.
+            "Feed Aminta" and XP are in-product mechanics users discover
+            naturally once they're actually posting, not concepts to explain
+            during onboarding. */}
+        {step === 9 && (
+          <div className="animate-slide-up flex flex-col items-center text-center pt-6">
 
             <h2 className="font-pixel text-[11px] leading-relaxed" style={{ color: C.text }}>
-              Find me on X.
+              Nice.
             </h2>
 
-            <p className="text-[12px] mt-2" style={{ color: C.textDim }}>
-              Open <span style={{ color: C.text }}>x.com</span> and start writing.
+            <p className="text-[12px] mt-2 leading-relaxed" style={{ color: C.textDim }}>
+              Aminta already knows a little about you.<br />
+              You&apos;ll be able to teach it even more over time.
             </p>
 
-            <div className="mt-3">
-              <SpeechBubble text="let's cook." />
-            </div>
-
-            {/* Mascot, reacting to the bubble above it — final evolved form, larger, with ambient particles */}
-            <div className="relative flex items-center justify-center mt-3" style={{ width: 132, height: 132 }}>
+            {/* Mascot, final evolved form, with ambient particles */}
+            <div className="relative flex items-center justify-center mt-5" style={{ width: 132, height: 132 }}>
               {AMBIENT_PARTICLES.map((p, i) => {
                 const rad = (p.angle * Math.PI) / 180
                 const dx  = Math.cos(rad) * p.dist
@@ -602,14 +863,12 @@ export default function OnboardingWizard({ store, onDone }: Props) {
               <DemonMascot skin={FINAL_FORM.skin} size={112} className="sprite-float aminta-glow" />
             </div>
 
-            {/* Visual instruction card */}
-            <Card className="w-full text-left mt-2" style={{ padding: 12 }}>
+            {/* Visual instruction card — functional info only, no XP mentions */}
+            <Card className="w-full text-left mt-5" style={{ padding: 12 }}>
               <div className="space-y-1.5">
                 {[
                   "Generate appears under the composer",
                   "Polish improves your draft",
-                  "Every published post earns XP",
-                  "XP evolves your companion",
                 ].map((row) => (
                   <div key={row} className="flex items-center gap-2">
                     <svg width="6" height="6" viewBox="0 0 6 6" className="shrink-0" style={{ imageRendering: "pixelated" }}>
@@ -620,37 +879,6 @@ export default function OnboardingWizard({ store, onDone }: Props) {
                 ))}
               </div>
             </Card>
-
-            {/* What you'll unlock */}
-            <div className="grid grid-cols-3 gap-1.5 w-full mt-2.5">
-              {[
-                { icon: "⚡", title: "Better posts",     sub: "Generate instantly" },
-                { icon: "🏆", title: "Earn XP",           sub: "Every post feeds me" },
-                { icon: "👾", title: "Grow me",            sub: "Unlock new forms" },
-              ].map((u) => (
-                <div key={u.title} className="rounded-xl px-2 py-2.5 text-center"
-                  style={{ backgroundColor: C.card, border: `1px solid ${C.border}` }}>
-                  <p className="text-[15px] leading-none mb-1">{u.icon}</p>
-                  <p className="text-[10px] font-semibold leading-snug" style={{ color: C.text }}>{u.title}</p>
-                  <p className="text-[9px] leading-snug mt-0.5" style={{ color: C.textFaint }}>{u.sub}</p>
-                </div>
-              ))}
-            </div>
-
-            {/* Generate / Polish UI preview */}
-            <div className="mt-2.5 rounded-xl px-3 py-2.5 w-full"
-              style={{ backgroundColor: C.card, border: `1px solid ${C.mint}33`, boxShadow: `0 0 20px ${C.mint}12` }}>
-              <div className="flex items-center gap-1.5">
-                <span className="generate-pulse text-[9px] font-bold rounded px-2 py-1" style={{ backgroundColor: C.mint, color: "#000" }}>+ Generate</span>
-                <span className="text-[9px] font-bold rounded px-2 py-1" style={{ backgroundColor: C.cardInner, color: C.textDim, border: `1px solid ${C.border}` }}>+ Polish</span>
-                <span className="text-[11px] ml-1" style={{ color: C.mint }}>← in the X composer</span>
-              </div>
-            </div>
-
-            {/* Pro tip */}
-            <p className="text-[11px] leading-relaxed mt-2.5" style={{ color: C.textDim }}>
-              💡 Pro tip: Generate first, polish second. Your voice improves over time.
-            </p>
           </div>
         )}
 
@@ -659,31 +887,42 @@ export default function OnboardingWizard({ store, onDone }: Props) {
       {/* ── Footer action ── */}
       <div className="shrink-0 pt-4 space-y-2">
         {step === 0 && <PrimaryButton onClick={next}>Meet Aminta</PrimaryButton>}
-        {step === 1 && <PrimaryButton onClick={next} disabled={topics.length === 0}>Continue</PrimaryButton>}
-        {step === 2 && <PrimaryButton onClick={next} disabled={tones.length === 0}>Continue</PrimaryButton>}
+        {step === 1 && <PrimaryButton onClick={next} disabled={!intent}>Continue</PrimaryButton>}
+        {step === 2 && (
+          includedAi ? (
+            <PrimaryButton onClick={next}>Continue</PrimaryButton>
+          ) : (
+            <>
+              <PrimaryButton onClick={next} disabled={!apiKey.trim()}>Continue</PrimaryButton>
+              <button onClick={next} className="w-full text-center text-[11px] py-1 transition-colors"
+                style={{ color: C.textDim }}>I'll add it later</button>
+            </>
+          )
+        )}
         {step === 3 && (
+          <PrimaryButton onClick={next} disabled={generating}>
+            {generating ? "Writing…" : "Continue"}
+          </PrimaryButton>
+        )}
+        {step === 4 && <PrimaryButton onClick={next}>Continue</PrimaryButton>}
+        {step === 5 && <PrimaryButton onClick={next} disabled={topics.length === 0}>Continue</PrimaryButton>}
+        {step === 6 && <PrimaryButton onClick={next} disabled={tones.length === 0}>Continue</PrimaryButton>}
+        {step === 7 && (
           <>
             <PrimaryButton onClick={next} disabled={examples.length < 1}>Continue</PrimaryButton>
             <button onClick={next} className="w-full text-center text-[11px] py-1 transition-colors"
               style={{ color: C.textDim }}>Skip for now</button>
           </>
         )}
-        {step === 4 && (
+        {step === 9 && (
           <>
-            <PrimaryButton onClick={next} disabled={!apiKey.trim()}>Continue</PrimaryButton>
-            <button onClick={next} className="w-full text-center text-[11px] py-1 transition-colors"
-              style={{ color: C.textDim }}>I'll add it later</button>
-          </>
-        )}
-        {step === 6 && (
-          <>
-            <PrimaryButton onClick={() => finish(true)} disabled={finishing}
+            <PrimaryButton onClick={() => finish(false)} disabled={finishing}
               className="hover:shadow-[0_0_24px_rgba(116,247,181,0.45)]">
-              {finishing ? "Saving…" : "Open X →"}
+              {finishing ? "Saving…" : "Enter Aminta →"}
             </PrimaryButton>
-            <button onClick={() => finish(false)} disabled={finishing}
+            <button onClick={() => finish(true)} disabled={finishing}
               className="w-full text-center text-[11px] py-1.5 font-medium transition-colors disabled:opacity-50"
-              style={{ color: C.textDim }}>Start here in the panel</button>
+              style={{ color: C.textDim }}>Or open x.com</button>
           </>
         )}
       </div>

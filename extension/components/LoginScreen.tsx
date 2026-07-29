@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import { C } from "~lib/theme"
+import { loginUrl } from "~lib/webUrl"
 
 interface Props {
   // Called by sidepanel's own storage-change listener; kept for API compat.
@@ -8,7 +9,11 @@ interface Props {
   onSignedIn: () => void
 }
 
-type State = "idle" | "waiting" | "stalled"
+// idle       — default, X-first entry point
+// waiting    — tab opened, watching for the session to land
+// stalled    — 90s with no session (tab closed, user got stuck, etc.)
+// cancelled  — user tapped Cancel while waiting
+type State = "idle" | "waiting" | "stalled" | "cancelled"
 
 export default function LoginScreen({ onSignedIn: _onSignedIn }: Props) {
   const [state, setState] = useState<State>("idle")
@@ -23,17 +28,21 @@ export default function LoginScreen({ onSignedIn: _onSignedIn }: Props) {
 
   function openLoginPage() {
     const extId = chrome.runtime.id
-    // Opens the website's full Supabase OAuth flow. After the user signs in,
-    // /extension-auth sends AMINTA_AUTH to background.ts, which stores the tokens.
-    // The sidepanel's chrome.storage.local.onChanged listener then fires and
-    // calls pullFromCloud() + setIsLoggedIn(true) automatically.
-    chrome.tabs.create({ url: `https://amintaapp.com/login?ext_id=${extId}` })
+    // Opens the website's full Supabase OAuth flow (X-first, same reveal for
+    // Google/email that exists on the page itself — this is the ONE URL for
+    // every account type, not a second flow). After the user signs in,
+    // /extension-auth sends AMINTA_AUTH to background.ts, which stores the
+    // tokens. The sidepanel's chrome.storage.local.onChanged listener then
+    // fires and calls pullFromCloud() + setIsLoggedIn(true) automatically.
+    chrome.tabs.create({ url: loginUrl(extId) })
     setState("waiting")
   }
 
   function cancel() {
-    setState("idle")
+    setState("cancelled")
   }
+
+  const showEntry = state === "idle" || state === "stalled" || state === "cancelled"
 
   return (
     <div
@@ -50,30 +59,47 @@ export default function LoginScreen({ onSignedIn: _onSignedIn }: Props) {
 
       <div className="text-center space-y-1.5">
         <p className="font-pixel text-[9px] tracking-widest" style={{ color: "#74f7b5" }}>
-          Sign in to Aminta
+          Your AI companion for X.
         </p>
         <p className="text-xs" style={{ color: C.textFaint }}>
-          Your XP, streak &amp; plan sync to your account
+          Connect your X account to start training Aminta.
         </p>
       </div>
 
-      {(state === "idle" || state === "stalled") && (
+      {showEntry && (
         <div className="w-full flex flex-col items-center gap-3">
           {state === "stalled" && (
             <p className="text-[10px] text-center" style={{ color: C.textFaint }}>
-              Still waiting… Finish sign-in in the tab that opened, or try again.
+              Couldn&apos;t connect your X account. Try again.
+            </p>
+          )}
+          {state === "cancelled" && (
+            <p className="text-[10px] text-center" style={{ color: C.textFaint }}>
+              Connection cancelled.
             </p>
           )}
           <button
             onClick={openLoginPage}
-            className="w-full py-3 rounded-xl font-pixel text-[8px] tracking-widest text-black transition-all hover:brightness-110 active:scale-[0.98]"
+            className="w-full py-3 rounded-xl font-pixel text-[8px] tracking-widest text-black transition-all hover:brightness-110 active:scale-[0.98] flex items-center justify-center gap-2"
             style={{ backgroundColor: "#74f7b5" }}
           >
-            {state === "stalled" ? "Try again" : "Sign in on amintaapp.com"}
+            {state === "idle" && (
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+              </svg>
+            )}
+            {state === "idle" ? "Connect X" : "Try again"}
           </button>
-          <p className="text-[10px]" style={{ color: C.textGhost }}>
-            X · Google · Email &amp; password
-          </p>
+          {/* Opens the exact same login page — its own reveal already
+              surfaces Google/email for anyone who needs them. Not a second
+              flow, just a second entry point into the same one. */}
+          <button
+            onClick={openLoginPage}
+            className="text-[10px] transition-colors"
+            style={{ color: C.textGhost }}
+          >
+            Already use Google or email? Use another sign-in method.
+          </button>
         </div>
       )}
 
@@ -85,10 +111,10 @@ export default function LoginScreen({ onSignedIn: _onSignedIn }: Props) {
               style={{ borderColor: "#74f7b5", borderTopColor: "transparent" }}
             />
             <p className="font-pixel text-[8px] tracking-widest" style={{ color: "#74f7b5" }}>
-              Waiting for sign in…
+              Connecting to X…
             </p>
             <p className="text-[10px]" style={{ color: C.textFaint }}>
-              Complete sign in on the tab that just opened
+              Complete sign-in on the tab that just opened
             </p>
           </div>
           <button
