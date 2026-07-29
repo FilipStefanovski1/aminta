@@ -83,7 +83,18 @@ function relativeTime(iso: string): string {
 }
 
 interface Props {
-  user: { id: string; email: string; name: string; avatarUrl: string }
+  user: {
+    id: string
+    email: string
+    name: string
+    avatarUrl: string
+    // X handle (preferred_username / user_name). Empty for Google and
+    // email/password accounts, which is fine — it's only ever a fallback.
+    username: string
+    // Every auth provider linked to this account ("email", "google", "x", …).
+    // Computed server-side from user.identities — see dashboard/page.tsx.
+    providers: string[]
+  }
   xp: number
   streak: number
   generationsTotal: number
@@ -136,10 +147,36 @@ export default function DashboardClient({
   const progress = level >= 9 ? 100 : Math.min(100, Math.round(((xp - lo) / (hi - lo)) * 100))
   const xpToNext = Math.max(0, hi - xp)
 
-  const displayName = user.name || user.email.split("@")[0]
-  const initials = user.name
-    ? user.name.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase()
-    : user.email.slice(0, 2).toUpperCase()
+  // Password management is gated on the account actually having an
+  // email/password identity — NOT on whether an email address exists. A
+  // Google or X account can carry a verified email and still have no password
+  // to change; offering the action there sends a reset email for a credential
+  // that was never set. Reading the provider list also means this stays
+  // correct once an account can have several linked identities: a user who
+  // signed up with X and later links email/password starts seeing the control
+  // automatically, with no change here.
+  const hasPasswordIdentity = user.providers.includes("email")
+
+  // Display fallbacks, most specific first. Email can never be the base case:
+  // X may send no email at all, and splitting an empty string yields an empty
+  // string rather than a usable default — so it's guarded explicitly and the
+  // chain always terminates in a real label.
+  const emailLocalPart = user.email ? user.email.split("@")[0] : ""
+  const displayName = user.name || user.username || emailLocalPart || "Your account"
+
+  // Secondary line under the name: the email when there is one, otherwise the
+  // X handle. Rendered conditionally at both call sites so an account with
+  // neither shows nothing at all rather than an empty row or bare "()".
+  const accountLabel = user.email || (user.username ? `@${user.username}` : "")
+
+  const initials =
+    (user.name || user.username || emailLocalPart)
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((w: string) => w[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase() || "AM"
 
   const q1Done = missionGenerates >= 3
   const q2Done = missionPublished >= 1
@@ -165,6 +202,9 @@ export default function DashboardClient({
   }
 
   async function handlePasswordReset() {
+    // Defence in depth — the button is only rendered for accounts with an
+    // email/password identity, which always carry an address.
+    if (!hasPasswordIdentity || !user.email) return
     setResetting(true)
     await createClient().auth.resetPasswordForEmail(user.email, {
       redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
@@ -224,7 +264,7 @@ export default function DashboardClient({
           <ol className="space-y-2 text-sm text-muted mb-5">
             <li><span className="text-white font-medium">1.</span> Install Aminta from the Chrome Web Store</li>
             <li><span className="text-white font-medium">2.</span> Pin it, then open the side panel on x.com</li>
-            <li><span className="text-white font-medium">3.</span> Sign in inside the panel with this account ({user.email})</li>
+            <li><span className="text-white font-medium">3.</span> Sign in inside the panel with this account{accountLabel ? ` (${accountLabel})` : ""}</li>
           </ol>
           <div className="flex flex-wrap items-center gap-4">
             <a href={EXTENSION_URL} target="_blank" rel="noopener noreferrer" className="rpg-btn-primary">
@@ -259,7 +299,7 @@ export default function DashboardClient({
             }
             <div className="text-center">
               <p className="text-lg font-semibold text-white">{displayName}</p>
-              <p className="text-sm text-muted mt-0.5">{user.email}</p>
+              {accountLabel && <p className="text-sm text-muted mt-0.5">{accountLabel}</p>}
             </div>
             <span className="font-pixel text-[8px] px-2.5 py-1"
               style={{
@@ -288,13 +328,15 @@ export default function DashboardClient({
           </div>
 
           <div className="flex flex-col gap-2 mt-auto">
-            <button
-              onClick={handlePasswordReset}
-              disabled={resetting || resetSent}
-              className="rpg-btn-secondary w-full"
-            >
-              {resetSent ? "Reset email sent" : resetting ? "Sending…" : "Change Password"}
-            </button>
+            {hasPasswordIdentity && (
+              <button
+                onClick={handlePasswordReset}
+                disabled={resetting || resetSent}
+                className="rpg-btn-secondary w-full"
+              >
+                {resetSent ? "Reset email sent" : resetting ? "Sending…" : "Change Password"}
+              </button>
+            )}
             <button onClick={handleLogout} disabled={loggingOut} className="rpg-btn-secondary w-full">
               {loggingOut ? "Signing out…" : "Logout"}
             </button>

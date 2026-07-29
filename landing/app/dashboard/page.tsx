@@ -25,6 +25,23 @@ export default async function DashboardPage() {
     )
   }
 
+  // Which auth providers are actually attached to this account.
+  // user.identities is the authoritative list (one row per linked provider);
+  // app_metadata mirrors it and covers older sessions where identities may be
+  // absent. Deduped into a set so an account with several linked identities —
+  // the direction Supabase's linkIdentity() enables — reports each provider
+  // once. Password management keys off this, never off "does an email exist":
+  // a Google or X account can carry an email and still have no password.
+  const providers = Array.from(
+    new Set(
+      [
+        ...(user.identities ?? []).map((i) => i.provider),
+        ...((user.app_metadata?.providers as string[] | undefined) ?? []),
+        ...(user.app_metadata?.provider ? [user.app_metadata.provider as string] : []),
+      ].filter(Boolean)
+    )
+  )
+
   return (
     <>
       <Navbar alwaysVisible />
@@ -35,6 +52,13 @@ export default async function DashboardPage() {
             email: user.email ?? "",
             name: user.user_metadata?.full_name ?? user.user_metadata?.name ?? "",
             avatarUrl: user.user_metadata?.avatar_url ?? "",
+            // X supplies a handle but may supply no email at all; it's the
+            // display fallback that keeps the profile block populated.
+            username:
+              user.user_metadata?.preferred_username ??
+              user.user_metadata?.user_name ??
+              "",
+            providers,
           }}
           xp={state?.xp ?? 0}
           streak={state?.streak ?? 0}
