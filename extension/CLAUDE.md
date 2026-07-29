@@ -164,7 +164,7 @@ onboardingDone  — boolean
 ---
 
 ## Auth & Sync (`lib/auth.ts`, `lib/sync.ts`)
-- Auth via the landing page (`amintaapp.com/login` — Google, GitHub, or email OTP)
+- Auth via the landing page (`amintaapp.com/login` — X, Google, or email & password)
 - Tokens stored in `chrome.storage.local` as `auth_access_token`, `auth_refresh_token`, `auth_user_id`, `auth_user_email`
 - **Token refresh**: on any 401, `sync.ts` calls `refreshAuthSession()` →
   `POST amintaapp.com/api/auth/refresh` and retries once. A definitively dead

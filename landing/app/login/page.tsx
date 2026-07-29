@@ -8,7 +8,8 @@ import {
 } from "@/components/auth/AuthShell"
 import posthog from "posthog-js"
 
-// Sign in — email/password + Google. Account creation lives on /signup.
+// Sign in — X (primary), Google (secondary), and email/password.
+// Account creation lives on /signup.
 
 const isDev = process.env.NODE_ENV !== "production"
 
@@ -77,7 +78,7 @@ export default function LoginPage() {
         setUnconfirmed(true)
         setFormError("Your email isn't verified yet. Check your inbox, or resend the link below.")
       } else if (/invalid login credentials/i.test(error.message)) {
-        setFormError("Wrong email or password. If you signed up with Google, use that button instead.")
+        setFormError("Wrong email or password. Make sure you're using the same sign-in method you used when creating your account.")
       } else {
         setFormError(error.message)
       }
