@@ -107,6 +107,17 @@ export default function LoginPage() {
     await createClient().auth.signInWithOAuth({ provider: "google", options: { redirectTo: oauthCallbackUrl() } })
   }
 
+  // Identical shape to handleGoogle — same redirectTo, same callback route,
+  // same extension handoff. Deliberately passes NO `scopes`: Supabase's X
+  // provider already requests the identity-only set (users.email, users.read,
+  // tweet.read, offline.access) and a custom `scopes` value is APPENDED to
+  // that list rather than replacing it, so passing anything here could only
+  // ever request MORE than identity. Read-only by construction.
+  const handleX = async () => {
+    posthog.capture("x_oauth_initiated", { page: "login" })
+    await createClient().auth.signInWithOAuth({ provider: "x", options: { redirectTo: oauthCallbackUrl() } })
+  }
+
   // Avoid flashing the form while we check for an existing session above —
   // either it redirects immediately, or this clears in well under a second.
   if (checkingSession) return null
@@ -121,7 +132,7 @@ export default function LoginPage() {
           <p className="text-[#9a9aa3] text-xs">Welcome back. Aminta missed you.</p>
         </div>
 
-        <OAuthButtons onGoogle={handleGoogle} />
+        <OAuthButtons onGoogle={handleGoogle} onX={handleX} />
 
         <OrDivider />
 

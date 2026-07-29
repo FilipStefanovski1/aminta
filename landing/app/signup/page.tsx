@@ -140,6 +140,14 @@ export default function SignupPage() {
     await createClient().auth.signInWithOAuth({ provider: "google", options: { redirectTo: oauthCallbackUrl() } })
   }
 
+  // See the note on login/page.tsx's handleX — no `scopes` passed on purpose;
+  // Supabase's X provider defaults are identity-only and custom scopes would
+  // be appended to (never replace) that list.
+  const handleX = async () => {
+    posthog.capture("x_oauth_initiated", { page: "signup" })
+    await createClient().auth.signInWithOAuth({ provider: "x", options: { redirectTo: oauthCallbackUrl() } })
+  }
+
   if (step === "verify") {
     return (
       <AuthShell onBack={() => { setStep("form"); setResent(false) }}>
@@ -189,7 +197,7 @@ export default function SignupPage() {
           <p className="text-[#9a9aa3] text-xs">Start growing your audience with Aminta</p>
         </div>
 
-        <OAuthButtons onGoogle={handleGoogle} />
+        <OAuthButtons onGoogle={handleGoogle} onX={handleX} />
 
         <OrDivider />
 
