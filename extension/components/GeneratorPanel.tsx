@@ -7,7 +7,7 @@ import { todayLocal } from "~lib/dates"
 import { getStageTint } from "~lib/evolution"
 import { shouldUseIncludedAi } from "~lib/entitlements"
 import { fetchImageAsDataUrl } from "~lib/images"
-import { readActivePost } from "~lib/messaging"
+import { findNextReplyTarget, readActivePost } from "~lib/messaging"
 import { incrementMissionGenerates } from "~lib/missions"
 import type { Mode, OutputLength, Platform, Tone } from "~lib/prompts"
 import { generateReply } from "~lib/replyGeneration"
@@ -259,6 +259,7 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
   // pull() and lib/replyGeneration.ts.
   const [postImageUrls, setPostImageUrls]   = useState<string[]>([])
   const [analyzingImage, setAnalyzingImage] = useState(false)
+  const [jumping, setJumping] = useState(false)
 
   const [templatesOpen, setTemplatesOpen] = useState(false)
   const [templatesPrefill, setTemplatesPrefill] = useState<{ content: string; mode: TemplateMode } | undefined>(undefined)
@@ -369,6 +370,26 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
       setPostImageUrls(res.imageUrls ?? [])
     } else {
       setError(res.error ?? "Couldn't read the post.")
+    }
+  }
+
+  // "Post worth a reply" is a product concept — this finds a genuine reply
+  // opportunity, not just the next post in the timeline. v1 is deterministic
+  // (see lib/replyTargets.ts); this call site doesn't change when
+  // opportunity scoring gets smarter later.
+  const jumpToNextReplyTarget = async () => {
+    setError("")
+    setJumping(true)
+    try {
+      const res = await findNextReplyTarget(PLATFORM)
+      if (res.ok) {
+        if (res.text) setTopic(res.text)
+        setPostImageUrls(res.imageUrls ?? [])
+      } else {
+        setError(res.error ?? "Couldn't find a reply opportunity.")
+      }
+    } finally {
+      setJumping(false)
     }
   }
 
@@ -617,6 +638,15 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
             className="w-full rounded-lg py-2 text-[11px] font-medium transition-colors"
             style={{ border: `1px solid ${C.border}`, color: C.textFaint }}>
             ↑ Pull from page
+          </button>
+        )}
+        {mode === "reply" && (
+          <button
+            onClick={jumpToNextReplyTarget}
+            disabled={jumping}
+            className="w-full rounded-lg py-2 text-[11px] font-medium transition-colors disabled:opacity-60"
+            style={{ border: `1px solid ${C.border}`, color: C.textFaint }}>
+            {jumping ? "Looking for a reply opportunity…" : "Find a post worth replying to"}
           </button>
         )}
         {mode === "reply" && postImageUrls.length > 0 && (

@@ -14,6 +14,7 @@ import { hasProAccess, planLabel as computePlanLabel } from "~lib/entitlements"
 import { getMissionProgress, tryCompleteDailyMissions } from "~lib/missions"
 import type { AmintaStore } from "~lib/storage"
 import { C } from "~lib/theme"
+import { openXComposer } from "~lib/xTab"
 import { Card, Sprite, SpeechBubble, XPBar } from "~components/ui"
 
 
@@ -226,7 +227,7 @@ export default function HomeTab({ store, onCreate, onTrain, onOpenCompanion, onO
         </div>
         <div className="px-4 py-3" style={{ borderTop: `1px solid ${C.border}` }}>
           <button
-            onClick={() => { chrome.tabs.create({ url: "https://x.com/compose/post" }); onCreate() }}
+            onClick={() => { openXComposer(); onCreate() }}
             className="btn-pixel w-full py-3 rounded-xl font-pixel text-[9px] text-black"
             style={{ backgroundColor: tint }}>
             Create with Aminta

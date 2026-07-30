@@ -149,9 +149,11 @@ export function LoginForm({ providers }: { providers: AuthProvidersConfig }) {
           <p className="font-pixel text-[9px] tracking-widest mb-1" style={{ color: "var(--accent)" }}>
             Sign in
           </p>
-          <p className="text-[#9a9aa3] text-xs">
-            {showAll ? "Welcome back. Aminta missed you." : "Connect your X account to personalize Aminta."}
-          </p>
+          {showAll && (
+            <p className="text-[#9a9aa3] text-xs">
+              Welcome back. Aminta missed you.
+            </p>
+          )}
         </div>
 
         <OAuthButtons onGoogle={handleGoogle} onX={handleX} showGoogle={visible.google} showX={visible.x} />
@@ -162,7 +164,7 @@ export function LoginForm({ providers }: { providers: AuthProvidersConfig }) {
             onClick={() => setShowAll(true)}
             className="w-full text-center text-xs text-[#888] hover:text-accent transition-colors"
           >
-            Already have an account? Sign in with another method
+            Use another sign-in method
           </button>
         )}
 

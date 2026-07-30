@@ -549,7 +549,7 @@ function TemplateEditor({
           </p>
           {supportsVariables && (
             <button onClick={convertSelection} className="text-[10px]" style={{ color: tint }}>
-              Convert selection → variable
+              Convert selection to variable
             </button>
           )}
         </div>

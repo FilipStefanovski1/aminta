@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react"
 import "~style.css"
 
 import { SELECT_STYLE } from "~components/ApiKeyForm"
+import AiKeyInput from "~components/AiKeyInput"
 import DemonMascot from "~components/DemonMascot"
 import GeneratorPanel from "~components/GeneratorPanel"
 import CompanionPage from "~components/CompanionPage"
@@ -146,7 +147,7 @@ function LevelUpModal({ data, onDismiss }: { data: LevelUpData; onDismiss: () =>
           onClick={onDismiss}
           className="btn-pixel w-full py-2.5 rounded-xl font-pixel text-[9px] text-black"
           style={{ backgroundColor: tint }}>
-          Keep Going →
+          Keep Going
         </button>
       </div>
     </div>
@@ -406,64 +407,14 @@ function SettingsOverlay({
 
             {/* API Key */}
             <div className="px-3.5 pt-3.5 pb-3">
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="text-[9px] uppercase tracking-[0.06em]" style={{ color: "#888896" }}>
-                  API Key {store.aiIncluded && store.providerMode !== "byok" && (
-                    <span className="normal-case" style={{ color: "#55555f" }}>(optional)</span>
-                  )}
-                </label>
-                <span className="text-[9px]" style={{ color: "#888896" }}>
-                  <span style={{ color: provider.dot }}>●</span>{" "}{provider.name}
-                </span>
-              </div>
-              <input
-                type="password"
+              <AiKeyInput
                 value={key}
-                onChange={e => setKey(e.target.value)}
-                placeholder="gsk_…  ·  AIza…  ·  sk-or-…"
-                className="input-pixel w-full rounded-lg px-3 py-2 text-[12px]"
+                onChange={setKey}
+                tint={avatarTint}
+                labelSuffix={store.aiIncluded && store.providerMode !== "byok" && (
+                  <span className="normal-case" style={{ color: "#55555f" }}>(optional)</span>
+                )}
               />
-
-              {/* Get an API Key — label on its own line so the chips have room
-                  to sit on one row instead of wrapping one-per-line. Display
-                  order is Groq/OpenRouter/Google (short chips first) rather
-                  than PROVIDERS' own order — that array's order is load-
-                  bearing for detectProvider()'s catch-all match and must not
-                  change, but nothing stops the two short labels (Groq,
-                  OpenRouter) from sitting adjacent here so they read left to
-                  right on the first row, with the longer "Google AI Studio"
-                  wrapping to its own line below instead of splitting them. */}
-              <p className="text-[9px] mt-2.5" style={{ color: "#55555f" }}>Get a key:</p>
-              <div className="flex items-center flex-wrap gap-1.5 mt-1">
-                {(["groq", "openrouter", "google"] as const).map((id) => {
-                  const p = PROVIDERS.find((x) => x.id === id)!
-                  const active = p.id === provider.id
-                  return (
-                    <a
-                      key={p.id}
-                      href={p.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="btn-pixel flex items-center gap-1 rounded-md px-1.5 py-1 text-[8px]"
-                      style={{
-                        backgroundColor: active ? avatarTint : "#2a2a30",
-                        border: "2px solid #000",
-                        boxShadow: "2px 2px 0 #000",
-                        color: active ? "#000" : "#ccccd2",
-                      }}
-                    >
-                      {p.name}
-                      {p.free && (
-                        <span className="text-[7px]" style={{ color: active ? "#00000099" : "#8a8a92" }}>free</span>
-                      )}
-                    </a>
-                  )
-                })}
-              </div>
-
-              <p className="text-[10px] mt-1.5 leading-none" style={{ color: "#666672" }}>
-                Stored locally only.
-              </p>
             </div>
 
             <div style={{ height: 1, backgroundColor: C.borderSoft }} />

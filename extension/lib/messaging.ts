@@ -51,6 +51,17 @@ export function readActivePost(platform: Platform): Promise<BridgeResponse> {
   return send({ type: "GET_ACTIVE_TWEET" }, platform)
 }
 
+// Scans the timeline currently loaded in the active X tab for the next post
+// worth replying to — a genuine reply opportunity (see lib/replyTargets.ts
+// for the long-term vision), not just the next post in order. Skips ads,
+// own posts, empty posts, and anything already picked this session — see
+// contents/twitter-bridge.ts — scrolls it into view, and returns its
+// text/images the same shape as readActivePost so callers can treat the
+// result identically.
+export function findNextReplyTarget(platform: Platform): Promise<BridgeResponse> {
+  return send({ type: "FIND_NEXT_REPLY_TARGET" }, platform)
+}
+
 export function insertText(platform: Platform, text: string): Promise<BridgeResponse> {
   return send({ type: "INSERT_TEXT", text }, platform)
 }

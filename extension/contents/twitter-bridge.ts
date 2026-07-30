@@ -2,6 +2,7 @@ import type { PlasmoCSConfig } from "plasmo"
 
 import { dispatchGenerate } from "~lib/backendGenerate"
 import { shouldUseIncludedAi } from "~lib/entitlements"
+import { pickNextReplyTarget, type ReplyPostData } from "~lib/replyTargets"
 import { getStore } from "~lib/storage"
 import { getOrBuildStyleProfile } from "~lib/styleProfile"
 import { processTweetImageUrls } from "~lib/tweetMedia"
@@ -72,6 +73,141 @@ function extractTweetImages(textNode: HTMLElement | null): string[] {
 
 function getActiveTweetImages(): string[] {
   return extractTweetImages(findActiveTweetTextNode())
+}
+
+// ─── Jump to next reply target ──────────────────────────────────────────────
+// Scans the timeline (not just the single active/composer-adjacent tweet
+// findActiveTweetTextNode targets) for the next post worth replying to —
+// "post worth a reply" is a product concept (see lib/replyTargets.ts for the
+// long-term vision), not just "next post." Deterministic, no AI call —
+// suitability is decided entirely from data already on the page (author, ad
+// label, text length, images).
+
+// Persists only for the lifetime of this content-script injection (i.e. the
+// current page load) — resets on navigation/reload, which doubles as a
+// natural "new session" boundary. Good enough for "never repeat within the
+// same side-panel session" without needing cross-context state plumbing.
+const seenReplyTargetIds = new Set<string>()
+
+interface DomReplyCandidate extends ReplyPostData {
+  article: HTMLElement
+  images: string[]
+}
+
+// Own-handle detection. Fragile: relies on the desktop left-nav profile
+// link, which may not render in narrow/mobile layouts — if it's absent, the
+// own-post filter is simply skipped rather than failing closed.
+function getOwnHandle(): string | null {
+  const href = document.querySelector<HTMLAnchorElement>('a[data-testid="AppTabBar_Profile_Link"]')?.getAttribute("href")
+  return href ? href.replace(/^\//, "").toLowerCase() : null
+}
+
+// Fragile: X has no stable, documented "this is an ad" attribute. Promoted
+// posts render a "Promoted" label in the same slot normal posts use for
+// "so-and-so reposted" — socialContext is the closest stable-ish hook, with
+// a plain-text fallback scan for layouts where that testid is absent.
+function isPromoted(article: HTMLElement): boolean {
+  const context = article.querySelector('[data-testid="socialContext"]')?.textContent ?? ""
+  if (/promoted/i.test(context)) return true
+  const firstLine = article.querySelector('div[dir="ltr"] > span')?.textContent?.trim() ?? ""
+  return /^promoted$/i.test(firstLine)
+}
+
+// Permalinks are `/<author>/status/<id>` — the one place a tweet's author
+// and a stable dedupe id are both available from a single attribute.
+function getTweetPermalink(article: HTMLElement): { id: string; author: string } | null {
+  const link = article.querySelector<HTMLAnchorElement>('a[role="link"][href*="/status/"]')
+  const href = link?.getAttribute("href")
+  if (!href) return null
+  const m = href.match(/^\/([^/]+)\/status\/(\d+)/)
+  return m ? { author: m[1].toLowerCase(), id: m[2] } : null
+}
+
+function imagesForArticle(article: HTMLElement | null): string[] {
+  if (!article) return []
+  const srcs = Array.from(article.querySelectorAll<HTMLImageElement>("img[src]")).map((img) => img.src)
+  return processTweetImageUrls(srcs)
+}
+
+// DOM scraping only — ad filtering and data extraction. The actual
+// eligibility/ordering decision lives in lib/replyTargets.ts (pure, unit
+// tested) so it isn't duplicated or left untestable here.
+function collectReplyCandidates(): DomReplyCandidate[] {
+  const out: DomReplyCandidate[] = []
+  for (const article of Array.from(document.querySelectorAll<HTMLElement>('article[data-testid="tweet"]'))) {
+    if (isPromoted(article)) continue
+    const permalink = getTweetPermalink(article)
+    if (!permalink) continue
+    const text = article.querySelector<HTMLElement>('[data-testid="tweetText"]')?.innerText.trim() ?? ""
+    const images = imagesForArticle(article)
+    out.push({ article, id: permalink.id, author: permalink.author, text, hasImages: images.length > 0, images })
+  }
+  return out
+}
+
+function highlightArticle(article: HTMLElement) {
+  const prev = { outline: article.style.outline, boxShadow: article.style.boxShadow, transition: article.style.transition }
+  article.style.transition = "outline 0.15s ease, box-shadow 0.15s ease"
+  article.style.outline = "2px solid #74f7b5"
+  article.style.boxShadow = "0 0 0 4px rgba(116,247,181,0.25)"
+  setTimeout(() => {
+    article.style.outline = prev.outline
+    article.style.boxShadow = prev.boxShadow
+    article.style.transition = prev.transition
+  }, 1400)
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+async function findNextReplyTarget(): Promise<{ text: string; imageUrls: string[] } | { error: string }> {
+  const ownHandle = getOwnHandle()
+  let candidates = collectReplyCandidates()
+  let pick = pickNextReplyTarget(candidates, ownHandle, seenReplyTargetIds)
+
+  if (!pick) {
+    // Nothing eligible currently loaded — scroll further and give X's
+    // virtualized timeline a moment to render more, then retry once.
+    window.scrollBy({ top: window.innerHeight * 1.4, behavior: "smooth" })
+    await sleep(1200)
+    candidates = collectReplyCandidates()
+    pick = pickNextReplyTarget(candidates, ownHandle, seenReplyTargetIds)
+  }
+
+  if (!pick) {
+    return { error: "No good reply opportunities found yet. Scroll a little further and try again." }
+  }
+
+  seenReplyTargetIds.add(pick.id)
+  const domPick = candidates.find(c => c.id === pick!.id)!
+  domPick.article.scrollIntoView({ behavior: "smooth", block: "center" })
+  highlightArticle(domPick.article)
+  return { text: domPick.text, imageUrls: domPick.images }
+}
+
+// ─── Composer open/focus (shared by "Create with Aminta" etc.) ─────────────
+
+function isComposerOpen(): boolean {
+  return !!document.querySelector('[data-testid="tweetTextarea_0"]')
+}
+
+// Opens X's own compose modal without navigating away from wherever the
+// user currently is — preserves any other in-progress draft on the page.
+// Fragile: relies on the desktop left-nav "Post" button; if X renames or
+// hides it (e.g. narrow layouts), this returns false and the caller's own
+// fallback (a fresh tab straight at /compose/post) takes over instead.
+function openOrFocusComposer(): boolean {
+  if (isComposerOpen()) {
+    getComposerBox()?.focus()
+    return true
+  }
+  const newPostBtn = document.querySelector<HTMLElement>('[data-testid="SideNav_NewTweet_Button"]')
+  if (newPostBtn) {
+    newPostBtn.click()
+    return true
+  }
+  return false
 }
 
 async function insertImageIntoComposer(dataUrl: string): Promise<boolean> {
@@ -499,6 +635,21 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
         : { ok: false, error: "Couldn't attach image. Make sure the X composer is open." }
       )
     })
+    return true
+  }
+
+  if (msg?.type === "FIND_NEXT_REPLY_TARGET") {
+    findNextReplyTarget().then((res) => {
+      sendResponse("error" in res
+        ? { ok: false, error: res.error }
+        : { ok: true, text: res.text, imageUrls: res.imageUrls }
+      )
+    })
+    return true
+  }
+
+  if (msg?.type === "OPEN_COMPOSER") {
+    sendResponse({ ok: openOrFocusComposer() })
     return true
   }
 

@@ -146,7 +146,8 @@ export function OrDivider() {
   )
 }
 
-// Aminta is X-first: "Connect X" is the primary action (existing
+// Aminta is X-first: "Connect" (with the X logo as the icon — no need to
+// also spell out the letter, that's redundant) is the primary action (existing
 // .rpg-btn-primary treatment), Google stays exactly as it was on
 // .rpg-btn-secondary, just below it. No new CSS — both classes already exist.
 //
@@ -173,10 +174,10 @@ export function OAuthButtons({
       {showX && onX && (
         <button onClick={onX} type="button"
           className="rpg-btn-primary w-full flex items-center justify-center gap-2">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          Connect
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
           </svg>
-          Connect X
         </button>
       )}
       {showGoogle && (

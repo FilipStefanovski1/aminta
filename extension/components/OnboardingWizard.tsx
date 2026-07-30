@@ -6,6 +6,8 @@ import { isGoogleKey, isGroqKey } from "~lib/ai"
 import { dispatchGenerate } from "~lib/backendGenerate"
 import { shouldUseIncludedAi } from "~lib/entitlements"
 import { FORMS } from "~lib/evolution"
+import { focusOrCreateXTab } from "~lib/xTab"
+import AiKeyInput from "~components/AiKeyInput"
 import DemonMascot from "~components/DemonMascot"
 import { Card, PrimaryButton, SectionLabel, Sprite, SpeechBubble } from "~components/ui"
 
@@ -34,9 +36,9 @@ interface Props {
 // about before any real customization (topics/tone/examples) exists.
 
 const INTENT_OPTIONS = [
-  { id: "posts",   label: "Write posts",   desc: "Create something from scratch.",   seed: "an introduction post about who you are and what you're building" },
-  { id: "replies", label: "Reply to posts", desc: "Respond to conversations.",        seed: "a post about jumping into more conversations on X" },
-  { id: "grow",    label: "Grow on X",      desc: "Ideas, strategy and consistency.", seed: "a post about showing up consistently on X" },
+  { id: "posts",   label: "Write posts",   desc: "Create something from scratch.",   seed: "a bold, specific take on why most people never actually start building the thing they talk about" },
+  { id: "replies", label: "Reply to posts", desc: "Respond to conversations.",        seed: "a sharp, quotable thought about why persistence beats talent for people trying to grow online" },
+  { id: "grow",    label: "Grow on X",      desc: "Ideas, strategy and consistency.", seed: "a contrarian but true insight about what actually makes posts take off on X" },
 ] as const
 type IntentId = typeof INTENT_OPTIONS[number]["id"]
 
@@ -136,13 +138,6 @@ function detectProvider(key: string): Provider {
   return "unknown"
 }
 
-const PROVIDER_LABEL: Record<Provider, string> = {
-  groq: "Groq", gemini: "Gemini", openrouter: "OpenRouter", unknown: "",
-}
-const PROVIDER_COLOR: Record<Provider, string> = {
-  groq: "#f97316", gemini: "#4a90d9", openrouter: "#a78bfa", unknown: C.textGhost,
-}
-
 // A key that's present but clearly malformed (too short / has whitespace) —
 // not a full validity check (that happens server-side on first generation),
 // just enough to catch an obvious copy/paste mistake with a friendly nudge.
@@ -151,22 +146,6 @@ function looksMalformed(key: string): boolean {
   if (!k) return false
   if (detectProvider(k) !== "unknown") return false
   return k.length < 20 || /\s/.test(k)
-}
-
-type ProviderInfoKey = "gemini" | "openrouter"
-const PROVIDER_INFO: Record<ProviderInfoKey, { title: string; points: string[]; url: string; cta: string }> = {
-  gemini: {
-    title: "Google Gemini",
-    points: ["Generous free tier", "Great quality", "Easy to obtain"],
-    url: "https://aistudio.google.com/apikey",
-    cta: "Get a Gemini key →",
-  },
-  openrouter: {
-    title: "OpenRouter",
-    points: ["Supports Claude, GPT, Gemini, DeepSeek and many more", "One key, hundreds of models"],
-    url: "https://openrouter.ai/keys",
-    cta: "Get an OpenRouter key →",
-  },
 }
 
 // Step order — value before customization, not after:
@@ -240,7 +219,6 @@ export default function OnboardingWizard({ store, onDone }: Props) {
   const [draft, setDraft] = useState("")
   const [apiKey, setApiKey] = useState(store.apiKey || "")
   const [finishing, setFinishing] = useState(false)
-  const [providerInfoOpen, setProviderInfoOpen] = useState<ProviderInfoKey | null>(null)
   const [faqOpen, setFaqOpen] = useState(false)
 
   // Same entitlement check dispatchGenerate() itself uses (lib/entitlements.ts)
@@ -334,7 +312,6 @@ export default function OnboardingWizard({ store, onDone }: Props) {
   }
 
   // ── AI key ──
-  const provider   = detectProvider(apiKey)
   const malformed  = looksMalformed(apiKey)
   const canGenerate = includedAi || !!apiKey.trim()
 
@@ -380,8 +357,8 @@ export default function OnboardingWizard({ store, onDone }: Props) {
           input: seed,
           voice,
           styleProfile: null,
-          tone: "direct",
-          length: "short",
+          tone: "witty",
+          length: "medium",
         }
       )
       setFirstPost(text)
@@ -410,7 +387,7 @@ export default function OnboardingWizard({ store, onDone }: Props) {
       voiceInspiration: store.voice?.voiceInspiration || "",
       customRules: store.voice?.customRules || "",
     }
-    if (openX) chrome.tabs.create({ url: "https://x.com" })
+    if (openX) focusOrCreateXTab()
     await onDone({ interests: topics.join(", "), voice, apiKey, onboardingDone: true })
   }
 
@@ -453,9 +430,6 @@ export default function OnboardingWizard({ store, onDone }: Props) {
             <h2 className="font-pixel text-[11px] mt-8 leading-relaxed" style={{ color: C.text }}>
               Let&apos;s show you<br />what I can do.
             </h2>
-            <p className="text-[12px] mt-3 leading-relaxed" style={{ color: C.textDim }}>
-              One quick question, then I&apos;ll write<br />something for you.
-            </p>
           </div>
         )}
 
@@ -463,7 +437,7 @@ export default function OnboardingWizard({ store, onDone }: Props) {
         {step === 1 && (
           <div className="animate-slide-up space-y-5">
             <h2 className="font-pixel text-[11px] leading-relaxed" style={{ color: C.text }}>
-              What are you trying<br />to do today?
+              What do you want<br />my help with?
             </h2>
             <Card>
               <div className="space-y-2">
@@ -516,10 +490,10 @@ export default function OnboardingWizard({ store, onDone }: Props) {
               <>
                 <div>
                   <h2 className="font-pixel text-[11px] leading-relaxed" style={{ color: C.text }}>
-                    Choose your AI
+                    Before we start...
                   </h2>
                   <p className="text-[12px] mt-3 leading-relaxed" style={{ color: C.textDim }}>
-                    Aminta runs using your own AI model, so your prompts stay private and under your control. You can use:
+                    Pick the AI model you&apos;d like me to use. It&apos;s free, takes 30 seconds, and keeps your prompts completely private. You can use:
                   </p>
                   <ul className="mt-2 space-y-1">
                     <li className="text-[11px] leading-relaxed" style={{ color: C.textDim }}>• <span style={{ color: C.text }}>Groq</span>: recommended, free, fastest</li>
@@ -532,45 +506,22 @@ export default function OnboardingWizard({ store, onDone }: Props) {
                 <Card>
                   <SectionLabel>AI key</SectionLabel>
 
-                  <div className="relative">
-                    <input type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} autoFocus
-                      placeholder="Paste your API key..." className={`${inputCls} ${provider !== "unknown" ? "pr-20" : ""}`} />
-                    {provider !== "unknown" && (
-                      <span
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-semibold px-2 py-1 rounded-md"
-                        style={{ backgroundColor: PROVIDER_COLOR[provider] + "22", color: PROVIDER_COLOR[provider] }}>
-                        {PROVIDER_LABEL[provider]}
-                      </span>
-                    )}
+                  <div className="mt-1">
+                    <AiKeyInput
+                      value={apiKey}
+                      onChange={setApiKey}
+                      tint={C.mint}
+                      autoFocus
+                      belowInput={malformed && (
+                        <p className="text-[11px] mt-2 leading-relaxed" style={{ color: "#f5b50a" }}>
+                          That doesn't look like a complete API key. Double check you copied the whole thing.
+                        </p>
+                      )}
+                    />
                   </div>
 
-                  {malformed && (
-                    <p className="text-[11px] mt-2 leading-relaxed" style={{ color: "#f5b50a" }}>
-                      That doesn't look like a complete API key. Double check you copied the whole thing.
-                    </p>
-                  )}
-
-                  <div className="mt-3 pt-3 space-y-1.5" style={{ borderTop: `1px solid ${C.border}` }}>
-                    <p className="text-[11px] font-medium" style={{ color: C.mint }}>✓ Recommended: Groq, free, fastest</p>
-                    <a href="https://console.groq.com/keys" target="_blank" rel="noreferrer"
-                      className="text-[11px] underline block" style={{ color: C.mint }}>
-                      Get a free API key →
-                    </a>
-                  </div>
-
-                  <div className="flex items-center gap-3 mt-3">
-                    <button onClick={() => setProviderInfoOpen("gemini")}
-                      className="text-[11px] underline transition-colors" style={{ color: C.textDim }}>
-                      Use Gemini instead
-                    </button>
-                    <button onClick={() => setProviderInfoOpen("openrouter")}
-                      className="text-[11px] underline transition-colors" style={{ color: C.textDim }}>
-                      Use OpenRouter instead
-                    </button>
-                  </div>
-
-                  {/* Collapsible FAQ */}
-                  <div className="mt-3 pt-3" style={{ borderTop: `1px solid ${C.border}` }}>
+                  {/* Collapsible FAQ — its own quiet section at the bottom */}
+                  <div className="mt-6 pt-4" style={{ borderTop: `1px solid ${C.borderSoft}` }}>
                     <button onClick={() => setFaqOpen(v => !v)}
                       className="w-full flex items-center justify-between text-[11px] font-medium" style={{ color: C.textDim }}>
                       <span>Why do I need my own API key?</span>
@@ -640,11 +591,10 @@ export default function OnboardingWizard({ store, onDone }: Props) {
             {canGenerate && !generating && !generateError && firstPost && (
               <>
                 <h2 className="font-pixel text-[11px] leading-relaxed" style={{ color: C.text }}>
-                  I&apos;d post something like this.
+                  I&apos;d post this.
                 </h2>
                 <Card className="w-full text-left mt-5">
-                  <SectionLabel>Generated</SectionLabel>
-                  <p className="text-[13px] leading-relaxed mt-2" style={{ color: "#ccc" }}>{firstPost}</p>
+                  <p className="text-[13px] leading-relaxed" style={{ color: "#ccc" }}>{firstPost}</p>
                   <button onClick={copyFirstPost}
                     className="w-full rounded-xl py-2.5 mt-3 text-[11px] font-semibold transition-colors"
                     style={{ border: `1px dashed ${C.mint}88`, color: C.mint }}>
@@ -667,7 +617,7 @@ export default function OnboardingWizard({ store, onDone }: Props) {
               Now make Aminta<br />sound more like you.
             </h2>
             <p className="text-[12px] mt-3 leading-relaxed" style={{ color: C.textDim }}>
-              A few quick questions. Takes less than a minute.
+              A few quick questions, and I&apos;ll sound just like you.
             </p>
           </div>
         )}
@@ -901,7 +851,7 @@ export default function OnboardingWizard({ store, onDone }: Props) {
         )}
         {step === 3 && (
           <PrimaryButton onClick={next} disabled={generating}>
-            {generating ? "Writing…" : "Continue"}
+            {generating ? "Writing…" : "Make it sound like me"}
           </PrimaryButton>
         )}
         {step === 4 && <PrimaryButton onClick={next}>Continue</PrimaryButton>}
@@ -918,7 +868,7 @@ export default function OnboardingWizard({ store, onDone }: Props) {
           <>
             <PrimaryButton onClick={() => finish(false)} disabled={finishing}
               className="hover:shadow-[0_0_24px_rgba(116,247,181,0.45)]">
-              {finishing ? "Saving…" : "Enter Aminta →"}
+              {finishing ? "Saving…" : "Enter Aminta"}
             </PrimaryButton>
             <button onClick={() => finish(true)} disabled={finishing}
               className="w-full text-center text-[11px] py-1.5 font-medium transition-colors disabled:opacity-50"
@@ -926,30 +876,6 @@ export default function OnboardingWizard({ store, onDone }: Props) {
           </>
         )}
       </div>
-
-      {/* ── Provider info dropdown (Gemini / OpenRouter) ── */}
-      {providerInfoOpen && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={() => setProviderInfoOpen(null)} />
-          <div className="absolute left-5 right-5 bottom-24 z-50 rounded-2xl p-4 animate-card-in"
-            style={{ backgroundColor: "#252528", border: `1px solid ${C.border}`, boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }}>
-            <div className="flex items-center justify-between mb-2">
-              <p className="font-pixel text-[9px]" style={{ color: C.text }}>{PROVIDER_INFO[providerInfoOpen].title}</p>
-              <button onClick={() => setProviderInfoOpen(null)} aria-label="Close"
-                className="text-[13px]" style={{ color: C.textDim }}>✕</button>
-            </div>
-            <ul className="space-y-1 mb-3">
-              {PROVIDER_INFO[providerInfoOpen].points.map(p => (
-                <li key={p} className="text-[11px] leading-relaxed" style={{ color: C.textDim }}>• {p}</li>
-              ))}
-            </ul>
-            <a href={PROVIDER_INFO[providerInfoOpen].url} target="_blank" rel="noreferrer"
-              className="text-[11px] underline" style={{ color: C.mint }}>
-              {PROVIDER_INFO[providerInfoOpen].cta}
-            </a>
-          </div>
-        </>
-      )}
     </div>
   )
 }

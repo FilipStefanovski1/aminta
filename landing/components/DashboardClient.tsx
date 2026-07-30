@@ -164,10 +164,10 @@ export default function DashboardClient({
   const emailLocalPart = user.email ? user.email.split("@")[0] : ""
   const displayName = user.name || user.username || emailLocalPart || "Your account"
 
-  // Secondary line under the name: the email when there is one, otherwise the
-  // X handle. Rendered conditionally at both call sites so an account with
+  // Secondary line under the name: the X handle when there is one, otherwise
+  // the email. Rendered conditionally at both call sites so an account with
   // neither shows nothing at all rather than an empty row or bare "()".
-  const accountLabel = user.email || (user.username ? `@${user.username}` : "")
+  const accountLabel = user.username ? `@${user.username}` : user.email || ""
 
   const initials =
     (user.name || user.username || emailLocalPart)
