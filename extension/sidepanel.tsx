@@ -14,7 +14,7 @@ import VoiceProfileForm from "~components/VoiceProfileForm"
 import { GhostButton, PrimaryButton } from "~components/ui"
 import { FORMS, getStageTint } from "~lib/evolution"
 import { planLabel as computePlanLabel } from "~lib/entitlements"
-import { isGroqKey, GROQ_DEFAULT, DEPRECATED_GROQ_IDS } from "~lib/ai"
+import { isGoogleKey, isGroqKey, GEMINI_DEFAULT, GROQ_DEFAULT, SUPPORTED_GEMINI_MODELS, DEPRECATED_GROQ_IDS } from "~lib/ai"
 import { PROVIDERS, detectProvider } from "~lib/providers"
 import { C } from "~lib/theme"
 import { getStore, setStore, type AmintaStore } from "~lib/storage"
@@ -562,6 +562,7 @@ function SidePanel() {
   const [settingsOpen, setSettingsOpen]   = useState(false)
   const [companionOpen, setCompanionOpen] = useState(false)
   const grqMigrated = useRef(false)
+  const geminiMigrated = useRef(false)
   const [authChecked, setAuthChecked]   = useState(false)
   const [isLoggedIn, setIsLoggedIn]     = useState(false)
   const [session, setSession]           = useState<AuthSession | null>(null)
@@ -676,6 +677,18 @@ function SidePanel() {
     grqMigrated.current = true
     if (isGroqKey(store.apiKey ?? "") && DEPRECATED_GROQ_IDS.has(store.model ?? "")) {
       setStore({ model: GROQ_DEFAULT }).then(refresh)
+    }
+  }, [store]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // One-time migration: silently upgrade any stored Gemini model that isn't
+  // in SUPPORTED_GEMINI_MODELS (retired, restricted, invalid, typo'd, or a
+  // future retirement Google hasn't announced yet) to the new default —
+  // same pattern as the Groq migration above.
+  useEffect(() => {
+    if (!store || geminiMigrated.current) return
+    geminiMigrated.current = true
+    if (isGoogleKey(store.apiKey ?? "") && !SUPPORTED_GEMINI_MODELS.includes(store.model ?? "")) {
+      setStore({ model: GEMINI_DEFAULT }).then(refresh)
     }
   }, [store]) // eslint-disable-line react-hooks/exhaustive-deps
 

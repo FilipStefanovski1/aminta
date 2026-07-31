@@ -200,7 +200,7 @@ export async function POST(request: NextRequest) {
   }
 
   // 9. PROVIDER CALL — model/provider chosen entirely server-side
-  // (lib/ai/gemini.ts's hardcoded GEMINI_MODEL); the client never supplies
+  // (lib/ai/config.ts's GEMINI_INCLUDED_MODEL); the client never supplies
   // or influences which model runs here.
   const startedAt = Date.now()
   try {

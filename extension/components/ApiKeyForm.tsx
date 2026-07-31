@@ -8,10 +8,15 @@ export const OPENROUTER_MODELS = [
   { id: "openai/gpt-4o-mini",                     label: "GPT-4o Mini" },
   { id: "anthropic/claude-3.5-haiku",             label: "Claude 3.5 Haiku" },
 ]
+// gemini-2.0-flash/-lite were shut down by Google (June 2026) and
+// gemini-2.5-flash is restricted to pre-existing keys only — new API keys
+// get a 404 from all three. Only currently-available, non-alias, stable
+// model IDs are listed here; gemini-3.5-flash is first/default (see
+// lib/ai.ts's GEMINI_DEFAULT, which this list's order doesn't drive but
+// should stay consistent with).
 export const GOOGLE_MODELS = [
-  { id: "gemini-2.0-flash",      label: "Gemini 2.0 Flash" },
-  { id: "gemini-2.5-flash",      label: "Gemini 2.5 Flash" },
-  { id: "gemini-2.0-flash-lite", label: "Gemini 2.0 Flash Lite" },
+  { id: "gemini-3.5-flash",      label: "Gemini 3.5 Flash" },
+  { id: "gemini-3.5-flash-lite", label: "Gemini 3.5 Flash Lite" },
 ]
 export const GROQ_MODELS = [
   { id: "llama-3.3-70b-versatile", label: "Llama 3.3 70B", badge: "★ Recommended", badgeColor: "#74f7b5" },

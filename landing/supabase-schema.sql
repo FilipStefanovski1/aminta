@@ -77,7 +77,7 @@ create trigger on_auth_user_created
 
 alter table public.users
   add column ai_included_override boolean not null default false,
-  add column provider_preference text not null default 'gemini-2.0-flash',
+  add column provider_preference text not null default 'gemini-3.5-flash', -- keep in sync with landing/lib/ai/config.ts's GEMINI_INCLUDED_MODEL
   add column generation_limit_daily integer,
   add column generation_limit_monthly integer;
 
@@ -101,7 +101,7 @@ create table public.ai_usage_log (
   user_id uuid references public.users(id) on delete cascade,
   request_id uuid not null,
   generation_mode text not null,
-  model text not null default 'gemini-2.0-flash',
+  model text not null default 'gemini-3.5-flash', -- keep in sync with landing/lib/ai/config.ts's GEMINI_INCLUDED_MODEL
   input_chars integer not null,
   image_count integer not null default 0,
   output_tokens_est integer,

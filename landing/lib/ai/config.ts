@@ -10,6 +10,17 @@ import { createServiceClient } from "@/lib/supabase/server"
 const CONFIG_TTL_MS = 10_000
 const SPEND_TTL_MS = 60_000
 
+// Included AI's Gemini model — single source of truth. lib/ai/gemini.ts
+// imports this rather than hardcoding a model string, so a future model
+// swap (like this one, forced by gemini-2.5-flash 404ing for new API users)
+// only ever needs to change here. Deliberately NOT "gemini-flash-latest" —
+// that alias auto-upgrades to whatever Google points it at next, trading
+// away predictable behavior and pricing for convenience this project
+// doesn't want. Keep supabase-setup.sql/supabase-schema.sql's
+// provider_preference and ai_usage_log.model column defaults in sync with
+// this value — SQL string literals can't import it directly.
+export const GEMINI_INCLUDED_MODEL = "gemini-3.5-flash"
+
 interface AiConfig {
   ai_included_enabled: boolean
   global_daily_spend_cap_usd: number

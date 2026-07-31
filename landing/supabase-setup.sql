@@ -285,7 +285,7 @@ CREATE INDEX IF NOT EXISTS aminta_state_updated_at_idx ON public.aminta_state (u
 -- 9.1 public.users — new entitlement columns
 ALTER TABLE public.users
   ADD COLUMN IF NOT EXISTS ai_included_override     boolean NOT NULL DEFAULT false,
-  ADD COLUMN IF NOT EXISTS provider_preference       text    NOT NULL DEFAULT 'gemini-2.0-flash',
+  ADD COLUMN IF NOT EXISTS provider_preference       text    NOT NULL DEFAULT 'gemini-3.5-flash', -- keep in sync with landing/lib/ai/config.ts's GEMINI_INCLUDED_MODEL
   ADD COLUMN IF NOT EXISTS generation_limit_daily    integer,
   ADD COLUMN IF NOT EXISTS generation_limit_monthly  integer;
 
@@ -319,7 +319,7 @@ CREATE TABLE IF NOT EXISTS public.ai_usage_log (
   user_id            uuid        REFERENCES public.users(id) ON DELETE CASCADE,
   request_id         uuid        NOT NULL,
   generation_mode    text        NOT NULL,   -- 'tweet' | 'reply' | 'polish' | 'style_profile'
-  model              text        NOT NULL DEFAULT 'gemini-2.0-flash',
+  model              text        NOT NULL DEFAULT 'gemini-3.5-flash', -- keep in sync with landing/lib/ai/config.ts's GEMINI_INCLUDED_MODEL
   input_chars        integer     NOT NULL,
   image_count        integer     NOT NULL DEFAULT 0,
   output_tokens_est  integer,

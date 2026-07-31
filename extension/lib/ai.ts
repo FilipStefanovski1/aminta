@@ -16,8 +16,16 @@ export function isGroqKey(key: string): boolean {
   return key.trim().startsWith("gsk_")
 }
 
-const GEMINI_DEFAULT = "gemini-2.0-flash"
+export const GEMINI_DEFAULT = "gemini-3.5-flash"
 export const GROQ_DEFAULT = "llama-3.3-70b-versatile"
+
+// Whitelist, not a blacklist — Google has already fully shut down
+// gemini-2.0-flash/-lite and restricted gemini-2.5-flash to pre-existing
+// keys only (404s for new ones), and there's no reason to expect that to
+// stop happening. Listing what's actually supported means any stale,
+// invalid, typo'd, or future-retired model ID falls back to GEMINI_DEFAULT
+// automatically — nothing to add here when Google retires the next one.
+export const SUPPORTED_GEMINI_MODELS = ["gemini-3.5-flash", "gemini-3.5-flash-lite"]
 
 export const DEPRECATED_GROQ_IDS = new Set([
   "llama-3.1-70b-versatile",
@@ -30,10 +38,8 @@ export const DEPRECATED_GROQ_IDS = new Set([
   "qwen-qwq-32b",
 ])
 
-// Guard against stale / wrong-provider model names.
 function normalizeGeminiModel(model: string): string {
-  if (!model || model.includes("/") || model.includes("1.5")) return GEMINI_DEFAULT
-  return model
+  return SUPPORTED_GEMINI_MODELS.includes(model) ? model : GEMINI_DEFAULT
 }
 
 function normalizeGroqModel(model: string): string {

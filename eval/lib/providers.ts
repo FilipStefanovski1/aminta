@@ -44,7 +44,7 @@ function requireApiKey(envVar: string): string {
 // extension's bundler, not under plain Node. gemini.ts and openrouter.ts
 // below have no such aliased imports (gemini.ts's one import is type-only
 // and erased at runtime), so those two are imported directly.
-const GEMINI_DEFAULT_MODEL = "gemini-2.0-flash"
+const GEMINI_DEFAULT_MODEL = "gemini-3.5-flash"
 const GROQ_DEFAULT_MODEL = "llama-3.3-70b-versatile"
 
 export interface GenerationCallResult {

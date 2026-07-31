@@ -3,14 +3,16 @@
 // Intentional duplicate for app/api/generate/route.ts — see
 // lib/ai/prompts.ts's header comment for why (no shared package between
 // extension/ and landing/). Diff against the extension version before
-// shipping a change to either.
+// shipping a change to either. (The extension's BYOK caller takes its model
+// as a parameter from the user's own choice — it has no hardcoded model of
+// its own, so there's nothing to sync there for the model constant below.)
 //
 // Included AI only calls Gemini — this is the ONE provider this backend
 // talks to. BYOK's Groq/OpenRouter calls never happen server-side; those
 // stay entirely client-side in the extension, untouched by this work.
 import type { ChatMessage, ContentPart } from "./prompts"
+import { GEMINI_INCLUDED_MODEL } from "./config"
 
-const GEMINI_MODEL = "gemini-2.0-flash"
 const MAX_OUTPUT_TOKENS = 400
 
 function toGeminiParts(content: string | ContentPart[]): object[] {
@@ -60,7 +62,7 @@ export async function callGemini(messages: ChatMessage[], timeoutMs = 55_000): P
   let res: Response
   try {
     res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_INCLUDED_MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -86,7 +88,14 @@ export async function callGemini(messages: ChatMessage[], timeoutMs = 55_000): P
     // Detailed provider errors (which can include project/quota/key-shape
     // hints) go to server logs only — the client gets a generic message.
     // See route.ts's errorResponse()/logProviderError() for the log side.
-    console.error("[Included AI] Gemini provider error", { status: res.status, detail })
+    console.error("[Included AI] Gemini provider error", { status: res.status, model: GEMINI_INCLUDED_MODEL, detail })
+    // A 404 here means GEMINI_INCLUDED_MODEL itself is wrong/retired for
+    // this API key's tier — a config problem, not a transient one, and
+    // "try again" would just repeat the same failure. Distinct message so
+    // this is diagnosable from the client side too, not just server logs.
+    if (res.status === 404) {
+      throw new Error("Included AI is temporarily misconfigured (the configured model is unavailable). Please use your own API key in Settings, or try again shortly.")
+    }
     throw new Error("The AI provider returned an error. Please try again.")
   }
 
@@ -108,7 +117,7 @@ export async function callGemini(messages: ChatMessage[], timeoutMs = 55_000): P
 
   return {
     text,
-    model: GEMINI_MODEL,
+    model: GEMINI_INCLUDED_MODEL,
     inputTokens: usage?.promptTokenCount,
     outputTokens: usage?.candidatesTokenCount,
     totalTokens: usage?.totalTokenCount,

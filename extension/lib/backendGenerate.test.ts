@@ -36,7 +36,7 @@ function jsonResponse(status: number, body: unknown): Response {
 
 const baseStore: Partial<AmintaStore> = {
   apiKey: "",
-  model: "gemini-2.0-flash",
+  model: "gemini-3.5-flash",
   plan: null,
   subscriptionStatus: null,
   aiIncluded: false,
@@ -173,7 +173,7 @@ describe("dispatchGenerate", () => {
       length: "medium",
     })
     expect(text).toBe("byok text")
-    expect(mockRunAI).toHaveBeenCalledWith("AIzaSomeKey", "gemini-2.0-flash", expect.any(Array))
+    expect(mockRunAI).toHaveBeenCalledWith("AIzaSomeKey", "gemini-3.5-flash", expect.any(Array))
     expect(fetch).not.toHaveBeenCalled()
   })
 
@@ -236,7 +236,7 @@ describe("dispatchGenerate", () => {
       length: "medium",
     })
     expect(text).toBe("byok text")
-    expect(mockRunAI).toHaveBeenCalledWith("AIzaSomeKey", "gemini-2.0-flash", expect.any(Array))
+    expect(mockRunAI).toHaveBeenCalledWith("AIzaSomeKey", "gemini-3.5-flash", expect.any(Array))
     expect(fetch).not.toHaveBeenCalled()
   })
 
@@ -252,7 +252,7 @@ describe("dispatchGenerate", () => {
       images: ["data:image/jpeg;base64,abc"],
     })
     expect(text).toBe("byok image text")
-    expect(mockGenerateFromImage).toHaveBeenCalledWith("AIzaSomeKey", "gemini-2.0-flash", expect.any(Array), ["data:image/jpeg;base64,abc"])
+    expect(mockGenerateFromImage).toHaveBeenCalledWith("AIzaSomeKey", "gemini-3.5-flash", expect.any(Array), ["data:image/jpeg;base64,abc"])
   })
 })
 

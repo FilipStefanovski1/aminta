@@ -73,6 +73,15 @@ export async function callGemini(
         "Invalid Google key. Get a free one at aistudio.google.com/apikey."
       )
     }
+    if (res.status === 404) {
+      // Google returns 404 for a model ID that's retired, restricted to
+      // other keys, or simply doesn't exist — not a transient error, and
+      // "try again" would just repeat the same failure. Specific, actionable
+      // message instead of the generic `Gemini error ${status}` below.
+      throw new Error(
+        "The selected Gemini model is no longer available. Please choose another Gemini model from Settings."
+      )
+    }
     if (res.status === 429) {
       // Google's raw quota error is a wall of repeated metric/URL text —
       // pull out just what's actionable instead of dumping it verbatim.

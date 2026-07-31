@@ -35,7 +35,7 @@ function mockDeps(overrides: Partial<GenerateReplyDeps> = {}): GenerateReplyDeps
 }
 
 const call = (deps: ReturnType<typeof mockDeps>, imageUrls: string[], input = "someone's post") =>
-  generateReply("AIzaSomeKey", "gemini-2.0-flash", baseVoice(), input, imageUrls, null, "direct", "medium", deps)
+  generateReply("AIzaSomeKey", "gemini-3.5-flash", baseVoice(), input, imageUrls, null, "direct", "medium", deps)
 
 beforeEach(() => {
   vi.clearAllMocks()
