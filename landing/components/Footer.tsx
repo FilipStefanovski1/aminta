@@ -41,6 +41,7 @@ const SOCIALS = [
 ];
 
 const LEGAL = [
+  { label: "Weekly", href: "/weekly" },
   { label: "Privacy", href: "/privacy" },
   { label: "Terms", href: "/terms" },
   { label: "Refund Policy", href: "/refund-policy" },

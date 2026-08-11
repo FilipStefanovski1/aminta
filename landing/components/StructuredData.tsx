@@ -7,7 +7,7 @@ export function SoftwareApplicationSchema() {
     "@type": "SoftwareApplication",
     name: "Aminta",
     description:
-      "Aminta is the AI writing sidekick that makes posting on X addictive. Write posts in your voice, feed your demon, stack XP, and grow on X.",
+      "Aminta is your X companion for AI-assisted writing — draft posts and replies in your own voice, feed your demon, stack XP, and grow on X.",
     url: "https://amintaapp.com",
     applicationCategory: "BrowserApplication",
     operatingSystem: "Chrome",
@@ -24,6 +24,53 @@ export function SoftwareApplicationSchema() {
       dangerouslySetInnerHTML={{ __html: JSON.stringify(json) }}
     />
   );
+}
+
+// BlogPosting schema for a single Weekly edition — every field is sourced
+// directly from that edition's own WeeklyEditionMeta, never invented.
+// dateModified is only included when the edition actually has an
+// updatedAt (a real revision), not defaulted to publish date.
+export function ArticleSchema({
+  headline,
+  description,
+  url,
+  imageUrl,
+  datePublished,
+  dateModified,
+  authorName,
+}: {
+  headline: string
+  description: string
+  url: string
+  imageUrl: string
+  datePublished: string
+  dateModified?: string
+  authorName: string
+}) {
+  const json = {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    headline,
+    description,
+    image: [imageUrl],
+    datePublished,
+    ...(dateModified ? { dateModified } : {}),
+    author: { "@type": "Person", name: authorName },
+    publisher: {
+      "@type": "Organization",
+      name: "Aminta",
+      url: "https://amintaapp.com",
+      logo: { "@type": "ImageObject", url: "https://amintaapp.com/icon.png" },
+    },
+    mainEntityOfPage: { "@type": "WebPage", "@id": url },
+  }
+
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(json) }}
+    />
+  )
 }
 
 // FAQPage schema — derived from the same FAQS array FAQ.tsx renders, so the

@@ -28,23 +28,23 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://amintaapp.com"),
-  title: "Aminta | Feed Aminta. Grow on X.",
+  title: "Aminta | Your X Companion",
   description:
-    "Aminta is the AI writing sidekick that makes posting on X addictive. Write posts in your voice, feed your demon, stack XP, and grow on X.",
+    "Aminta is your X companion for AI-assisted writing — draft posts and replies in your own voice, feed your demon, stack XP, and grow on X.",
   alternates: {
     canonical: "/",
   },
   openGraph: {
-    title: "Aminta | Feed Aminta. Grow on X.",
+    title: "Aminta | Your X Companion",
     description:
-      "The AI sidekick that makes posting on X addictive. Generate posts in your voice, feed Aminta, stack XP, keep your streak alive.",
+      "Aminta is your X companion for AI-assisted writing. Generate posts and replies in your voice, feed Aminta, stack XP, keep your streak alive.",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Aminta | Feed Aminta. Grow on X.",
+    title: "Aminta | Your X Companion",
     description:
-      "The AI sidekick that makes posting on X addictive. Generate posts in your voice, feed Aminta, stack XP, keep your streak alive.",
+      "Aminta is your X companion for AI-assisted writing. Generate posts and replies in your voice, feed Aminta, stack XP, keep your streak alive.",
   },
   icons: {
     icon: [

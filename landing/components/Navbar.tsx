@@ -21,10 +21,13 @@ export default function Navbar({ alwaysVisible = true }: { alwaysVisible?: boole
   const [authed, setAuthed] = useState(false);
   const pathname = usePathname();
   const isHome = pathname === "/";
-  const LINKS = ANCHORS.map(({ label, hash }) => ({
-    label,
-    href: isHome ? `#${hash}` : `/#${hash}`,
-  }));
+  const LINKS = [
+    ...ANCHORS.map(({ label, hash }) => ({
+      label,
+      href: isHome ? `#${hash}` : `/#${hash}`,
+    })),
+    { label: "Weekly", href: "/weekly" },
+  ];
 
   useEffect(() => {
     const supabase = createClient();
