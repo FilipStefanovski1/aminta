@@ -23,35 +23,56 @@ const STEPS = [
   },
 ];
 
+// Card chrome, icon tile and type scale are deliberately the same tokens
+// Features.tsx uses (.feature-card + the mint-bordered icon chip), so the two
+// card grids on this page read as one system rather than two designs.
 function StepCard({ step, index }: { step: (typeof STEPS)[0]; index: number }) {
   const { Icon } = step;
   return (
     <Reveal delay={index * 120} className="h-full">
-      <div className="how-card group flex h-full flex-col items-center px-8 py-10 text-center">
-        <span className="how-badge flex items-center justify-center self-start">
-          <span className="font-pixel text-[11px] text-accent">{step.n}</span>
-        </span>
+      <div
+        className="feature-card group h-full p-6 transition-all duration-150 cursor-default
+                   hover:-translate-y-0.5 active:translate-y-0.5"
+        style={{ background: "#1a1a1a", position: "relative" }}
+      >
+        {/* top-left highlight strip */}
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{ boxShadow: "inset 1px 1px 0 rgba(255,255,255,0.05)" }}
+        />
 
-        <div className="mt-6 flex h-[90px] items-center justify-center">
-          <Icon className="how-icon-float h-[90px] w-[90px] text-accent" />
+        <div className="flex items-center justify-between gap-3">
+          <span
+            className="inline-flex h-16 w-16 shrink-0 items-center justify-center text-accent"
+            style={{
+              background: "rgba(116,247,181,0.08)",
+              border: "2px solid rgba(116,247,181,0.25)",
+              boxShadow: "2px 2px 0 #000",
+            }}
+          >
+            <Icon className="h-10 w-10" />
+          </span>
+          <span className="font-pixel text-[11px] text-muted/50">{step.n}</span>
         </div>
 
-        <h3 className="mt-6 font-pixel text-[13px] leading-snug text-accent sm:text-[15px]">
-          {step.title}
-        </h3>
-
-        <p className="mt-4 font-mono text-[15px] leading-relaxed text-[#b3b3b3] sm:text-base">
-          {step.desc}
-        </p>
+        <h3 className="mt-5 font-pixel text-sm leading-snug text-white">{step.title}</h3>
+        <p className="mt-2 text-sm leading-relaxed text-muted">{step.desc}</p>
       </div>
     </Reveal>
   );
 }
 
+// Sits between cards on desktop and lines up with the icon tiles rather than
+// floating at card mid-height, so the row reads as one left-to-right flow.
 function Connector() {
   return (
-    <div className="hidden lg:flex items-center justify-center px-3 shrink-0">
-      <span className="how-chevron font-pixel text-lg leading-none">&gt;</span>
+    <div aria-hidden className="hidden shrink-0 items-start px-4 lg:flex">
+      {/* 26px clears the card's 2px border + 24px padding, and h-16 matches the
+          icon tile, so centering here lands the arrow on the icon centreline. */}
+      <div className="mt-[26px] flex h-16 items-center gap-2">
+        <span className="h-px w-7 bg-line" />
+        <span className="font-pixel text-[11px] leading-none text-accent/60">&gt;</span>
+      </div>
     </div>
   );
 }
@@ -62,11 +83,11 @@ export default function HowItWorks() {
       {/* soft ambient glow behind the cards */}
       <div
         aria-hidden
-        className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-[420px] w-[900px] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-40 blur-[120px]"
+        className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-[360px] w-[900px] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-30 blur-[120px]"
         style={{ background: "var(--accent-soft)" }}
       />
 
-      <div className="mx-auto max-w-5xl px-5">
+      <div className="mx-auto max-w-6xl px-5">
         <Reveal className="text-center max-w-xl mx-auto">
           <p className="font-pixel text-xs text-accent uppercase tracking-widest">The loop</p>
           <h2 className="mt-4 font-pixel text-2xl sm:text-3xl text-white leading-snug">
@@ -74,7 +95,9 @@ export default function HowItWorks() {
           </h2>
         </Reveal>
 
-        <div className="mt-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[1fr_auto_1fr_auto_1fr] gap-6 lg:gap-0 items-stretch">
+        {/* Connectors are display:none below lg, so they drop out of the grid
+            entirely and the md layout is a clean 3-up. */}
+        <div className="mt-12 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-[1fr_auto_1fr_auto_1fr] gap-5 lg:gap-0 items-stretch">
           {STEPS.map((s, i) => (
             <Fragment key={s.n}>
               <StepCard step={s} index={i} />
