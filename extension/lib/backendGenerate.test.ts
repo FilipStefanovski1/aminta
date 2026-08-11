@@ -173,7 +173,10 @@ describe("dispatchGenerate", () => {
       length: "medium",
     })
     expect(text).toBe("byok text")
-    expect(mockRunAI).toHaveBeenCalledWith("AIzaSomeKey", "gemini-3.5-flash", expect.any(Array))
+    expect(mockRunAI).toHaveBeenCalledWith(
+      "AIzaSomeKey", "gemini-3.5-flash", expect.any(Array),
+      { structuredText: true, generationType: "tweet" }
+    )
     expect(fetch).not.toHaveBeenCalled()
   })
 
@@ -236,7 +239,10 @@ describe("dispatchGenerate", () => {
       length: "medium",
     })
     expect(text).toBe("byok text")
-    expect(mockRunAI).toHaveBeenCalledWith("AIzaSomeKey", "gemini-3.5-flash", expect.any(Array))
+    expect(mockRunAI).toHaveBeenCalledWith(
+      "AIzaSomeKey", "gemini-3.5-flash", expect.any(Array),
+      { structuredText: true, generationType: "tweet" }
+    )
     expect(fetch).not.toHaveBeenCalled()
   })
 
@@ -252,7 +258,10 @@ describe("dispatchGenerate", () => {
       images: ["data:image/jpeg;base64,abc"],
     })
     expect(text).toBe("byok image text")
-    expect(mockGenerateFromImage).toHaveBeenCalledWith("AIzaSomeKey", "gemini-3.5-flash", expect.any(Array), ["data:image/jpeg;base64,abc"])
+    expect(mockGenerateFromImage).toHaveBeenCalledWith(
+      "AIzaSomeKey", "gemini-3.5-flash", expect.any(Array), ["data:image/jpeg;base64,abc"],
+      { structuredText: true, generationType: "reply" }
+    )
   })
 })
 

@@ -40,6 +40,36 @@ function stripWrappingQuotes(text: string): string {
   return text
 }
 
+// A stray leading/trailing "**" or "__" — a truncated or misplaced markdown
+// bold marker with no matching partner (e.g. a model that trailed off
+// mid-bold-span, or accidentally wrapped a meta-comment instead of the
+// post). Checked in order of "**"/"__" before "*"/"_" so a real bold pair
+// isn't miscounted as two stray single markers. Only acts when the marker
+// count is ODD — a genuine, balanced emphasis span anywhere in real content
+// is left completely alone, so this never rewrites legitimate formatting.
+function stripStrayMarkdownEmphasis(text: string): string {
+  const boldCount = (text.match(/\*\*/g) ?? []).length
+  if (boldCount % 2 === 1) {
+    text = text.replace(/^\*\*(?=\S)/, "").replace(/(?<=\S)\*\*$/, "")
+  }
+  const underscoreBoldCount = (text.match(/__/g) ?? []).length
+  if (underscoreBoldCount % 2 === 1) {
+    text = text.replace(/^__(?=\S)/, "").replace(/(?<=\S)__$/, "")
+  }
+  // Single-marker emphasis, counted on whatever's left after the double-
+  // marker pass above so a leftover lone "*"/"_" from an already-stripped
+  // "**" pair doesn't get double-counted.
+  const starCount = (text.match(/\*/g) ?? []).length
+  if (starCount % 2 === 1) {
+    text = text.replace(/^\*(?=\S)/, "").replace(/(?<=\S)\*$/, "")
+  }
+  const underscoreCount = (text.match(/_/g) ?? []).length
+  if (underscoreCount % 2 === 1) {
+    text = text.replace(/^_(?=\S)/, "").replace(/(?<=\S)_$/, "")
+  }
+  return text.trim()
+}
+
 // Absolute safety cap — well past even "long" mode's realistic ceiling
 // (extension/lib/prompts.ts's LENGTH_GUIDE tops out around 700 characters
 // for a long post), so this only ever fires when generation has gone
@@ -65,6 +95,7 @@ export function cleanGenerationOutput(raw: string): string {
 
   text = text.replace(LABEL_RE, "").trim()
   text = stripWrappingQuotes(text)
+  text = stripStrayMarkdownEmphasis(text)
 
   // Collapse 3+ blank lines to a single blank line — never removes a
   // deliberate single line break.

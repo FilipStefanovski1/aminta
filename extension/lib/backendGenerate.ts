@@ -8,7 +8,7 @@
 import { getAuthSession, refreshAuthSession } from "~lib/auth"
 import { getDeviceId } from "~lib/deviceId"
 import { shouldUseIncludedAi } from "~lib/entitlements"
-import { generate as runAI, generateFromImage } from "~lib/ai"
+import { generate as runAI, generateFromImage, type GenerateOptions } from "~lib/ai"
 import { buildMessages, type Mode, type OutputLength, type Tone } from "~lib/prompts"
 import { cleanGenerationOutput } from "~lib/textCleanup"
 import type { AmintaStore, StyleProfile, VoiceProfile } from "~lib/storage"
@@ -115,7 +115,15 @@ export async function backendGenerate(args: BackendGenerateArgs): Promise<string
 // backend; everyone else runs the exact same buildMessages()+generate()/
 // generateFromImage() path that existed before this file did — no behavior
 // change for BYOK.
-export async function dispatchGenerate(store: AmintaStore, args: TextGenerateArgs): Promise<string> {
+export async function dispatchGenerate(
+  store: AmintaStore,
+  args: TextGenerateArgs,
+  // Fired before each automatic retry of a transient Gemini error (BYOK
+  // only — Included AI retries silently server-side, nothing to notify the
+  // UI about mid-request). Lets GeneratorPanel.tsx show "Retrying
+  // automatically…" instead of a raw provider error flashing on screen.
+  onRetry?: GenerateOptions["onRetry"]
+): Promise<string> {
   if (shouldUseIncludedAi(store)) {
     return backendGenerate(args)
   }
@@ -130,8 +138,12 @@ export async function dispatchGenerate(store: AmintaStore, args: TextGenerateArg
     args.templateInstruction,
     args.hasImages
   )
+  // Structured `{ text }` output for Gemini keys — args.generationMode is
+  // always tweet/reply/polish here (TextGenerateArgs excludes style_profile),
+  // so this is always real generation, never extraction.
+  const geminiOptions: GenerateOptions = { structuredText: true, generationType: args.generationMode, onRetry }
   const raw = args.images && args.images.length > 0
-    ? await generateFromImage(store.apiKey, store.model, messages, args.images)
-    : await runAI(store.apiKey, store.model, messages)
+    ? await generateFromImage(store.apiKey, store.model, messages, args.images, geminiOptions)
+    : await runAI(store.apiKey, store.model, messages, geminiOptions)
   return cleanGenerationOutput(raw)
 }

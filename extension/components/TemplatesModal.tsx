@@ -80,7 +80,9 @@ function makeRunTemplateDeps(store: AmintaStore): RunTemplateDeps {
         })
       }
       const { generate } = await import("~lib/ai")
-      return cleanGenerationOutput(await generate(apiKey, model, messages))
+      return cleanGenerationOutput(
+        await generate(apiKey, model, messages, { structuredText: true, generationType: lastArgs?.mode ?? "template" })
+      )
     },
     incrementGenerations: async () => {
       const { incrementGenerations } = await import("~lib/xp")

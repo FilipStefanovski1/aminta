@@ -1,6 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 
 import { getStageTint } from "~lib/evolution"
+import {
+  INSTINCT_CATEGORIES,
+  INSTINCT_PRESETS,
+  POPULAR_INSTINCT_PRESETS,
+  PRESET_BY_LABEL,
+  PRESET_BY_PROMPT,
+  searchInstinctPresets,
+  type InstinctPreset,
+} from "~lib/instinctPresets"
 import type { AmintaStore, VoiceProfile } from "~lib/storage"
 import { C } from "~lib/theme"
 import { Card, Sprite } from "~components/ui"
@@ -34,7 +43,6 @@ const INFO_TIPS: Record<string, string> = {
   niche:       "Be specific. 'crypto' is too broad, 'DeFi protocol security' is useful. Aminta uses this to stay on-topic when generating.",
   voice:       "Pick the style closest to how you actually write, not how you want to write. Aminta mimics your current voice, not an ideal one.",
   examples:    "Paste 3–5 real posts you've written. The more authentic, the better Aminta learns your patterns.",
-  inspiration: "An X handle whose writing style you admire. Aminta blends their rhythm into your voice, not their content.",
   rules:       "Things Aminta must never do. Examples: 'no hashtags', 'keep under 200 chars', 'never say leverage'.",
 }
 
@@ -45,8 +53,6 @@ const MEMORY_LESSONS = [
   "Felt your rhythm",
   "Recognized your style",
 ]
-
-const SUGGESTION_HANDLES = ["@naval", "@sama", "@levelsio", "@paulg"]
 
 function InfoTip({ tip }: { tip: string }) {
   const [open, setOpen] = useState(false)
@@ -131,10 +137,13 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0 
   )
   const [newTopic,         setNewTopic]         = useState("")
   const [voiceStyle,       setVoiceStyle]       = useState(initial?.voiceStyle ?? "")
-  const [voiceInspiration, setVoiceInspiration] = useState<string[]>(() =>
+  // No longer editable via UI (the "Sound like" section was removed) — kept
+  // read-only so an existing user's previously-saved inspiration handle(s)
+  // keep round-tripping through save() and the "Instincts" step's done-check
+  // exactly as before, instead of being silently dropped.
+  const [voiceInspiration] = useState<string[]>(() =>
     (initial?.voiceInspiration ?? "").split(",").map(s => s.trim()).filter(Boolean)
   )
-  const [newInspiration,   setNewInspiration]   = useState("")
   const [examples,         setExamples]         = useState<string[]>(() => {
     const raw = initial?.examples ?? ""
     if (!raw) return []
@@ -149,7 +158,15 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0 
   const [rules,    setRules]    = useState<string[]>(() =>
     (initial?.customRules ?? "").split("\n").map(s => s.trim()).filter(Boolean)
   )
-  const [newRule,  setNewRule]  = useState("")
+  // Doubles as the preset-library search box and the free-text "type your
+  // own instinct" input — one field, per the UX spec (search filters the
+  // library live; Enter with no matching preset adds it as a custom
+  // instinct, exactly like the old newRule input did).
+  const [instinctQuery, setInstinctQuery] = useState("")
+  // Collapsed by default — the full categorized library is an opt-in
+  // "advanced browse" view, not shown alongside Popular by default (that
+  // was the duplication problem with the previous design).
+  const [browseAllOpen, setBrowseAllOpen] = useState(false)
   const [saved,    setSaved]    = useState(false)
   const [error,    setError]    = useState("")
 
@@ -224,21 +241,28 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0 
     setVoiceStyle(id)
   }
 
-  const addInspiration = (handle?: string) => {
-    const h = (handle ?? newInspiration).trim()
-    if (!h || voiceInspiration.includes(h) || voiceInspiration.length >= 5) return
-    setVoiceInspiration(prev => [...prev, h])
-    setNewInspiration("")
-    react(`I'll study ${h} and blend their rhythm into yours.`)
+  // Adds an instinct by its already-resolved internal prompt string
+  // (whatever ends up stored/sent to the model — a preset's internalPrompt,
+  // or raw custom text). Shared by both the preset chips and the free-text
+  // Enter path so dedupe/cap logic lives in exactly one place.
+  const addInstinct = (prompt: string) => {
+    const p = prompt.trim()
+    if (!p || rules.includes(p) || rules.length >= 10) return
+    setRules(prev => [...prev, p])
+    react("I'll remember that every time I write.")
   }
-  const removeInspiration = (i: number) => setVoiceInspiration(prev => prev.filter((_, j) => j !== i))
+
+  const addPreset = (preset: InstinctPreset) => addInstinct(preset.internalPrompt)
 
   const addRule = () => {
-    const r = newRule.trim()
-    if (!r || rules.includes(r) || rules.length >= 10) return
-    setRules(prev => [...prev, r])
-    setNewRule("")
-    react("I'll remember that every time I write.")
+    const typed = instinctQuery.trim()
+    if (!typed) return
+    // Typing a preset's own label (e.g. "no hashtags") maps to that preset's
+    // internal prompt instead of storing the label text as a second, oddly-
+    // worded duplicate of the same intent — see instinctPresets.ts.
+    const matched = PRESET_BY_LABEL.get(typed.toLowerCase())
+    addInstinct(matched ? matched.internalPrompt : typed)
+    setInstinctQuery("")
   }
   const removeRule = (i: number) => setRules(prev => prev.filter((_, j) => j !== i))
 
@@ -524,85 +548,20 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0 
 
         <Divider />
 
-        {/* Sound like */}
-        <div className="p-4">
-          <SectionHead label="Sound like (optional)" tipKey="inspiration" />
-          {voiceInspiration.length > 0 && (
-            <div className="flex flex-wrap gap-2 mb-3">
-              {voiceInspiration.map((handle, i) => (
-                <span
-                  key={i}
-                  className="group/chip inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px]"
-                  style={{ backgroundColor: C.cardInner, border: `1px solid ${C.border}`, color: C.text }}>
-                  {handle}
-                  <button
-                    onClick={() => removeInspiration(i)}
-                    className="opacity-30 group-hover/chip:opacity-80 hover:!opacity-100 transition-opacity leading-none"
-                    style={{ color: C.textDim, fontSize: 14 }}>
-                    ×
-                  </button>
-                </span>
-              ))}
-            </div>
-          )}
-          {voiceInspiration.length < 5 && (
-            <div
-              className="flex items-center gap-2 rounded-xl px-3 py-2"
-              style={{ backgroundColor: C.cardInner, border: `1px solid ${C.border}` }}>
-              <input
-                value={newInspiration}
-                onChange={e => setNewInspiration(e.target.value)}
-                placeholder={voiceInspiration.length === 0 ? "@handle" : "Add another handle…"}
-                className="flex-1 bg-transparent text-[11px] outline-none min-w-0"
-                style={{ color: C.text }}
-                onKeyDown={e => {
-                  if (e.key === "Enter") { e.preventDefault(); addInspiration() }
-                  if (e.key === "Escape") setNewInspiration("")
-                }}
-              />
-              {newInspiration.trim() && (
-                <button
-                  onClick={() => addInspiration()}
-                  className="font-pixel text-[7px] shrink-0"
-                  style={{ color: tint }}>
-                  Add
-                </button>
-              )}
-            </div>
-          )}
-          {voiceInspiration.length === 0 && (
-            <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-              <span className="text-[10px]" style={{ color: C.textDim }}>try:</span>
-              {SUGGESTION_HANDLES.map(h => (
-                <button
-                  key={h}
-                  onClick={() => addInspiration(h)}
-                  className="text-[10px] transition-colors"
-                  style={{ color: C.textDim }}
-                  onMouseEnter={e => { e.currentTarget.style.color = tint }}
-                  onMouseLeave={e => { e.currentTarget.style.color = C.textDim }}>
-                  {h}
-                </button>
-              ))}
-            </div>
-          )}
-          {voiceInspiration.length > 0 && (
-            <p className="text-[10px] mt-2 leading-relaxed" style={{ color: C.textDim }}>
-              I'll blend their rhythm into your voice, not their ideas.
-            </p>
-          )}
-        </div>
-
-        <Divider />
-
         {/* Instincts / rules */}
         <div className="p-4">
           <SectionHead label="Instincts (optional)" tipKey="rules" />
           {rules.length === 0 && (
             <p className="text-[10px] mb-3 leading-relaxed" style={{ color: C.textDim }}>
-              Things I should never do. I'll remember these every time I write.
+              Writing preferences I should always follow. Search, pick a popular one, or type your own.
             </p>
           )}
+
+          {/* 1. Selected — same chip UI as before, nothing changed here. A
+              rule that matches a preset's internalPrompt displays that
+              preset's friendly label; anything else (pre-existing freeform
+              instincts, and any genuinely custom one) displays as the raw
+              text it's always been. */}
           {rules.length > 0 && (
             <div className="flex flex-wrap gap-2 mb-3">
               {rules.map((rule, i) => (
@@ -610,7 +569,7 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0 
                   key={i}
                   className="group/chip inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px]"
                   style={{ backgroundColor: C.cardInner, border: `1px solid ${C.border}`, color: C.text }}>
-                  {rule}
+                  {PRESET_BY_PROMPT.get(rule)?.label ?? rule}
                   <button
                     onClick={() => removeRule(i)}
                     className="opacity-30 group-hover/chip:opacity-80 hover:!opacity-100 transition-opacity leading-none"
@@ -621,31 +580,135 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0 
               ))}
             </div>
           )}
-          {rules.length < 10 && (
-            <div
-              className="flex items-center gap-2 rounded-xl px-3 py-2"
-              style={{ backgroundColor: C.cardInner, border: `1px solid ${C.border}` }}>
-              <input
-                value={newRule}
-                onChange={e => setNewRule(e.target.value)}
-                placeholder={rules.length === 0 ? "e.g. no hashtags, keep under 200 chars…" : "Add another instinct…"}
-                className="flex-1 bg-transparent text-[11px] outline-none min-w-0"
-                style={{ color: C.text }}
-                onKeyDown={e => {
-                  if (e.key === "Enter") { e.preventDefault(); addRule() }
-                  if (e.key === "Escape") setNewRule("")
-                }}
-              />
-              {newRule.trim() && (
-                <button
-                  onClick={addRule}
-                  className="font-pixel text-[7px] shrink-0"
-                  style={{ color: tint }}>
-                  Add
-                </button>
-              )}
-            </div>
-          )}
+
+          {rules.length < 10 && (() => {
+            const query = instinctQuery.trim()
+            const isSearching = query.length > 0
+            // Never duplicate a selected instinct anywhere in this picker —
+            // Popular, search results, and Browse-all all exclude whatever
+            // is already in `rules`.
+            const unselected = (list: InstinctPreset[]) =>
+              list.filter(p => !rules.includes(p.internalPrompt))
+            const searchResults = isSearching ? unselected(searchInstinctPresets(query)) : []
+            const popular = unselected(POPULAR_INSTINCT_PRESETS)
+
+            return (
+              <>
+                {/* 2. Search — directly under Selected. Doubles as the
+                    free-text input; Enter adds a matching preset (if the
+                    typed text is one) or a custom instinct otherwise. */}
+                <div
+                  className="flex items-center gap-2 rounded-xl px-3 py-2 mb-3"
+                  style={{ backgroundColor: C.cardInner, border: `1px solid ${C.border}` }}>
+                  <input
+                    value={instinctQuery}
+                    onChange={e => setInstinctQuery(e.target.value)}
+                    placeholder="Search or create an instinct…"
+                    className="flex-1 bg-transparent text-[11px] outline-none min-w-0"
+                    style={{ color: C.text }}
+                    onKeyDown={e => {
+                      if (e.key === "Enter") { e.preventDefault(); addRule() }
+                      if (e.key === "Escape") setInstinctQuery("")
+                    }}
+                  />
+                  {query && (
+                    <button
+                      onClick={addRule}
+                      className="font-pixel text-[7px] shrink-0"
+                      style={{ color: tint }}>
+                      Add
+                    </button>
+                  )}
+                </div>
+
+                {isSearching ? (
+                  // Actively searching — replace Popular/Browse-all with a
+                  // flat list of matches so nothing shows twice.
+                  searchResults.length > 0 ? (
+                    <div className="flex flex-wrap gap-1.5">
+                      {searchResults.map(preset => (
+                        <button
+                          key={preset.id}
+                          type="button"
+                          onClick={() => addPreset(preset)}
+                          className="px-2.5 py-1.5 rounded-lg text-[10px] transition-all"
+                          style={{ border: `1px solid ${C.border}`, color: C.textDim }}>
+                          {preset.label}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-[10px] leading-relaxed" style={{ color: C.textDim }}>
+                      No matching instinct — press Enter to add "{query}" as a custom instinct.
+                    </p>
+                  )
+                ) : (
+                  <>
+                    {/* 3. Popular — quick-add chips only, 8 curated defaults */}
+                    {popular.length > 0 && (
+                      <>
+                        <p className="text-[9px] uppercase tracking-widest mb-1.5" style={{ color: C.textDim }}>Popular</p>
+                        <div className="flex flex-wrap gap-1.5 mb-2.5">
+                          {popular.map(preset => (
+                            <button
+                              key={preset.id}
+                              type="button"
+                              onClick={() => addPreset(preset)}
+                              className="px-2.5 py-1.5 rounded-lg text-[10px] transition-all"
+                              style={{ border: `1px solid ${C.border}`, color: C.textDim }}>
+                              {preset.label}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+
+                    {/* 4. Browse all — collapsed by default; the full
+                        categorized library is an advanced/opt-in view, not
+                        shown alongside Popular. */}
+                    <button
+                      type="button"
+                      onClick={() => setBrowseAllOpen(v => !v)}
+                      className="text-[10px] underline-offset-2 hover:underline"
+                      style={{ color: C.textDim }}>
+                      {browseAllOpen ? "Hide full library" : "Browse all instincts"}
+                    </button>
+
+                    {browseAllOpen && (
+                      <div className="mt-2.5 max-h-40 overflow-y-auto pr-1 space-y-2.5">
+                        {INSTINCT_CATEGORIES.map(category => {
+                          const inCategory = unselected(
+                            INSTINCT_PRESETS.filter(p => p.category === category)
+                          )
+                          if (inCategory.length === 0) return null
+                          return (
+                            <div key={category}>
+                              <p className="text-[9px] uppercase tracking-widest mb-1.5" style={{ color: C.textGhost }}>
+                                {category}
+                              </p>
+                              <div className="flex flex-wrap gap-1.5">
+                                {inCategory.map(preset => (
+                                  <button
+                                    key={preset.id}
+                                    type="button"
+                                    onClick={() => addPreset(preset)}
+                                    className="px-2.5 py-1.5 rounded-lg text-[10px] transition-all"
+                                    style={{ border: `1px solid ${C.border}`, color: C.textDim }}>
+                                    {preset.label}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </>
+                )}
+              </>
+            )
+          })()}
+
           {rules.length > 0 && (
             <p className="text-[10px] mt-2" style={{ color: C.textDim }}>
               I'll follow {rules.length === 1 ? "this instinct" : `these ${rules.length} instincts`} in every generation.

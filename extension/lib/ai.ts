@@ -2,10 +2,11 @@
 //   AIza… / AQ.…  → Google AI Studio (Gemini)
 //   gsk_…         → Groq (free tier)
 //   else          → OpenRouter
-import { callGemini } from "~lib/gemini"
+import { callGemini, type CallGeminiOptions } from "~lib/gemini"
 import { callGroq, callOpenRouter, type ChatMessage } from "~lib/openrouter"
 
 export type { ChatMessage }
+export type { CallGeminiOptions as GenerateOptions }
 
 export function isGoogleKey(key: string): boolean {
   const k = key.trim()
@@ -59,10 +60,11 @@ function normalizeGroqModel(model: string): string {
 export function generate(
   apiKey: string,
   model: string,
-  messages: ChatMessage[]
+  messages: ChatMessage[],
+  options?: CallGeminiOptions
 ): Promise<string> {
   if (isGoogleKey(apiKey)) {
-    return callGemini(apiKey, normalizeGeminiModel(model), messages)
+    return callGemini(apiKey, normalizeGeminiModel(model), messages, options)
   }
   if (isGroqKey(apiKey)) {
     return callGroq(apiKey, normalizeGroqModel(model), messages)
@@ -77,7 +79,8 @@ export function generateFromImage(
   apiKey: string,
   model: string,
   messages: ChatMessage[],
-  imageDataUrls: string[]
+  imageDataUrls: string[],
+  options?: CallGeminiOptions
 ): Promise<string> {
   if (isGroqKey(apiKey)) {
     throw new Error("Vision isn't supported with Groq keys. Switch to a Gemini or OpenRouter key in Settings.")
@@ -104,7 +107,7 @@ export function generateFromImage(
   })
 
   if (isGoogleKey(apiKey)) {
-    return callGemini(apiKey, normalizeGeminiModel(model), visionMessages)
+    return callGemini(apiKey, normalizeGeminiModel(model), visionMessages, options)
   }
   return callOpenRouter(apiKey, model, visionMessages)
 }

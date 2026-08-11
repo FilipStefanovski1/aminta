@@ -325,4 +325,22 @@ describe("template generation — benchmark scenarios", () => {
     const system = systemOf(buildMessages("x", "tweet", voice(), "topic", null, "direct", "medium"))
     expect(system).not.toContain("TEMPLATE STRUCTURE")
   })
+
+  // Prompt strengthening (production Gemini-leakage fix): the anti-leakage
+  // instruction must be the literal LAST thing the model reads — LLMs weight
+  // end-of-prompt instructions more heavily, and this used to be buried in
+  // the middle of RULES with TONE DIRECTION/LENGTH TARGET appended after it.
+  it("ends the system prompt with the final anti-leakage instruction, after tone/length guidance", () => {
+    const system = systemOf(buildMessages("x", "tweet", voice(), "topic", null, "direct", "medium"))
+    expect(system.trim().endsWith(
+      "Do not return writing instructions, tone descriptions, analysis, labels, quotation marks, markdown, or commentary."
+    )).toBe(true)
+    // TONE DIRECTION/LENGTH TARGET must come BEFORE the final instruction,
+    // not after it — otherwise it would once again be the actual last thing
+    // the model reads.
+    const toneIdx = system.indexOf("TONE DIRECTION")
+    const finalIdx = system.indexOf("FINAL INSTRUCTION")
+    expect(toneIdx).toBeGreaterThan(-1)
+    expect(finalIdx).toBeGreaterThan(toneIdx)
+  })
 })

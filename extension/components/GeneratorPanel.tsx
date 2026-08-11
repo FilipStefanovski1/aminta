@@ -250,6 +250,10 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
   const [output,   setOutput]   = useState("")
   const [loading,  setLoading]  = useState(false)
   const [error,    setError]    = useState("")
+  // Set only while an automatic Gemini retry is in flight (see
+  // lib/gemini.ts's onRetry) — shown instead of leaving a raw provider
+  // error like "Gemini error 503..." on screen mid-retry.
+  const [retrying, setRetrying] = useState(false)
   const [genKey,   setGenKey]   = useState(0)
   const [imageDataUrl, setImageDataUrl] = useState<string | null>(null)
   const [outputImage, setOutputImage]   = useState<string | null>(null)
@@ -360,7 +364,11 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
   const todayGenerations = store.missionDate === todayLocal() ? (store.missionGenerates ?? 0) : 0
   const atFreeLimit = isFree && todayGenerations >= FREE_DAILY_LIMIT
 
-  const reset = () => { setError(""); setOutput(""); setOutputImage(null) }
+  const reset = () => { setError(""); setOutput(""); setOutputImage(null); setRetrying(false) }
+
+  // Passed to dispatchGenerate()/generateReply() as onRetry — fires before
+  // each automatic retry of a transient Gemini error (429/500/502/503/504).
+  const handleGeminiRetry = () => setRetrying(true)
 
   const pull = async () => {
     setError("")
@@ -467,11 +475,11 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
             generateText: (apiKey, model, messages) =>
               shouldUseIncludedAi(store)
                 ? backendGenerate({ generationMode: "reply", input: combined, voice: store.voice!, styleProfile, tone, length })
-                : runAI(apiKey, model, messages),
+                : runAI(apiKey, model, messages, { structuredText: true, generationType: "reply", onRetry: handleGeminiRetry }),
             generateFromImages: (apiKey, model, messages, images) =>
               shouldUseIncludedAi(store)
                 ? backendGenerate({ generationMode: "reply", input: combined, voice: store.voice!, styleProfile, tone, length, images, hasImages: true })
-                : generateFromImage(apiKey, model, messages, images),
+                : generateFromImage(apiKey, model, messages, images, { structuredText: true, generationType: "reply", onRetry: handleGeminiRetry }),
           }
         )
         setOutput(result.text)
@@ -484,15 +492,19 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
       }
 
       const topicInput = combined || "Write a post about this image."
-      const text = await dispatchGenerate(store, {
-        generationMode: mode,
-        input: topicInput,
-        voice: store.voice,
-        styleProfile,
-        tone,
-        length,
-        images: imageDataUrl ? [imageDataUrl] : undefined,
-      })
+      const text = await dispatchGenerate(
+        store,
+        {
+          generationMode: mode,
+          input: topicInput,
+          voice: store.voice,
+          styleProfile,
+          tone,
+          length,
+          images: imageDataUrl ? [imageDataUrl] : undefined,
+        },
+        handleGeminiRetry
+      )
       setOutput(text)
       setOutputImage(imageDataUrl)
       setGenKey(k => k + 1)
@@ -503,6 +515,7 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
       setError(e instanceof Error ? e.message : "Something went wrong.")
       onContext?.("api_error")
     } finally {
+      setRetrying(false)
       setLoading(false)
       setAnalyzingImage(false)
     }
@@ -796,7 +809,26 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
         </p>
       )}
 
-      {error && <p className="text-[11px] text-red-400 animate-fade-in px-1">{error}</p>}
+      {/* Shown instead of a raw provider error while lib/gemini.ts is silently
+          retrying a transient failure (429/500/502/503/504) in the
+          background — error stays empty until every retry is exhausted. */}
+      {retrying && !error && (
+        <p className="text-[11px] animate-fade-in px-1" style={{ color: C.textFaint }}>
+          AI is experiencing high demand. Retrying automatically…
+        </p>
+      )}
+
+      {/* Generate button itself already re-enables the instant loading
+          clears (see the deadline-bounded finally in generate()) — this is
+          just an explicit, visible affordance for "the AI failed, try the
+          exact same thing again" so the user isn't left reading an error
+          with no obvious next step. */}
+      {error && (
+        <p className="text-[11px] text-red-400 animate-fade-in px-1">
+          {error}{" "}
+          <button onClick={generate} className="underline" style={{ color: "inherit" }}>Try again</button>
+        </p>
+      )}
 
       {output && (
         <OutputCard

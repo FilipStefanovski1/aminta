@@ -1,6 +1,7 @@
 import type { PlasmoCSConfig } from "plasmo"
 
 import { dispatchGenerate } from "~lib/backendGenerate"
+import { resolveAmintaInsertion, type ManagedRegion } from "~lib/composerRegion"
 import { shouldUseIncludedAi } from "~lib/entitlements"
 import { pickNextReplyTarget, type ReplyPostData } from "~lib/replyTargets"
 import { getStore } from "~lib/storage"
@@ -275,6 +276,37 @@ function getComposerBox(bar?: HTMLElement): HTMLElement | null {
   return (wrapper.querySelector('[contenteditable="true"]') ?? wrapper) as HTMLElement
 }
 
+// ─── Aminta-managed region tracking ────────────────────────────────────────
+// Generate/Polish/Insert must feel like one editable draft Aminta owns, not
+// repeated separate insertions — so Polish (or a second Generate) has to
+// REPLACE what Aminta last wrote, never append a second copy, while leaving
+// anything the user typed outside that text untouched. Decision logic lives
+// in lib/composerRegion.ts (pure, unit-tested); only the DOM-touching parts
+// (the WeakMap keyed by the live contenteditable node, and reading its
+// current text) live here.
+//
+// Keyed by the actual contenteditable node, which is stable while a given
+// composer stays open. A closed/reopened composer (or a different bar) gets
+// a fresh node, so it naturally falls through to "insert normally" — no
+// explicit cleanup needed, and nothing here survives a page reload.
+const managedRegions = new WeakMap<HTMLElement, ManagedRegion>()
+
+// Public entry point for every Aminta-initiated write into the composer
+// (inline bar Generate/Polish, the side panel's Insert button, Templates) —
+// replaces the previously tracked Aminta region instead of appending after
+// it, then updates tracking to the new region. Falls through to a plain
+// full-box insert (today's behavior) the first time, or whenever the
+// previous region can no longer be found intact.
+function insertAmintaText(newText: string, bar?: HTMLElement): boolean {
+  const box = getComposerBox(bar)
+  if (!box) return false
+
+  const { fullText, region } = resolveAmintaInsertion(box.innerText, managedRegions.get(box), newText)
+  const ok = insertIntoComposer(fullText, bar)
+  if (ok) managedRegions.set(box, region)
+  return ok
+}
+
 function insertIntoComposer(text: string, bar?: HTMLElement): boolean {
   const box = getComposerBox(bar)
   if (!box) return false
@@ -411,7 +443,7 @@ async function runGenerate(bar: HTMLElement, mode: "tweet" | "polish", prefill?:
       length: "medium",
     })
 
-    const inserted = insertIntoComposer(text, bar)
+    const inserted = insertAmintaText(text, bar)
     if (inserted) {
       setBarStatus(bar, "Inserted ✦", false)
       if (mode === "tweet" && input && !isReply) {
@@ -620,7 +652,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   }
 
   if (msg?.type === "INSERT_TEXT") {
-    const ok = insertIntoComposer(msg.text)
+    const ok = insertAmintaText(msg.text)
     sendResponse(ok
       ? { ok: true }
       : { ok: false, error: "Couldn't insert. Click inside the X compose box first, then try again." }

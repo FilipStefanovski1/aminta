@@ -177,6 +177,17 @@ function systemX(mode: Mode, voice: VoiceProfile, styleProfile: StyleProfile | n
     .join("\n")
 }
 
+// Deliberately the LAST thing the model reads before generating — LLMs
+// weight end-of-prompt instructions more heavily than mid-prompt ones, and
+// this used to sit buried inside the RULES list (still is, for belt-and-
+// suspenders), with TONE DIRECTION/LENGTH TARGET appended after it. That
+// meant the model's actual last read was tone/length guidance, not the
+// anti-leakage instruction — one contributing factor (alongside no
+// thinking-level cap and no structured output) in style-profile prose
+// occasionally surfacing as the "generated post" instead of real output.
+const FINAL_OUTPUT_INSTRUCTION =
+  "\n\nFINAL INSTRUCTION — this overrides everything above if there's ever a conflict: return only the finished post. Do not return writing instructions, tone descriptions, analysis, labels, quotation marks, markdown, or commentary."
+
 export function buildMessages(
   platform: Platform,
   mode: Mode,
@@ -195,7 +206,7 @@ export function buildMessages(
   const toneNote = `\nTONE DIRECTION: ${TONE_GUIDE[tone]}\n${LENGTH_GUIDE[mode][length]}`
   const trimmed = input.trim()
 
-  const system = systemX(mode, voice, styleProfile, templateInstruction) + toneNote
+  const system = systemX(mode, voice, styleProfile, templateInstruction) + toneNote + FINAL_OUTPUT_INSTRUCTION
   let user = ""
   if (mode === "tweet") {
     user = `Write ONE original X post about this topic:\n"""${trimmed}"""`

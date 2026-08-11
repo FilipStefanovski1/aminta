@@ -41,6 +41,44 @@ describe("cleanGenerationOutput", () => {
     expect(cleanGenerationOutput("```\nThe actual post text.\n```")).toBe("The actual post text.")
   })
 
+  // Markdown suffix cleanup — a stray trailing "**" left over from a
+  // truncated/misplaced bold span, the exact shape of a real production
+  // leak (a style-profile-style parenthetical ending in ").**").
+  it("strips a stray trailing double-asterisk with no matching pair", () => {
+    expect(cleanGenerationOutput("lowercase, direct, short bursts, minimal commas, high energy).**")).toBe(
+      "lowercase, direct, short bursts, minimal commas, high energy)."
+    )
+  })
+
+  it("strips a stray leading double-asterisk with no matching pair", () => {
+    expect(cleanGenerationOutput("**Not actually bold, just a stray marker.")).toBe(
+      "Not actually bold, just a stray marker."
+    )
+  })
+
+  it("does not touch a real, balanced bold span", () => {
+    const text = "This part is **actually bold** and stays that way."
+    expect(cleanGenerationOutput(text)).toBe(text)
+  })
+
+  it("does not touch legitimate underscores in normal words", () => {
+    const text = "check out my_handle for more."
+    expect(cleanGenerationOutput(text)).toBe(text)
+  })
+
+  // Style-instruction leakage — the exact bad output from the production
+  // incident: a style-profile description surfacing as the generated post
+  // instead of real content. Sanitization can't detect "this is the wrong
+  // content" (that's what the schema + prompt + thinking-level fixes are
+  // for), but it must still clean up the trailing markdown artifact rather
+  // than showing it raw.
+  it("cleans up a leaked style-descriptor fragment without mangling its content", () => {
+    const leaked = "lowercase, direct, short bursts, minimal commas, high energy).**"
+    const cleaned = cleanGenerationOutput(leaked)
+    expect(cleaned).not.toMatch(/\*\*$/)
+    expect(cleaned).toBe("lowercase, direct, short bursts, minimal commas, high energy).")
+  })
+
   it("collapses 3+ blank lines to one blank line", () => {
     expect(cleanGenerationOutput("Line one.\n\n\n\nLine two.")).toBe("Line one.\n\nLine two.")
   })
