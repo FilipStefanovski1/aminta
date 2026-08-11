@@ -29,6 +29,31 @@ function stripWrappingQuotes(text: string): string {
   return text
 }
 
+// A stray leading/trailing "**" or "__" — a truncated or misplaced markdown
+// bold marker with no matching partner. See extension/lib/textCleanup.ts's
+// identical function for the full rationale (SOURCE OF TRUTH there). Only
+// acts when the marker count is ODD — a genuine, balanced emphasis span is
+// left completely alone.
+function stripStrayMarkdownEmphasis(text: string): string {
+  const boldCount = (text.match(/\*\*/g) ?? []).length
+  if (boldCount % 2 === 1) {
+    text = text.replace(/^\*\*(?=\S)/, "").replace(/(?<=\S)\*\*$/, "")
+  }
+  const underscoreBoldCount = (text.match(/__/g) ?? []).length
+  if (underscoreBoldCount % 2 === 1) {
+    text = text.replace(/^__(?=\S)/, "").replace(/(?<=\S)__$/, "")
+  }
+  const starCount = (text.match(/\*/g) ?? []).length
+  if (starCount % 2 === 1) {
+    text = text.replace(/^\*(?=\S)/, "").replace(/(?<=\S)\*$/, "")
+  }
+  const underscoreCount = (text.match(/_/g) ?? []).length
+  if (underscoreCount % 2 === 1) {
+    text = text.replace(/^_(?=\S)/, "").replace(/(?<=\S)_$/, "")
+  }
+  return text.trim()
+}
+
 const ABSOLUTE_MAX_CHARS = 900
 
 function trimToSentenceBoundary(text: string, maxChars: number): string {
@@ -48,6 +73,7 @@ export function cleanGenerationOutput(raw: string): string {
 
   text = text.replace(LABEL_RE, "").trim()
   text = stripWrappingQuotes(text)
+  text = stripStrayMarkdownEmphasis(text)
 
   text = text.replace(/\n{3,}/g, "\n\n")
   text = text.replace(/ +([.,!?;:])/g, "$1")

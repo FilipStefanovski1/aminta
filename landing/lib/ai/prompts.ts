@@ -247,6 +247,12 @@ function systemX(mode: Mode, voice: VoiceProfile, styleProfile: StyleProfile | n
     .join("\n")
 }
 
+// Deliberately the LAST thing the model reads before generating — see
+// extension/lib/prompts.ts's identical constant for the full rationale
+// (SOURCE OF TRUTH there).
+const FINAL_OUTPUT_INSTRUCTION =
+  "\n\nFINAL INSTRUCTION — this overrides everything above if there's ever a conflict: return only the finished post. Do not return writing instructions, tone descriptions, analysis, labels, quotation marks, markdown, or commentary."
+
 export function buildMessages(
   mode: Mode,
   voice: VoiceProfile,
@@ -260,7 +266,7 @@ export function buildMessages(
   const toneNote = `\nTONE DIRECTION: ${TONE_GUIDE[tone]}\n${LENGTH_GUIDE[mode][length]}`
   const trimmed = input.trim()
 
-  const system = systemX(mode, voice, styleProfile, templateInstruction) + toneNote
+  const system = systemX(mode, voice, styleProfile, templateInstruction) + toneNote + FINAL_OUTPUT_INSTRUCTION
   let user = ""
   if (mode === "tweet") {
     user = `Write ONE original X post about this topic:\n"""${trimmed}"""`

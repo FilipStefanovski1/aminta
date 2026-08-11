@@ -12,8 +12,7 @@ const SPEND_TTL_MS = 60_000
 
 // Included AI's Gemini model — single source of truth. lib/ai/gemini.ts
 // imports this rather than hardcoding a model string, so a future model
-// swap (like this one, forced by gemini-2.5-flash 404ing for new API users)
-// only ever needs to change here. Deliberately NOT "gemini-flash-latest" —
+// swap only ever needs to change here. Deliberately NOT "gemini-flash-latest" —
 // that alias auto-upgrades to whatever Google points it at next, trading
 // away predictable behavior and pricing for convenience this project
 // doesn't want. Keep supabase-setup.sql/supabase-schema.sql's

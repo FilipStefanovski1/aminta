@@ -204,6 +204,7 @@ export async function POST(request: NextRequest) {
   // or influences which model runs here.
   const startedAt = Date.now()
   try {
+    const prepStartedAt = Date.now()
     const messages = isStyleProfile
       ? buildStyleProfileMessages(body.corpus!)
       : withImages(
@@ -219,8 +220,11 @@ export async function POST(request: NextRequest) {
           ),
           images
         )
+    const prepMs = Date.now() - prepStartedAt
 
-    const result = await callGemini(messages)
+    // Structured `{ text }` output only for real generation — style_profile
+    // keeps its own existing multi-field JSON-via-prompt contract.
+    const result = await callGemini(messages, { structuredText: !isStyleProfile, generationType: generationMode })
     const latencyMs = Date.now() - startedAt
     // style_profile returns raw JSON for client-side parsing — cleanup
     // (label/quote stripping, punctuation normalization) is only valid for
@@ -231,6 +235,17 @@ export async function POST(request: NextRequest) {
     const cost = estimateCostUsd(inputChars, outputChars, {
       inputTokens: result.inputTokens,
       outputTokens: result.outputTokens,
+    })
+
+    // Latency instrumentation — timing/model/mode only, never the prompt,
+    // the response text, or any credential.
+    console.log("[Included AI] generation latency", {
+      generationType: generationMode,
+      model: result.model,
+      prepMs,
+      apiMs: result.apiMs,
+      parseMs: result.parseMs,
+      totalMs: latencyMs,
     })
 
     // 10. USAGE LOG — real token counts when the provider returned them,
