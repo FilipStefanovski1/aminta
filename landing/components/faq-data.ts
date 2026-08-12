@@ -17,7 +17,7 @@ export const FAQS = [
   },
   {
     q: "Do I need my own API key?",
-    a: "Yes. Aminta is BYOK (bring your own key). It works with Groq's free tier, OpenRouter, or Google Gemini. You only pay us for the app; the AI usage runs on your own key, which keeps everything cheap and private.",
+    a: "Not on a paid plan — Pro and Founder include AI generations, so Aminta works as soon as you install it. On the free plan you bring your own key: Groq's free tier, OpenRouter, or Google Gemini. If you're on a paid plan but would rather keep using your own key, you can switch back to it in settings.",
   },
   {
     q: "Does it work inside X / Twitter?",
