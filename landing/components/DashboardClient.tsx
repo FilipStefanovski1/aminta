@@ -214,7 +214,9 @@ export default function DashboardClient({
   }
 
   async function handleCopy() {
-    await navigator.clipboard.writeText("https://amintaapp.com")
+    // Copies the canonical www host — this URL gets shared, and any resulting
+    // backlink should point at the preferred hostname rather than a redirect.
+    await navigator.clipboard.writeText("https://www.amintaapp.com")
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }

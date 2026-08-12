@@ -5,6 +5,7 @@ import LegalHero from "@/components/LegalHero";
 export const metadata: Metadata = {
   title: "Privacy Policy | Aminta",
   description: "How Aminta collects, uses, and protects your data. GDPR-compliant privacy policy for the Aminta Chrome extension and web application.",
+  alternates: { canonical: "/privacy" },
 };
 
 function Section({ id, label: _label, title, children }: { id: string; label: string; title: string; children: React.ReactNode }) {

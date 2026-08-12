@@ -10,11 +10,20 @@ import FAQ from "@/components/FAQ";
 import OnboardingCTA from "@/components/OnboardingCTA";
 import Footer from "@/components/Footer";
 import AuthCodeHandler from "@/components/AuthCodeHandler";
-import { FAQPageSchema } from "@/components/StructuredData";
+import { FAQPageSchema, SoftwareApplicationSchema } from "@/components/StructuredData";
+import type { Metadata } from "next";
+
+// Self-referencing canonical. The root layout deliberately sets no canonical,
+// so each indexable page declares its own; resolved against metadataBase this
+// becomes https://www.amintaapp.com.
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+};
 
 export default function Home() {
   return (
     <>
+      <SoftwareApplicationSchema />
       <FAQPageSchema />
       <AuthCodeHandler />
       <Navbar />

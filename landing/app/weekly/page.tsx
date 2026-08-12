@@ -13,7 +13,7 @@ export const metadata: Metadata = {
     title: "Aminta Weekly",
     description: "What's happening on X, what's working, and what we're learning.",
     type: "website",
-    url: "https://amintaapp.com/weekly",
+    url: "https://www.amintaapp.com/weekly",
   },
   twitter: {
     card: "summary_large_image",

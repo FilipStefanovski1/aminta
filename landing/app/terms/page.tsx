@@ -5,6 +5,7 @@ import LegalHero from "@/components/LegalHero";
 export const metadata: Metadata = {
   title: "Terms of Service | Aminta",
   description: "Terms and conditions for using the Aminta Chrome extension and web application. Governed by Belgian law.",
+  alternates: { canonical: "/terms" },
 };
 
 function Section({ id, label: _label, title, children }: { id: string; label: string; title: string; children: React.ReactNode }) {

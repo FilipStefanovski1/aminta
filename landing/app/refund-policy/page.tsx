@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   title: "Refund Policy | Aminta",
   description:
     "Aminta's refund policy for monthly subscriptions and lifetime plans. Learn when refunds are available and how to request one.",
+  alternates: { canonical: "/refund-policy" },
 };
 
 function Section({

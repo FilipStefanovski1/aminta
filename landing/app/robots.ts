@@ -16,6 +16,6 @@ export default function robots(): MetadataRoute.Robots {
         "/auth/",
       ],
     },
-    sitemap: "https://amintaapp.com/sitemap.xml",
+    sitemap: "https://www.amintaapp.com/sitemap.xml",
   };
 }

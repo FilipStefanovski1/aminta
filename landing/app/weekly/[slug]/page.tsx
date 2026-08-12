@@ -12,7 +12,9 @@ import { getAdjacentEditions, getEditionBySlug, getPublishedEditions, getRelated
 import { estimateReadingTimeMinutes } from "@/content/weekly/reading-time"
 import { HERO_IMAGE_WIDTH, HERO_IMAGE_HEIGHT } from "@/content/weekly/types"
 
-const BASE_URL = "https://amintaapp.com"
+// Matches the hostname production serves (www) — used for absolute OG,
+// JSON-LD and mainEntityOfPage URLs.
+const BASE_URL = "https://www.amintaapp.com"
 
 interface PageProps {
   params: Promise<{ slug: string }>

@@ -1,7 +1,9 @@
 import type { MetadataRoute } from "next";
 import { getPublishedEditions } from "@/content/weekly/registry";
 
-const BASE_URL = "https://amintaapp.com";
+// Must match the hostname production actually serves (www). Listing apex URLs
+// here would make every sitemap entry a redirect.
+const BASE_URL = "https://www.amintaapp.com";
 
 // Only the public marketing/legal pages — auth, dashboard, and other
 // app-only routes don't belong in search results.
