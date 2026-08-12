@@ -325,7 +325,7 @@ CREATE TABLE IF NOT EXISTS public.ai_usage_log (
   output_tokens_est  integer,
   latency_ms         integer,
   status             text        NOT NULL,   -- 'pending' | 'success' | 'error'
-  result_text        text,
+  result_text        text,                   -- generated output; short-lived, scrubbed on the content TTL (section 12)
   error_detail        text,
   estimated_cost_usd numeric(10,6) DEFAULT 0,
   client_ip          text,
@@ -585,3 +585,45 @@ GRANT EXECUTE ON FUNCTION public.increment_rate_limit(text, timestamptz, integer
 -- SELECT grantee, routine_name FROM information_schema.role_routine_grants
 -- WHERE routine_name IN ('claim_inflight_slot', 'increment_rate_limit');
 -- Expected: service_role listed for both.
+
+
+-- ===========================================================================
+-- 12. INCLUDED AI — generated-content retention correction
+-- ===========================================================================
+-- ai_usage_log.result_text held the user's generated output for the full
+-- 90-day record retention. It only ever existed to replay a duplicate
+-- (user_id, request_id), which can only occur inside a single
+-- backendGenerate() call — the client never persists the request id — so
+-- keeping the text for 90 days was far beyond its purpose.
+--
+-- The application now enforces a short content TTL (landing/lib/ai/
+-- retention.ts, CONTENT_TTL_MS) in two places:
+--   * read side  — resolveReplayState() refuses to replay text older than
+--                  the TTL even if the column is still populated;
+--   * write side — the daily cleanup cron nulls result_text past the TTL,
+--                  while leaving every non-content column intact until the
+--                  unchanged 90-day row deletion.
+--
+-- result_text is already nullable, so no schema change is required.
+--
+-- 12.1 ONE-TIME BACKFILL — scrub generated output already stored under the
+-- old policy. Safe to re-run: rows with result_text IS NULL are skipped, and
+-- no other column is touched, so quota/spend/abuse history is preserved.
+-- The cleanup cron performs the same sweep on its next run; running this
+-- once immediately means historical content doesn't sit in the table
+-- waiting for it.
+UPDATE public.ai_usage_log
+   SET result_text = NULL
+ WHERE result_text IS NOT NULL
+   AND created_at < now() - interval '15 minutes';
+
+-- 12.2 VERIFICATION
+-- SELECT count(*) AS rows_with_content,
+--        min(created_at) AS oldest_retained_content
+--   FROM public.ai_usage_log
+--  WHERE result_text IS NOT NULL;
+-- Expected: only rows from the last ~15 minutes; oldest_retained_content
+-- should never be older than CONTENT_TTL_MS plus the cron interval.
+--
+-- SELECT count(*) FROM public.ai_usage_log;
+-- Expected: unchanged by 12.1 — the scrub nulls content, it deletes nothing.

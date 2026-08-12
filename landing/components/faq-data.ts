@@ -25,7 +25,7 @@ export const FAQS = [
   },
   {
     q: "Is my data private?",
-    a: "Your API key never leaves your device, and generations go straight from your browser to your AI provider. We never see what you write. When you sign in, your XP, streak, and voice profile sync to your Aminta account so your progress follows you across devices.",
+    a: "Yes. If you use your own API key, generations go directly from your browser to your chosen AI provider, and your key is never sent to Aminta. With Included AI, requests are processed through Aminta and sent to our AI provider. We don't store your prompt, and generated text is only kept briefly for request reliability before being scrubbed. We keep limited non-content usage data for things like quotas and abuse prevention. Signing in also syncs your XP, streak, and voice profile across devices.",
   },
   {
     q: "What happens if I miss a day?",

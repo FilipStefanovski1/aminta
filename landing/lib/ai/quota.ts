@@ -4,6 +4,7 @@
 // between a separate counter and the audit trail.
 import { createServiceClient } from "@/lib/supabase/server"
 import { aiIncluded } from "@/lib/entitlements"
+import { resolveReplayState } from "@/lib/ai/retention"
 
 export interface UserEntitlement {
   plan: string
@@ -86,6 +87,7 @@ export interface UsageLogRow {
   status: "pending" | "success" | "error"
   result_text: string | null
   error_detail: string | null
+  created_at: string | null
 }
 
 export type ClaimResult =
@@ -96,6 +98,11 @@ export type ClaimResult =
   // REQUEST_IN_PROGRESS response instead of treating a still-processing row
   // as if it had a result (never surface a null/empty result as success).
   | { claimed: false; state: "in_progress" }
+  // The row succeeded, but its generated text is past CONTENT_TTL_MS and/or
+  // has already been scrubbed. Distinct from "in_progress" so the caller
+  // returns an accurate message rather than claiming the request is still
+  // running — and, critically, never returns the null result as success.
+  | { claimed: false; state: "expired" }
 
 export async function claimRequestId(params: {
   requestId: string
@@ -128,24 +135,22 @@ export async function claimRequestId(params: {
   // this user too (see comment above).
   const { data: existing } = await service
     .from("ai_usage_log")
-    .select("id, status, result_text, error_detail")
+    .select("id, status, result_text, error_detail, created_at")
     .eq("request_id", params.requestId)
     .eq("user_id", params.userId)
     .single()
 
   if (existing) {
     const row = existing as UsageLogRow
-    if (row.status === "success" && row.result_text) {
-      return { claimed: false, state: "success", existing: row }
+    // resolveReplayState owns this decision (and is unit-tested) — it also
+    // enforces CONTENT_TTL_MS at read time, so generated text is never
+    // replayed past its retention window even if the scrub sweep hasn't
+    // physically nulled the column yet.
+    const state = resolveReplayState(row)
+    if (state === "success" || state === "error") {
+      return { claimed: false, state, existing: row }
     }
-    if (row.status === "error") {
-      return { claimed: false, state: "error", existing: row }
-    }
-    // status === "pending", OR status === "success" with a missing
-    // result_text (shouldn't happen — completeUsageLog always writes both
-    // together — but treated as still-in-progress rather than risking a
-    // null-as-success response).
-    return { claimed: false, state: "in_progress" }
+    return { claimed: false, state }
   }
 
   // Genuinely unexpected (insert failed AND no existing row found under

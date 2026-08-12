@@ -126,8 +126,8 @@ export default function PrivacyPage() {
               <p>
                 Aminta processes text you provide as input, such as topics, draft posts, reply
                 targets, and instructions, to generate AI-assisted content. This input is
-                transmitted to your chosen AI provider (see §8) to fulfill the request. We do not
-                permanently store the raw text of your prompts or generated outputs unless you
+                transmitted to the AI provider handling the request (see §8) to fulfil it. We do
+                not permanently store the raw text of your prompts or generated outputs unless you
                 explicitly save them within the application.
               </p>
             </Sub>
@@ -152,10 +152,10 @@ export default function PrivacyPage() {
 
             <Sub title="2.5 Usage Analytics">
               <p>
-                We collect anonymised, aggregated usage data to understand how Aminta is used and
-                to improve the product. This may include feature usage frequency, error rates, and
-                session duration. We do not collect your content or personally identifiable
-                information through analytics.
+                We collect usage data to understand how Aminta is used and to improve the product.
+                This may include feature usage frequency, error rates, and session duration. When
+                you are signed in, this data may be linked to your account (see §8.3). We do not
+                collect the content of your prompts or generated output through analytics.
               </p>
             </Sub>
 
@@ -183,7 +183,7 @@ export default function PrivacyPage() {
               <Li>Transmitting your prompts to AI providers to generate content on your behalf.</Li>
               <Li>Storing your Voice Profile so Aminta can write in your style.</Li>
               <Li>Sending transactional emails (account confirmation, password reset, billing receipts).</Li>
-              <Li>Analysing anonymised usage patterns to improve features and performance.</Li>
+              <Li>Analysing usage patterns to improve features and performance.</Li>
               <Li>Preventing fraud, abuse, and violations of our Terms of Service.</Li>
               <Li>Complying with our legal obligations under Belgian and EU law.</Li>
             </ul>
@@ -209,8 +209,8 @@ export default function PrivacyPage() {
               <Li>
                 <span>
                   <strong className="text-white">Legitimate Interests (Art. 6(1)(f)):</strong>{" "}
-                  Processing anonymised analytics data to improve our product, and processing data
-                  to detect and prevent abuse.
+                  Processing analytics data to improve our product, and processing data to detect
+                  and prevent abuse.
                 </span>
               </Li>
               <Li>
@@ -353,21 +353,39 @@ export default function PrivacyPage() {
                 If you provide your own API key (BYOK), requests go directly from your browser to
                 the provider and are governed entirely by that provider&apos;s terms.
               </p>
+              <p className="mt-3">
+                If your plan includes AI generations (Included AI), the request is instead sent to
+                Aminta&apos;s backend, which forwards it to Google Gemini using our own provider
+                credentials. Your prompt is processed to fulfil the request and is not stored by
+                us. See section 10 for what we retain afterwards.
+              </p>
             </Sub>
 
             <Sub title="8.2 Billing">
               <p>
-                Aminta does not currently process any payments. All plans are free. If we
-                introduce paid plans, we will name the payment processor here before any billing
-                begins.
+                Paid plans are sold through <strong className="text-white">Creem</strong>, our
+                payment provider. Checkout happens on Creem&apos;s own hosted pages, so your card
+                details are entered with them and are never sent to or stored by Aminta. Privacy
+                policy: creem.io/privacy
+              </p>
+              <p className="mt-3">
+                From a completed purchase we receive the billing email address and the resulting
+                plan and subscription status, which we store on your account so your plan works
+                across devices. The free plan requires no payment details at all.
               </p>
             </Sub>
 
             <Sub title="8.3 Analytics">
               <p>
-                We may use analytics tools to collect anonymised usage data. Any analytics data
-                collected is aggregated and does not identify you personally. We will update this
-                section with specific tools as they are deployed.
+                We use <strong className="text-white">PostHog</strong> (EU-hosted) for product and
+                website analytics and for diagnostic error reports. When you are signed in,
+                analytics events may be associated with your Aminta account rather than being
+                anonymous — typically your user identifier, and for subscription events your email
+                address and plan. Privacy policy: posthog.com/privacy
+              </p>
+              <p className="mt-3">
+                We do not send the content of your AI prompts or generated outputs to PostHog. The
+                extension, where generation happens, contains no analytics code at all.
               </p>
             </Sub>
 
@@ -432,15 +450,34 @@ export default function PrivacyPage() {
               </Li>
               <Li>
                 <span>
-                  <strong className="text-white">Anonymised analytics:</strong> May be retained
-                  indefinitely in aggregated form, as they do not identify you.
+                  <strong className="text-white">Analytics data:</strong> Retained by PostHog under
+                  its own retention settings. Aggregated data that no longer identifies you may be
+                  kept indefinitely.
                 </span>
               </Li>
               <Li>
                 <span>
                   <strong className="text-white">Prompt data:</strong> Not retained on our servers
-                  beyond the time needed to fulfill the AI request (typically seconds). We do not
-                  log or store the content of your AI prompts or generated outputs.
+                  beyond the time needed to fulfil the AI request. We do not log or store the
+                  content of your prompts.
+                </span>
+              </Li>
+              <Li>
+                <span>
+                  <strong className="text-white">Generated output (Included AI):</strong> Kept
+                  briefly so that a repeated or retried request returns the same result instead of
+                  being generated and charged twice, then automatically scrubbed. Only the text is
+                  removed; the surrounding usage record remains. This does not apply to BYOK, where
+                  the output never reaches our servers.
+                </span>
+              </Li>
+              <Li>
+                <span>
+                  <strong className="text-white">AI usage records:</strong> Non-content details of
+                  each Included AI request — generation type, prompt length, image count, token
+                  counts, cost, timing, outcome, device identifier and a hashed IP address — are
+                  kept for up to 90 days for quota enforcement, abuse prevention and cost
+                  accounting. These records contain no prompt or output text.
                 </span>
               </Li>
             </ul>

@@ -182,6 +182,20 @@ export async function POST(request: NextRequest) {
     await clearInflight(requestId)
     if (claim.state === "success") return NextResponse.json({ text: claim.existing.result_text })
     if (claim.state === "error") return errorResponse("Generation failed. Please try again.", "PROVIDER_ERROR", 502)
+    // expired: the row succeeded, but its generated text is past
+    // CONTENT_TTL_MS (scrubbed, or about to be). We can't replay content we
+    // deliberately no longer keep, and we must not echo the NULL back as a
+    // success — the client asks for a fresh generation instead. In practice
+    // this is close to unreachable: requestId lives only inside one
+    // backendGenerate() call and is never persisted client-side, so a
+    // replay 15+ minutes later shouldn't happen.
+    if (claim.state === "expired") {
+      return errorResponse(
+        "That result is no longer available. Please generate again.",
+        "RESULT_EXPIRED",
+        410
+      )
+    }
     // in_progress: the original request for this id is still running.
     // Never treat this as success with a null/empty result.
     return errorResponse("This request is already being processed.", "REQUEST_IN_PROGRESS", 409)
