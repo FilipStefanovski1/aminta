@@ -1,18 +1,18 @@
 import Link from "next/link"
-import type { WeeklyEditionMeta } from "../types"
-import { Callout, H2, Lead, P } from "@/components/weekly/Prose"
+import type { EditionMeta } from "../types"
+import { Callout, H2, Lead, P } from "@/components/blog/Prose"
 
-export const meta: WeeklyEditionMeta = {
+export const meta: EditionMeta = {
   edition: 2,
   slug: "why-replies-matter-on-x",
   title: "Your Replies Are Doing More Work Than Your Posts",
   description:
     "Most people spend the bulk of their effort on their own posts and treat replies as an afterthought. On X, that ratio is backwards.",
   author: "Filip Stefanovski",
-  publishedAt: "2026-08-11",
+  publishedAt: "2026-08-04",
   tags: ["replies", "identity", "x-trends", "building-aminta"],
   status: "published",
-  heroImage: "/weekly/edition-002/replies-conversation.png",
+  heroImage: "/blog/edition-002/replies-conversation.png",
   heroImageAlt:
     "A single post with one reply branch breaking away and connecting outward to a wider conversation.",
 }

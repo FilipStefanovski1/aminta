@@ -1,28 +1,28 @@
 import type { Metadata } from "next"
 import Navbar from "@/components/Navbar"
 import Footer from "@/components/Footer"
-import EditionCard from "@/components/weekly/EditionCard"
-import { getPublishedEditions } from "@/content/weekly/registry"
+import EditionCard from "@/components/blog/EditionCard"
+import { getPublishedEditions } from "@/content/blog/registry"
 
 export const metadata: Metadata = {
-  title: "Aminta Weekly — What's happening on X",
+  title: "Aminta Blog | What's happening on X",
   description:
     "A weekly look at what's working on X, what's changing, and what we're learning building Aminta, your X companion.",
-  alternates: { canonical: "/weekly" },
+  alternates: { canonical: "/blog" },
   openGraph: {
-    title: "Aminta Weekly",
+    title: "Aminta Blog",
     description: "What's happening on X, what's working, and what we're learning.",
     type: "website",
-    url: "https://www.amintaapp.com/weekly",
+    url: "https://www.amintaapp.com/blog",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Aminta Weekly",
+    title: "Aminta Blog",
     description: "What's happening on X, what's working, and what we're learning.",
   },
 }
 
-export default function WeeklyIndexPage() {
+export default function BlogIndexPage() {
   const editions = getPublishedEditions()
   const [latest, ...rest] = editions
 
@@ -32,7 +32,7 @@ export default function WeeklyIndexPage() {
       <main className="flex-1 bg-ink">
         <div className="mx-auto max-w-5xl px-6 pt-32 pb-24">
           <header className="max-w-2xl">
-            <span className="font-pixel text-[9px] text-accent">AMINTA WEEKLY</span>
+            <span className="font-pixel text-[9px] text-accent">AMINTA BLOG</span>
             <h1 className="mt-4 text-3xl sm:text-4xl font-semibold text-white leading-tight">
               What&apos;s happening on X, what&apos;s working, and what we&apos;re learning.
             </h1>

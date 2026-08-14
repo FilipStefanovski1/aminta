@@ -26,7 +26,7 @@ export default function Navbar({ alwaysVisible = true }: { alwaysVisible?: boole
       label,
       href: isHome ? `#${hash}` : `/#${hash}`,
     })),
-    { label: "Weekly", href: "/weekly" },
+    { label: "Blog", href: "/blog" },
   ];
 
   useEffect(() => {

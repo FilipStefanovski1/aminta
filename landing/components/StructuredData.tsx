@@ -30,8 +30,8 @@ function JsonLd({ json }: { json: Record<string, unknown> }) {
   );
 }
 
-// Organization — the publisher entity behind both the product and Aminta
-// Weekly. Rendered site-wide from the root layout. Deliberately omits
+// Organization, the publisher entity behind both the product and the Aminta
+// Blog. Rendered site-wide from the root layout. Deliberately omits
 // foundingDate/founder/employee counts/ratings: none of that is verifiable
 // from this repo, and fabricated values are worse than absent ones.
 export function OrganizationSchema() {
@@ -69,9 +69,9 @@ export function WebSiteSchema() {
   );
 }
 
-// SoftwareApplication — the product itself. Emitted only on the homepage
+// SoftwareApplication, the product itself. Emitted only on the homepage
 // (app/page.tsx), not site-wide: describing the Chrome extension on the
-// privacy policy or a Weekly article dilutes rather than strengthens the
+// privacy policy or a blog article dilutes rather than strengthens the
 // association. Stays SoftwareApplication (not WebApplication) because Aminta
 // ships as a browser extension. Offers mirror the live pricing page.
 export function SoftwareApplicationSchema() {
@@ -99,8 +99,8 @@ export function SoftwareApplicationSchema() {
   );
 }
 
-// BlogPosting schema for a single Weekly edition — every field is sourced
-// directly from that edition's own WeeklyEditionMeta, never invented.
+// BlogPosting schema for a single blog edition, every field is sourced
+// directly from that edition's own EditionMeta, never invented.
 // dateModified is only included when the edition actually has an
 // updatedAt (a real revision), not defaulted to publish date.
 export function ArticleSchema({

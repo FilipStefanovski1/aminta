@@ -1,4 +1,4 @@
-// Shared typography primitives for Weekly article bodies — keeps every
+// Shared typography primitives for blog article bodies. Keeps every
 // edition visually consistent without repeating className strings in each
 // content file, and keeps the reading column narrow/editorial rather than
 // full-width like the marketing sections elsewhere on the site.
@@ -53,12 +53,12 @@ export function Quote({ children, cite }: { children: ReactNode; cite?: string }
   return (
     <blockquote className="mt-6 border-l-2 border-accent/40 pl-5 py-1">
       <p className="text-[1.0625rem] leading-relaxed text-[#e7e7ef] italic">{children}</p>
-      {cite && <cite className="mt-2 block text-xs text-[#666] not-italic">— {cite}</cite>}
+      {cite && <cite className="mt-2 block text-xs text-[#666] not-italic">- {cite}</cite>}
     </blockquote>
   )
 }
 
-// Editorial aside — used for methodology notes, placeholder-data disclosure,
+// Editorial aside, used for methodology notes, placeholder-data disclosure,
 // or context that isn't the main narrative thread.
 export function Callout({ children }: { children: ReactNode }) {
   return (

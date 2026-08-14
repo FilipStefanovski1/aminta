@@ -1,4 +1,4 @@
-// Central registry for Weekly editions. Adding a new edition each week means:
+// Central registry for blog editions. Adding a new edition means:
 // 1) add a file under editions/, 2) add one import + array entry here. No
 // route/architecture changes needed. Every read path below filters by
 // status === "published", so a "draft" edition can exist in the repo
@@ -7,37 +7,37 @@
 import * as edition001 from "./editions/why-ai-posts-are-starting-to-sound-the-same"
 import * as edition002 from "./editions/why-replies-matter-on-x"
 import * as edition003 from "./editions/what-is-working-on-x-right-now"
-import type { WeeklyEditionMeta, WeeklyEditionModule } from "./types"
+import type { EditionMeta, EditionModule } from "./types"
 
-const ALL_EDITIONS: WeeklyEditionModule[] = [
+const ALL_EDITIONS: EditionModule[] = [
   { meta: edition001.meta, Content: edition001.default },
   { meta: edition002.meta, Content: edition002.default },
   { meta: edition003.meta, Content: edition003.default },
 ]
 
-function byEditionDesc(a: WeeklyEditionModule, b: WeeklyEditionModule): number {
+function byEditionDesc(a: EditionModule, b: EditionModule): number {
   return b.meta.edition - a.meta.edition
 }
 
 /** Published editions, newest edition number first. */
-export function getPublishedEditions(): WeeklyEditionModule[] {
+export function getPublishedEditions(): EditionModule[] {
   return ALL_EDITIONS.filter((e) => e.meta.status === "published").sort(byEditionDesc)
 }
 
 /** A single published edition by slug, or undefined (drafts are never returned here either). */
-export function getEditionBySlug(slug: string): WeeklyEditionModule | undefined {
+export function getEditionBySlug(slug: string): EditionModule | undefined {
   return ALL_EDITIONS.find((e) => e.meta.slug === slug && e.meta.status === "published")
 }
 
 /** The most recently published edition, for homepage featuring. */
-export function getLatestEdition(): WeeklyEditionModule | undefined {
+export function getLatestEdition(): EditionModule | undefined {
   return getPublishedEditions()[0]
 }
 
-/** Previous/next by edition number (not publish date) — "next" is the newer edition. */
-export function getAdjacentEditions(current: WeeklyEditionMeta): {
-  previous?: WeeklyEditionModule
-  next?: WeeklyEditionModule
+/** Previous/next by edition number (not publish date), "next" is the newer edition. */
+export function getAdjacentEditions(current: EditionMeta): {
+  previous?: EditionModule
+  next?: EditionModule
 } {
   const published = getPublishedEditions() // newest first
   const index = published.findIndex((e) => e.meta.slug === current.slug)
@@ -49,7 +49,7 @@ export function getAdjacentEditions(current: WeeklyEditionMeta): {
 }
 
 /** Other published editions sharing at least one tag, ranked by overlap then recency. */
-export function getRelatedEditions(current: WeeklyEditionMeta, limit = 3): WeeklyEditionModule[] {
+export function getRelatedEditions(current: EditionMeta, limit = 3): EditionModule[] {
   return getPublishedEditions()
     .filter((e) => e.meta.slug !== current.slug)
     .map((e) => ({ edition: e, overlap: e.meta.tags.filter((t) => current.tags.includes(t)).length }))

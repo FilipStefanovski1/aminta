@@ -1,18 +1,18 @@
 import Link from "next/link"
-import type { WeeklyEditionMeta } from "../types"
-import { H2, Lead, P, Quote } from "@/components/weekly/Prose"
+import type { EditionMeta } from "../types"
+import { H2, Lead, P, Quote } from "@/components/blog/Prose"
 
-export const meta: WeeklyEditionMeta = {
+export const meta: EditionMeta = {
   edition: 1,
   slug: "why-ai-posts-are-starting-to-sound-the-same",
   title: "Why So Much AI Writing Sounds the Same",
   description:
     "Generic AI writing isn't a problem with AI. It's a problem with AI that knows nothing about the person it's supposedly writing for.",
   author: "Filip Stefanovski",
-  publishedAt: "2026-08-11",
+  publishedAt: "2026-07-28",
   tags: ["ai-writing", "voice", "writing-craft", "building-aminta"],
   status: "published",
-  heroImage: "/weekly/edition-001/ai-writing-sameness.png",
+  heroImage: "/blog/edition-001/ai-writing-sameness.png",
   heroImageAlt: "Repeated post cards with one distinct post breaking the pattern.",
 }
 

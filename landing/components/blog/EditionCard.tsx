@@ -1,8 +1,8 @@
 import Image from "next/image"
 import Link from "next/link"
-import type { WeeklyEditionMeta } from "@/content/weekly/types"
-import { HERO_IMAGE_WIDTH, HERO_IMAGE_HEIGHT } from "@/content/weekly/types"
-import { estimateReadingTimeMinutes } from "@/content/weekly/reading-time"
+import type { EditionMeta } from "@/content/blog/types"
+import { HERO_IMAGE_WIDTH, HERO_IMAGE_HEIGHT } from "@/content/blog/types"
+import { estimateReadingTimeMinutes } from "@/content/blog/reading-time"
 import type { ComponentType } from "react"
 
 function formatDate(iso: string): string {
@@ -10,7 +10,7 @@ function formatDate(iso: string): string {
 }
 
 interface Props {
-  meta: WeeklyEditionMeta
+  meta: EditionMeta
   Content: ComponentType
   featured?: boolean
 }
@@ -22,7 +22,7 @@ export default function EditionCard({ meta, Content, featured = false }: Props) 
   if (featured) {
     return (
       <Link
-        href={`/weekly/${meta.slug}`}
+        href={`/blog/${meta.slug}`}
         className="group block overflow-hidden rounded-2xl border border-[#2a2a2a] bg-[#161616] transition-colors hover:border-accent/40"
       >
         <div className="relative aspect-[16/9] w-full overflow-hidden bg-[#111]">
@@ -58,7 +58,7 @@ export default function EditionCard({ meta, Content, featured = false }: Props) 
 
   return (
     <Link
-      href={`/weekly/${meta.slug}`}
+      href={`/blog/${meta.slug}`}
       className="group block overflow-hidden rounded-xl border border-[#232323] bg-[#141414] transition-colors hover:border-accent/30"
     >
       <div className="relative aspect-[16/9] w-full overflow-hidden bg-[#111]">

@@ -20,14 +20,14 @@ function collectText(node: ReactNode, out: string[], depth: number): void {
     const props = node.props as { children?: ReactNode } | null
     if (props && "children" in props) {
       // Covers DOM elements and every content primitive used *with*
-      // children (P, H2, Link, etc.) — reading the children prop directly
+      // children (P, H2, Link, etc.), reading the children prop directly
       // is always correct here and never requires invoking the component,
       // so framework components like next/link's Link (which may use
       // hooks internally) are never called outside of a real render.
       collectText(props.children, out, depth + 1)
       return
     }
-    // A component with no children prop at all — e.g. an edition's
+    // A component with no children prop at all, e.g. an edition's
     // <Content/>, whose real text only exists once it's invoked. Only our
     // own hook-free, zero-prop content wrapper components take this path.
     if (typeof node.type === "function") {

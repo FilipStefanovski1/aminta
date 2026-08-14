@@ -1,8 +1,8 @@
 import Link from "next/link"
-import type { WeeklyEditionMeta } from "../types"
-import { H2, Lead, P } from "@/components/weekly/Prose"
+import type { EditionMeta } from "../types"
+import { H2, Lead, P } from "@/components/blog/Prose"
 
-export const meta: WeeklyEditionMeta = {
+export const meta: EditionMeta = {
   edition: 3,
   slug: "what-is-working-on-x-right-now",
   title: "What's Actually Working on X Right Now",
@@ -12,7 +12,7 @@ export const meta: WeeklyEditionMeta = {
   publishedAt: "2026-08-11",
   tags: ["x-trends", "ai-writing", "replies", "voice", "building-aminta"],
   status: "published",
-  heroImage: "/weekly/edition-003/x-feed-patterns.png",
+  heroImage: "/blog/edition-003/x-feed-patterns.png",
   heroImageAlt:
     "A scrolling feed where most posts blur past while a few remain sharp and distinct.",
 }
@@ -52,7 +52,7 @@ export default function Content() {
         tells you how mainstream the complaint about generic content has gotten. I wrote a full
         edition on why that happens and what actually causes it, worth reading on its own:{" "}
         <Link
-          href="/weekly/why-ai-posts-are-starting-to-sound-the-same"
+          href="/blog/why-ai-posts-are-starting-to-sound-the-same"
           className="text-accent underline underline-offset-2 hover:text-accent/80"
         >
           Why So Much AI Writing Sounds the Same
@@ -65,7 +65,7 @@ export default function Content() {
       <P>
         Same idea applies to replies, and I already made the longer case for it:{" "}
         <Link
-          href="/weekly/why-replies-matter-on-x"
+          href="/blog/why-replies-matter-on-x"
           className="text-accent underline underline-offset-2 hover:text-accent/80"
         >
           Your Replies Are Doing More Work Than Your Posts

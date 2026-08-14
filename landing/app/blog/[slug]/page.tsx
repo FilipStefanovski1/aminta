@@ -4,15 +4,15 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import Navbar from "@/components/Navbar"
 import Footer from "@/components/Footer"
-import AuthorBio from "@/components/weekly/AuthorBio"
-import WeeklyCTA from "@/components/weekly/WeeklyCTA"
-import EditionCard from "@/components/weekly/EditionCard"
+import AuthorBio from "@/components/blog/AuthorBio"
+import BlogCTA from "@/components/blog/BlogCTA"
+import EditionCard from "@/components/blog/EditionCard"
 import { ArticleSchema } from "@/components/StructuredData"
-import { getAdjacentEditions, getEditionBySlug, getPublishedEditions, getRelatedEditions } from "@/content/weekly/registry"
-import { estimateReadingTimeMinutes } from "@/content/weekly/reading-time"
-import { HERO_IMAGE_WIDTH, HERO_IMAGE_HEIGHT } from "@/content/weekly/types"
+import { getAdjacentEditions, getEditionBySlug, getPublishedEditions, getRelatedEditions } from "@/content/blog/registry"
+import { estimateReadingTimeMinutes } from "@/content/blog/reading-time"
+import { HERO_IMAGE_WIDTH, HERO_IMAGE_HEIGHT } from "@/content/blog/types"
 
-// Matches the hostname production serves (www) — used for absolute OG,
+// Matches the hostname production serves (www), used for absolute OG,
 // JSON-LD and mainEntityOfPage URLs.
 const BASE_URL = "https://www.amintaapp.com"
 
@@ -20,7 +20,7 @@ interface PageProps {
   params: Promise<{ slug: string }>
 }
 
-// Static-generates every published edition at build time — the article page
+// Static-generates every published edition at build time, so the article page
 // never depends on client-side JS or a runtime fetch for its primary
 // content, and unpublished/draft slugs simply aren't in this list (so they
 // 404 rather than render).
@@ -34,11 +34,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   if (!edition) return {}
 
   const { meta } = edition
-  const url = `/weekly/${meta.slug}`
-  const ogImageUrl = `${BASE_URL}/weekly/${meta.slug}/opengraph-image`
+  const url = `/blog/${meta.slug}`
+  const ogImageUrl = `${BASE_URL}/blog/${meta.slug}/opengraph-image`
 
   return {
-    title: `${meta.title} | Aminta Weekly`,
+    title: `${meta.title} | Aminta Blog`,
     description: meta.description,
     alternates: { canonical: url },
     authors: [{ name: meta.author }],
@@ -65,7 +65,7 @@ function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
 }
 
-export default async function WeeklyEditionPage({ params }: PageProps) {
+export default async function BlogEditionPage({ params }: PageProps) {
   const { slug } = await params
   const edition = getEditionBySlug(slug)
   if (!edition) notFound()
@@ -74,7 +74,7 @@ export default async function WeeklyEditionPage({ params }: PageProps) {
   const readingTime = estimateReadingTimeMinutes(<Content />)
   const { previous, next } = getAdjacentEditions(meta)
   const related = getRelatedEditions(meta)
-  const url = `${BASE_URL}/weekly/${meta.slug}`
+  const url = `${BASE_URL}/blog/${meta.slug}`
 
   return (
     <>
@@ -82,7 +82,7 @@ export default async function WeeklyEditionPage({ params }: PageProps) {
         headline={meta.title}
         description={meta.description}
         url={url}
-        imageUrl={`${BASE_URL}/weekly/${meta.slug}/opengraph-image`}
+        imageUrl={`${BASE_URL}/blog/${meta.slug}/opengraph-image`}
         datePublished={meta.publishedAt}
         dateModified={meta.updatedAt}
         authorName={meta.author}
@@ -91,8 +91,8 @@ export default async function WeeklyEditionPage({ params }: PageProps) {
       <main className="flex-1 bg-ink">
         <article className="mx-auto max-w-[680px] px-6 pt-32 pb-10">
           <nav aria-label="Breadcrumb" className="text-xs text-[#555]">
-            <Link href="/weekly" className="hover:text-[#888] transition-colors">
-              Aminta Weekly
+            <Link href="/blog" className="hover:text-[#888] transition-colors">
+              Aminta Blog
             </Link>
           </nav>
 
@@ -134,7 +134,7 @@ export default async function WeeklyEditionPage({ params }: PageProps) {
             <Content />
           </div>
 
-          <WeeklyCTA />
+          <BlogCTA />
 
           <AuthorBio author={meta.author} />
 
@@ -142,7 +142,7 @@ export default async function WeeklyEditionPage({ params }: PageProps) {
             <nav aria-label="Edition navigation" className="mt-10 grid grid-cols-1 sm:grid-cols-2 gap-3">
               {previous && (
                 <Link
-                  href={`/weekly/${previous.meta.slug}`}
+                  href={`/blog/${previous.meta.slug}`}
                   className="rounded-lg border border-[#232323] p-4 hover:border-accent/30 transition-colors"
                 >
                   <span className="text-[10px] text-[#555]">&larr; Previous</span>
@@ -151,7 +151,7 @@ export default async function WeeklyEditionPage({ params }: PageProps) {
               )}
               {next && (
                 <Link
-                  href={`/weekly/${next.meta.slug}`}
+                  href={`/blog/${next.meta.slug}`}
                   className="rounded-lg border border-[#232323] p-4 hover:border-accent/30 transition-colors sm:text-right"
                 >
                   <span className="text-[10px] text-[#555]">Next &rarr;</span>
