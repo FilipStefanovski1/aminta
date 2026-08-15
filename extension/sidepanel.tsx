@@ -181,6 +181,16 @@ async function cropAvatarSquare(file: File): Promise<string> {
   })
 }
 
+// Reset copy per credit period kind. Keys match the server's PeriodKind
+// (landing/lib/ai/credits.ts) — "billing" is a real Creem subscription cycle,
+// "monthly" is the rolling fallback used by Founder/Gifted and by comped Pro
+// accounts that have no Creem subscription, so the two can't share wording.
+const CREDIT_RESET_LABEL: Record<string, string> = {
+  day: "Resets daily",
+  billing: "Resets each billing period",
+  monthly: "Resets monthly",
+}
+
 function SettingsOverlay({
   store,
   onSave,
@@ -414,6 +424,25 @@ function SettingsOverlay({
                     ? "Using your own API key below."
                     : "Included in your plan — no API key needed."}
                 </p>
+
+                {/* Credit balance — the same server-authoritative values
+                    GeneratorPanel shows (store.credits*, synced from
+                    /api/sync). Read-only display of what the backend already
+                    decided; deliberately not a second counter, and never
+                    derived locally. Hidden until allowance > 0 so a store
+                    that hasn't synced yet shows nothing rather than "0 / 0".
+                    Only rendered on Included — a BYOK user is paying their
+                    own provider, so their credit balance is irrelevant. */}
+                {includedActive && store.creditsAllowance > 0 && (
+                  <div className="mt-2.5 pt-2.5" style={{ borderTop: `1px solid ${C.borderSoft}` }}>
+                    <p className="text-[11px] leading-none" style={{ color: "#ccccd2" }}>
+                      {store.creditsBalance.toLocaleString()} / {store.creditsAllowance.toLocaleString()} credits
+                    </p>
+                    <p className="text-[9px] mt-1 leading-none" style={{ color: "#666672" }}>
+                      {CREDIT_RESET_LABEL[store.creditsPeriodKind] ?? "Resets each period"}
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 
