@@ -18,10 +18,12 @@ export const GOOGLE_MODELS = [
   { id: "gemini-3.5-flash",      label: "Gemini 3.5 Flash" },
   { id: "gemini-3.5-flash-lite", label: "Gemini 3.5 Flash Lite" },
 ]
+// Must stay in sync with lib/ai.ts's SUPPORTED_GROQ_MODELS — anything not in
+// that whitelist is normalized away to GROQ_DEFAULT at call time, so offering
+// it here would show the user a model they can't actually use.
 export const GROQ_MODELS = [
-  { id: "llama-3.3-70b-versatile", label: "Llama 3.3 70B", badge: "★ Recommended", badgeColor: "#74f7b5" },
-  { id: "llama3-70b-8192",         label: "Llama 3 70B",   badge: "Stable",        badgeColor: "#666672" },
-  { id: "llama3-8b-8192",          label: "Llama 3 8B",    badge: "Fast",          badgeColor: "#666672" },
+  { id: "openai/gpt-oss-120b", label: "GPT-OSS 120B", badge: "★ Recommended", badgeColor: "#74f7b5" },
+  { id: "qwen/qwen3.6-27b",    label: "Qwen 3.6 27B", badge: "Fast",          badgeColor: "#666672" },
 ]
 
 export const SELECT_STYLE: React.CSSProperties = {

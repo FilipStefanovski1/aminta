@@ -14,7 +14,7 @@ import VoiceProfileForm from "~components/VoiceProfileForm"
 import { GhostButton, PrimaryButton } from "~components/ui"
 import { FORMS, getStageTint } from "~lib/evolution"
 import { planLabel as computePlanLabel } from "~lib/entitlements"
-import { isGoogleKey, isGroqKey, GEMINI_DEFAULT, GROQ_DEFAULT, SUPPORTED_GEMINI_MODELS, DEPRECATED_GROQ_IDS } from "~lib/ai"
+import { isGoogleKey, isGroqKey, GEMINI_DEFAULT, GROQ_DEFAULT, SUPPORTED_GEMINI_MODELS, SUPPORTED_GROQ_MODELS } from "~lib/ai"
 import { PROVIDERS, detectProvider } from "~lib/providers"
 import { C } from "~lib/theme"
 import { getStore, setStore, type AmintaStore } from "~lib/storage"
@@ -688,7 +688,7 @@ function SidePanel() {
   useEffect(() => {
     if (!store || grqMigrated.current) return
     grqMigrated.current = true
-    if (isGroqKey(store.apiKey ?? "") && DEPRECATED_GROQ_IDS.has(store.model ?? "")) {
+    if (isGroqKey(store.apiKey ?? "") && !SUPPORTED_GROQ_MODELS.includes(store.model ?? "")) {
       setStore({ model: GROQ_DEFAULT }).then(refresh)
     }
   }, [store]) // eslint-disable-line react-hooks/exhaustive-deps

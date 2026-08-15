@@ -18,7 +18,11 @@ export function isGroqKey(key: string): boolean {
 }
 
 export const GEMINI_DEFAULT = "gemini-3.5-flash"
-export const GROQ_DEFAULT = "llama-3.3-70b-versatile"
+// Groq retired llama-3.3-70b-versatile on 2026-08-16. Its official
+// replacement per console.groq.com/docs/deprecations is openai/gpt-oss-120b
+// (verified 2026-08-14). Note the vendor-prefixed ID format Groq now uses —
+// see SUPPORTED_GROQ_MODELS below for why that matters.
+export const GROQ_DEFAULT = "openai/gpt-oss-120b"
 
 // Whitelist, not a blacklist — Google has already fully shut down
 // gemini-2.0-flash/-lite and restricted gemini-2.5-flash to pre-existing
@@ -28,26 +32,25 @@ export const GROQ_DEFAULT = "llama-3.3-70b-versatile"
 // automatically — nothing to add here when Google retires the next one.
 export const SUPPORTED_GEMINI_MODELS = ["gemini-3.5-flash", "gemini-3.5-flash-lite"]
 
-export const DEPRECATED_GROQ_IDS = new Set([
-  "llama-3.1-70b-versatile",
-  "llama-3.1-8b-instant",
-  "gemma2-9b-it",
-  "gpt-oss-120b",
-  "qwen-3.6-27b",
-  "llama-4-maverick-17b-128e-instruct",
-  "llama-4-scout-17b-16e-instruct",
-  "qwen-qwq-32b",
-])
+// Whitelist, for exactly the reasons given for Gemini above — and Groq has
+// proven the point harder: an audit on 2026-08-14 found ALL THREE models
+// previously offered here were dead or dying (llama3-70b-8192 and
+// llama3-8b-8192 shut down 2025-08-30, llama-3.3-70b-versatile on
+// 2026-08-16), and the old blacklist had silently gone stale against them.
+//
+// Groq's current IDs are vendor-prefixed ("openai/...", "qwen/..."), which
+// is why normalizeGroqModel can no longer reject a model just because it
+// contains "/" — that heuristic existed to catch an OpenRouter model string
+// left over from a provider switch, and a whitelist covers that case
+// correctly without also rejecting Groq's own legitimate IDs.
+export const SUPPORTED_GROQ_MODELS = ["openai/gpt-oss-120b", "qwen/qwen3.6-27b"]
 
 function normalizeGeminiModel(model: string): string {
   return SUPPORTED_GEMINI_MODELS.includes(model) ? model : GEMINI_DEFAULT
 }
 
 function normalizeGroqModel(model: string): string {
-  // Groq models have no "/" and no ":free" suffix.
-  if (!model || model.includes("/") || model.includes(":")) return GROQ_DEFAULT
-  if (DEPRECATED_GROQ_IDS.has(model)) return GROQ_DEFAULT
-  return model
+  return SUPPORTED_GROQ_MODELS.includes(model) ? model : GROQ_DEFAULT
 }
 
 // Deliberately returns the raw provider text, uncleaned — this function is
