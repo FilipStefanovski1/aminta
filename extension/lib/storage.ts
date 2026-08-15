@@ -157,6 +157,22 @@ export interface AmintaStore {
   // aiIncluded user defaults to "included". See lib/entitlements.ts's
   // shouldUseIncludedAi().
   providerMode: "included" | "byok"
+  // ── Included AI credits ──────────────────────────────────────────────
+  // Server-authoritative, synced from /api/sync. NEVER decremented locally:
+  // the backend reserves and charges (see landing/lib/ai/creditService.ts),
+  // and these fields exist purely to display a balance. A client-side
+  // counter would be both wrong under concurrency and trivially editable.
+  //
+  // Completely separate from XP. XP is Aminta's progression/game currency;
+  // credits are Included AI usage. Never render them as the same thing.
+  creditsBalance: number
+  creditsAllowance: number
+  /** ISO timestamp when the current credit period ends (reset time). */
+  creditsPeriodEnd: string
+  /** 'day' for Free, 'billing' for Pro, 'monthly' for Founder/Gifted. */
+  creditsPeriodKind: string
+  /** True for pro/lifetime/active-gift. Free users are aiIncluded but not paid. */
+  aiIncludedPaid: boolean
   pendingXP: PendingXPRecord[]
 }
 
@@ -191,6 +207,11 @@ const DEFAULTS: AmintaStore = {
   subscriptionStatus: null,
   aiIncluded: false,
   providerMode: "included",
+  creditsBalance: 0,
+  creditsAllowance: 0,
+  creditsPeriodEnd: "",
+  creditsPeriodKind: "day",
+  aiIncludedPaid: false,
   pendingXP: [],
 }
 

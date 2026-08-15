@@ -14,9 +14,10 @@ const FREE_PLAN = {
   price: "$0",
   billing: "forever",
   description:
-    "Start with the essentials. Bring your own API key and generate directly inside X.",
+    "Start free with Included AI. No API key, no setup, generate directly inside X.",
   features: [
-    "5 generations / day",
+    "5 Included AI credits / day",
+    "No API key required",
     "Tweet Generator",
     "Reply Generator",
     "Tweet Polisher",
@@ -37,9 +38,9 @@ const PRO_PLAN = {
   price: "$8.99",
   billing: "/ month",
   description:
-    "Unlimited posting power for creators who want to show up consistently.",
+    "Serious posting power for creators who want to show up consistently.",
   features: [
-    "Unlimited generations",
+    "1,000 Included AI credits / month",
     "Aminta DNA",
     "Thread mode (coming soon)",
     "Multiple Amintas (coming soon)",

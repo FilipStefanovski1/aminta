@@ -17,7 +17,7 @@ export const FAQS = [
   },
   {
     q: "Do I need my own API key?",
-    a: "Not on a paid plan — Pro and Founder include AI generations, so Aminta works as soon as you install it. On the free plan you bring your own key: Groq's free tier, OpenRouter, or Google Gemini. If you're on a paid plan but would rather keep using your own key, you can switch back to it in settings.",
+    a: "No. Every plan includes AI credits, so Aminta works as soon as you install it: Free gets 5 Included AI credits a day, Pro gets 1,000 a month. If you'd rather use your own key instead, you can switch to it in settings at any time — Groq's free tier, OpenRouter, or Google Gemini — and it won't touch your Aminta credits.",
   },
   {
     q: "Does it work inside X / Twitter?",

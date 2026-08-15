@@ -45,6 +45,15 @@ export async function POST(request: NextRequest) {
 
   if (!userMatch) return NextResponse.json({ ok: true })
 
+  // Creem's subscription object carries the authoritative billing window.
+  // Field names verified against docs.creem.io/code/webhooks:
+  //   current_period_start_date / current_period_end_date (ISO 8601).
+  // On checkout.completed the subscription may be nested under obj.subscription;
+  // on subscription.* events obj IS the subscription. Read both shapes.
+  const subscription = obj.object === "subscription" ? obj : (obj.subscription ?? {})
+  const periodStart: string | null = subscription?.current_period_start_date ?? null
+  const periodEnd: string | null = subscription?.current_period_end_date ?? null
+
   // Map Creem event types to plan status
   if (
     eventType === "subscription.active" ||
@@ -60,7 +69,10 @@ export async function POST(request: NextRequest) {
         paid_via: "card",
         subscription_status: "active",
         creem_customer_id: obj.customer?.id,
-        creem_subscription_id: obj.subscription?.id ?? null,
+        creem_subscription_id: subscription?.id ?? null,
+        // Lifetime has no billing period — leave the columns null so the
+        // credit system falls through to its rolling monthly window.
+        ...(isLifetime ? {} : { current_period_start: periodStart, current_period_end: periodEnd }),
       })
       .eq(userMatch.column, userMatch.value)
 
@@ -71,6 +83,38 @@ export async function POST(request: NextRequest) {
       properties: { plan, event_type: eventType },
     })
     posthog.identify({ distinctId: email ?? userMatch.value, properties: { plan } })
+  }
+
+  // subscription.paid — a recurring payment was collected, i.e. a NEW billing
+  // period started. This is the credit-renewal trigger for Pro.
+  //
+  // Idempotency is deliberately keyed on the PERIOD, not on the webhook's
+  // event id: we only advance current_period_start when Creem reports a
+  // period we haven't stored yet. A duplicate/replayed subscription.paid for
+  // the same period writes the same values and grants nothing, because the
+  // credit reset is driven by period_start changing (see
+  // lib/ai/creditService.ts + reserve_credit()). That holds even if Creem
+  // retries with a different event id, which an event-id-based dedupe table
+  // would not survive.
+  //
+  // Note there is no credit write here at all: the balance resets lazily on
+  // the user's next generation once the stored period no longer matches. So
+  // a lost or late webhook can't strand a paying user at zero, and a
+  // duplicate can't hand out a second 1,000.
+  if (eventType === "subscription.paid") {
+    if (periodStart && periodEnd) {
+      await supabase
+        .from("users")
+        .update({
+          subscription_status: "active",
+          current_period_start: periodStart,
+          current_period_end: periodEnd,
+        })
+        .eq(userMatch.column, userMatch.value)
+        // Only move forward. A replayed webhook for an older period is a
+        // no-op rather than rewinding a user into a period they've finished.
+        .or(`current_period_start.is.null,current_period_start.lt.${periodStart}`)
+    }
   }
 
   // Canceled = user turned off renewal; access continues until the period
@@ -90,7 +134,10 @@ export async function POST(request: NextRequest) {
   if (eventType === "subscription.expired") {
     await supabase
       .from("users")
-      .update({ plan: "free", subscription_status: "expired" })
+      // Clearing the period is what drops them back to the free daily
+      // allowance: with no billing window stored, the credit system resolves
+      // them as a free user on a UTC-day period at their next generation.
+      .update({ plan: "free", subscription_status: "expired", current_period_start: null, current_period_end: null })
       .eq(userMatch.column, userMatch.value)
       .neq("plan", "lifetime") // never downgrade lifetime purchases
 

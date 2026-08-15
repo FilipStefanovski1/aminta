@@ -349,20 +349,20 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
   const xp   = store.xp ?? 0
   const tint = getStageTint(xp)
 
-  const FREE_DAILY_LIMIT = 5
-  // aiIncluded, not hasProAccess() — hasProAccess() only knows plan==='pro'/
-  // 'lifetime', so a gifted user (plan stays 'free', entitled via
-  // ai_included_override) would otherwise get capped at the free daily
-  // limit and never reach the 60/day Included AI quota the backend already
-  // grants them. aiIncluded is synced straight from the backend's own
-  // aiIncluded() and correctly covers pro/lifetime/gifted alike (see
-  // lib/entitlements.ts's shouldUseIncludedAi header comment). Deliberately
-  // NOT shouldUseIncludedAi(store) — this is the plan-level "unlimited
-  // generations" perk, which should still apply even if the user has
-  // switched providerMode to BYOK.
-  const isFree = !store.aiIncluded
-  const todayGenerations = store.missionDate === todayLocal() ? (store.missionGenerates ?? 0) : 0
-  const atFreeLimit = isFree && todayGenerations >= FREE_DAILY_LIMIT
+  // Credit gating replaces the old client-side free counter entirely. The
+  // backend is authoritative (it reserves atomically per request); these
+  // values are display/UX only, synced from /api/sync. Deliberately NOT
+  // derived from missionGenerates — that counter lives in chrome.storage
+  // and is trivially editable, which was harmless when free meant BYOK
+  // (the user's own money) but must never gate Aminta-funded generations.
+  //
+  // shouldUseIncludedAi() here, not aiIncluded: a user who has switched to
+  // BYOK is paying their own provider, so their Aminta credit balance is
+  // irrelevant and must not block or be displayed.
+  const usingIncluded = shouldUseIncludedAi(store)
+  const creditsExhausted = usingIncluded && store.creditsAllowance > 0 && store.creditsBalance <= 0
+  const creditResetLabel =
+    store.creditsPeriodKind === "day" ? " today" : ""
 
   const reset = () => { setError(""); setOutput(""); setOutputImage(null); setRetrying(false) }
 
@@ -521,7 +521,7 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
     }
   }
 
-  const canGenerate = (!!store.apiKey || shouldUseIncludedAi(store)) && !!store.voice && (!!topic.trim() || !!imageDataUrl || postImageUrls.length > 0) && !atFreeLimit
+  const canGenerate = (!!store.apiKey || shouldUseIncludedAi(store)) && !!store.voice && (!!topic.trim() || !!imageDataUrl || postImageUrls.length > 0) && !creditsExhausted
   const topicLabel =
     mode === "reply"  ? "Who are we replying to?" :
     mode === "polish" ? "Your draft"               :
@@ -776,32 +776,58 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
         ) : "Generate"}
       </button>
 
-      {/* Free-plan usage counter — visible before the wall, not only at it */}
-      {!loading && isFree && !atFreeLimit && !!store.apiKey && !!store.voice && (
+      {/* Included AI credit balance — server-authoritative (store.creditsBalance
+          is synced from /api/sync, never decremented locally). Only shown when
+          the user is actually generating through Included AI; on BYOK their own
+          provider is paying, so credits are irrelevant. */}
+      {!loading && usingIncluded && creditsExhausted === false && !!store.voice && (
         <p className="text-[10px] text-center animate-fade-in" style={{ color: C.textGhost }}>
-          {todayGenerations}/{FREE_DAILY_LIMIT} free generations used today
+          {store.creditsBalance} / {store.creditsAllowance} credits remaining{creditResetLabel}
         </p>
       )}
 
-      {/* Explain why Generate is disabled */}
-      {!loading && atFreeLimit && (
+      {/* Zero-credit state. BYOK stays the escape hatch on both plans; paid
+          users just wait for renewal, free users get the upgrade path. */}
+      {!loading && creditsExhausted && (
         <div className="animate-fade-in rounded-xl px-4 py-3 space-y-2" style={{ backgroundColor: tint + "12", border: `1px solid ${tint}30` }}>
           <p className="font-pixel text-[8px]" style={{ color: tint }}>
-            {FREE_DAILY_LIMIT}/{FREE_DAILY_LIMIT} free generations used today
+            {store.aiIncludedPaid
+              ? "You've used your 1,000 Included AI credits for this billing period."
+              : "You're out of free credits for today."}
           </p>
           <p className="text-[11px] leading-snug" style={{ color: C.textFaint }}>
-            Come back tomorrow for more free generations.
+            {store.aiIncludedPaid
+              ? "Your credits renew at the start of your next billing period."
+              : "Credits reset tomorrow."}
           </p>
+          <div className="flex flex-col gap-1.5 pt-0.5">
+            {!store.aiIncludedPaid && (
+              <a
+                href="https://www.amintaapp.com/#pricing"
+                target="_blank"
+                rel="noreferrer"
+                className="btn-pixel w-full py-1.5 rounded-lg font-pixel text-[8px] text-center"
+                style={{ backgroundColor: tint, color: "#000", border: "2px solid #000", boxShadow: "2px 2px 0 #000" }}>
+                Upgrade to Pro
+              </a>
+            )}
+            <button
+              onClick={onOpenSettings}
+              className="w-full py-1.5 rounded-lg font-pixel text-[8px]"
+              style={{ backgroundColor: "transparent", color: C.textFaint, border: `1px solid ${C.border}` }}>
+              Use my API key
+            </button>
+          </div>
         </div>
       )}
-      {!loading && !atFreeLimit && !store.apiKey && !shouldUseIncludedAi(store) && (
+      {!loading && !creditsExhausted && !store.apiKey && !shouldUseIncludedAi(store) && (
         <p className="text-[11px] animate-fade-in px-1" style={{ color: C.textFaint }}>
           Add your AI key in{" "}
           <button onClick={onOpenSettings} className="underline" style={{ color: C.text }}>Settings</button>
           {" "}to start generating.
         </p>
       )}
-      {!loading && !atFreeLimit && (!!store.apiKey || shouldUseIncludedAi(store)) && !store.voice && (
+      {!loading && !creditsExhausted && (!!store.apiKey || shouldUseIncludedAi(store)) && !store.voice && (
         <p className="text-[11px] animate-fade-in px-1" style={{ color: C.textFaint }}>
           Go to{" "}
           <button onClick={onTeach} className="underline" style={{ color: C.text }}>Train</button>

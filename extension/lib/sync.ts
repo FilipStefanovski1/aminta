@@ -180,6 +180,11 @@ export async function pullFromCloud(): Promise<{ cloudXp: number } | void> {
     plan?: AmintaStore["plan"]
     subscription_status?: string | null
     ai_included?: boolean
+    ai_included_paid?: boolean
+    credits_balance?: number
+    credits_allowance?: number
+    credits_period_end?: string
+    credits_period_kind?: string
     voice_profile?: AmintaStore["voice"]
     style_profile?: AmintaStore["styleProfile"]
     style_profile_hash?: string
@@ -237,6 +242,14 @@ export async function pullFromCloud(): Promise<{ cloudXp: number } | void> {
   // resolved server-side via lib/entitlements.ts's aiIncluded()) — always
   // trust the cloud here too, same reasoning as plan/subscription_status.
   if ("ai_included" in data) patch.aiIncluded = !!data.ai_included
+  if ("ai_included_paid" in data) patch.aiIncludedPaid = !!data.ai_included_paid
+  // Credit balance is server-authoritative and display-only. Always trust
+  // the cloud — never merge/max against a local value, because the backend
+  // is the only thing that actually spends credits.
+  if (typeof data.credits_balance === "number") patch.creditsBalance = data.credits_balance
+  if (typeof data.credits_allowance === "number") patch.creditsAllowance = data.credits_allowance
+  if (typeof data.credits_period_end === "string") patch.creditsPeriodEnd = data.credits_period_end
+  if (typeof data.credits_period_kind === "string") patch.creditsPeriodKind = data.credits_period_kind
 
   // Only overwrite these if cloud has them and local doesn't
   if (!local.voice && data.voice_profile)      patch.voice = data.voice_profile

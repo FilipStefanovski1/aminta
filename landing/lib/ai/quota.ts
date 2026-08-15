@@ -10,26 +10,30 @@ export interface UserEntitlement {
   plan: string
   subscriptionStatus: string | null
   aiIncludedOverride: boolean
-  generationLimitDaily: number | null
-  generationLimitMonthly: number | null
+  giftExpiresAt: string | null
+  creemPeriodStart: string | null
+  creemPeriodEnd: string | null
+  createdAt: string | null
 }
 
 export interface ResolvedLimits {
-  aiIncluded: boolean
-  dailyLimit: number
-  monthlyLimit: number
+  /** Whether this user is on a PAID included tier (pro/lifetime/active gift).
+   *  NOT "may they use Included AI" — every signed-in user may now, funded by
+   *  their credit balance. This flag only distinguishes paid from free. */
+  paidIncluded: boolean
   maxConcurrent: number
 }
 
-// Loads the user's row + resolves their effective entitlement/limits in one
-// pass. `'gifted'` is a synthetic plan_limits key, resolved here when
-// ai_included_override is set — it is never a real users.plan value (see
-// supabase-setup.sql section 9 for why).
+// Loads the user's row + everything the credit system needs to resolve their
+// period and allowance, in one pass. `'gifted'` is a synthetic plan_limits
+// key, resolved in lib/ai/credits.ts's resolvePlanKey() when
+// ai_included_override is set and the gift hasn't expired — it is never a
+// real users.plan value (see supabase-setup.sql section 9 for why).
 export async function loadUserEntitlement(userId: string): Promise<UserEntitlement | null> {
   const service = await createServiceClient()
   const { data, error } = await service
     .from("users")
-    .select("plan, subscription_status, ai_included_override, generation_limit_daily, generation_limit_monthly")
+    .select("plan, subscription_status, ai_included_override, gift_expires_at, current_period_start, current_period_end, created_at")
     .eq("id", userId)
     .single()
 
@@ -39,39 +43,29 @@ export async function loadUserEntitlement(userId: string): Promise<UserEntitleme
     plan: data.plan ?? "free",
     subscriptionStatus: data.subscription_status ?? null,
     aiIncludedOverride: !!data.ai_included_override,
-    generationLimitDaily: data.generation_limit_daily ?? null,
-    generationLimitMonthly: data.generation_limit_monthly ?? null,
+    giftExpiresAt: data.gift_expires_at ?? null,
+    creemPeriodStart: data.current_period_start ?? null,
+    creemPeriodEnd: data.current_period_end ?? null,
+    createdAt: data.created_at ?? null,
   }
 }
 
+// Only concurrency comes from plan_limits now. daily_limit/monthly_limit are
+// intentionally no longer read — the credit balance is the single product
+// allowance, and reading both would be two competing quota systems. The
+// columns stay in the table so this change is revertible by redeploy alone.
 export async function resolveLimits(entitlement: UserEntitlement): Promise<ResolvedLimits> {
-  const included = aiIncluded({ plan: entitlement.plan, subscription_status: entitlement.subscriptionStatus, ai_included_override: entitlement.aiIncludedOverride })
+  const paid = aiIncluded({
+    plan: entitlement.plan,
+    subscription_status: entitlement.subscriptionStatus,
+    ai_included_override: entitlement.aiIncludedOverride,
+  })
   const planKey = entitlement.aiIncludedOverride ? "gifted" : entitlement.plan
 
   const service = await createServiceClient()
-  const { data } = await service.from("plan_limits").select("*").eq("plan", planKey).single()
+  const { data } = await service.from("plan_limits").select("max_concurrent").eq("plan", planKey).single()
 
-  const dailyLimit = entitlement.generationLimitDaily ?? data?.daily_limit ?? 0
-  const monthlyLimit = entitlement.generationLimitMonthly ?? data?.monthly_limit ?? 0
-  const maxConcurrent = data?.max_concurrent ?? 1
-
-  return { aiIncluded: included, dailyLimit, monthlyLimit, maxConcurrent }
-}
-
-export async function checkQuota(userId: string, dailyLimit: number, monthlyLimit: number): Promise<{ ok: true } | { ok: false; reason: string }> {
-  const service = await createServiceClient()
-  const now = new Date()
-  const dayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString()
-  const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString()
-
-  const [{ count: dailyCount }, { count: monthlyCount }] = await Promise.all([
-    service.from("ai_usage_log").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("status", "success").gte("created_at", dayStart),
-    service.from("ai_usage_log").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("status", "success").gte("created_at", monthStart),
-  ])
-
-  if ((dailyCount ?? 0) >= dailyLimit) return { ok: false, reason: "You've hit your daily Included AI limit. Try again tomorrow, or use your own API key." }
-  if ((monthlyCount ?? 0) >= monthlyLimit) return { ok: false, reason: "You've hit your monthly Included AI limit. It resets next month, or you can use your own API key." }
-  return { ok: true }
+  return { paidIncluded: paid, maxConcurrent: data?.max_concurrent ?? 1 }
 }
 
 // ─── Idempotency ─────────────────────────────────────────────────────────
@@ -112,6 +106,9 @@ export async function claimRequestId(params: {
   imageCount: number
   clientIp: string | null
   deviceId: string | null
+  /** Plan at generation time — the stable attribution the free-tier spend
+   *  cap sums over. Never derived later from users.plan, which changes. */
+  planKey: string
 }): Promise<ClaimResult> {
   const service = await createServiceClient()
   const { data, error } = await service
@@ -125,6 +122,7 @@ export async function claimRequestId(params: {
       status: "pending",
       client_ip: params.clientIp,
       device_id: params.deviceId,
+      plan_key: params.planKey,
     })
     .select("id")
     .single()

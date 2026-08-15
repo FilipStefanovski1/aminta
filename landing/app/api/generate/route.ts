@@ -14,7 +14,10 @@ import { isIncludedAiAvailable } from "@/lib/ai/config"
 import { callGemini } from "@/lib/ai/gemini"
 import { buildMessages, buildStyleProfileMessages, withImages, type Mode, type OutputLength, type Tone, type VoiceProfile, type StyleProfile, type StyleCorpusEntry } from "@/lib/ai/prompts"
 import { checkAndIncrementRateLimits, claimConcurrencySlot, clearInflight } from "@/lib/ai/rateLimit"
-import { loadUserEntitlement, resolveLimits, checkQuota, claimRequestId, completeUsageLog, estimateCostUsd } from "@/lib/ai/quota"
+import { loadUserEntitlement, resolveLimits, claimRequestId, completeUsageLog } from "@/lib/ai/quota"
+import { reserveCredits, refundCredits } from "@/lib/ai/creditService"
+import { resolvePlanKey } from "@/lib/ai/credits"
+import { computeProviderCostUsd } from "@/lib/ai/pricing"
 import { validateImages, validateCorpus, hashedClientIp, isAllowedOrigin, MAX_REQUEST_BODY_BYTES } from "@/lib/ai/security"
 import { cleanGenerationOutput } from "@/lib/ai/textCleanup"
 
@@ -85,23 +88,37 @@ export async function POST(request: NextRequest) {
   const user = await getUser(request)
   if (!user) return errorResponse("Sign in required.", "UNAUTHENTICATED", 401)
 
-  // 2. KILL SWITCH + SPEND CAP
-  const availability = await isIncludedAiAvailable()
-  if (!availability.ok) return errorResponse(availability.reason, "AI_INCLUDED_DISABLED", 403)
-
-  // 3. AUTHORIZATION — hard, independent server-side check. Never trust the
+  // 2. AUTHORIZATION — hard, independent server-side check. Never trust the
   // client's own entitlement routing decision (its `aiIncluded`/
   // `providerMode` fields exist purely to pick a client-side code path).
+  //
+  // Under the credit model EVERY signed-in account may use Included AI —
+  // free included, funded by its own (smaller) daily credit allowance. So
+  // the gate here is no longer "are you paid", it's "do you have credits",
+  // which is decided atomically at reservation time in step 8. All this
+  // step still does is confirm the account exists.
+  //
+  // Deliberately ordered BEFORE the spend-cap check below: which caps apply
+  // depends on the user's resolved plan (free gets its own sub-cap), so the
+  // plan has to be known first.
   const entitlement = await loadUserEntitlement(user.id)
   if (!entitlement) return errorResponse("Account not found.", "NOT_ENTITLED", 403)
 
-  const included = aiIncluded({
-    plan: entitlement.plan,
-    subscription_status: entitlement.subscriptionStatus,
-    ai_included_override: entitlement.aiIncludedOverride,
-  })
-  if (!included) {
-    return errorResponse("Included AI requires Pro, Founder, or a gift — switch to your own API key in Settings.", "NOT_ENTITLED", 403)
+  const planKey = resolvePlanKey(
+    {
+      plan: entitlement.plan,
+      aiIncludedOverride: entitlement.aiIncludedOverride,
+      giftExpiresAt: entitlement.giftExpiresAt,
+    },
+    new Date()
+  )
+
+  // 3. KILL SWITCH + SPEND CAPS — server-authoritative, plan-aware. Free
+  // accounts stop at the free sub-cap; paid accounts continue until the
+  // global cap. The client is never consulted and never sees a dollar value.
+  const availability = await isIncludedAiAvailable(planKey)
+  if (!availability.ok) {
+    return errorResponse(availability.reason, availability.code, 403)
   }
 
   const limits = await resolveLimits(entitlement)
@@ -177,6 +194,7 @@ export async function POST(request: NextRequest) {
     imageCount: images.length,
     clientIp: hashedIp,
     deviceId,
+    planKey,
   })
   if (!claim.claimed) {
     await clearInflight(requestId)
@@ -202,15 +220,40 @@ export async function POST(request: NextRequest) {
   }
   const rowId = claim.rowId
 
-  // 8. QUOTA (skipped for style_profile — cheap, infrequent, small-output;
-  // still subject to rate limiting/concurrency/entitlement above)
-  if (!isStyleProfile) {
-    const quota = await checkQuota(user.id, limits.dailyLimit, limits.monthlyLimit)
-    if (!quota.ok) {
-      await completeUsageLog(rowId, { status: "error", errorDetail: quota.reason })
-      await clearInflight(requestId)
-      return errorResponse(quota.reason, "QUOTA_EXCEEDED", 403)
-    }
+  // 8. CREDITS — atomic reserve. This replaces the old daily/monthly quota
+  // entirely (that one COUNTed ai_usage_log rows outside any lock, so two
+  // concurrent requests could both pass on the same last unit).
+  //
+  // Reserve BEFORE the provider call, not after: the Gemini call can take
+  // up to 15s, and leaving the balance untouched for that window is exactly
+  // what lets parallel requests oversell the final credit. Anything that
+  // fails after this point refunds (see the catch and the failure paths
+  // below), so a failed generation ultimately costs the user 0.
+  //
+  // reserveCredits() is idempotent per (user, requestId): a retry of the
+  // same generation re-uses the original reservation instead of charging
+  // twice. style_profile resolves to cost 0 via the central mapping in
+  // lib/ai/credits.ts — not special-cased here.
+  const creditCtx = {
+    userId: user.id,
+    plan: entitlement.plan,
+    aiIncludedOverride: entitlement.aiIncludedOverride,
+    giftExpiresAt: entitlement.giftExpiresAt,
+    creemPeriodStart: entitlement.creemPeriodStart,
+    creemPeriodEnd: entitlement.creemPeriodEnd,
+    createdAt: entitlement.createdAt,
+  }
+  const reservation = await reserveCredits(creditCtx, requestId, generationMode, "user")
+  if (!reservation.ok) {
+    const outOfCredits = reservation.reason === "insufficient_credits"
+    const message = outOfCredits
+      ? (reservation.planKey === "free"
+          ? "You're out of free credits for today."
+          : "You've used your Included AI credits for this billing period.")
+      : "Couldn't start generation right now. Try again in a moment."
+    await completeUsageLog(rowId, { status: "error", errorDetail: reservation.reason })
+    await clearInflight(requestId)
+    return errorResponse(message, outOfCredits ? "OUT_OF_CREDITS" : "PROVIDER_ERROR", outOfCredits ? 403 : 503)
   }
 
   // 9. PROVIDER CALL — model/provider chosen entirely server-side
@@ -246,9 +289,15 @@ export async function POST(request: NextRequest) {
     const outputText = isStyleProfile ? result.text : cleanGenerationOutput(result.text)
     const outputChars = outputText.length
     const inputChars = isStyleProfile ? 200 : (body.input?.length ?? 0)
-    const cost = estimateCostUsd(inputChars, outputChars, {
+    // Model-aware provider cost (lib/ai/pricing.ts). This is internal dollar
+    // accounting for the spend caps and the audit log ONLY — it never
+    // influences how many credits the user was charged.
+    const { costUsd: cost } = computeProviderCostUsd({
+      model: result.model,
       inputTokens: result.inputTokens,
       outputTokens: result.outputTokens,
+      inputChars,
+      outputChars,
     })
 
     // Latency instrumentation — timing/model/mode only, never the prompt,
@@ -283,6 +332,11 @@ export async function POST(request: NextRequest) {
     // generic message — never forward provider internals outward.
     const detail = e instanceof Error ? e.message : String(e)
     console.error("[Included AI] generation failed", { userId: user.id, generationMode, requestId, detail })
+    // Give the credit back. Covers every provider failure mode that lands
+    // here: Gemini 429/5xx after retries, the 15s deadline, network errors,
+    // safety blocks, and empty responses. Idempotent, so a retried request
+    // that fails again doesn't double-refund.
+    await refundCredits(user.id, requestId)
     await completeUsageLog(rowId, { status: "error", errorDetail: detail, latencyMs: Date.now() - startedAt })
     await clearInflight(requestId)
     return errorResponse("Generation failed. Please try again.", "PROVIDER_ERROR", 502)

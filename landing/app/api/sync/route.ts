@@ -3,6 +3,7 @@ import { createServiceClient } from "@/lib/supabase/server"
 import { cookies } from "next/headers"
 import { NextResponse, type NextRequest } from "next/server"
 import { aiIncluded } from "@/lib/entitlements"
+import { getCreditStatus } from "@/lib/ai/creditService"
 
 async function getUser(request: NextRequest) {
   // Support both cookie-based sessions (web) and Bearer token (extension)
@@ -54,9 +55,23 @@ export async function GET(request: NextRequest) {
   const service = await createServiceClient()
   const { data: profile } = await service
     .from("users")
-    .select("plan, subscription_status, ai_included_override")
+    .select("plan, subscription_status, ai_included_override, gift_expires_at, current_period_start, current_period_end, created_at")
     .eq("id", user.id)
     .single()
+
+  // Credit balance for the Settings/usage display. Read-only — getCreditStatus
+  // never writes, but it applies the same period logic as the reservation
+  // path so a user whose period rolled sees a full balance rather than last
+  // period's leftovers.
+  const credits = await getCreditStatus({
+    userId: user.id,
+    plan: profile?.plan ?? "free",
+    aiIncludedOverride: profile?.ai_included_override ?? false,
+    giftExpiresAt: profile?.gift_expires_at ?? null,
+    creemPeriodStart: profile?.current_period_start ?? null,
+    creemPeriodEnd: profile?.current_period_end ?? null,
+    createdAt: profile?.created_at ?? null,
+  })
 
   // ai_included is the ONE canonical entitlement field the extension should
   // route Included-AI generation on — it's aiIncluded() from
@@ -69,11 +84,25 @@ export async function GET(request: NextRequest) {
     ...(data ?? {}),
     plan: profile?.plan ?? "free",
     subscription_status: profile?.subscription_status ?? null,
-    ai_included: aiIncluded({
+    // Under the credit model every signed-in account can use Included AI —
+    // free accounts included, funded by their smaller daily allowance. The
+    // gate is the credit balance, not the plan, so this is now true for
+    // everyone and the extension shows the Included/My API Key choice to
+    // all signed-in users.
+    ai_included: true,
+    // Whether they're on a PAID included tier. Kept distinct from
+    // ai_included so the UI can still tell free from Pro/Founder/gifted
+    // (e.g. which zero-credit message and CTA to show).
+    ai_included_paid: aiIncluded({
       plan: profile?.plan ?? "free",
       subscription_status: profile?.subscription_status ?? null,
       ai_included_override: profile?.ai_included_override ?? false,
     }),
+    credits_balance: credits.balance,
+    credits_allowance: credits.allowance,
+    credits_period_end: credits.periodEnd,
+    credits_period_kind: credits.periodKind,
+    credits_plan_key: credits.planKey,
   })
 }
 

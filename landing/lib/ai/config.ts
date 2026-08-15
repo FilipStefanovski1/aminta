@@ -24,6 +24,13 @@ interface AiConfig {
   ai_included_enabled: boolean
   global_daily_spend_cap_usd: number
   global_monthly_spend_cap_usd: number
+  // Free-tier sub-caps. Free users gaining Included AI created a new cost
+  // centre whose worst case is unbounded (anyone can sign up). Without these,
+  // free traffic could exhaust the GLOBAL cap and take Included AI down for
+  // paying Pro/Founder users — so free spend is bounded separately, and the
+  // global caps remain purely as the emergency failsafe behind them.
+  free_daily_spend_cap_usd: number
+  free_monthly_spend_cap_usd: number
 }
 
 let cachedConfig: { value: AiConfig; fetchedAt: number } | null = null
@@ -41,6 +48,8 @@ export async function getAiConfig(): Promise<AiConfig> {
       ai_included_enabled: false,
       global_daily_spend_cap_usd: 0,
       global_monthly_spend_cap_usd: 0,
+      free_daily_spend_cap_usd: 0,
+      free_monthly_spend_cap_usd: 0,
     }
     cachedConfig = { value: fallback, fetchedAt: Date.now() }
     return fallback
@@ -49,9 +58,28 @@ export async function getAiConfig(): Promise<AiConfig> {
   return cachedConfig.value
 }
 
-let cachedSpend: { dailyUsd: number; monthlyUsd: number; fetchedAt: number } | null = null
+interface SpendSnapshot {
+  dailyUsd: number
+  monthlyUsd: number
+  freeDailyUsd: number
+  freeMonthlyUsd: number
+}
 
-export async function getCurrentSpend(): Promise<{ dailyUsd: number; monthlyUsd: number }> {
+let cachedSpend: (SpendSnapshot & { fetchedAt: number }) | null = null
+
+/**
+ * Current recorded spend, globally and for the free tier specifically.
+ *
+ * Sums ai_usage_log.estimated_cost_usd, which route.ts now writes from the
+ * model-aware calculator in lib/ai/pricing.ts — NOT the stale Gemini 2.0
+ * constants that previously understated real spend by ~20-30x and made these
+ * caps meaningless.
+ *
+ * Free spend is attributed via the plan_key recorded on each row at
+ * generation time, so a user upgrading later never retroactively moves their
+ * past free-tier spend into the paid bucket (or vice versa).
+ */
+export async function getCurrentSpend(): Promise<SpendSnapshot> {
   if (cachedSpend && Date.now() - cachedSpend.fetchedAt < SPEND_TTL_MS) {
     return cachedSpend
   }
@@ -60,33 +88,85 @@ export async function getCurrentSpend(): Promise<{ dailyUsd: number; monthlyUsd:
   const dayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString()
   const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString()
 
-  const [{ data: dayRows }, { data: monthRows }] = await Promise.all([
-    service.from("ai_usage_log").select("estimated_cost_usd").eq("status", "success").gte("created_at", dayStart),
-    service.from("ai_usage_log").select("estimated_cost_usd").eq("status", "success").gte("created_at", monthStart),
-  ])
+  // One month-scoped read, bucketed in memory. The month window is a superset
+  // of the day window, so a second query for "today" would be redundant I/O.
+  const { data: monthRows } = await service
+    .from("ai_usage_log")
+    .select("estimated_cost_usd, plan_key, created_at")
+    .eq("status", "success")
+    .gte("created_at", monthStart)
 
-  const sum = (rows: { estimated_cost_usd: number | null }[] | null) =>
-    (rows ?? []).reduce((acc, r) => acc + (r.estimated_cost_usd ?? 0), 0)
+  const dayStartMs = Date.parse(dayStart)
+  let dailyUsd = 0, monthlyUsd = 0, freeDailyUsd = 0, freeMonthlyUsd = 0
 
-  const value = { dailyUsd: sum(dayRows), monthlyUsd: sum(monthRows), fetchedAt: Date.now() }
+  for (const r of (monthRows ?? []) as { estimated_cost_usd: number | null; plan_key: string | null; created_at: string }[]) {
+    const cost = r.estimated_cost_usd ?? 0
+    const isToday = Date.parse(r.created_at) >= dayStartMs
+    // Rows written before plan_key existed are all pre-credit-system, i.e.
+    // never free-tier spend — correctly excluded from the free buckets.
+    const isFree = r.plan_key === "free"
+
+    monthlyUsd += cost
+    if (isToday) dailyUsd += cost
+    if (isFree) {
+      freeMonthlyUsd += cost
+      if (isToday) freeDailyUsd += cost
+    }
+  }
+
+  const value = { dailyUsd, monthlyUsd, freeDailyUsd, freeMonthlyUsd, fetchedAt: Date.now() }
   cachedSpend = value
   return value
 }
 
-// Called once per request, right after the kill-switch check. Combines both
-// caches into a single pass/fail so app/api/generate/route.ts doesn't need
-// to know about the two different TTLs.
-export async function isIncludedAiAvailable(): Promise<{ ok: true } | { ok: false; reason: string }> {
+export type AvailabilityFailure =
+  | { ok: false; reason: string; code: "AI_INCLUDED_DISABLED" }
+  | { ok: false; reason: string; code: "FREE_AI_BUDGET_EXHAUSTED" }
+
+/**
+ * Called once per request, right after auth. Server-authoritative — the
+ * client is never consulted and can't influence which caps apply.
+ *
+ * `planKey` decides which caps are in force:
+ *   free  -> free daily/monthly caps, THEN the global caps
+ *   paid  -> global caps only
+ *
+ * That ordering is the whole point of the free sub-cap: free traffic stops at
+ * its own smaller ceiling while Pro/Founder/Gifted keep generating right up
+ * to the global cap. Exhausted free budget is reported as its own code so the
+ * UI can say "temporarily unavailable, try later or use your own key" rather
+ * than implying the user did something wrong — and no dollar figure is ever
+ * returned to the client.
+ */
+export async function isIncludedAiAvailable(
+  planKey: string
+): Promise<{ ok: true } | AvailabilityFailure> {
   const config = await getAiConfig()
   if (!config.ai_included_enabled) {
-    return { ok: false, reason: "Included AI is temporarily unavailable. Please use your own API key in Settings." }
+    return { ok: false, code: "AI_INCLUDED_DISABLED", reason: "Included AI is temporarily unavailable. Please use your own API key in Settings." }
   }
+
   const spend = await getCurrentSpend()
+
+  if (planKey === "free") {
+    if (
+      spend.freeDailyUsd >= config.free_daily_spend_cap_usd ||
+      spend.freeMonthlyUsd >= config.free_monthly_spend_cap_usd
+    ) {
+      return {
+        ok: false,
+        code: "FREE_AI_BUDGET_EXHAUSTED",
+        reason: "Free Included AI is temporarily unavailable. Try again later or use your own API key.",
+      }
+    }
+  }
+
+  // Global caps apply to everyone, free included, as the final failsafe.
   if (spend.dailyUsd >= config.global_daily_spend_cap_usd) {
-    return { ok: false, reason: "Included AI has hit its daily usage cap. Please try again tomorrow or use your own API key." }
+    return { ok: false, code: "AI_INCLUDED_DISABLED", reason: "Included AI has hit its daily usage cap. Please try again tomorrow or use your own API key." }
   }
   if (spend.monthlyUsd >= config.global_monthly_spend_cap_usd) {
-    return { ok: false, reason: "Included AI has hit its monthly usage cap. Please use your own API key in Settings." }
+    return { ok: false, code: "AI_INCLUDED_DISABLED", reason: "Included AI has hit its monthly usage cap. Please use your own API key in Settings." }
   }
   return { ok: true }
 }

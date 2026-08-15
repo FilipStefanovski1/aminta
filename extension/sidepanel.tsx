@@ -261,6 +261,11 @@ function SettingsOverlay({
 
   const isDirty = key.trim() !== (store.apiKey ?? "") || model !== (store.model ?? "")
 
+  // True only when this account actually has Included AI AND has it
+  // selected — never true for a BYOK-only account, so those users still see
+  // the API key/model card directly, exactly as before this change.
+  const includedActive = store.aiIncluded && store.providerMode !== "byok"
+
   useEffect(() => {
     if (!models.find(m => m.id === model)) setModel(models[0].id)
   }, [provider.id]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -371,9 +376,16 @@ function SettingsOverlay({
                 directly via onSave (same immediate-persist pattern as the
                 avatar upload above), which lib/entitlements.ts's
                 shouldUseIncludedAi() already reads everywhere generation is
-                dispatched — no other wiring needed for this to take effect. */}
+                dispatched — no other wiring needed for this to take effect.
+                includedActive gates everything below: when Included is the
+                active mode, the BYOK card (key/provider links/model/save)
+                is hidden entirely rather than shown-but-optional, since
+                Included needs zero configuration. Switching tabs never
+                clears `key`/`model` local state or store.apiKey/store.model
+                — only this section's visibility changes, so a user's BYOK
+                setup is exactly as they left it if they switch back. */}
             {store.aiIncluded && (
-              <div className="px-3.5 pt-3.5 pb-3" style={{ borderBottom: `1px solid ${C.borderSoft}` }}>
+              <div className="px-3.5 pt-3.5 pb-3" style={includedActive ? undefined : { borderBottom: `1px solid ${C.borderSoft}` }}>
                 <label className="text-[9px] uppercase tracking-[0.06em] block mb-1.5" style={{ color: "#888896" }}>
                   AI Provider
                 </label>
@@ -405,61 +417,62 @@ function SettingsOverlay({
               </div>
             )}
 
-            {/* API Key */}
-            <div className="px-3.5 pt-3.5 pb-3">
-              <AiKeyInput
-                value={key}
-                onChange={setKey}
-                tint={avatarTint}
-                labelSuffix={store.aiIncluded && store.providerMode !== "byok" && (
-                  <span className="normal-case" style={{ color: "#55555f" }}>(optional)</span>
-                )}
-              />
-            </div>
+            {!includedActive && (
+              <>
+                {/* API Key */}
+                <div className="px-3.5 pt-3.5 pb-3">
+                  <AiKeyInput
+                    value={key}
+                    onChange={setKey}
+                    tint={avatarTint}
+                  />
+                </div>
 
-            <div style={{ height: 1, backgroundColor: C.borderSoft }} />
+                <div style={{ height: 1, backgroundColor: C.borderSoft }} />
 
-            {/* Model */}
-            <div className="px-3.5 pt-3 pb-3.5">
-              <label className="text-[9px] uppercase tracking-[0.06em] block mb-1.5" style={{ color: "#888896" }}>
-                Model
-              </label>
-              <select
-                value={models.find(m => m.id === model)?.id ?? models[0].id}
-                onChange={e => setModel(e.target.value)}
-                style={SELECT_STYLE}>
-                {models.map(m => (
-                  <option key={m.id} value={m.id}>{m.label}</option>
-                ))}
-              </select>
-              {provider.id === "groq" && (() => {
-                const gm = models.find(m => m.id === model) ?? models[0]
-                return gm.badge ? (
-                  <p className="font-pixel text-[6px] mt-1.5" style={{ color: gm.badgeColor }}>
-                    {gm.badge}
-                  </p>
-                ) : null
-              })()}
-              {error && <p className="font-pixel text-[7px] text-red-400 mt-2.5">{error}</p>}
+                {/* Model */}
+                <div className="px-3.5 pt-3 pb-3.5">
+                  <label className="text-[9px] uppercase tracking-[0.06em] block mb-1.5" style={{ color: "#888896" }}>
+                    Model
+                  </label>
+                  <select
+                    value={models.find(m => m.id === model)?.id ?? models[0].id}
+                    onChange={e => setModel(e.target.value)}
+                    style={SELECT_STYLE}>
+                    {models.map(m => (
+                      <option key={m.id} value={m.id}>{m.label}</option>
+                    ))}
+                  </select>
+                  {provider.id === "groq" && (() => {
+                    const gm = models.find(m => m.id === model) ?? models[0]
+                    return gm.badge ? (
+                      <p className="font-pixel text-[6px] mt-1.5" style={{ color: gm.badgeColor }}>
+                        {gm.badge}
+                      </p>
+                    ) : null
+                  })()}
+                  {error && <p className="font-pixel text-[7px] text-red-400 mt-2.5">{error}</p>}
 
-              {/* Save — inline under Model, part of the same card */}
-              {isDirty ? (
-                <PrimaryButton onClick={!saving ? save : undefined} tint={avatarTint} className="mt-3 !py-2 text-[8px]" disabled={saving}>
-                  {saving ? "Saving…" : "Save Changes"}
-                </PrimaryButton>
-              ) : (
-                <button
-                  disabled
-                  className="w-full mt-3 py-2 rounded-lg font-pixel text-[8px] cursor-default"
-                  style={{
-                    backgroundColor: "transparent",
-                    color: justSaved ? avatarTint : "#666672",
-                    border: `1px solid ${justSaved ? avatarTint + "55" : C.border}`,
-                  }}>
-                  Saved
-                </button>
-              )}
-            </div>
+                  {/* Save — inline under Model, part of the same card */}
+                  {isDirty ? (
+                    <PrimaryButton onClick={!saving ? save : undefined} tint={avatarTint} className="mt-3 !py-2 text-[8px]" disabled={saving}>
+                      {saving ? "Saving…" : "Save Changes"}
+                    </PrimaryButton>
+                  ) : (
+                    <button
+                      disabled
+                      className="w-full mt-3 py-2 rounded-lg font-pixel text-[8px] cursor-default"
+                      style={{
+                        backgroundColor: "transparent",
+                        color: justSaved ? avatarTint : "#666672",
+                        border: `1px solid ${justSaved ? avatarTint + "55" : C.border}`,
+                      }}>
+                      Saved
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         </section>
 
