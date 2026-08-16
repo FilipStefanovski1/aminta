@@ -13,7 +13,7 @@ import SetupGate from "~components/SetupGate"
 import VoiceProfileForm from "~components/VoiceProfileForm"
 import { GhostButton, PrimaryButton } from "~components/ui"
 import { FORMS, getStageTint } from "~lib/evolution"
-import { planLabel as computePlanLabel } from "~lib/entitlements"
+import { planLabel as computePlanLabel, providerModeFor } from "~lib/entitlements"
 import { isGoogleKey, isGroqKey, GEMINI_DEFAULT, GROQ_DEFAULT, SUPPORTED_GEMINI_MODELS, SUPPORTED_GROQ_MODELS } from "~lib/ai"
 import { PROVIDERS, detectProvider } from "~lib/providers"
 import { C } from "~lib/theme"
@@ -271,10 +271,31 @@ function SettingsOverlay({
 
   const isDirty = key.trim() !== (store.apiKey ?? "") || model !== (store.model ?? "")
 
-  // True only when this account actually has Included AI AND has it
-  // selected — never true for a BYOK-only account, so those users still see
-  // the API key/model card directly, exactly as before this change.
-  const includedActive = store.aiIncluded && store.providerMode !== "byok"
+  // ONE authoritative mode drives both the segmented control's selected
+  // state and whether the BYOK controls mount, so the two cannot disagree.
+  // Do not reintroduce a second boolean here — the previous bug was exactly
+  // that: the control painted Included as selected off `providerMode`
+  // alone while the gate also required `aiIncluded`.
+  const providerMode = providerModeFor(store)
+  const includedActive = providerMode === "included"
+
+  // Diagnostic for "the Settings UI is wrong" reports. Two things were
+  // impossible to tell apart from a screenshot: a genuine state bug, versus
+  // Chrome still running an older unpacked build (a stale build/chrome-mv3-dev
+  // is 100% indistinguishable from a logic bug in the UI itself). The stamp
+  // settles which build is loaded; the state values settle the rest.
+  // Entitlement/mode flags only — never the key, the model, or user content.
+  useEffect(() => {
+    console.info("[Aminta] settings", {
+      build: process.env.NODE_ENV, // "production" = build/chrome-mv3-prod
+      providerMode,
+      includedActive,
+      storedProviderMode: store.providerMode,
+      hasIncludedEntitlement: store.aiIncluded,
+      creditsAllowance: store.creditsAllowance,
+      byokControlsMounted: !includedActive,
+    })
+  }, [providerMode, includedActive, store.providerMode, store.aiIncluded, store.creditsAllowance])
 
   useEffect(() => {
     if (!models.find(m => m.id === model)) setModel(models[0].id)
@@ -404,8 +425,8 @@ function SettingsOverlay({
                     onClick={() => onSave({ providerMode: "included" })}
                     className="flex-1 py-2 font-pixel text-[8px] transition-colors"
                     style={{
-                      backgroundColor: store.providerMode !== "byok" ? avatarTint : "transparent",
-                      color: store.providerMode !== "byok" ? "#000" : "#888896",
+                      backgroundColor: includedActive ? avatarTint : "transparent",
+                      color: includedActive ? "#000" : "#888896",
                     }}>
                     Included
                   </button>
@@ -413,16 +434,16 @@ function SettingsOverlay({
                     onClick={() => onSave({ providerMode: "byok" })}
                     className="flex-1 py-2 font-pixel text-[8px] transition-colors"
                     style={{
-                      backgroundColor: store.providerMode === "byok" ? avatarTint : "transparent",
-                      color: store.providerMode === "byok" ? "#000" : "#888896",
+                      backgroundColor: includedActive ? "transparent" : avatarTint,
+                      color: includedActive ? "#888896" : "#000",
                     }}>
                     My API Key
                   </button>
                 </div>
                 <p className="text-[10px] mt-1.5 leading-snug" style={{ color: "#666672" }}>
-                  {store.providerMode === "byok"
-                    ? "Using your own API key below."
-                    : "Included in your plan — no API key needed."}
+                  {includedActive
+                    ? "Included in your plan — no API key needed."
+                    : "Using your own API key below."}
                 </p>
 
                 {/* Credit balance — the same server-authoritative values

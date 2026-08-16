@@ -71,6 +71,31 @@ export function storeHasProAccess(store: Pick<AmintaStore, "plan" | "subscriptio
 // The backend independently re-verifies entitlement on every request
 // regardless of what this returns (see app/api/generate/route.ts) — this
 // is a client-side UX routing hint only, never a security boundary.
+export type ProviderMode = "included" | "byok"
+
+/**
+ * THE authoritative provider mode. One value, three consumers: the Settings
+ * segmented control's selected state, whether the BYOK controls mount, and
+ * generation dispatch.
+ *
+ * Previously each of those derived its own boolean, and they were not the
+ * same expression — the segmented control used `providerMode !== "byok"`
+ * while the other two used `aiIncluded && providerMode !== "byok"`. Any
+ * state with aiIncluded=false and a stored providerMode of "included" made
+ * them disagree: the control paints Included as selected while the BYOK
+ * controls stay mounted, which is exactly the "Included selected but the API
+ * key field is still there" report. Deriving all three from this function
+ * makes that state unrepresentable rather than merely unlikely.
+ *
+ * Entitlement validation lives here, not at the call sites: no entitlement
+ * means the mode IS "byok", so Included can never render as active for a
+ * user who cannot use it.
+ */
+export function providerModeFor(store: Pick<AmintaStore, "aiIncluded" | "providerMode">): ProviderMode {
+  if (!store.aiIncluded) return "byok"
+  return store.providerMode === "byok" ? "byok" : "included"
+}
+
 export function shouldUseIncludedAi(store: Pick<AmintaStore, "aiIncluded" | "providerMode">): boolean {
-  return !!store.aiIncluded && store.providerMode !== "byok"
+  return providerModeFor(store) === "included"
 }
