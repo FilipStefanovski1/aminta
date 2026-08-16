@@ -700,6 +700,21 @@ function SidePanel() {
     return () => chrome.storage.local.onChanged.removeListener(listener)
   }, [])
 
+  // Repaint when the credit balance changes underneath us. `store` here is a
+  // React snapshot taken by refresh(), so a write to chrome.storage.local is
+  // invisible to the UI until something re-reads it — which is why the panel
+  // kept showing the balance from when it was opened. Watching the key rather
+  // than calling refresh() at the generation call site means any writer
+  // propagates: the generation response, a /api/sync pull, or a second panel
+  // spending the same account's credits.
+  useEffect(() => {
+    const listener = (changes: Record<string, chrome.storage.StorageChange>) => {
+      if ("creditsBalance" in changes || "creditsAllowance" in changes) refresh()
+    }
+    chrome.storage.local.onChanged.addListener(listener)
+    return () => chrome.storage.local.onChanged.removeListener(listener)
+  }, [])
+
   const handleSignOut = async () => {
     await clearAuthSession()
     setSession(null)

@@ -11,7 +11,7 @@ import { shouldUseIncludedAi } from "~lib/entitlements"
 import { generate as runAI, generateFromImage, type GenerateOptions } from "~lib/ai"
 import { buildMessages, type Mode, type OutputLength, type Tone } from "~lib/prompts"
 import { cleanGenerationOutput } from "~lib/textCleanup"
-import type { AmintaStore, StyleProfile, VoiceProfile } from "~lib/storage"
+import { setStore, type AmintaStore, type StyleProfile, type VoiceProfile } from "~lib/storage"
 
 const API_URL = "https://amintaapp.com/api/generate"
 
@@ -43,6 +43,14 @@ interface GenerateResponse {
   text?: string
   error?: string
   code?: string
+  // Post-reservation balance straight from the server's own debit. Present
+  // only on a successful billable generation.
+  credits?: {
+    balance: number
+    allowance: number
+    periodEnd: string
+    planKey: string
+  }
 }
 
 async function postGenerate(body: BackendGenerateArgs & { requestId: string }): Promise<GenerateResponse> {
@@ -88,6 +96,27 @@ async function postGenerate(body: BackendGenerateArgs & { requestId: string }): 
   if (!res.ok) {
     throw new Error(json.error ?? `Request failed (${res.status}).`)
   }
+
+  // Persist the server's balance the moment it arrives. This is the single
+  // choke point every Included AI generation passes through, so the panel
+  // and Settings both update from one place with no extra request and no
+  // second reservation.
+  //
+  // Only ever the value the server sent — never balance - 1. A local
+  // decrement would drift on refund-after-failure (the request throws before
+  // reaching here, so nothing is written), on an idempotent retry (the
+  // server re-reports the original balance rather than charging again), on a
+  // period reset, and on a generation started from another panel. Absent
+  // `credits` (e.g. an idempotent replay served from cache) simply leaves
+  // the last known value in place rather than guessing at a new one.
+  if (json.credits) {
+    await setStore({
+      creditsBalance: json.credits.balance,
+      creditsAllowance: json.credits.allowance,
+      creditsPeriodEnd: json.credits.periodEnd,
+    })
+  }
+
   return json
 }
 

@@ -326,7 +326,20 @@ export async function POST(request: NextRequest) {
     })
     await clearInflight(requestId)
 
-    return NextResponse.json({ text: outputText })
+    // Hand back the post-reservation balance so the panel can show the real
+    // number immediately. These are reserveCredits()'s own outputs, i.e. what
+    // the debit actually left in the row — the client never derives a balance
+    // by subtracting, which would go wrong on refunds, idempotent retries,
+    // period resets, and generations from a second panel.
+    return NextResponse.json({
+      text: outputText,
+      credits: {
+        balance: reservation.balance,
+        allowance: reservation.allowance,
+        periodEnd: reservation.periodEnd.toISOString(),
+        planKey: reservation.planKey,
+      },
+    })
   } catch (e) {
     // Detailed error goes to server logs; the client only ever sees a
     // generic message — never forward provider internals outward.
