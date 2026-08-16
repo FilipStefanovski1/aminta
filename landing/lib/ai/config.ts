@@ -42,6 +42,17 @@ export async function getAiConfig(): Promise<AiConfig> {
   const service = await createServiceClient()
   const { data, error } = await service.from("ai_config").select("*").single()
   if (error || !data) {
+    // This branch disables a paid feature for every user, so it must never be
+    // silent: with no log, a dead credential and a deliberately flipped kill
+    // switch are indistinguishable from the outside, and the 403 the client
+    // gets says "temporarily unavailable" either way.
+    // Only the Postgrest error code and message — never keys, tokens,
+    // headers, or anything user-scoped. `ai_config` is a singleton settings
+    // row, so its errors carry no user data.
+    console.error("[Included AI] ai_config read failed, failing closed", {
+      code: error?.code ?? "no_row",
+      message: error?.message ?? "query returned no row",
+    })
     // Fail closed — if we can't confirm the switch is on, treat Included AI
     // as disabled rather than silently allowing spend.
     const fallback: AiConfig = {
