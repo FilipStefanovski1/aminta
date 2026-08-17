@@ -12,6 +12,7 @@ import { getStageTint } from "~lib/evolution"
 import { PrimaryButton } from "~components/ui"
 import type { AmintaStore } from "~lib/storage"
 import { disconnectX, fetchConnectionState, runVoiceRefresh, startXConnect } from "~lib/voiceRefresh"
+import { summarizeStyleProfile, summaryAffordanceFor } from "~lib/styleProfileSummary"
 
 interface Props {
   store: AmintaStore
@@ -31,6 +32,8 @@ export default function VoiceRefreshCard({ store, onRefreshed }: Props) {
   const [error, setError] = useState("")
   const [justRefreshed, setJustRefreshed] = useState<number | null>(null)
   const [needsReconnect, setNeedsReconnect] = useState(false)
+  const [showLearned, setShowLearned] = useState(false)
+  const [showHow, setShowHow] = useState(false)
 
   // The OAuth tab lands on a page outside the extension, so the panel can't
   // observe completion directly — re-check connection state when the panel
@@ -46,7 +49,12 @@ export default function VoiceRefreshCard({ store, onRefreshed }: Props) {
   const allowance = store.voiceRefreshAllowance
   const exhausted = entitled && remaining <= 0
   const resetLabel = formatDate(store.voiceRefreshPeriodEnd)
-  const lastLabel = formatDate(store.lastVoiceRefreshAt)
+
+  // Both derived from what is already in storage — never re-extracted, and
+  // the summary survives closing the panel because it reads the persisted
+  // profile rather than the transient justRefreshed state.
+  const learned = summarizeStyleProfile(store.styleProfile)
+  const affordance = summaryAffordanceFor(store, justRefreshed)
 
   const label = "text-[9px] uppercase tracking-[0.06em]"
 
@@ -137,15 +145,79 @@ export default function VoiceRefreshCard({ store, onRefreshed }: Props) {
               {resetLabel && (
                 <p className="text-[9px] leading-none" style={{ color: "#666672" }}>Resets {resetLabel}</p>
               )}
-              {lastLabel && !justRefreshed && (
-                <p className="text-[9px] leading-none" style={{ color: "#666672" }}>Last refreshed: {lastLabel}</p>
-              )}
             </div>
 
-            {justRefreshed !== null && !error && (
-              <p className="font-pixel text-[7px] mt-2.5" style={{ color: tint }}>
-                Voice refreshed from {justRefreshed} recent posts
-              </p>
+            {/* Success state. Everything below renders from the StyleProfile
+                already saved in chrome.storage.local by the refresh — no
+                second model call, no second X request, nothing new stored. */}
+            {affordance.kind !== "none" && (
+              <div className="mt-3 pt-2.5" style={{ borderTop: `1px solid ${C.borderSoft}` }}>
+                {affordance.kind === "fresh" && !error && (
+                  <p className="font-pixel text-[7px] mb-1.5" style={{ color: tint }}>
+                    ✓ Your Aminta DNA has been updated
+                  </p>
+                )}
+
+                <div className="flex items-start gap-1">
+                  <p className="text-[10px] leading-snug" style={{ color: "#ccccd2" }}>
+                    {affordance.kind === "fresh"
+                      ? `Learned from ${affordance.postsAnalyzed} recent posts`
+                      : `Last refreshed ${formatDate(affordance.lastRefreshedAt)}`}
+                  </p>
+                  <button
+                    onClick={() => setShowHow((v) => !v)}
+                    aria-label="How posts are chosen"
+                    className="text-[9px] leading-none mt-[1px]"
+                    style={{ color: "#55555f" }}>
+                    ⓘ
+                  </button>
+                </div>
+
+                {showHow && (
+                  <p className="text-[9px] mt-1 leading-snug" style={{ color: "#666672" }}>
+                    Aminta analyzes your recent original posts and automatically chooses the
+                    strongest examples of your writing. Replies and reposts aren't used.
+                  </p>
+                )}
+
+                {learned.length > 0 && (
+                  <button
+                    onClick={() => setShowLearned((v) => !v)}
+                    className="text-[10px] mt-2 leading-none"
+                    style={{ color: tint }}>
+                    {showLearned
+                      ? "Hide details"
+                      : affordance.kind === "fresh" ? "See what changed →" : "View what Aminta learned →"}
+                  </button>
+                )}
+
+                {showLearned && learned.length > 0 && (
+                  <div className="mt-2.5 pt-2.5" style={{ borderTop: `1px solid ${C.borderSoft}` }}>
+                    <p className={`${label} mb-2`} style={{ color: "#888896" }}>
+                      What Aminta learned
+                    </p>
+                    <div className="space-y-2.5">
+                      {learned.map((s) => (
+                        <div key={s.title}>
+                          <p className="text-[10px] leading-none mb-1" style={{ color: "#ccccd2" }}>
+                            {s.title}
+                          </p>
+                          {s.inline && (
+                            <p className="text-[10px] leading-snug" style={{ color: "#888896" }}>
+                              {s.inline}
+                            </p>
+                          )}
+                          {s.lines.map((line) => (
+                            <p key={line} className="text-[10px] leading-snug" style={{ color: "#888896" }}>
+                              {s.lines.length > 1 ? `• ${line}` : line}
+                            </p>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
 
             {exhausted && !error && (
