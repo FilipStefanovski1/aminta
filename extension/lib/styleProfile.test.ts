@@ -7,14 +7,16 @@ vi.mock("~lib/ai", () => ({
 
 import { generate } from "~lib/ai"
 import { buildMessages } from "~lib/prompts"
-import { getStore, setStore, type AmintaStore, type VoiceProfile } from "~lib/storage"
+import { getStore, setStore, type AmintaStore, type StyleProfile, type VoiceProfile } from "~lib/storage"
 import {
   buildCorpus,
   computeConfidenceScore,
   getOrBuildStyleProfile,
   hashInputs,
+  isXHistorySourced,
   parseStyleProfile,
   sanitizeStyleText,
+  X_HISTORY_SOURCE_PREFIX,
 } from "~lib/styleProfile"
 
 const mockGenerate = vi.mocked(generate)
@@ -229,6 +231,198 @@ describe("getOrBuildStyleProfile", () => {
     expect(mockGenerate).toHaveBeenCalledTimes(1)
     expect(a).toEqual(b)
     expect(b).toEqual(c)
+  })
+})
+
+describe("X Voice Refresh precedence — P0 fix", () => {
+  // Root cause: getOrBuildStyleProfile() hashed the manual examples/DNA
+  // corpus and treated ANY mismatch against the stored hash as staleness,
+  // then silently re-extracted and overwrote styleProfile. A Voice
+  // Refresh's hash could never match that corpus-derived hash, so the very
+  // next Generate call after any successful refresh discarded it — even
+  // though onboarding requires at least one example, making this the
+  // default outcome for nearly every account, not an edge case.
+  //
+  // Fix: getOrBuildStyleProfile() now checks isXHistorySourced(hash) FIRST
+  // and returns the stored profile immediately when true, before the
+  // corpus/hash machinery runs at all. These tests stand in for what
+  // voiceRefresh.ts writes on a successful refresh (styleProfile +
+  // X_HISTORY_SOURCE_PREFIX-tagged hash, verified against the real
+  // constant/predicate rather than a hardcoded string).
+  const X_PROFILE: StyleProfile = {
+    confidence: "declarative",
+    energy: "moderate",
+    vocabularyComplexity: "simple",
+    capitalization: "lowercase-leaning",
+    directness: "direct",
+    rhythm: "very short, abrupt fragments",
+    punctuation: "completely omitted punctuation",
+    emojiUsage: "none",
+    humorStyle: "earnest and literal",
+    formattingPreferences: "single-sentence posts",
+    rhetoricalDevices: "implied subjects, brief observations",
+    cadence: "quick and conversational",
+    confidenceScore: 1,
+  }
+  const xHash = () => `${X_HISTORY_SOURCE_PREFIX}${Date.now()}`
+
+  it("isXHistorySourced recognizes exactly the prefix voiceRefresh.ts writes", () => {
+    expect(isXHistorySourced(`${X_HISTORY_SOURCE_PREFIX}1234567890`)).toBe(true)
+    expect(isXHistorySourced("v1:abc123:5")).toBe(false) // a real hashInputs() output
+    expect(isXHistorySourced("")).toBe(false)
+  })
+
+  it("[1/2/3] Generate/Reply/Polish all resolve through the same function — the X profile comes back byte-identical, no extraction call", async () => {
+    const store = await makeStore({
+      apiKey: "gsk_test",
+      voice: baseVoice({ examples: JSON.stringify(["an old manual example"]) }),
+      tweetDNA: ["old dna sample"],
+      styleProfile: X_PROFILE,
+      styleProfileHash: xHash(),
+    })
+
+    for (let i = 0; i < 3; i++) { // stands in for tweet / reply / polish, same call site
+      const result = await getOrBuildStyleProfile(await getStore())
+      expect(result).toEqual(X_PROFILE)
+    }
+    expect(mockGenerate).not.toHaveBeenCalled()
+  })
+
+  it("[4] survives a fresh read of the store (closing/reopening the panel)", async () => {
+    await makeStore({
+      apiKey: "gsk_test",
+      voice: baseVoice({ examples: JSON.stringify(["example"]) }),
+      styleProfile: X_PROFILE,
+      styleProfileHash: xHash(),
+    })
+    // getStore() here is a genuinely fresh read, exactly what a remounted
+    // component does — not the stale `store` object from setup.
+    const reopened = await getStore()
+    expect(await getOrBuildStyleProfile(reopened)).toEqual(X_PROFILE)
+    expect(mockGenerate).not.toHaveBeenCalled()
+  })
+
+  it("[5] old manual examples that predate the refresh still lose to the X profile", async () => {
+    const store = await makeStore({
+      apiKey: "gsk_test",
+      // A corpus that, pre-fix, would have hashed to something guaranteed
+      // not to match the X-tagged hash and triggered a rebuild.
+      voice: baseVoice({ examples: JSON.stringify(["pre-existing example one", "pre-existing example two"]) }),
+      tweetDNA: ["pre-existing dna"],
+      styleProfile: X_PROFILE,
+      styleProfileHash: xHash(),
+    })
+    expect(await getOrBuildStyleProfile(store)).toEqual(X_PROFILE)
+    expect(mockGenerate).not.toHaveBeenCalled()
+  })
+
+  it("[6] adding an example after a refresh does not retrain or touch the X profile — explicit, not silent", async () => {
+    const store = await makeStore({
+      apiKey: "gsk_test",
+      voice: baseVoice({ examples: JSON.stringify(["first example"]) }),
+      styleProfile: X_PROFILE,
+      styleProfileHash: xHash(),
+    })
+    expect(await getOrBuildStyleProfile(store)).toEqual(X_PROFILE)
+
+    // The user adds a new writing example — VoiceProfileForm's save() path,
+    // simulated here as the store mutation it produces.
+    const afterAdding = await makeStore({
+      voice: baseVoice({ examples: JSON.stringify(["first example", "second example"]) }),
+    })
+    const result = await getOrBuildStyleProfile(afterAdding)
+
+    // Explicit behavior: the X profile is untouched and no extraction ran.
+    // The new example is saved (round-trips through voice.examples, feeding
+    // manual extraction later if the source ever becomes "manual" again)
+    // but does not, by itself, retrain or discard the learned profile.
+    expect(result).toEqual(X_PROFILE)
+    expect(mockGenerate).not.toHaveBeenCalled()
+    expect(afterAdding.voice?.examples).toContain("second example")
+  })
+
+  it("[7] deleting a writing example does not destroy the X profile", async () => {
+    await makeStore({
+      apiKey: "gsk_test",
+      voice: baseVoice({ examples: JSON.stringify(["a", "b", "c"]) }),
+      styleProfile: X_PROFILE,
+      styleProfileHash: xHash(),
+    })
+    const afterDeleting = await makeStore({ voice: baseVoice({ examples: JSON.stringify(["a", "c"]) }) })
+    expect(await getOrBuildStyleProfile(afterDeleting)).toEqual(X_PROFILE)
+    expect(mockGenerate).not.toHaveBeenCalled()
+  })
+
+  it("[8] a newer X-tagged write (another successful refresh) replaces the old one", async () => {
+    await makeStore({ apiKey: "gsk_test", styleProfile: X_PROFILE, styleProfileHash: xHash() })
+    const NEWER_PROFILE: StyleProfile = { ...X_PROFILE, cadence: "different cadence from the new refresh" }
+    // voiceRefresh.ts writes styleProfile + hash together, unconditionally,
+    // on every successful refresh — this is that write, not a rebuild path.
+    const afterSecondRefresh = await makeStore({ styleProfile: NEWER_PROFILE, styleProfileHash: xHash() })
+    expect(await getOrBuildStyleProfile(afterSecondRefresh)).toEqual(NEWER_PROFILE)
+  })
+
+  it("[10] a user who never used Voice Refresh keeps the exact pre-fix behavior", async () => {
+    // No X_HISTORY_SOURCE_PREFIX anywhere in this store — isXHistorySourced
+    // is false, so the corpus/hash path below runs completely unmodified.
+    const store = await makeStore({
+      apiKey: "gsk_test",
+      voice: baseVoice({ examples: JSON.stringify(["sample one"]) }),
+      tweetDNA: [],
+    })
+    await getOrBuildStyleProfile(store)
+    expect(mockGenerate).toHaveBeenCalledTimes(1)
+
+    const edited = await makeStore({ voice: baseVoice({ examples: JSON.stringify(["a different sample"]) }) })
+    await getOrBuildStyleProfile(edited)
+    // The mock always returns the same JSON, so content equality isn't the
+    // signal — a second real extraction call firing on a genuine corpus
+    // change is: manual-only accounts must keep re-extracting exactly as
+    // before this fix (that behavior is untouched, only X-sourced profiles
+    // get the new early return).
+    expect(mockGenerate).toHaveBeenCalledTimes(2)
+  })
+
+  it("[11] BYOK generation still gets the X profile back without touching the BYOK key", async () => {
+    // Voice Refresh always runs server-side on Aminta's own key regardless
+    // of the user's BYOK setting — a BYOK user's local apiKey must never be
+    // consulted to read back an X-derived profile.
+    const store = await makeStore({
+      apiKey: "gsk_realkey",
+      aiIncluded: false,
+      providerMode: "byok",
+      styleProfile: X_PROFILE,
+      styleProfileHash: xHash(),
+    })
+    expect(await getOrBuildStyleProfile(store)).toEqual(X_PROFILE)
+    expect(mockGenerate).not.toHaveBeenCalled()
+  })
+
+  it("[12] confirms zero extraction calls across repeated generations post-refresh", async () => {
+    const store = await makeStore({
+      apiKey: "gsk_test",
+      voice: baseVoice({ examples: JSON.stringify(["e1", "e2", "e3"]) }),
+      tweetDNA: ["d1", "d2"],
+      styleProfile: X_PROFILE,
+      styleProfileHash: xHash(),
+    })
+    for (let i = 0; i < 5; i++) await getOrBuildStyleProfile(await getStore())
+    expect(mockGenerate).not.toHaveBeenCalled()
+  })
+
+  it("a corpus of zero examples/DNA no longer returns null when an X profile exists (second manifestation of the same bug)", async () => {
+    // Before the fix, corpus.length === 0 short-circuited to `return null`
+    // unconditionally — discarding a perfectly good X-derived profile for
+    // any account with no manual examples/DNA, independent of the hash
+    // check entirely.
+    const store = await makeStore({
+      apiKey: "gsk_test",
+      voice: baseVoice({ examples: "" }),
+      tweetDNA: [],
+      styleProfile: X_PROFILE,
+      styleProfileHash: xHash(),
+    })
+    expect(await getOrBuildStyleProfile(store)).toEqual(X_PROFILE)
   })
 })
 

@@ -8,7 +8,7 @@
 // It never sees an X access token, refresh token, or the raw posts — the
 // backend returns only the distilled profile plus counts.
 import { getAuthSession, refreshAuthSession } from "~lib/auth"
-import { parseStyleProfile, computeConfidenceScore } from "~lib/styleProfile"
+import { parseStyleProfile, computeConfidenceScore, X_HISTORY_SOURCE_PREFIX } from "~lib/styleProfile"
 import { getStore, setStore } from "~lib/storage"
 import type { StyleCorpusEntry, StyleProfile } from "~lib/storage"
 
@@ -151,10 +151,15 @@ export async function runVoiceRefresh(): Promise<RefreshResult> {
   const store = await getStore()
   await setStore({
     styleProfile: profile,
-    // Invalidate the corpus hash so the local example/DNA corpus can't
-    // immediately re-extract over the fresher X-derived profile. The next
-    // manual training edit rebuilds it normally.
-    styleProfileHash: `x_history:${Date.now()}`,
+    // This prefix is what getOrBuildStyleProfile() checks to treat the
+    // profile as authoritative and skip its own corpus/hash rebuild —
+    // see isXHistorySourced() in styleProfile.ts. The timestamp suffix
+    // just keeps each refresh's value distinct; it plays no role in that
+    // check. Written together with styleProfile in one setStore call so
+    // the two can never desync, and both travel as a pair through cloud
+    // sync (lib/sync.ts push/pull), which is what keeps a second device
+    // from treating a pulled X-derived profile as manually sourced.
+    styleProfileHash: `${X_HISTORY_SOURCE_PREFIX}${Date.now()}`,
     voiceRefreshRemaining: json.refreshes.remaining,
     voiceRefreshAllowance: json.refreshes.allowance,
     voiceRefreshPeriodEnd: json.refreshes.periodEnd,

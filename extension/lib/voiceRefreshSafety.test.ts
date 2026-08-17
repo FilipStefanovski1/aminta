@@ -18,7 +18,7 @@ vi.mock("~lib/storage", () => ({
 
 import { setStore } from "~lib/storage"
 import { isEmptyProfile, runVoiceRefresh } from "~lib/voiceRefresh"
-import { parseStyleProfile } from "~lib/styleProfile"
+import { isXHistorySourced, parseStyleProfile } from "~lib/styleProfile"
 import type { StyleProfile } from "~lib/storage"
 
 const mockSetStore = vi.mocked(setStore)
@@ -126,6 +126,20 @@ describe("failures never overwrite an existing good profile", () => {
     )
     await expect(runVoiceRefresh()).rejects.toThrow()
     expect(mockSetStore).not.toHaveBeenCalled()
+  })
+})
+
+describe("P0 — the written hash is recognized as X-sourced by the real precedence check", () => {
+  // voiceRefresh.ts and styleProfile.ts must agree on the same convention —
+  // this imports the REAL isXHistorySourced (only ~lib/auth and
+  // ~lib/storage are mocked in this file), so a drift between the two
+  // (e.g. someone changing one file's prefix string without the other)
+  // fails here rather than silently reintroducing the P0 bug.
+  it("the hash runVoiceRefresh() persists is recognized as X-sourced", async () => {
+    vi.mocked(global.fetch).mockResolvedValue(res(200, okBody(GOOD_JSON)))
+    await runVoiceRefresh()
+    const patch = mockSetStore.mock.calls[0][0] as { styleProfileHash: string }
+    expect(isXHistorySourced(patch.styleProfileHash)).toBe(true)
   })
 })
 
