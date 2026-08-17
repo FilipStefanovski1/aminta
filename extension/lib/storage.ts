@@ -54,7 +54,7 @@ export interface StyleProfile {
 // "example" and "tweet_dna" are populated today; "approved_edit" exists so
 // a future feature (capturing user-edited drafts) can extend the corpus
 // without changing extraction/hashing/caching signatures.
-export type StyleCorpusSource = "example" | "tweet_dna" | "approved_edit"
+export type StyleCorpusSource = "example" | "tweet_dna" | "approved_edit" | "x_history"
 export interface StyleCorpusEntry {
   text: string
   source: StyleCorpusSource
@@ -173,6 +173,23 @@ export interface AmintaStore {
   creditsPeriodKind: string
   /** True for pro/lifetime/active-gift. Free users are aiIncluded but not paid. */
   aiIncludedPaid: boolean
+
+  // ── Voice Refresh ────────────────────────────────────────────────────
+  // All server-authoritative, synced from /api/sync. Display only — the
+  // backend decides entitlement and allowance on every request and never
+  // trusts these. Deliberately separate from credits*: a Voice Refresh
+  // costs 0 Included AI credits.
+  /** Whether an X account is linked. The access token never comes here. */
+  xConnected: boolean
+  /** @handle for display. Never the X user id. */
+  xUsername: string
+  voiceRefreshRemaining: number
+  voiceRefreshAllowance: number
+  /** ISO timestamp when the refresh allowance resets. */
+  voiceRefreshPeriodEnd: string
+  /** ISO timestamp of the last successful refresh, or "" if never. */
+  lastVoiceRefreshAt: string
+
   pendingXP: PendingXPRecord[]
 }
 
@@ -212,6 +229,12 @@ const DEFAULTS: AmintaStore = {
   creditsPeriodEnd: "",
   creditsPeriodKind: "day",
   aiIncludedPaid: false,
+  xConnected: false,
+  xUsername: "",
+  voiceRefreshRemaining: 0,
+  voiceRefreshAllowance: 0,
+  voiceRefreshPeriodEnd: "",
+  lastVoiceRefreshAt: "",
   pendingXP: [],
 }
 

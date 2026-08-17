@@ -13,12 +13,15 @@ import {
 import type { AmintaStore, VoiceProfile } from "~lib/storage"
 import { C } from "~lib/theme"
 import { Card, Sprite } from "~components/ui"
+import VoiceRefreshCard from "~components/VoiceRefreshCard"
 
 interface Props {
   store: AmintaStore
   initial: VoiceProfile | null
   onSave: (voice: VoiceProfile) => Promise<void> | void
   dnaCount?: number
+  /** Re-read the store after a Voice Refresh installs a new profile. */
+  onRefreshed?: () => void
 }
 
 const VOICE_STYLES: { id: string; desc: string }[] = [
@@ -129,7 +132,7 @@ function PixelStep({ done, label, tint }: { done: boolean; label: string; tint: 
   )
 }
 
-export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0 }: Props) {
+export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0, onRefreshed }: Props) {
   const tint = getStageTint(store.xp ?? 0)
 
   const [topics,           setTopics]           = useState<string[]>(() =>
@@ -754,6 +757,9 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0 
           )}
         </div>
       )}
+
+      {/* Voice Refresh — same Train surface, not a separate section. */}
+      <VoiceRefreshCard store={store} onRefreshed={onRefreshed ?? (() => {})} />
 
     </div>
   )

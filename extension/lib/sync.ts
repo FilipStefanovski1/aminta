@@ -250,6 +250,16 @@ export async function pullFromCloud(): Promise<{ cloudXp: number } | void> {
   if (typeof data.credits_allowance === "number") patch.creditsAllowance = data.credits_allowance
   if (typeof data.credits_period_end === "string") patch.creditsPeriodEnd = data.credits_period_end
   if (typeof data.credits_period_kind === "string") patch.creditsPeriodKind = data.credits_period_kind
+  // Voice Refresh — display state only. The server re-derives entitlement and
+  // allowance on every refresh request and never trusts these values.
+  if (typeof data.x_connected === "boolean") patch.xConnected = data.x_connected
+  if (typeof data.x_username === "string") patch.xUsername = data.x_username
+  else if (data.x_username === null) patch.xUsername = ""
+  if (typeof data.voice_refresh_remaining === "number") patch.voiceRefreshRemaining = data.voice_refresh_remaining
+  if (typeof data.voice_refresh_allowance === "number") patch.voiceRefreshAllowance = data.voice_refresh_allowance
+  if (typeof data.voice_refresh_period_end === "string") patch.voiceRefreshPeriodEnd = data.voice_refresh_period_end
+  if (typeof data.last_voice_refresh_at === "string") patch.lastVoiceRefreshAt = data.last_voice_refresh_at
+  else if (data.last_voice_refresh_at === null) patch.lastVoiceRefreshAt = ""
 
   // Only overwrite these if cloud has them and local doesn't
   if (!local.voice && data.voice_profile)      patch.voice = data.voice_profile

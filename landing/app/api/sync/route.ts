@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr"
 import { createServiceClient } from "@/lib/supabase/server"
+import { getRefreshStatus } from "@/lib/voiceRefresh/allowance"
 import { cookies } from "next/headers"
 import { NextResponse, type NextRequest } from "next/server"
 import { aiIncluded } from "@/lib/entitlements"
@@ -73,6 +74,25 @@ export async function GET(request: NextRequest) {
     createdAt: profile?.created_at ?? null,
   })
 
+  // Voice Refresh state. Read-only, same lazy-period logic as credits, and a
+  // separate allowance — a Voice Refresh costs 0 Included AI credits.
+  // The X username is returned for display; the access token, refresh token
+  // and X user id never leave the server.
+  const refreshCtx = {
+    userId: user.id,
+    plan: profile?.plan ?? "free",
+    aiIncludedOverride: profile?.ai_included_override ?? false,
+    giftExpiresAt: profile?.gift_expires_at ?? null,
+    creemPeriodStart: profile?.current_period_start ?? null,
+    creemPeriodEnd: profile?.current_period_end ?? null,
+    createdAt: profile?.created_at ?? null,
+  }
+  const [voiceRefresh, xConn] = await Promise.all([
+    getRefreshStatus(refreshCtx),
+    service.from("x_connections").select("x_username").eq("user_id", user.id).maybeSingle()
+      .then((r) => r.data, () => null),
+  ])
+
   // ai_included is the ONE canonical entitlement field the extension should
   // route Included-AI generation on — it's aiIncluded() from
   // lib/entitlements.ts, not a re-derivation. A gifted user (plan='free',
@@ -103,6 +123,12 @@ export async function GET(request: NextRequest) {
     credits_period_end: credits.periodEnd,
     credits_period_kind: credits.periodKind,
     credits_plan_key: credits.planKey,
+    x_connected: !!xConn,
+    x_username: xConn?.x_username ?? null,
+    voice_refresh_remaining: voiceRefresh.remaining,
+    voice_refresh_allowance: voiceRefresh.allowance,
+    voice_refresh_period_end: voiceRefresh.periodEnd,
+    last_voice_refresh_at: voiceRefresh.lastRefreshAt,
   })
 }
 

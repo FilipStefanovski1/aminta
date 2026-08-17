@@ -295,7 +295,7 @@ const DIRECTNESS_VALUES: Directness[] = ["indirect", "balanced", "direct", "blun
 
 export interface StyleCorpusEntry {
   text: string
-  source: "example" | "tweet_dna" | "approved_edit"
+  source: "example" | "tweet_dna" | "approved_edit" | "x_history"
 }
 
 export function buildStyleProfileMessages(corpus: StyleCorpusEntry[]): ChatMessage[] {

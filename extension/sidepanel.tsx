@@ -885,6 +885,7 @@ function SidePanel() {
                 initial={store.voice}
                 onSave={(voice) => update({ voice })}
                 dnaCount={store.tweetDNA?.length ?? 0}
+                onRefreshed={refresh}
               />
             )}
 

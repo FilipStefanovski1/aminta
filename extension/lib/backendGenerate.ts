@@ -17,7 +17,7 @@ const API_URL = "https://amintaapp.com/api/generate"
 
 export interface StyleCorpusEntry {
   text: string
-  source: "example" | "tweet_dna" | "approved_edit"
+  source: "example" | "tweet_dna" | "approved_edit" | "x_history"
 }
 
 export interface TextGenerateArgs {
