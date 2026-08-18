@@ -35,18 +35,14 @@ export async function GET(request: NextRequest) {
     plan: entitlement.plan,
     aiIncludedOverride: entitlement.aiIncludedOverride,
     giftExpiresAt: entitlement.giftExpiresAt,
-    creemPeriodStart: entitlement.creemPeriodStart,
-    creemPeriodEnd: entitlement.creemPeriodEnd,
-    createdAt: entitlement.createdAt,
   })
 
   return NextResponse.json({
     connected: !!conn,
     username: conn?.x_username ?? null,
     entitled: status.entitled,
-    remaining: status.remaining,
-    allowance: status.allowance,
-    period_end: status.periodEnd,
+    eligible: status.eligible,
+    next_eligible_at: status.nextEligibleAt,
     last_refresh_at: status.lastRefreshAt,
   })
 }

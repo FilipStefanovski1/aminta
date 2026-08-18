@@ -37,7 +37,7 @@ function res(status: number, body: unknown): Response {
 }
 const okBody = (profileJson: string, posts = 18) => ({
   profileJson, postsAnalyzed: posts,
-  refreshes: { remaining: 3, allowance: 4, periodEnd: "2026-09-01T00:00:00.000Z" },
+  nextEligibleAt: "2026-08-25T14:03:00.000Z",
 })
 
 beforeEach(() => {
@@ -62,21 +62,16 @@ describe("isEmptyProfile", () => {
 })
 
 describe("a successful refresh installs the new profile", () => {
-  it("writes the profile and the new allowance", async () => {
+  it("writes the profile and starts the cooldown", async () => {
     vi.mocked(global.fetch).mockResolvedValue(res(200, okBody(GOOD_JSON)))
     const r = await runVoiceRefresh()
     expect(r.postsAnalyzed).toBe(18)
-    expect(r.remaining).toBe(3)
+    expect(r.nextEligibleAt).toBe("2026-08-25T14:03:00.000Z")
     const patch = mockSetStore.mock.calls[0][0]
     expect(patch.styleProfile).toBeTruthy()
-    expect(patch.voiceRefreshRemaining).toBe(3)
+    expect(patch.voiceRefreshEligible).toBe(false)
+    expect(patch.voiceRefreshNextEligibleAt).toBe("2026-08-25T14:03:00.000Z")
     expect(patch.lastVoiceRefreshAt).toBeTruthy()
-  })
-
-  it("consumes exactly one refresh (4 -> 3), reported by the server", async () => {
-    vi.mocked(global.fetch).mockResolvedValue(res(200, okBody(GOOD_JSON)))
-    const r = await runVoiceRefresh()
-    expect(r.allowance - r.remaining).toBe(1)
   })
 })
 
@@ -103,9 +98,12 @@ describe("failures never overwrite an existing good profile", () => {
     expect(mockSetStore).not.toHaveBeenCalled()
   })
 
-  it("an exhausted allowance writes nothing", async () => {
+  it("a still-cooling-down account writes nothing", async () => {
     vi.mocked(global.fetch).mockResolvedValue(
-      res(403, { error: "You've used all your Voice Refreshes for this period.", code: "NO_REFRESHES_LEFT" })
+      res(403, {
+        error: "Your voice is up to date. Check back next week.", code: "TOO_SOON",
+        nextEligibleAt: "2026-08-25T14:03:00.000Z",
+      })
     )
     await expect(runVoiceRefresh()).rejects.toThrow()
     expect(mockSetStore).not.toHaveBeenCalled()

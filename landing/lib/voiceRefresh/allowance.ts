@@ -1,38 +1,43 @@
-// Voice Refresh allowance.
+// Voice Refresh eligibility — one successful refresh every 168 hours.
 //
-// Deliberately built on the SAME period infrastructure as credits
-// (lib/ai/credits.ts's resolvePlanKey/resolvePeriod) rather than a second
-// billing-cycle implementation. A Creem subscriber's refreshes reset on
-// their real billing boundary; a comped Pro/Founder/Gifted account resets on
-// the existing rolling-monthly fallback. There is no "30 days since last
-// refresh" anywhere.
+// Deliberately NOT built on the credits period infrastructure anymore
+// (resolvePeriod/PeriodKind): that modeled a shared allowance bucket reset
+// on a billing/calendar boundary, which is a different mechanism from a
+// per-user rolling cooldown anchored on the user's own last success. Using
+// it here would have meant either lying about what "period" means for this
+// feature, or reinventing the same cooldown logic a second time under a
+// name that doesn't fit. See supabase-migration-voice-refresh-weekly.sql
+// for the SQL side of this.
+//
+// 168 hours, not "7 days": Postgres day-interval arithmetic on a
+// timestamptz is resolved in the session's TimeZone and can shift by an
+// hour across a DST boundary. An hour-based interval is a fixed elapsed
+// duration regardless of timezone. This constant and the SQL migration's
+// `interval '168 hours'` must always agree.
 //
 // This is a separate ledger from credits and never calls reserve_credit or
 // refund_credit: a Voice Refresh costs 0 Included AI credits.
 import { createServiceClient } from "@/lib/supabase/server"
-import { resolvePeriod, resolvePlanKey, type PeriodKind } from "@/lib/ai/credits"
+import { resolvePlanKey } from "@/lib/ai/credits"
 
-/** Approved policy: Pro, Founder/Lifetime and active Gifted all get 4. */
-const REFRESH_ALLOWANCE: Record<string, number> = {
-  pro: 4,
-  lifetime: 4,
-  gifted: 4,
-  free: 0,
+export const VOICE_REFRESH_COOLDOWN_MS = 168 * 60 * 60 * 1000
+
+/** Approved policy: Pro, Founder/Lifetime and active Gifted all get it; Free doesn't. */
+const REFRESH_ENTITLEMENT: Record<string, boolean> = {
+  pro: true,
+  lifetime: true,
+  gifted: true,
+  free: false,
 }
 
-/** Unknown plans get 0 — fails closed, matching policyFor() in credits.ts. */
+/** Unknown plans are not entitled — fails closed, matching policyFor() in credits.ts. */
+export function isVoiceRefreshEntitled(planKey: string): boolean {
+  return REFRESH_ENTITLEMENT[planKey] ?? false
+}
+
+/** Kept for the one caller (voice-refresh/route.ts) that still needs an integer for the RPC's entitlement gate. */
 export function refreshAllowanceFor(planKey: string): number {
-  return REFRESH_ALLOWANCE[planKey] ?? 0
-}
-
-/**
- * Period kind per plan, mirroring PLAN_CREDIT_POLICY so a user's refreshes
- * and credits reset on the same boundary.
- */
-function periodKindFor(planKey: string): PeriodKind {
-  if (planKey === "pro") return "billing"
-  if (planKey === "lifetime" || planKey === "gifted") return "monthly"
-  return "day"
+  return isVoiceRefreshEntitled(planKey) ? 1 : 0
 }
 
 export interface RefreshContext {
@@ -40,43 +45,32 @@ export interface RefreshContext {
   plan: string
   aiIncludedOverride: boolean
   giftExpiresAt: string | null
-  creemPeriodStart: string | null
-  creemPeriodEnd: string | null
-  createdAt: string | null
 }
 
 export interface RefreshStatus {
-  remaining: number
-  allowance: number
-  periodEnd: string
-  periodKind: string
-  planKey: string
+  /** Can attempt right now — server-authoritative, this is the only thing the UI should gate the button on. */
+  eligible: boolean
   entitled: boolean
+  planKey: string
+  /** ISO timestamp of the last successful refresh, or null if never. */
   lastRefreshAt: string | null
+  /** ISO timestamp cooldown ends, or null when already eligible / never refreshed. */
+  nextEligibleAt: string | null
 }
 
-function resolve(ctx: RefreshContext, now: Date) {
-  const planKey = resolvePlanKey(
+function resolvePlan(ctx: Pick<RefreshContext, "plan" | "aiIncludedOverride" | "giftExpiresAt">, now: Date): string {
+  return resolvePlanKey(
     { plan: ctx.plan, aiIncludedOverride: ctx.aiIncludedOverride, giftExpiresAt: ctx.giftExpiresAt },
     now
   )
-  const allowance = refreshAllowanceFor(planKey)
-  const period = resolvePeriod(periodKindFor(planKey), now, {
-    creemPeriodStart: ctx.creemPeriodStart,
-    creemPeriodEnd: ctx.creemPeriodEnd,
-    anchor: ctx.createdAt,
-  })
-  return { planKey, allowance, period }
 }
 
 export interface ReserveOutcome {
   ok: boolean
-  remaining: number
-  allowance: number
   reason: string
   planKey: string
-  periodStart: Date
-  periodEnd: Date
+  /** When ok=false with reason 'too_soon', when the cooldown ends. Null otherwise. */
+  nextEligibleAt: Date | null
 }
 
 export async function reserveVoiceRefresh(
@@ -84,27 +78,22 @@ export async function reserveVoiceRefresh(
   requestId: string,
   now: Date = new Date()
 ): Promise<ReserveOutcome> {
-  const { planKey, allowance, period } = resolve(ctx, now)
+  const planKey = resolvePlan(ctx, now)
+  const allowance = refreshAllowanceFor(planKey)
 
   const service = await createServiceClient()
   const { data, error } = await service.rpc("reserve_voice_refresh", {
     p_user_id: ctx.userId,
     p_request_id: requestId,
     p_allowance: allowance,
-    p_period_kind: period.kind,
-    p_period_start: period.start.toISOString(),
-    p_period_end: period.end.toISOString(),
     p_plan_key: planKey,
   })
 
   if (error) {
-    // Fail closed. An unconfirmable allowance must not authorize paid X
-    // reads and a Gemini call.
+    // Fail closed. An unconfirmable eligibility check must not authorize
+    // paid X reads and a Gemini call.
     console.error("[Voice Refresh] reservation failed", { reason: error.message })
-    return {
-      ok: false, remaining: 0, allowance, reason: "reservation_error",
-      planKey, periodStart: period.start, periodEnd: period.end,
-    }
+    return { ok: false, reason: "reservation_error", planKey, nextEligibleAt: null }
   }
 
   // out_* naming: a RETURNS TABLE column named `remaining` collides with
@@ -112,12 +101,9 @@ export async function reserveVoiceRefresh(
   const row = Array.isArray(data) ? data[0] : data
   return {
     ok: !!row?.out_ok,
-    remaining: row?.out_remaining ?? 0,
-    allowance,
     reason: row?.out_reason ?? "unknown",
     planKey,
-    periodStart: period.start,
-    periodEnd: period.end,
+    nextEligibleAt: row?.out_next_eligible_at ? new Date(row.out_next_eligible_at) : null,
   }
 }
 
@@ -152,35 +138,40 @@ export async function completeVoiceRefresh(
   if (error) console.error("[Voice Refresh] completion write failed", { requestId, reason: error.message })
 }
 
-/** Read-only status for /api/sync. Writes nothing. */
+/**
+ * Read-only status for /api/x/connection and /api/sync. Writes nothing.
+ *
+ * eligible is derived from last_refresh_at alone, not from `remaining` —
+ * remaining's job is guarding the reserve/refund concurrency window during
+ * an in-flight request, which is a few seconds and irrelevant to a status
+ * read that could happen anytime. Reading last_refresh_at directly means
+ * this can never show a stale "locked" state merely because remaining
+ * hasn't been lazily reset yet; the real reserve call self-heals that the
+ * moment it's actually needed.
+ */
 export async function getRefreshStatus(
   ctx: RefreshContext,
   now: Date = new Date()
 ): Promise<RefreshStatus> {
-  const { planKey, allowance, period } = resolve(ctx, now)
+  const planKey = resolvePlan(ctx, now)
+  const entitled = isVoiceRefreshEntitled(planKey)
 
   const service = await createServiceClient()
   const { data } = await service
     .from("voice_refresh_balance")
-    .select("remaining, allowance, period_start, plan_key, last_refresh_at")
+    .select("last_refresh_at")
     .eq("user_id", ctx.userId)
     .single()
 
-  // No row, a rolled period, or a changed plan all mean the next refresh
-  // starts from a full allowance — show that, not a stale number.
-  const stale =
-    !data ||
-    data.plan_key !== planKey ||
-    data.allowance !== allowance ||
-    new Date(data.period_start).getTime() !== period.start.getTime()
+  const lastRefreshAt: string | null = data?.last_refresh_at ?? null
+  const nextEligibleAtMs = lastRefreshAt ? Date.parse(lastRefreshAt) + VOICE_REFRESH_COOLDOWN_MS : null
+  const cooldownActive = nextEligibleAtMs !== null && now.getTime() < nextEligibleAtMs
 
   return {
-    remaining: stale ? allowance : data.remaining,
-    allowance,
-    periodEnd: period.end.toISOString(),
-    periodKind: period.kind,
+    eligible: entitled && !cooldownActive,
+    entitled,
     planKey,
-    entitled: allowance > 0,
-    lastRefreshAt: stale ? null : data.last_refresh_at,
+    lastRefreshAt,
+    nextEligibleAt: entitled && cooldownActive ? new Date(nextEligibleAtMs!).toISOString() : null,
   }
 }

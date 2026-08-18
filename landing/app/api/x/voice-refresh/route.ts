@@ -25,7 +25,7 @@ import { buildStyleProfileMessages } from "@/lib/ai/prompts"
 import { callGemini } from "@/lib/ai/gemini"
 import { computeProviderCostUsd } from "@/lib/ai/pricing"
 import {
-  reserveVoiceRefresh, refundVoiceRefresh, completeVoiceRefresh, refreshAllowanceFor,
+  reserveVoiceRefresh, refundVoiceRefresh, completeVoiceRefresh, refreshAllowanceFor, VOICE_REFRESH_COOLDOWN_MS,
 } from "@/lib/voiceRefresh/allowance"
 import { fetchOwnPosts, XApiError, FIRST_FETCH, SECOND_FETCH, MAX_FETCH } from "@/lib/x/client"
 import {
@@ -34,8 +34,8 @@ import {
 
 const UUID_RE = /^[0-9a-f-]{36}$/i
 
-function fail(error: string, code: string, status: number) {
-  return NextResponse.json({ error, code }, { status })
+function fail(error: string, code: string, status: number, extra?: Record<string, unknown>) {
+  return NextResponse.json({ error, code, ...extra }, { status })
 }
 
 export async function POST(request: NextRequest) {
@@ -77,16 +77,18 @@ export async function POST(request: NextRequest) {
     plan: entitlement.plan,
     aiIncludedOverride: entitlement.aiIncludedOverride,
     giftExpiresAt: entitlement.giftExpiresAt,
-    creemPeriodStart: entitlement.creemPeriodStart,
-    creemPeriodEnd: entitlement.creemPeriodEnd,
-    createdAt: entitlement.createdAt,
   }
 
   // 4. RESERVE — before any paid X read or Gemini call.
   const reservation = await reserveVoiceRefresh(ctx, requestId)
   if (!reservation.ok) {
-    if (reservation.reason === "no_refreshes_left") {
-      return fail("You've used all your Voice Refreshes for this period.", "NO_REFRESHES_LEFT", 403)
+    if (reservation.reason === "too_soon") {
+      return fail(
+        "Your voice is up to date. Check back next week.",
+        "TOO_SOON",
+        403,
+        { nextEligibleAt: reservation.nextEligibleAt?.toISOString() ?? null }
+      )
     }
     return fail("Couldn't start Voice Refresh right now. Try again in a moment.", "RESERVE_FAILED", 503)
   }
@@ -186,11 +188,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       profileJson: result.text,
       postsAnalyzed: stats.used,
-      refreshes: {
-        remaining: reservation.remaining,
-        allowance: reservation.allowance,
-        periodEnd: reservation.periodEnd.toISOString(),
-      },
+      nextEligibleAt: new Date(Date.now() + VOICE_REFRESH_COOLDOWN_MS).toISOString(),
     })
   } catch (e) {
     await refund()

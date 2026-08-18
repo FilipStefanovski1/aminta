@@ -1,99 +1,88 @@
-// Voice Refresh entitlement + period alignment.
+// Voice Refresh entitlement + cooldown math.
 //
-// The concurrency and idempotency guarantees live in SQL (advisory lock +
-// partial unique index) and are exercised against real Postgres, exactly as
+// The concurrency, idempotency, and cooldown-gating guarantees live in SQL
+// (advisory lock + partial unique index + the last_refresh_at comparison in
+// reserve_voice_refresh) and are exercised against real Postgres, exactly as
 // the credit system's were — a mocked client cannot prove them. What is
-// testable in isolation is the policy: who gets refreshes, how many, and on
-// which period boundary.
+// testable in isolation here is the policy: who is entitled, and the pure
+// cooldown-window arithmetic getRefreshStatus performs on a given
+// last_refresh_at.
 import { describe, it, expect } from "vitest"
-import { refreshAllowanceFor } from "./allowance"
-import { resolvePeriod, resolvePlanKey } from "@/lib/ai/credits"
+import { isVoiceRefreshEntitled, refreshAllowanceFor, VOICE_REFRESH_COOLDOWN_MS } from "./allowance"
+import { resolvePlanKey } from "@/lib/ai/credits"
 
 describe("entitlement", () => {
-  it("gives Pro 4 refreshes", () => {
-    expect(refreshAllowanceFor("pro")).toBe(4)
+  it("entitles Pro", () => {
+    expect(isVoiceRefreshEntitled("pro")).toBe(true)
+    expect(refreshAllowanceFor("pro")).toBe(1)
   })
 
-  it("gives Founder/Lifetime the same 4 as Pro", () => {
-    expect(refreshAllowanceFor("lifetime")).toBe(4)
+  it("entitles Founder/Lifetime", () => {
+    expect(isVoiceRefreshEntitled("lifetime")).toBe(true)
+    expect(refreshAllowanceFor("lifetime")).toBe(1)
   })
 
-  it("gives an active Gifted account the same 4 as Pro", () => {
-    expect(refreshAllowanceFor("gifted")).toBe(4)
+  it("entitles an active Gifted account", () => {
+    expect(isVoiceRefreshEntitled("gifted")).toBe(true)
+    expect(refreshAllowanceFor("gifted")).toBe(1)
   })
 
-  it("gives Free none", () => {
+  it("does not entitle Free", () => {
+    expect(isVoiceRefreshEntitled("free")).toBe(false)
     expect(refreshAllowanceFor("free")).toBe(0)
   })
 
   it("fails closed on an unknown plan", () => {
-    expect(refreshAllowanceFor("enterprise")).toBe(0)
-    expect(refreshAllowanceFor("")).toBe(0)
+    expect(isVoiceRefreshEntitled("enterprise")).toBe(false)
+    expect(isVoiceRefreshEntitled("")).toBe(false)
   })
 })
 
 describe("plan resolution drives entitlement", () => {
   const now = new Date("2026-08-16T12:00:00Z")
 
-  it("an expired gift drops back to no refreshes", () => {
+  it("an expired gift drops back to not entitled", () => {
     const planKey = resolvePlanKey(
       { plan: "free", aiIncludedOverride: true, giftExpiresAt: "2026-08-01T00:00:00Z" },
       now
     )
-    expect(refreshAllowanceFor(planKey)).toBe(0)
+    expect(isVoiceRefreshEntitled(planKey)).toBe(false)
   })
 
-  it("an active gift gets the full 4", () => {
+  it("an active gift is entitled", () => {
     const planKey = resolvePlanKey(
       { plan: "free", aiIncludedOverride: true, giftExpiresAt: "2026-09-01T00:00:00Z" },
       now
     )
     expect(planKey).toBe("gifted")
-    expect(refreshAllowanceFor(planKey)).toBe(4)
+    expect(isVoiceRefreshEntitled(planKey)).toBe(true)
   })
 
-  it("a plain free account gets none", () => {
+  it("a plain free account is not entitled", () => {
     const planKey = resolvePlanKey({ plan: "free", aiIncludedOverride: false, giftExpiresAt: null }, now)
-    expect(refreshAllowanceFor(planKey)).toBe(0)
+    expect(isVoiceRefreshEntitled(planKey)).toBe(false)
   })
 })
 
-describe("period reuse — no second billing implementation", () => {
-  const now = new Date("2026-08-16T12:00:00Z")
-
-  it("a Creem subscriber's refreshes follow the real billing period", () => {
-    const p = resolvePeriod("billing", now, {
-      creemPeriodStart: "2026-08-01T00:00:00Z",
-      creemPeriodEnd: "2026-09-01T00:00:00Z",
-    })
-    expect(p.kind).toBe("billing")
-    expect(p.end.toISOString()).toBe("2026-09-01T00:00:00.000Z")
+describe("cooldown is 168 hours, not a calendar/billing period", () => {
+  it("is exactly 7*24 hours in milliseconds", () => {
+    expect(VOICE_REFRESH_COOLDOWN_MS).toBe(7 * 24 * 60 * 60 * 1000)
   })
 
-  it("a comped Pro with no Creem subscription uses the rolling monthly fallback", () => {
-    const p = resolvePeriod("billing", now, {
-      creemPeriodStart: null, creemPeriodEnd: null, anchor: "2026-07-29T00:00:00Z",
-    })
-    expect(p.kind).toBe("monthly")
-  })
-
-  it("Founder/Gifted use the monthly cycle", () => {
-    expect(resolvePeriod("monthly", now, { anchor: "2026-01-01T00:00:00Z" }).kind).toBe("monthly")
-  })
-
-  it("periods roll forward rather than sliding from the last refresh", () => {
-    // A rolling "30 days since last refresh" would move with usage. The
-    // period identity must depend only on the calendar/billing cycle.
-    const a = resolvePeriod("monthly", new Date("2026-08-16T12:00:00Z"), { anchor: "2026-01-01T00:00:00Z" })
-    const b = resolvePeriod("monthly", new Date("2026-08-20T12:00:00Z"), { anchor: "2026-01-01T00:00:00Z" })
-    expect(a.start.getTime()).toBe(b.start.getTime())
+  it("is anchored on the user's own last refresh, not a shared boundary", () => {
+    // Two users who refreshed on different days get different cooldown
+    // ends — there is no shared period_end this reads from.
+    const a = new Date("2026-08-16T12:00:00Z").getTime() + VOICE_REFRESH_COOLDOWN_MS
+    const b = new Date("2026-08-18T09:30:00Z").getTime() + VOICE_REFRESH_COOLDOWN_MS
+    expect(a).not.toBe(b)
+    expect(new Date(a).toISOString()).toBe("2026-08-23T12:00:00.000Z")
+    expect(new Date(b).toISOString()).toBe("2026-08-25T09:30:00.000Z")
   })
 })
 
 describe("credits are untouched", () => {
-  it("Voice Refresh allowance is a separate number from credit allowance", () => {
-    // 4 refreshes must never be confused with the 1,000 generation credits.
-    expect(refreshAllowanceFor("pro")).toBe(4)
+  it("Voice Refresh entitlement is a boolean gate, never confused with the 1,000 generation credits", () => {
+    expect(refreshAllowanceFor("pro")).toBe(1)
     expect(refreshAllowanceFor("pro")).not.toBe(1000)
   })
 })

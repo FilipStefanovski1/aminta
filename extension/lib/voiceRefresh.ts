@@ -60,9 +60,10 @@ export interface ConnectionState {
   connected: boolean
   username: string | null
   entitled: boolean
-  remaining: number
-  allowance: number
-  periodEnd: string
+  /** Can attempt a refresh right now — server-authoritative. */
+  eligible: boolean
+  /** ISO timestamp when the 168-hour cooldown ends, or null when already eligible / never refreshed. */
+  nextEligibleAt: string | null
   lastRefreshAt: string | null
 }
 
@@ -74,17 +75,15 @@ export async function fetchConnectionState(): Promise<ConnectionState> {
     connected: !!j.connected,
     username: (j.username as string) ?? null,
     entitled: !!j.entitled,
-    remaining: (j.remaining as number) ?? 0,
-    allowance: (j.allowance as number) ?? 0,
-    periodEnd: (j.period_end as string) ?? "",
+    eligible: !!j.eligible,
+    nextEligibleAt: (j.next_eligible_at as string) ?? null,
     lastRefreshAt: (j.last_refresh_at as string) ?? null,
   }
   await setStore({
     xConnected: state.connected,
     xUsername: state.username ?? "",
-    voiceRefreshRemaining: state.remaining,
-    voiceRefreshAllowance: state.allowance,
-    voiceRefreshPeriodEnd: state.periodEnd,
+    voiceRefreshEligible: state.eligible,
+    voiceRefreshNextEligibleAt: state.nextEligibleAt ?? "",
     lastVoiceRefreshAt: state.lastRefreshAt ?? "",
   })
   return state
@@ -105,8 +104,8 @@ export function isEmptyProfile(p: StyleProfile): boolean {
 
 export interface RefreshResult {
   postsAnalyzed: number
-  remaining: number
-  allowance: number
+  /** ISO timestamp when the next refresh becomes eligible (now + 168 hours). */
+  nextEligibleAt: string
 }
 
 /**
@@ -130,7 +129,7 @@ export async function runVoiceRefresh(): Promise<RefreshResult> {
   const json = (await res.json()) as {
     profileJson: string
     postsAnalyzed: number
-    refreshes: { remaining: number; allowance: number; periodEnd: string }
+    nextEligibleAt: string
   }
 
   // computeConfidenceScore only reads corpus.length, so a length-accurate
@@ -160,16 +159,14 @@ export async function runVoiceRefresh(): Promise<RefreshResult> {
     // sync (lib/sync.ts push/pull), which is what keeps a second device
     // from treating a pulled X-derived profile as manually sourced.
     styleProfileHash: `${X_HISTORY_SOURCE_PREFIX}${Date.now()}`,
-    voiceRefreshRemaining: json.refreshes.remaining,
-    voiceRefreshAllowance: json.refreshes.allowance,
-    voiceRefreshPeriodEnd: json.refreshes.periodEnd,
+    voiceRefreshEligible: false,
+    voiceRefreshNextEligibleAt: json.nextEligibleAt,
     lastVoiceRefreshAt: new Date().toISOString(),
     xConnected: store.xConnected || true,
   })
 
   return {
     postsAnalyzed: json.postsAnalyzed,
-    remaining: json.refreshes.remaining,
-    allowance: json.refreshes.allowance,
+    nextEligibleAt: json.nextEligibleAt,
   }
 }

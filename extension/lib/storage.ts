@@ -183,10 +183,10 @@ export interface AmintaStore {
   xConnected: boolean
   /** @handle for display. Never the X user id. */
   xUsername: string
-  voiceRefreshRemaining: number
-  voiceRefreshAllowance: number
-  /** ISO timestamp when the refresh allowance resets. */
-  voiceRefreshPeriodEnd: string
+  /** Can attempt a refresh right now. Server-authoritative — the only thing the UI should gate the button on. */
+  voiceRefreshEligible: boolean
+  /** ISO timestamp when the 168-hour cooldown ends, or "" when already eligible / never refreshed. */
+  voiceRefreshNextEligibleAt: string
   /** ISO timestamp of the last successful refresh, or "" if never. */
   lastVoiceRefreshAt: string
 
@@ -231,9 +231,8 @@ const DEFAULTS: AmintaStore = {
   aiIncludedPaid: false,
   xConnected: false,
   xUsername: "",
-  voiceRefreshRemaining: 0,
-  voiceRefreshAllowance: 0,
-  voiceRefreshPeriodEnd: "",
+  voiceRefreshEligible: false,
+  voiceRefreshNextEligibleAt: "",
   lastVoiceRefreshAt: "",
   pendingXP: [],
 }

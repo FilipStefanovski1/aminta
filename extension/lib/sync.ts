@@ -255,9 +255,9 @@ export async function pullFromCloud(): Promise<{ cloudXp: number } | void> {
   if (typeof data.x_connected === "boolean") patch.xConnected = data.x_connected
   if (typeof data.x_username === "string") patch.xUsername = data.x_username
   else if (data.x_username === null) patch.xUsername = ""
-  if (typeof data.voice_refresh_remaining === "number") patch.voiceRefreshRemaining = data.voice_refresh_remaining
-  if (typeof data.voice_refresh_allowance === "number") patch.voiceRefreshAllowance = data.voice_refresh_allowance
-  if (typeof data.voice_refresh_period_end === "string") patch.voiceRefreshPeriodEnd = data.voice_refresh_period_end
+  if (typeof data.voice_refresh_eligible === "boolean") patch.voiceRefreshEligible = data.voice_refresh_eligible
+  if (typeof data.voice_refresh_next_eligible_at === "string") patch.voiceRefreshNextEligibleAt = data.voice_refresh_next_eligible_at
+  else if (data.voice_refresh_next_eligible_at === null) patch.voiceRefreshNextEligibleAt = ""
   if (typeof data.last_voice_refresh_at === "string") patch.lastVoiceRefreshAt = data.last_voice_refresh_at
   else if (data.last_voice_refresh_at === null) patch.lastVoiceRefreshAt = ""
 

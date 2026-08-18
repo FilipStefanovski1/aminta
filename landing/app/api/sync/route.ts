@@ -83,9 +83,6 @@ export async function GET(request: NextRequest) {
     plan: profile?.plan ?? "free",
     aiIncludedOverride: profile?.ai_included_override ?? false,
     giftExpiresAt: profile?.gift_expires_at ?? null,
-    creemPeriodStart: profile?.current_period_start ?? null,
-    creemPeriodEnd: profile?.current_period_end ?? null,
-    createdAt: profile?.created_at ?? null,
   }
   const [voiceRefresh, xConn] = await Promise.all([
     getRefreshStatus(refreshCtx),
@@ -125,9 +122,8 @@ export async function GET(request: NextRequest) {
     credits_plan_key: credits.planKey,
     x_connected: !!xConn,
     x_username: xConn?.x_username ?? null,
-    voice_refresh_remaining: voiceRefresh.remaining,
-    voice_refresh_allowance: voiceRefresh.allowance,
-    voice_refresh_period_end: voiceRefresh.periodEnd,
+    voice_refresh_eligible: voiceRefresh.eligible,
+    voice_refresh_next_eligible_at: voiceRefresh.nextEligibleAt,
     last_voice_refresh_at: voiceRefresh.lastRefreshAt,
   })
 }
