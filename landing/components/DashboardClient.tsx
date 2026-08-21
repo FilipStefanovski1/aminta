@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import posthog from "posthog-js"
 import { createClient } from "@/lib/supabase/client"
 import { EXTENSION_URL } from "@/lib/links"
-import { hasProAccess } from "@/lib/entitlements"
+import { communityUnlocked, hasProAccess } from "@/lib/entitlements"
 
 const THRESHOLDS = [0, 300, 750, 1400, 2300, 3500, 5200, 7500, 10500, 14500]
 
@@ -105,14 +105,23 @@ interface Props {
   subscriptionStatus: string | null
   hasState: boolean
   lastSyncedAt: string | null
+  // Server-authoritative: extension_connected_at IS NOT NULL (set once, on
+  // the extension's first authenticated call to app/api/sync/route.ts).
+  // Distinct from the `needsExtension` heuristic below, which only drives
+  // the connect-extension banner — this is the real, persisted signal the
+  // Discord community card gates on.
+  extensionConnected: boolean
 }
+
+const DISCORD_INVITE_URL = "https://discord.gg/J7EbxJDwwe"
 
 export default function DashboardClient({
   user, xp, streak, generationsTotal, dnaCount,
   missionDate, missionModes,
-  plan, subscriptionStatus, hasState, lastSyncedAt,
+  plan, subscriptionStatus, hasState, lastSyncedAt, extensionConnected,
 }: Props) {
   const entitled = hasProAccess({ plan, subscription_status: subscriptionStatus })
+  const discordUnlocked = communityUnlocked(extensionConnected)
   // Mission flags only count if they were recorded on the user's local
   // "today" — the extension stamps mission_date with a local date. Same
   // per-mode confirmed-publish flags as the extension's Home tab (Part 1) —
@@ -474,6 +483,36 @@ export default function DashboardClient({
             <div className="py-3 text-center" style={{ borderTop: "1px solid #2a2a2a" }}>
               <p className="font-pixel text-[9px]" style={{ color: form.color }}>Maximum level reached.</p>
             </div>
+          )}
+        </div>
+
+        {/* ── Card: Community / Discord ── */}
+        <div style={card} className="p-6 flex flex-col gap-4">
+          <div className="flex items-center gap-2 text-muted">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/>
+              <path d="M7.5 7.2C9 6.4 10.5 6 12 6s3 .4 4.5 1.2M6 15.5c1.7 1 3.8 1.5 6 1.5s4.3-.5 6-1.5M8.5 4.5c-2 .6-3.7 2-4.7 4-1.3 2.7-1.5 6-1 8.5.1.4.3.7.6.9 1.6 1.2 3.4 2 5.3 2.4l1-1.8M15.5 4.5c2 .6 3.7 2 4.7 4 1.3 2.7 1.5 6 1 8.5-.1.4-.3.7-.6.9-1.6 1.2-3.4 2-5.3 2.4l-1-1.8"/>
+            </svg>
+            <span className="font-pixel text-[9px] tracking-widest uppercase">Community</span>
+          </div>
+
+          <div>
+            <p className="font-pixel text-[10px] text-white">Join the Aminta community</p>
+            <p className="text-xs text-muted mt-2 leading-relaxed">
+              {discordUnlocked
+                ? "Share your posts, get feedback, meet other people building on X, and help shape Aminta."
+                : "Install Aminta and sign in to unlock the community."}
+            </p>
+          </div>
+
+          {discordUnlocked ? (
+            <a href={DISCORD_INVITE_URL} target="_blank" rel="noopener noreferrer" className="rpg-btn-primary w-full mt-auto text-center">
+              Join Discord
+            </a>
+          ) : (
+            <a href={EXTENSION_URL} target="_blank" rel="noopener noreferrer" className="rpg-btn-secondary w-full mt-auto text-center">
+              Get the Extension
+            </a>
           )}
         </div>
 

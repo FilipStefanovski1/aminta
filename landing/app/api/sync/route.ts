@@ -6,6 +6,24 @@ import { NextResponse, type NextRequest } from "next/server"
 import { aiIncluded } from "@/lib/entitlements"
 import { getCreditStatus } from "@/lib/ai/creditService"
 
+// Marks the account as having a real authenticated extension sync — the
+// Discord community card's unlock condition (app/dashboard/page.tsx). This
+// route is only ever called by the extension (see extension/lib/sync.ts),
+// so reaching either handler with a valid user already proves that. Guarded
+// by `.is(..., null)` so it's a no-op write after the first call, and once
+// set it's never cleared.
+async function markExtensionConnected(userId: string): Promise<void> {
+  const service = await createServiceClient()
+  const { error } = await service
+    .from("users")
+    .update({ extension_connected_at: new Date().toISOString() })
+    .eq("id", userId)
+    .is("extension_connected_at", null)
+  if (error) {
+    console.error("[sync] failed to mark extension_connected_at", { userId, reason: error.message })
+  }
+}
+
 async function getUser(request: NextRequest) {
   // Support both cookie-based sessions (web) and Bearer token (extension)
   const authHeader = request.headers.get("authorization")
@@ -36,6 +54,7 @@ async function getUser(request: NextRequest) {
 export async function GET(request: NextRequest) {
   const { supabase, user } = await getUser(request)
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  await markExtensionConnected(user.id)
 
   const { data, error } = await supabase
     .from("aminta_state")
@@ -133,6 +152,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const { supabase, user } = await getUser(request)
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  await markExtensionConnected(user.id)
 
   const body = await request.json()
 

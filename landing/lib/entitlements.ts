@@ -55,3 +55,12 @@ export function aiIncluded(
 ): boolean {
   return hasProAccess(user) || !!user.ai_included_override
 }
+
+// Discord community gate (components/DashboardClient.tsx). Onboarding gate,
+// not a security boundary: unlocks once the extension has authenticated/
+// synced at least once (extension_connected_at IS NOT NULL — set by
+// app/api/sync/route.ts). Deliberately plan-independent — Free, Pro, and
+// Founder all get the same Discord access, no plan check here ever.
+export function communityUnlocked(extensionConnected: boolean): boolean {
+  return extensionConnected
+}
