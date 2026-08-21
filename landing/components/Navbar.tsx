@@ -74,7 +74,7 @@ export default function Navbar({ alwaysVisible = true }: { alwaysVisible?: boole
         {/* Left: Logo + nav links */}
         <div className="flex items-center gap-8">
           <a href={isHome ? "#top" : "/"} aria-label="Aminta" className="flex items-center shrink-0">
-            <svg width="28" height="22" viewBox="0 0 16 13" className="pixelated">
+            <svg width="36" height="28" viewBox="0 0 16 13" className="pixelated">
               <rect x="2" y="0" width="2" height="3" fill="#0a0a0a" />
               <rect x="12" y="0" width="2" height="3" fill="#0a0a0a" />
               <rect x="3" y="3" width="10" height="9" fill="#0a0a0a" />
