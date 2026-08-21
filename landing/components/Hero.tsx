@@ -12,7 +12,7 @@ export default function Hero() {
           </h1>
 
           <p className="mt-5 text-base sm:text-lg text-muted max-w-md">
-            Your X companion — writes posts and replies in your voice, feeds your demon, and grows with every post.
+            Your X companion. Writes posts and replies in your voice, feeds your demon, and grows with every post.
           </p>
 
           <div className="mt-9 flex flex-col sm:flex-row gap-4">
