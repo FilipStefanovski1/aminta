@@ -12,7 +12,7 @@ import { NextResponse, type NextRequest } from "next/server"
 import { aiIncluded } from "@/lib/entitlements"
 import { isIncludedAiAvailable } from "@/lib/ai/config"
 import { callGemini } from "@/lib/ai/gemini"
-import { buildMessages, buildStyleProfileMessages, withImages, type Mode, type OutputLength, type Tone, type VoiceProfile, type StyleProfile, type StyleCorpusEntry } from "@/lib/ai/prompts"
+import { buildMessages, buildStyleProfileMessages, buildThreadMessages, withImages, type Mode, type OutputLength, type Tone, type VoiceProfile, type StyleProfile, type StyleCorpusEntry } from "@/lib/ai/prompts"
 import { checkAndIncrementRateLimits, claimConcurrencySlot, clearInflight } from "@/lib/ai/rateLimit"
 import { loadUserEntitlement, resolveLimits, claimRequestId, completeUsageLog } from "@/lib/ai/quota"
 import { reserveCredits, refundCredits } from "@/lib/ai/creditService"
@@ -25,7 +25,7 @@ export const runtime = "nodejs"
 
 // ─── Request validation limits — hardcoded, never client-overridable ───────
 const MAX_INPUT_CHARS = 4_000
-const MODES = new Set<Mode | "style_profile">(["tweet", "reply", "polish", "style_profile"])
+const MODES = new Set<Mode | "style_profile" | "thread">(["tweet", "reply", "polish", "style_profile", "thread"])
 const TONES = new Set<Tone>(["direct", "witty", "analytical", "inspiring"])
 const LENGTHS = new Set<OutputLength>(["short", "medium", "long"])
 const MAX_TEMPLATE_INSTRUCTION_CHARS = 1_000
@@ -139,11 +139,12 @@ export async function POST(request: NextRequest) {
   if (!requestId || typeof requestId !== "string" || !/^[0-9a-f-]{36}$/i.test(requestId)) {
     return errorResponse("Missing or invalid requestId.", "INVALID_REQUEST", 400)
   }
-  if (!generationMode || !MODES.has(generationMode as Mode | "style_profile")) {
+  if (!generationMode || !MODES.has(generationMode as Mode | "style_profile" | "thread")) {
     return errorResponse("Invalid generationMode.", "INVALID_REQUEST", 400)
   }
 
   const isStyleProfile = generationMode === "style_profile"
+  const isThread = generationMode === "thread"
 
   if (isStyleProfile) {
     const corpusCheck = validateCorpus(body.corpus)
@@ -264,29 +265,32 @@ export async function POST(request: NextRequest) {
     const prepStartedAt = Date.now()
     const messages = isStyleProfile
       ? buildStyleProfileMessages(body.corpus!)
-      : withImages(
-          buildMessages(
-            generationMode as Mode,
-            body.voice!,
-            body.input!,
-            body.styleProfile ?? null,
-            body.tone ?? "direct",
-            body.length ?? "medium",
-            body.templateInstruction,
-            !!body.hasImages
-          ),
-          images
-        )
+      : isThread
+        ? buildThreadMessages(body.voice!, body.input!, body.styleProfile ?? null, body.tone ?? "direct")
+        : withImages(
+            buildMessages(
+              generationMode as Mode,
+              body.voice!,
+              body.input!,
+              body.styleProfile ?? null,
+              body.tone ?? "direct",
+              body.length ?? "medium",
+              body.templateInstruction,
+              !!body.hasImages
+            ),
+            images
+          )
     const prepMs = Date.now() - prepStartedAt
 
-    // Structured `{ text }` output only for real generation — style_profile
-    // keeps its own existing multi-field JSON-via-prompt contract.
-    const result = await callGemini(messages, { structuredText: !isStyleProfile, generationType: generationMode })
+    // Structured `{ text }` output only for real single-post generation —
+    // style_profile and thread both keep their own JSON-via-prompt contract
+    // (parsed client-side).
+    const result = await callGemini(messages, { structuredText: !isStyleProfile && !isThread, generationType: generationMode })
     const latencyMs = Date.now() - startedAt
-    // style_profile returns raw JSON for client-side parsing — cleanup
-    // (label/quote stripping, punctuation normalization) is only valid for
-    // actual post/reply/polish/template text.
-    const outputText = isStyleProfile ? result.text : cleanGenerationOutput(result.text)
+    // style_profile/thread return raw JSON for client-side parsing —
+    // cleanup (label/quote stripping, punctuation normalization) is only
+    // valid for actual post/reply/polish/template text.
+    const outputText = (isStyleProfile || isThread) ? result.text : cleanGenerationOutput(result.text)
     const outputChars = outputText.length
     const inputChars = isStyleProfile ? 200 : (body.input?.length ?? 0)
     // Model-aware provider cost (lib/ai/pricing.ts). This is internal dollar

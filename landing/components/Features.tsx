@@ -14,39 +14,39 @@ interface Feature {
 
 const FEATURES: Feature[] = [
   {
-    title: "Tweet Generator",
+    title: "Generate",
     desc: "Type a topic. Get a post in your voice. No blank-box paralysis. Just output.",
-    feedback: "Aminta gains 50 XP.",
+    feedback: "+50 XP on publish.",
     icon: <path d="M12 5v14M5 12h14" strokeWidth="2.2" strokeLinecap="round" />,
   },
   {
-    title: "Reply Generator",
-    desc: "Pull any tweet, fire back an in-voice reply that adds something. Every reply feeds the demon.",
-    feedback: "Reply sent. Demon feeds.",
+    title: "Reply",
+    desc: "Pull any tweet, fire back an in-voice reply that adds something real to the conversation.",
+    feedback: "+25 XP on publish.",
     icon: <path d="M21 11.5a8.5 8.5 0 0 1-12.3 7.6L3 21l1.9-5.7A8.5 8.5 0 1 1 21 11.5Z" strokeWidth="2.2" strokeLinejoin="round" />,
   },
   {
-    title: "Tweet Polisher",
-    desc: "Rough draft in, sharp banger out. Keeps your voice, just tighter.",
-    feedback: "Voice refined.",
+    title: "Polish",
+    desc: "Rough draft in, sharp post out. Keeps your voice, just tighter.",
+    feedback: "+15 XP on publish.",
     icon: <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" strokeWidth="1.8" strokeLinejoin="round" />,
   },
   {
-    title: "Voice Profile",
-    desc: "Teach Aminta your niche, tone, and best tweets once. Everything it writes sounds like you.",
-    feedback: "Voice locked in.",
+    title: "Thread Creator",
+    desc: "One click, three genuinely different thread options — pick one, edit any post, insert.",
+    feedback: "3 angles, 1 generate.",
+    icon: <path d="M6 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm0 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm12-4a2 2 0 1 0 0 4 2 2 0 0 0 0-4ZM6 8v8M8 6.8l8 4M8 17.2l8-4" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />,
+  },
+  {
+    title: "Voice Refresh / Aminta DNA",
+    desc: "Aminta reads your recent X posts and learns how you actually write — tone, pacing, structure.",
+    feedback: "Refreshes weekly.",
     icon: <path d="M12 3a9 9 0 0 0-9 9v4a3 3 0 0 0 3 3h1v-7H5v-0a7 7 0 0 1 14 0v0h-2v7h1a3 3 0 0 0 3-3v-4a9 9 0 0 0-9-9Z" strokeWidth="1.8" strokeLinejoin="round" />,
   },
   {
-    title: "Insert into X",
-    desc: "One click drops the result straight into the X composer. Post it. Collect the XP.",
-    feedback: "Frictionless. Post it now.",
-    icon: <path d="M5 12h12m0 0-5-5m5 5-5 5M19 4v16" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />,
-  },
-  {
-    title: "BYOK API Support",
-    desc: "Bring your own key: Groq, OpenRouter, or Gemini. Your key, your cost, your demon.",
-    feedback: "Your key. Full control.",
+    title: "Included AI, or your own key",
+    desc: "Every plan includes AI credits out of the box — no setup required. Prefer your own key? Switch to Groq, OpenRouter, or Gemini any time.",
+    feedback: "Your choice, either way.",
     icon: <path d="M15.75 5.25a3 3 0 0 1 3 3m3 0a6 6 0 0 1-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1 1 21.75 8.25Z" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />,
   },
 ];
@@ -170,9 +170,9 @@ export default function Features() {
       <div className="mx-auto max-w-7xl px-5">
 
         <Reveal className="text-center max-w-2xl mx-auto">
-          <p className="font-pixel text-xs text-accent uppercase tracking-widest">Training System</p>
+          <p className="font-pixel text-xs text-accent uppercase tracking-widest">What Aminta does</p>
           <h2 className="mt-4 font-pixel text-2xl sm:text-3xl text-white leading-snug">
-            Every action trains your demon.
+            Write, reply, and polish — in your voice, every time.
           </h2>
         </Reveal>
 

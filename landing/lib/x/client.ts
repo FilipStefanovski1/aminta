@@ -128,11 +128,22 @@ export async function fetchOwnPosts(
   return { ...mapPosts(json as never), xUserId }
 }
 
-/** Identity of the connected account, used once at connect time. */
-export async function fetchMe(accessToken: string): Promise<{ id: string; username: string }> {
-  const json = (await get("/users/me?user.fields=username", accessToken)) as {
-    data?: { id: string; username: string }
+/** Identity of the connected account — fetched once at connect time and
+ * cached (x_connections.x_display_name/x_avatar_url) so Settings never
+ * needs a live X API call just to render an avatar. */
+export async function fetchMe(
+  accessToken: string
+): Promise<{ id: string; username: string; name: string | null; profileImageUrl: string | null }> {
+  const json = (await get("/users/me?user.fields=username,name,profile_image_url", accessToken)) as {
+    data?: { id: string; username: string; name?: string; profile_image_url?: string }
   }
   if (!json.data?.id) throw new XApiError(500, "x_me_failed")
-  return { id: json.data.id, username: json.data.username }
+  return {
+    id: json.data.id,
+    username: json.data.username,
+    name: json.data.name ?? null,
+    // X serves the "_normal" (48x48) size by default; swap to a larger
+    // variant for a crisper Settings avatar without a second request.
+    profileImageUrl: json.data.profile_image_url?.replace("_normal", "_200x200") ?? null,
+  }
 }

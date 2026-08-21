@@ -253,6 +253,47 @@ function systemX(mode: Mode, voice: VoiceProfile, styleProfile: StyleProfile | n
 const FINAL_OUTPUT_INSTRUCTION =
   "\n\nFINAL INSTRUCTION — this overrides everything above if there's ever a conflict: return only the finished post. Do not return writing instructions, tone descriptions, analysis, labels, quotation marks, markdown, or commentary."
 
+// ─── Thread Creator — SOURCE OF TRUTH: extension/lib/prompts.ts's
+// buildThreadMessages/parseThreadResponse (identical duplicate, same
+// convention as the rest of this file). ONE model call requests all 3
+// variants in one JSON response, so Thread Creator is one credit
+// reservation, never three.
+export interface ThreadOption {
+  angle: string
+  posts: string[]
+}
+
+export function buildThreadMessages(
+  voice: VoiceProfile,
+  input: string,
+  styleProfile: StyleProfile | null,
+  tone: Tone = "direct"
+): ChatMessage[] {
+  const system = [
+    "You write X (Twitter) threads for a specific person. Match their voice precisely.",
+    voiceBlock(voice, styleProfile),
+    `TONE DIRECTION: ${TONE_GUIDE[tone]}`,
+    "THINK FIRST, SILENTLY (never write this part down): this topic can be approached from genuinely different angles — pick 3 that are ACTUALLY different premises (e.g. a personal story, a contrarian take, a step-by-step breakdown), not 3 rewrites of the same point. Each thread must stand on its own: a different opening idea, different supporting posts, a different close. Never reuse the same hook, transition phrase, or closing line across the 3 threads.",
+    "RULES FOR EVERY THREAD:",
+    "- The FIRST post must work as a strong standalone X hook — someone scrolling past should want to open the thread from that post alone.",
+    "- Choose a sensible number of posts for the idea (roughly 3-7) — never pad to hit a count, never cram everything into 2 posts if the idea needs more room.",
+    "- Each post should be a complete thought that also flows into the next — not a sentence chopped mid-idea.",
+    "- Avoid a generic AI-sounding conclusion (\"In summary...\", \"The bottom line is...\", forced calls to action) unless it's genuinely earned.",
+    "- Write like a real person, not marketing copy. No hashtags or emojis unless their examples use them.",
+    "- Each individual post should read naturally as a single X post (roughly under 280 characters where possible; a little over is fine if the idea needs it, never pad to fill space).",
+    "",
+    "Return ONLY a JSON object: { \"threads\": [ { \"angle\": \"short label for this thread's angle\", \"posts\": [\"post 1\", \"post 2\", ...] }, ... 3 items total ] }",
+    "No markdown fences, no explanation, no text outside the JSON object.",
+  ].filter(Boolean).join("\n")
+
+  const user = `Write a thread about this topic:\n"""${input.trim()}"""`
+
+  return [
+    { role: "system", content: system },
+    { role: "user", content: user },
+  ]
+}
+
 export function buildMessages(
   mode: Mode,
   voice: VoiceProfile,

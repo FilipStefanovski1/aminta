@@ -11,6 +11,7 @@ import HomeTab from "~components/HomeTab"
 import LoginScreen from "~components/LoginScreen"
 import SetupGate from "~components/SetupGate"
 import VoiceProfileForm from "~components/VoiceProfileForm"
+import FaqPage from "~components/FaqPage"
 import { GhostButton, PrimaryButton } from "~components/ui"
 import { FORMS, getStageTint } from "~lib/evolution"
 import { planLabel as computePlanLabel, providerModeFor } from "~lib/entitlements"
@@ -21,6 +22,8 @@ import { getStore, setStore, type AmintaStore } from "~lib/storage"
 import { getAuthSession, clearAuthSession, type AuthSession } from "~lib/auth"
 import { pullFromCloud, pushToCloud } from "~lib/sync"
 import { handleAuthUserChanged } from "~lib/accountScope"
+import { deleteAccount } from "~lib/account"
+import { PUBLISH_COOLDOWN_MS } from "~lib/publishCooldown"
 import { useCompanion } from "~hooks/useCompanion"
 
 type Tab = "home" | "create" | "train"
@@ -191,6 +194,76 @@ const CREDIT_RESET_LABEL: Record<string, string> = {
   monthly: "Resets monthly",
 }
 
+function DangerZone({ onSignOut }: { onSignOut: () => void }) {
+  const [open, setOpen] = useState(false)
+  const [confirmText, setConfirmText] = useState("")
+  const [deleting, setDeleting] = useState(false)
+  const [error, setError] = useState("")
+
+  const canDelete = confirmText === "DELETE"
+
+  const doDelete = async () => {
+    if (!canDelete || deleting) return
+    setDeleting(true)
+    setError("")
+    try {
+      await deleteAccount()
+      // Server-side deletion succeeded — the account (and its session) no
+      // longer exists. Clear local session state the same way sign-out does.
+      onSignOut()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Something went wrong.")
+      setDeleting(false)
+    }
+  }
+
+  return (
+    <section className="space-y-1.5">
+      <p className="text-[9px] uppercase tracking-[0.1em]" style={{ color: "#f87171" }}>Danger Zone</p>
+      <div className="rounded-xl p-3" style={{ backgroundColor: "#1a1214", border: "1px solid #3a1f22" }}>
+        {!open ? (
+          <button
+            onClick={() => setOpen(true)}
+            className="w-full py-2 rounded-lg font-pixel text-[8px]"
+            style={{ backgroundColor: "transparent", color: "#f87171", border: "1px solid #4a2226" }}>
+            Delete account
+          </button>
+        ) : (
+          <div className="space-y-2.5">
+            <p className="text-[11px] leading-relaxed" style={{ color: "#e7c7c7" }}>
+              This permanently deletes your Aminta account — X connection, Voice Refresh data, credits,
+              XP, and everything synced to your account. This cannot be undone.
+            </p>
+            <input
+              value={confirmText}
+              onChange={(e) => setConfirmText(e.target.value)}
+              placeholder='Type "DELETE" to confirm'
+              className="w-full rounded-lg px-3 py-2 text-[12px] bg-transparent outline-none"
+              style={{ border: "1px solid #4a2226", color: "#e7e7ef" }}
+            />
+            {error && <p className="text-[10px]" style={{ color: "#f87171" }}>{error}</p>}
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setOpen(false); setConfirmText(""); setError("") }}
+                className="flex-1 py-2 rounded-lg font-pixel text-[7px]"
+                style={{ backgroundColor: "transparent", color: "#8a8a96", border: "1px solid #333" }}>
+                Cancel
+              </button>
+              <button
+                onClick={doDelete}
+                disabled={!canDelete || deleting}
+                className="flex-1 py-2 rounded-lg font-pixel text-[7px] disabled:opacity-40"
+                style={{ backgroundColor: canDelete ? "#f87171" : "transparent", color: canDelete ? "#1a1214" : "#f87171", border: "1px solid #f87171" }}>
+                {deleting ? "Deleting…" : "Permanently delete"}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
+  )
+}
+
 function SettingsOverlay({
   store,
   onSave,
@@ -198,6 +271,7 @@ function SettingsOverlay({
   onResetOnboarding,
   session,
   onSignOut,
+  onOpenFaq,
 }: {
   store: AmintaStore
   onSave: (patch: Partial<AmintaStore>) => Promise<void>
@@ -205,6 +279,7 @@ function SettingsOverlay({
   onResetOnboarding: () => void
   session: AuthSession | null
   onSignOut: () => void
+  onOpenFaq: () => void
 }) {
   // ── Plan ────────────────────────────────────────────────────────────────────
   const planLabel  = computePlanLabel({ plan: store.plan, subscriptionStatus: store.subscriptionStatus })
@@ -346,6 +421,13 @@ function SettingsOverlay({
                   style={{ width: 40, height: 40, border: `2px solid ${avatarTint}55` }}>
                   {store.avatarDataUrl ? (
                     <img src={store.avatarDataUrl} alt="" className="w-full h-full object-cover" />
+                  ) : store.xConnected && store.xAvatarUrl ? (
+                    <img
+                      src={store.xAvatarUrl}
+                      alt=""
+                      className="w-full h-full object-cover"
+                      onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none" }}
+                    />
                   ) : (
                     <div
                       className="w-full h-full flex items-center justify-center font-pixel text-[13px]"
@@ -376,7 +458,9 @@ function SettingsOverlay({
                         secondary line, never buried entirely (still needed
                         for sign-in/account recovery context). */}
                     <p className="text-[12px] truncate leading-none" style={{ color: C.text }}>
-                      {store.xConnected && store.xUsername ? `@${store.xUsername}` : session.email}
+                      {store.xConnected && store.xUsername
+                        ? store.xDisplayName || `@${store.xUsername}`
+                        : session.email}
                     </p>
                     <span className="font-pixel text-[6px] px-1.5 py-0.5 rounded shrink-0"
                       style={{ backgroundColor: planColor + "1a", color: planColor, border: `1px solid ${planColor}33` }}>
@@ -384,7 +468,9 @@ function SettingsOverlay({
                     </span>
                   </div>
                   {store.xConnected && store.xUsername && (
-                    <p className="text-[10px] mt-0.5 truncate" style={{ color: "#8a8a96" }}>{session.email}</p>
+                    <p className="text-[10px] mt-0.5 truncate" style={{ color: "#8a8a96" }}>
+                      {store.xDisplayName ? `@${store.xUsername}` : session.email}
+                    </p>
                   )}
                   {syncLine && (
                     <p className="text-[10px] mt-1" style={{ color: syncLine.color }}>{syncLine.text}</p>
@@ -546,6 +632,8 @@ function SettingsOverlay({
           </div>
         </section>
 
+        {session && <DangerZone onSignOut={onSignOut} />}
+
       </div>
 
       {/* ── Footer ── icon links to real, project-configured destinations
@@ -565,8 +653,9 @@ function SettingsOverlay({
             <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
           </svg>
         </a>
-        <a href="https://amintaapp.com" target="_blank" rel="noreferrer"
-          className="text-[10px] text-[#666672] hover:text-white transition-colors">Help</a>
+        <button
+          onClick={onOpenFaq}
+          className="text-[10px] text-[#666672] hover:text-white transition-colors">Help &amp; FAQ</button>
       </div>
 
     </div>
@@ -646,6 +735,11 @@ function SidePanel() {
   const newlyUnlockedTimer = useRef<ReturnType<typeof setTimeout>>()
   const [settingsOpen, setSettingsOpen]   = useState(false)
   const [companionOpen, setCompanionOpen] = useState(false)
+  const [faqOpen, setFaqOpen] = useState(false)
+  // Anti-spam: 15s after a CONFIRMED post/reply publish, before Aminta will
+  // insert another one. Held here (not inside GeneratorPanel/OutputCard) so
+  // it survives switching tabs and back, same reasoning as the XP listener.
+  const [publishCooldownUntil, setPublishCooldownUntil] = useState<number | null>(null)
   const grqMigrated = useRef(false)
   const geminiMigrated = useRef(false)
   const [authChecked, setAuthChecked]   = useState(false)
@@ -753,8 +847,15 @@ function SidePanel() {
   // OutputCard) because the publish confirmation can arrive well after the
   // user has switched tabs, so it must work regardless of what's mounted.
   useEffect(() => {
-    const listener = (msg: { type?: string; amount?: number; levelUp?: { level: number; stage: string }; firstPost?: boolean }) => {
+    const listener = (msg: { type?: string; amount?: number; levelUp?: { level: number; stage: string }; firstPost?: boolean; mode?: "tweet" | "reply" | "polish" }) => {
       if (msg?.type !== "AMINTA_XP_AWARDED") return
+      // Anti-spam cooldown — only for posts/replies, and only starts after
+      // this CONFIRMED publish (never on Generate/Polish/insert alone).
+      // Aminta doesn't own X's own Post button, so the only thing it can
+      // actually enforce is its own Insert action for the next publish.
+      if (msg.mode === "tweet" || msg.mode === "reply") {
+        setPublishCooldownUntil(Date.now() + PUBLISH_COOLDOWN_MS)
+      }
       refresh().then(() => {
         pushToCloud()
         dispatch("insert")
@@ -868,8 +969,10 @@ function SidePanel() {
             onResetOnboarding={async () => { await update({ onboardingDone: false }) }}
             session={session}
             onSignOut={handleSignOut}
+            onOpenFaq={() => setFaqOpen(true)}
           />
         )}
+        {faqOpen && <FaqPage tint={tint} onClose={() => setFaqOpen(false)} />}
 
         {/* ── Content ── */}
         <main className="flex-1 overflow-y-auto overflow-x-hidden">
@@ -896,6 +999,7 @@ function SidePanel() {
                 onOpenSettings={() => setSettingsOpen(true)}
                 onContext={dispatch}
                 onTemplatesChanged={refresh}
+                publishCooldownUntil={publishCooldownUntil}
               />
             )}
 

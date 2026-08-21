@@ -67,8 +67,7 @@ export default async function DashboardPage() {
           // Raw values + date: "is this today?" is decided client-side in the
           // user's LOCAL timezone (the extension writes local dates too).
           missionDate={state?.mission_date ?? null}
-          missionGenerates={state?.mission_generates ?? 0}
-          missionPublished={state?.mission_published ?? 0}
+          missionModes={state?.mission_modes ?? { tweet: false, reply: false, polish: false }}
           plan={profile?.plan ?? "free"}
           subscriptionStatus={profile?.subscription_status ?? null}
           hasState={!!state}

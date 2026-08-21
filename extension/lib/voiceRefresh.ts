@@ -53,12 +53,14 @@ export async function startXConnect(): Promise<void> {
 export async function disconnectX(): Promise<void> {
   const res = await authedFetch("/connection", { method: "DELETE" })
   if (!res.ok) throw await errorFrom(res)
-  await setStore({ xConnected: false, xUsername: "" })
+  await setStore({ xConnected: false, xUsername: "", xDisplayName: "", xAvatarUrl: "" })
 }
 
 export interface ConnectionState {
   connected: boolean
   username: string | null
+  displayName: string | null
+  avatarUrl: string | null
   entitled: boolean
   /** Can attempt a refresh right now — server-authoritative. */
   eligible: boolean
@@ -74,6 +76,8 @@ export async function fetchConnectionState(): Promise<ConnectionState> {
   const state: ConnectionState = {
     connected: !!j.connected,
     username: (j.username as string) ?? null,
+    displayName: (j.display_name as string) ?? null,
+    avatarUrl: (j.avatar_url as string) ?? null,
     entitled: !!j.entitled,
     eligible: !!j.eligible,
     nextEligibleAt: (j.next_eligible_at as string) ?? null,
@@ -82,6 +86,8 @@ export async function fetchConnectionState(): Promise<ConnectionState> {
   await setStore({
     xConnected: state.connected,
     xUsername: state.username ?? "",
+    xDisplayName: state.displayName ?? "",
+    xAvatarUrl: state.avatarUrl ?? "",
     voiceRefreshEligible: state.eligible,
     voiceRefreshNextEligibleAt: state.nextEligibleAt ?? "",
     lastVoiceRefreshAt: state.lastRefreshAt ?? "",
@@ -129,6 +135,7 @@ export async function runVoiceRefresh(): Promise<RefreshResult> {
   const json = (await res.json()) as {
     profileJson: string
     postsAnalyzed: number
+    lengthProfile: { p25: number; median: number; p75: number } | null
     nextEligibleAt: string
   }
 
@@ -138,6 +145,9 @@ export async function runVoiceRefresh(): Promise<RefreshResult> {
     text: "", source: "x_history" as const,
   }))
   const profile = parseStyleProfile(json.profileJson, computeConfidenceScore(sized))
+  // Server-computed from corpus.text.length, not re-derived here — the raw
+  // corpus never reaches the client for an X-sourced refresh.
+  profile.lengthProfile = json.lengthProfile
 
   // parseStyleProfile never throws — malformed JSON yields a NEUTRAL default
   // profile. Installing that would silently erase a good DNA profile and

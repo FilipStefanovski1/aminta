@@ -188,6 +188,104 @@ function systemX(mode: Mode, voice: VoiceProfile, styleProfile: StyleProfile | n
 const FINAL_OUTPUT_INSTRUCTION =
   "\n\nFINAL INSTRUCTION — this overrides everything above if there's ever a conflict: return only the finished post. Do not return writing instructions, tone descriptions, analysis, labels, quotation marks, markdown, or commentary."
 
+// Personalizes Short/Medium/Long against the user's own learned posting
+// length (StyleProfile.lengthProfile, from Voice Refresh or local corpus —
+// see lib/styleProfile.ts's computeLengthProfile) instead of one fixed
+// range for everyone. Tweet mode only: replies/polish already scale off
+// the source post/draft itself, not the user's typical post length.
+// Falls back to the fixed LENGTH_GUIDE when there's no baseline yet (never
+// refreshed, or too few posts) — generation must never break either way.
+export function resolveLengthGuide(mode: Mode, length: OutputLength, styleProfile: StyleProfile | null): string {
+  const lp = mode === "tweet" ? styleProfile?.lengthProfile : null
+  if (!lp) return LENGTH_GUIDE[mode][length]
+
+  const { p25, median, p75 } = lp
+  if (length === "short") {
+    const lo = Math.max(20, Math.round(p25 * 0.55))
+    const hi = Math.max(lo + 15, p25)
+    return `LENGTH TARGET: roughly ${lo}-${hi} characters — noticeably shorter than this person's normal post (their usual range centers around ${median} characters). One tight, complete thought.`
+  }
+  if (length === "long") {
+    const lo = Math.max(p75, median + 20)
+    const hi = Math.max(lo + 100, Math.round(p75 * 1.6))
+    return `LENGTH TARGET: roughly ${lo}-${hi} characters — longer and more developed than this person's normal post (their usual range centers around ${median} characters). Real substance, not padding.`
+  }
+  const lo = Math.min(p25, median - 10)
+  const hi = Math.max(p75, median + 10)
+  return `LENGTH TARGET: roughly ${lo}-${hi} characters — this is close to how this person normally writes (their usual length centers around ${median} characters). Don't force it longer or shorter than the idea needs.`
+}
+
+// ─── Thread Creator ─────────────────────────────────────────────────────
+// Deliberately a SEPARATE prompt-building function rather than a 4th Mode
+// branch woven through systemX/PLANNING/LENGTH_GUIDE — those are shared by
+// every existing tweet/reply/polish call site, and threading a new case
+// through all of them risked regressing generation that already works.
+// This reuses voiceBlock/CONTEXT_PRIORITY/TONE_GUIDE (the parts that are
+// genuinely shared) and nothing else.
+//
+// ONE model call requests all 3 variants in one structured JSON response —
+// not 3 separate calls — specifically so Thread Creator costs one credit
+// reservation, not three. See landing/lib/ai/credits.ts's thread cost.
+export interface ThreadOption {
+  angle: string
+  posts: string[]
+}
+
+export function buildThreadMessages(
+  voice: VoiceProfile,
+  input: string,
+  styleProfile: StyleProfile | null,
+  tone: Tone = "direct"
+): ChatMessage[] {
+  const system = [
+    "You write X (Twitter) threads for a specific person. Match their voice precisely.",
+    voiceBlock(voice, styleProfile),
+    `TONE DIRECTION: ${TONE_GUIDE[tone]}`,
+    "THINK FIRST, SILENTLY (never write this part down): this topic can be approached from genuinely different angles — pick 3 that are ACTUALLY different premises (e.g. a personal story, a contrarian take, a step-by-step breakdown), not 3 rewrites of the same point. Each thread must stand on its own: a different opening idea, different supporting posts, a different close. Never reuse the same hook, transition phrase, or closing line across the 3 threads.",
+    "RULES FOR EVERY THREAD:",
+    "- The FIRST post must work as a strong standalone X hook — someone scrolling past should want to open the thread from that post alone.",
+    "- Choose a sensible number of posts for the idea (roughly 3-7) — never pad to hit a count, never cram everything into 2 posts if the idea needs more room.",
+    "- Each post should be a complete thought that also flows into the next — not a sentence chopped mid-idea.",
+    "- Avoid a generic AI-sounding conclusion (\"In summary...\", \"The bottom line is...\", forced calls to action) unless it's genuinely earned.",
+    "- Write like a real person, not marketing copy. No hashtags or emojis unless their examples use them.",
+    "- Each individual post should read naturally as a single X post (roughly under 280 characters where possible; a little over is fine if the idea needs it, never pad to fill space).",
+    "",
+    "Return ONLY a JSON object: { \"threads\": [ { \"angle\": \"short label for this thread's angle\", \"posts\": [\"post 1\", \"post 2\", ...] }, ... 3 items total ] }",
+    "No markdown fences, no explanation, no text outside the JSON object.",
+  ].filter(Boolean).join("\n")
+
+  const user = `Write a thread about this topic:\n"""${input.trim()}"""`
+
+  return [
+    { role: "system", content: system },
+    { role: "user", content: user },
+  ]
+}
+
+/** Parses+validates the model's thread JSON — never throws; returns [] on anything malformed. */
+export function parseThreadResponse(raw: string): ThreadOption[] {
+  const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/i)
+  const candidate = fenced ? fenced[1] : raw
+  const start = candidate.indexOf("{")
+  const end = candidate.lastIndexOf("}")
+  if (start === -1 || end === -1 || end < start) return []
+  try {
+    const parsed = JSON.parse(candidate.slice(start, end + 1)) as { threads?: unknown }
+    if (!Array.isArray(parsed.threads)) return []
+    return parsed.threads
+      .filter((t): t is { angle: unknown; posts: unknown } => typeof t === "object" && t !== null)
+      .map((t) => ({
+        angle: typeof t.angle === "string" && t.angle.trim() ? t.angle.trim() : "Thread",
+        posts: Array.isArray(t.posts)
+          ? t.posts.filter((p): p is string => typeof p === "string" && p.trim().length > 0).map((p) => p.trim())
+          : [],
+      }))
+      .filter((t) => t.posts.length >= 2)
+  } catch {
+    return []
+  }
+}
+
 export function buildMessages(
   platform: Platform,
   mode: Mode,
@@ -203,7 +301,7 @@ export function buildMessages(
   // input instead of assuming `input` is the whole post.
   hasImages?: boolean
 ): ChatMessage[] {
-  const toneNote = `\nTONE DIRECTION: ${TONE_GUIDE[tone]}\n${LENGTH_GUIDE[mode][length]}`
+  const toneNote = `\nTONE DIRECTION: ${TONE_GUIDE[tone]}\n${resolveLengthGuide(mode, length, styleProfile)}`
   const trimmed = input.trim()
 
   const system = systemX(mode, voice, styleProfile, templateInstruction) + toneNote + FINAL_OUTPUT_INSTRUCTION

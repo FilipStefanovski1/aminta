@@ -14,15 +14,27 @@ import { exchangeCode } from "@/lib/x/oauth"
 import { encryptToken } from "@/lib/x/crypto"
 import { fetchMe } from "@/lib/x/client"
 
-function page(title: string, message: string, ok: boolean): NextResponse {
+const X_HOME = "https://x.com/home"
+
+// On success, redirect back to X rather than leaving the user on a dead-end
+// tab — but only ever fired AFTER the connection row is actually persisted
+// below, never before. The visible success message + fallback "Continue to
+// X" link cover the case where the browser blocks the automatic redirect.
+function page(title: string, message: string, ok: boolean, redirectTo?: string): NextResponse {
+  const redirectScript = ok && redirectTo
+    ? `setTimeout(function(){window.location.href=${JSON.stringify(redirectTo)}},1200)`
+    : `setTimeout(function(){window.close()},2500)`
+  const link = ok && redirectTo
+    ? `<p style="margin-top:14px"><a href="${redirectTo}" style="color:#74f7b5">Continue to X →</a></p>`
+    : ""
   const html = `<!doctype html><meta charset="utf-8"><title>${title}</title>
 <style>body{background:#1f1f1f;color:#e8e8ea;font:14px -apple-system,system-ui,sans-serif;
 display:flex;align-items:center;justify-content:center;height:100vh;margin:0}
 .c{text-align:center;max-width:320px;padding:24px}
 h1{font-size:15px;margin:0 0 8px;color:${ok ? "#74f7b5" : "#f87171"}}
 p{color:#888896;line-height:1.5;margin:0}</style>
-<div class="c"><h1>${title}</h1><p>${message}</p></div>
-<script>setTimeout(function(){window.close()},2500)</script>`
+<div class="c"><h1>${title}</h1><p>${message}</p>${link}</div>
+<script>${redirectScript}</script>`
   return new NextResponse(html, { status: ok ? 200 : 400, headers: { "Content-Type": "text/html; charset=utf-8" } })
 }
 
@@ -76,6 +88,8 @@ export async function GET(request: NextRequest) {
       user_id: stateRow.user_id,
       x_user_id: me.id,
       x_username: me.username,
+      x_display_name: me.name,
+      x_avatar_url: me.profileImageUrl,
       access_token_cipher: encryptToken(tokens.accessToken),
       refresh_token_cipher: tokens.refreshToken ? encryptToken(tokens.refreshToken) : null,
       token_expires_at: tokens.expiresAt?.toISOString() ?? null,
@@ -98,5 +112,5 @@ export async function GET(request: NextRequest) {
     )
   }
 
-  return page("X connected", `Connected as @${me.username}. You can close this tab.`, true)
+  return page("X connected", `Connected as @${me.username}. Taking you back to X…`, true, X_HOME)
 }

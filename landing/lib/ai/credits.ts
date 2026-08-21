@@ -13,17 +13,26 @@
 // generations costing 2, a premium model costing 3) is a one-line edit that
 // the client physically cannot disagree with — the server is authoritative.
 
-export type CreditedMode = "tweet" | "reply" | "polish" | "style_profile"
+export type CreditedMode = "tweet" | "reply" | "polish" | "style_profile" | "thread"
 
 // V1: every user-initiated Included AI action costs exactly 1 credit.
 // style_profile is a background-ish extraction the user doesn't explicitly
 // ask for, so it's free — charging for it would make a user's credits drain
 // for something they never pressed a button for.
+//
+// thread costs 3, not 1 and not 3x-via-3-calls: it's still exactly ONE
+// Gemini call (see lib/ai/prompts.ts's buildThreadMessages — one structured
+// JSON response containing all 3 variants), but that one call produces
+// roughly 3 threads' worth of output tokens versus a single tweet, so 1
+// credit would undercharge relative to real cost and 3 credits reflects
+// that honestly without penalizing the user for Aminta's own call-count
+// choice.
 const CREDIT_COSTS: Record<CreditedMode, number> = {
   tweet: 1,
   reply: 1,
   polish: 1,
   style_profile: 0,
+  thread: 3,
 }
 
 // Internal/system callers (future Auto Voice Refresh, admin tooling) run

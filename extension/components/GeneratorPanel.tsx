@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 
 import { generate as runAI, generateFromImage, isGroqKey } from "~lib/ai"
-import { backendGenerate, dispatchGenerate } from "~lib/backendGenerate"
+import { backendGenerate, dispatchGenerate, runThreadGenerate } from "~lib/backendGenerate"
 import type { CompanionEvent } from "~lib/companion"
 import { todayLocal } from "~lib/dates"
 import { getStageTint } from "~lib/evolution"
@@ -9,7 +9,7 @@ import { shouldUseIncludedAi } from "~lib/entitlements"
 import { fetchImageAsDataUrl } from "~lib/images"
 import { findNextReplyTarget, readActivePost } from "~lib/messaging"
 import { incrementMissionGenerates } from "~lib/missions"
-import type { Mode, OutputLength, Platform, Tone } from "~lib/prompts"
+import type { Mode, OutputLength, Platform, ThreadOption, Tone } from "~lib/prompts"
 import { generateReply } from "~lib/replyGeneration"
 import { getOrBuildStyleProfile } from "~lib/styleProfile"
 import type { AmintaStore, TemplateMode } from "~lib/storage"
@@ -19,10 +19,18 @@ import { incrementGenerations } from "~lib/xp"
 
 import OutputCard from "~components/OutputCard"
 import TemplatesModal from "~components/TemplatesModal"
+import ThreadResults from "~components/ThreadResults"
+
+// UI-level mode — "thread" is not part of lib/prompts.ts's Mode (tweet/
+// reply/polish), which every single-post call site (XP, dispatchGenerate,
+// OutputCard) is typed against. Keeping it a separate UI union means none
+// of that shared plumbing has to special-case a 4th value it was never
+// designed for.
+type UiMode = Mode | "thread"
 
 // ─── Mode config ───────────────────────────────────────────────────────────────
 
-const MODE_CONFIG: { id: Mode; label: string; sub: string; icon: React.ReactNode }[] = [
+const MODE_CONFIG: { id: UiMode; label: string; sub: string; icon: React.ReactNode }[] = [
   {
     id: "tweet",
     label: "Post",
@@ -50,6 +58,17 @@ const MODE_CONFIG: { id: Mode; label: string; sub: string; icon: React.ReactNode
     icon: (
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+      </svg>
+    ),
+  },
+  {
+    id: "thread",
+    label: "Thread",
+    sub: "3 thread options",
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="6" cy="6" r="2.2" /><circle cx="6" cy="18" r="2.2" /><circle cx="18" cy="12" r="2.2" />
+        <path d="M6 8.2V15.8M8 6.8l8 4M8 17.2l8-4" />
       </svg>
     ),
   },
@@ -131,10 +150,11 @@ const LENGTH_CONFIG: { id: OutputLength; label: string; desc: string }[] = [
 
 // ─── Placeholder map ─────────────────────────────────────────────────────────
 
-const TOPIC_PLACEHOLDER: Record<Mode, string> = {
+const TOPIC_PLACEHOLDER: Record<UiMode, string> = {
   tweet:  "A topic, angle, or spark…",
   reply:  "Paste the tweet you're replying to…",
   polish: "Paste your rough draft…",
+  thread: "A topic, angle, or spark for the whole thread…",
 }
 
 // ─── Rotating topic-field examples (tweet mode only) ───────────────────────
@@ -188,6 +208,8 @@ interface Props {
   onOpenSettings?: () => void
   onContext?: (event: CompanionEvent) => void
   onTemplatesChanged?: () => void
+  /** Anti-spam: ms-epoch when Aminta will allow another post/reply insert. */
+  publishCooldownUntil?: number | null
 }
 
 // Resize image to max 1024px on longest side and return as JPEG data URL
@@ -213,8 +235,10 @@ async function resizeImage(file: File): Promise<string> {
   })
 }
 
-export default function GeneratorPanel({ store, onTeach, onOpenSettings, onContext, onTemplatesChanged }: Props) {
-  const [mode,     setMode]     = useState<Mode>("tweet")
+export default function GeneratorPanel({ store, onTeach, onOpenSettings, onContext, onTemplatesChanged, publishCooldownUntil }: Props) {
+  const [mode,     setMode]     = useState<UiMode>("tweet")
+  const [threadOptions, setThreadOptions] = useState<ThreadOption[] | null>(null)
+  const [threadError,   setThreadError]   = useState("")
   const [tone,     setTone]     = useState<Tone>("direct")
   const [length,   setLength]   = useState<OutputLength>("medium")
   const [hoveredTone, setHoveredTone] = useState<Tone | null>(null)
@@ -337,7 +361,10 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
   const creditResetLabel =
     store.creditsPeriodKind === "day" ? " today" : ""
 
-  const reset = () => { setError(""); setOutput(""); setOutputImage(null); setRetrying(false) }
+  const reset = () => {
+    setError(""); setOutput(""); setOutputImage(null); setRetrying(false)
+    setThreadOptions(null); setThreadError("")
+  }
 
   // Passed to dispatchGenerate()/generateReply() as onRetry — fires before
   // each automatic retry of a transient Gemini error (429/500/502/503/504).
@@ -402,7 +429,7 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
       voice: store.voice,
       styleProfile,
       platform: PLATFORM,
-      mode,
+      mode: mode === "thread" ? "tweet" : mode,
       tone,
       length,
       topic: combined || "Write a post about this.",
@@ -424,6 +451,32 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
     if (!combined && !imageDataUrl && !hasPostImages) { setError("Give Aminta something to work with."); return }
     setLoading(true)
     onContext?.("generate_start")
+
+    // Thread Creator — separate flow entirely: one call, 3 options, no
+    // image support (not part of the spec), never touches OutputCard/XP
+    // pending-insert plumbing (posts are inserted individually from
+    // ThreadResults, each insert queues its own XP the normal way).
+    if (mode === "thread") {
+      try {
+        const styleProfile = await getOrBuildStyleProfile(store)
+        const threads = await runThreadGenerate(store, { input: combined, voice: store.voice, styleProfile, tone })
+        if (threads.length === 0) {
+          setThreadError("Couldn't generate distinct threads from that. Try rephrasing the topic.")
+        } else {
+          setThreadOptions(threads)
+        }
+        await incrementGenerations()
+        await incrementMissionGenerates()
+        onContext?.("generate_end")
+      } catch (e) {
+        setThreadError(e instanceof Error ? e.message : "Something went wrong.")
+        onContext?.("api_error")
+      } finally {
+        setLoading(false)
+      }
+      return
+    }
+
     try {
       const styleProfile = await getOrBuildStyleProfile(store)
 
@@ -692,7 +745,12 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
 
       {/* ── Length ── */}
       <div className="space-y-1.5">
-        <p className="text-[11px] font-medium" style={{ color: C.textFaint }}>Length</p>
+        <div className="flex items-center gap-1.5">
+          <p className="text-[11px] font-medium" style={{ color: C.textFaint }}>Length</p>
+          {mode === "tweet" && store.styleProfile?.lengthProfile && (
+            <span className="text-[9px]" style={{ color: C.textGhost }}>· based on how you normally write</span>
+          )}
+        </div>
         <div className="flex rounded-xl overflow-hidden" style={{ border: `1.5px solid ${C.border}` }}>
           {LENGTH_CONFIG.map((l, i) => {
             const active = length === l.id
@@ -812,7 +870,17 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
         </p>
       )}
 
-      {output && (
+      {threadError && (
+        <p className="text-[11px] text-red-400 animate-fade-in px-1">
+          {threadError}{" "}
+          <button onClick={generate} className="underline" style={{ color: "inherit" }}>Try again</button>
+        </p>
+      )}
+      {threadOptions && (
+        <ThreadResults threads={threadOptions} tint={tint} />
+      )}
+
+      {output && mode !== "thread" && (
         <OutputCard
           key={genKey}
           text={output}
@@ -821,6 +889,7 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
           imageDataUrl={outputImage}
           onRegenerate={generate}
           onSaveAsTemplate={openSaveAsTemplate}
+          publishCooldownUntil={publishCooldownUntil}
         />
       )}
 

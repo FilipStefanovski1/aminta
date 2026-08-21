@@ -9,7 +9,7 @@ import { getAuthSession, refreshAuthSession } from "~lib/auth"
 import { getDeviceId } from "~lib/deviceId"
 import { shouldUseIncludedAi } from "~lib/entitlements"
 import { generate as runAI, generateFromImage, type GenerateOptions } from "~lib/ai"
-import { buildMessages, type Mode, type OutputLength, type Tone } from "~lib/prompts"
+import { buildMessages, buildThreadMessages, parseThreadResponse, type Mode, type OutputLength, type Tone, type ThreadOption } from "~lib/prompts"
 import { cleanGenerationOutput } from "~lib/textCleanup"
 import { setStore, type AmintaStore, type StyleProfile, type VoiceProfile } from "~lib/storage"
 
@@ -37,7 +37,15 @@ export interface StyleProfileGenerateArgs {
   corpus: StyleCorpusEntry[]
 }
 
-type BackendGenerateArgs = TextGenerateArgs | StyleProfileGenerateArgs
+export interface ThreadGenerateArgs {
+  generationMode: "thread"
+  input: string
+  voice: VoiceProfile
+  styleProfile: StyleProfile | null
+  tone: Tone
+}
+
+type BackendGenerateArgs = TextGenerateArgs | StyleProfileGenerateArgs | ThreadGenerateArgs
 
 interface GenerateResponse {
   text?: string
@@ -128,14 +136,35 @@ export async function backendGenerate(args: BackendGenerateArgs): Promise<string
   const requestId = crypto.randomUUID()
   const json = await postGenerate({ ...args, requestId })
   if (!json.text) throw new Error("Empty response from the server.")
-  // style_profile mode returns raw JSON (parsed client-side by
-  // lib/styleProfile.ts's parseStyleProfile) — post-generation text cleanup
-  // (label/quote stripping, punctuation normalization) would corrupt it, so
-  // only apply it to actual post/reply/polish/template output. The backend
-  // already runs the same cleanup server-side (see landing/lib/ai/
-  // textCleanup.ts) before returning — this is a second, harmless pass in
-  // case the two ever drift, not the primary cleanup step.
-  return args.generationMode === "style_profile" ? json.text : cleanGenerationOutput(json.text)
+  // style_profile/thread both return raw JSON (parsed client-side) —
+  // post-generation text cleanup (label/quote stripping, punctuation
+  // normalization) would corrupt it, so only apply it to actual
+  // post/reply/polish/template output. The backend already runs the same
+  // cleanup server-side (see landing/lib/ai/textCleanup.ts) before
+  // returning — this is a second, harmless pass in case the two ever
+  // drift, not the primary cleanup step.
+  return args.generationMode === "style_profile" || args.generationMode === "thread"
+    ? json.text
+    : cleanGenerationOutput(json.text)
+}
+
+/**
+ * Thread Creator — ONE model call, 3 thread options, one credit
+ * reservation (Included) / one provider call (BYOK). Never throws on a
+ * malformed model response; returns [] so the caller can show a clear
+ * "couldn't generate threads" state instead of crashing.
+ */
+export async function runThreadGenerate(
+  store: AmintaStore,
+  args: { input: string; voice: VoiceProfile; styleProfile: StyleProfile | null; tone: Tone }
+): Promise<ThreadOption[]> {
+  if (shouldUseIncludedAi(store)) {
+    const raw = await backendGenerate({ generationMode: "thread", ...args })
+    return parseThreadResponse(raw)
+  }
+  const messages = buildThreadMessages(args.voice, args.input, args.styleProfile, args.tone)
+  const raw = await runAI(store.apiKey, store.model, messages)
+  return parseThreadResponse(raw)
 }
 
 // Dispatcher for the direct call sites in GeneratorPanel.tsx (tweet/polish,

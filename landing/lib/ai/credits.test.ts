@@ -32,6 +32,14 @@ describe("credit cost mapping (centralized, server-side)", () => {
     expect(creditCostFor("style_profile")).toBe(0)
   })
 
+  it("charges thread more than a single post, but as ONE flat reservation", () => {
+    // Thread Creator is one Gemini call producing 3 variants — this pins
+    // that it's priced as a single higher-cost action (3 credits), never
+    // as 3 separate per-variant charges.
+    expect(creditCostFor("thread")).toBe(3)
+    expect(creditCostFor("thread")).toBeGreaterThan(creditCostFor("tweet"))
+  })
+
   it("charges system/internal actors 0 credits (future Auto Voice Refresh)", () => {
     expect(creditCostFor("tweet", "system")).toBe(0)
     expect(creditCostFor("reply", "system")).toBe(0)

@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
   const service = await createServiceClient()
   const { data: conn } = await service
     .from("x_connections")
-    .select("x_username")
+    .select("x_username, x_display_name, x_avatar_url")
     .eq("user_id", user.id)
     .single()
 
@@ -40,6 +40,8 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     connected: !!conn,
     username: conn?.x_username ?? null,
+    display_name: conn?.x_display_name ?? null,
+    avatar_url: conn?.x_avatar_url ?? null,
     entitled: status.entitled,
     eligible: status.eligible,
     next_eligible_at: status.nextEligibleAt,

@@ -100,8 +100,7 @@ interface Props {
   generationsTotal: number
   dnaCount: number
   missionDate: string | null
-  missionGenerates: number
-  missionPublished: number
+  missionModes: { tweet: boolean; reply: boolean; polish: boolean }
   plan: string
   subscriptionStatus: string | null
   hasState: boolean
@@ -110,15 +109,18 @@ interface Props {
 
 export default function DashboardClient({
   user, xp, streak, generationsTotal, dnaCount,
-  missionDate, missionGenerates: missionGeneratesRaw, missionPublished: missionPublishedRaw,
+  missionDate, missionModes,
   plan, subscriptionStatus, hasState, lastSyncedAt,
 }: Props) {
   const entitled = hasProAccess({ plan, subscription_status: subscriptionStatus })
-  // Mission counters only count if they were recorded on the user's local
-  // "today" — the extension stamps mission_date with a local date.
+  // Mission flags only count if they were recorded on the user's local
+  // "today" — the extension stamps mission_date with a local date. Same
+  // per-mode confirmed-publish flags as the extension's Home tab (Part 1) —
+  // one system, not two. Training is deliberately not part of this.
   const isMissionToday = missionDate === todayLocal()
-  const missionGenerates = isMissionToday ? missionGeneratesRaw : 0
-  const missionPublished = isMissionToday ? missionPublishedRaw : 0
+  const postDone   = isMissionToday && missionModes.tweet
+  const replyDone  = isMissionToday && missionModes.reply
+  const polishDone = isMissionToday && missionModes.polish
 
   // No synced state (or a fully empty one) = the extension has never pushed
   // for this account — guide the user to install/connect it.
@@ -177,10 +179,6 @@ export default function DashboardClient({
       .join("")
       .slice(0, 2)
       .toUpperCase() || "AM"
-
-  const q1Done = missionGenerates >= 3
-  const q2Done = missionPublished >= 1
-  const q3Done = dnaCount >= 3
 
   // Blink scheduler
   const scheduleNext = useRef<(() => void) | undefined>(undefined)
@@ -406,41 +404,32 @@ export default function DashboardClient({
               </svg>
               <span className="font-pixel text-[9px] tracking-widest uppercase">Today</span>
             </div>
-            {q1Done && q2Done && q3Done && (
+            {postDone && replyDone && polishDone && (
               <span className="font-pixel text-[8px]" style={{ color: form.color }}>All done ✓</span>
             )}
           </div>
 
-          {/* Missions */}
+          {/* Daily goals — same 3 confirmed-publish flags as the extension's
+              Home tab (Part 1): Write one post / Join a conversation /
+              Polish one post. Training is intentionally not a daily goal. */}
           <div className="space-y-3">
             {[
-              { label: "Generate 3 posts",       value: Math.min(missionGenerates, 3), target: 3, done: q1Done },
-              { label: "Publish something",       value: Math.min(missionPublished, 1), target: 1, done: q2Done },
-              { label: "Add training samples",    value: Math.min(dnaCount, 3),         target: 3, done: q3Done },
+              { label: "Write one post",      done: postDone },
+              { label: "Join a conversation", done: replyDone },
+              { label: "Polish one post",     done: polishDone },
             ].map(q => (
-              <div key={q.label}>
-                <div className="flex items-center justify-between mb-1.5">
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 flex items-center justify-center shrink-0"
-                      style={{ border: `2px solid ${q.done ? form.color : "#333"}`, background: q.done ? `${form.color}18` : "transparent" }}>
-                      {q.done && (
-                        <svg width="8" height="6" viewBox="0 0 8 6" fill="none">
-                          <path d="M1 3L3 5L7 1" stroke={form.color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                      )}
-                    </div>
-                    <span className="text-sm" style={{ color: q.done ? "#444" : "#ccc", textDecoration: q.done ? "line-through" : "none" }}>
-                      {q.label}
-                    </span>
-                  </div>
-                  <span className="font-pixel text-[8px]" style={{ color: q.done ? form.color : "#444" }}>
-                    {q.value}/{q.target}
-                  </span>
+              <div key={q.label} className="flex items-center gap-2">
+                <div className="w-4 h-4 flex items-center justify-center shrink-0"
+                  style={{ border: `2px solid ${q.done ? form.color : "#333"}`, background: q.done ? `${form.color}18` : "transparent" }}>
+                  {q.done && (
+                    <svg width="8" height="6" viewBox="0 0 8 6" fill="none">
+                      <path d="M1 3L3 5L7 1" stroke={form.color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  )}
                 </div>
-                <div className="h-1" style={{ background: "#222" }}>
-                  <div className="h-full transition-all duration-500"
-                    style={{ width: `${(q.value / q.target) * 100}%`, background: q.done ? form.color : `${form.color}50` }} />
-                </div>
+                <span className="text-sm" style={{ color: q.done ? "#444" : "#ccc", textDecoration: q.done ? "line-through" : "none" }}>
+                  {q.label}
+                </span>
               </div>
             ))}
           </div>
@@ -516,43 +505,19 @@ export default function DashboardClient({
             </div>
             <div>
               <p className="font-pixel text-[10px] text-white">Invite Friends</p>
-              <p className="text-xs text-muted mt-0.5">Get 30 days of PRO for every 5 friends</p>
+              <p className="text-xs text-muted mt-0.5">Referral rewards are still being designed</p>
             </div>
           </div>
 
           <div style={{ opacity: 0.55 }}>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-white">Your Progress</span>
-              <span className="font-pixel text-[9px]" style={{ color: form.color }}>0 / 5 friends</span>
-            </div>
-            <div className="h-1.5" style={{ background: "#222", border: "1px solid #2a2a2a" }}>
-              <div className="h-full" style={{ width: "0%", background: form.color }} />
-            </div>
-            <p className="text-xs text-muted mt-2">Invite 5 friends to unlock 1 month of PRO!</p>
-          </div>
-
-          {/* Steps */}
-          <div className="flex items-start justify-between gap-1" style={{ opacity: 0.55 }}>
-            {[
-              { n: "1", label: "Share Link", accent: false },
-              { n: "2", label: "Friend gets 7 days PRO", accent: true },
-              { n: "3", label: "You get 30 days PRO", accent: false },
-            ].map((step, i) => (
-              <div key={step.n} className="flex-1 flex flex-col items-center gap-2 text-center">
-                <div className="flex items-center w-full">
-                  <div className="w-7 h-7 shrink-0 flex items-center justify-center font-pixel text-[9px]"
-                    style={{ background: step.accent ? `${form.color}20` : "#222", border: `2px solid ${step.accent ? form.color : "#333"}`, color: step.accent ? form.color : "#666" }}>
-                    {step.n}
-                  </div>
-                  {i < 2 && <div className="flex-1 h-px mx-1" style={{ background: "#2a2a2a" }} />}
-                </div>
-                <span className="text-[10px] leading-tight" style={{ color: step.accent ? form.color : "#666" }}>{step.label}</span>
-              </div>
-            ))}
+            <p className="text-xs text-muted">
+              We want to get this right before turning it on — reward amounts aren&apos;t decided yet, so nothing
+              is advertised here until it&apos;s real and something you can actually receive.
+            </p>
           </div>
 
           <button disabled className="rpg-btn-secondary w-full mt-auto" style={{ opacity: 0.35, cursor: "not-allowed" }}>
-            Create Link
+            Coming Soon
           </button>
         </div>
 

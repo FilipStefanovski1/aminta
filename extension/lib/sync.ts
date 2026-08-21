@@ -115,6 +115,7 @@ export async function pushToCloud(): Promise<void> {
     mission_date: store.missionDate,
     mission_generates: store.missionGenerates,
     mission_published: store.missionPublished,
+    mission_modes: store.missionModes,
     voice_profile: store.voice,
     style_profile: store.styleProfile,
     style_profile_hash: store.styleProfileHash,
@@ -255,6 +256,10 @@ export async function pullFromCloud(): Promise<{ cloudXp: number } | void> {
   if (typeof data.x_connected === "boolean") patch.xConnected = data.x_connected
   if (typeof data.x_username === "string") patch.xUsername = data.x_username
   else if (data.x_username === null) patch.xUsername = ""
+  if (typeof data.x_display_name === "string") patch.xDisplayName = data.x_display_name
+  else if (data.x_display_name === null) patch.xDisplayName = ""
+  if (typeof data.x_avatar_url === "string") patch.xAvatarUrl = data.x_avatar_url
+  else if (data.x_avatar_url === null) patch.xAvatarUrl = ""
   if (typeof data.voice_refresh_eligible === "boolean") patch.voiceRefreshEligible = data.voice_refresh_eligible
   if (typeof data.voice_refresh_next_eligible_at === "string") patch.voiceRefreshNextEligibleAt = data.voice_refresh_next_eligible_at
   else if (data.voice_refresh_next_eligible_at === null) patch.voiceRefreshNextEligibleAt = ""

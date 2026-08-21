@@ -1,7 +1,8 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 
 import { insertImage, insertText } from "~lib/messaging"
 import type { Mode, Platform } from "~lib/prompts"
+import { cooldownSecondsRemaining } from "~lib/publishCooldown"
 import { hashText, queuePendingXP, XP_PER_MODE } from "~lib/xp"
 
 const X_CHAR_LIMIT = 280
@@ -13,11 +14,27 @@ interface Props {
   imageDataUrl?: string | null
   onRegenerate?: () => void
   onSaveAsTemplate?: (text: string) => void
+  /** Anti-spam: ms-epoch when Aminta will allow another post/reply insert. */
+  publishCooldownUntil?: number | null
 }
 
-export default function OutputCard({ text, mode, platform, imageDataUrl, onRegenerate, onSaveAsTemplate }: Props) {
+export default function OutputCard({ text, mode, platform, imageDataUrl, onRegenerate, onSaveAsTemplate, publishCooldownUntil }: Props) {
   const [copied, setCopied] = useState(false)
   const [insertStatus, setInsertStatus] = useState("")
+
+  // Only posts/replies are ever gated — Polish never publishes on its own,
+  // and Generate/editing/browsing are never touched by this at all.
+  const cooldownApplies = mode === "tweet" || mode === "reply"
+  const [cooldownSecs, setCooldownSecs] = useState(() =>
+    cooldownApplies ? cooldownSecondsRemaining(publishCooldownUntil ?? null, Date.now()) : 0
+  )
+  useEffect(() => {
+    if (!cooldownApplies || !publishCooldownUntil) { setCooldownSecs(0); return }
+    const tick = () => setCooldownSecs(cooldownSecondsRemaining(publishCooldownUntil, Date.now()))
+    tick()
+    const iv = setInterval(tick, 500)
+    return () => clearInterval(iv)
+  }, [cooldownApplies, publishCooldownUntil])
 
   const copy = async () => {
     try {
@@ -97,9 +114,11 @@ export default function OutputCard({ text, mode, platform, imageDataUrl, onRegen
           {copied ? "Copied ✓" : "Copy"}
         </button>
         <button
-          onClick={insert}
-          className="btn-pixel flex-1 bg-mint text-black rounded py-2 font-pixel text-[8px] active:scale-[0.97]">
-          Insert into X
+          onClick={cooldownSecs > 0 ? undefined : insert}
+          disabled={cooldownSecs > 0}
+          className="btn-pixel flex-1 bg-mint text-black rounded py-2 font-pixel text-[8px] active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed"
+          title={cooldownSecs > 0 ? "Anti-spam protection — avoids accidental duplicate posts." : undefined}>
+          {cooldownSecs > 0 ? `Post again in ${cooldownSecs}s` : "Insert into X"}
         </button>
       </div>
 

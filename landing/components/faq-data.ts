@@ -36,7 +36,31 @@ export const FAQS = [
     a: "Anything your provider offers: Llama 3.3, Gemini, GPT, and more via OpenRouter, or fast free models on Groq. Aminta auto-detects your key and routes to the right provider.",
   },
   {
+    q: "What is Voice Refresh / Aminta DNA?",
+    a: "Voice Refresh reads your recent original X posts (not replies or reposts) and distills how you actually write — tone, structure, pacing — into your Aminta DNA. It's available once every 7 days per account, timed from your own last successful refresh, on Pro/Founder plans with X connected. Your writing examples and Instincts (Train tab) feed the same DNA between refreshes.",
+  },
+  {
+    q: "Why only once a week?",
+    a: "Voice Refresh reads a batch of your recent posts each time, so weekly keeps your DNA current without re-reading the same posts over and over. You can keep training between refreshes with writing examples and Instincts.",
+  },
+  {
+    q: "What X data does Aminta read, and is it stored?",
+    a: "Only what's needed to build your DNA: your recent original posts, read via X's API when you run Voice Refresh. The raw post text is never stored — Aminta distills it into a structured style profile (tone, pacing, structure) and discards the posts themselves. Your X access token is encrypted at rest and only Aminta's backend can use it.",
+  },
+  {
     q: "Can I cancel anytime?",
     a: "Yep. Monthly cancels anytime, no lock-in. Lifetime is a one-time payment; pay once and feed Aminta forever.",
+  },
+  {
+    q: "What's the difference between Pro and Founder?",
+    a: "Founder is a one-time $49 purchase for lifetime Pro access — same Included AI credits and Voice Refresh access as monthly Pro, forever, plus a Founder badge. Pro is the $9/month subscription. Founder doesn't get a bigger AI allowance than Pro; the AI/X costs behind every generation are ongoing, so the two stay at parity there.",
+  },
+  {
+    q: "Is the Discord Founder-only?",
+    a: "No — the Aminta Discord is free and open to everyone, not a paid perk.",
+  },
+  {
+    q: "What's the anti-spam cooldown?",
+    a: "After Aminta confirms a post or reply you inserted actually published, it waits 15 seconds before letting you insert another post or reply — just accidental-duplicate protection, not a claim about X's own spam rules. Generating, polishing, and editing are never affected.",
   },
 ];

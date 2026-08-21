@@ -48,6 +48,12 @@ export interface StyleProfile {
   // deterministic 0–1 score computed from corpus size — NOT self-reported
   // by the model. Scales how strongly the profile is applied in prompts.ts.
   confidenceScore: number
+  // Personal length baseline — character-count percentiles across the
+  // corpus, computed with plain arithmetic (never the model). Only these 3
+  // numbers are derived and kept; the corpus itself is never persisted.
+  // null/absent when there wasn't enough corpus to derive a baseline —
+  // callers must fall back to the fixed LENGTH_GUIDE ranges in that case.
+  lengthProfile?: { p25: number; median: number; p75: number } | null
 }
 
 // Source-tagged writing samples used to build a StyleProfile. Only
@@ -193,6 +199,10 @@ export interface AmintaStore {
   xConnected: boolean
   /** @handle for display. Never the X user id. */
   xUsername: string
+  /** X display name, cached at connect/refresh time — never a live API call. */
+  xDisplayName: string
+  /** X avatar URL, cached at connect/refresh time. */
+  xAvatarUrl: string
   /** Can attempt a refresh right now. Server-authoritative — the only thing the UI should gate the button on. */
   voiceRefreshEligible: boolean
   /** ISO timestamp when the 168-hour cooldown ends, or "" when already eligible / never refreshed. */
@@ -242,6 +252,8 @@ const DEFAULTS: AmintaStore = {
   aiIncludedPaid: false,
   xConnected: false,
   xUsername: "",
+  xDisplayName: "",
+  xAvatarUrl: "",
   voiceRefreshEligible: false,
   voiceRefreshNextEligibleAt: "",
   lastVoiceRefreshAt: "",

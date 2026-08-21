@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
   }
   const [voiceRefresh, xConn] = await Promise.all([
     getRefreshStatus(refreshCtx),
-    service.from("x_connections").select("x_username").eq("user_id", user.id).maybeSingle()
+    service.from("x_connections").select("x_username, x_display_name, x_avatar_url").eq("user_id", user.id).maybeSingle()
       .then((r) => r.data, () => null),
   ])
 
@@ -122,6 +122,8 @@ export async function GET(request: NextRequest) {
     credits_plan_key: credits.planKey,
     x_connected: !!xConn,
     x_username: xConn?.x_username ?? null,
+    x_display_name: xConn?.x_display_name ?? null,
+    x_avatar_url: xConn?.x_avatar_url ?? null,
     voice_refresh_eligible: voiceRefresh.eligible,
     voice_refresh_next_eligible_at: voiceRefresh.nextEligibleAt,
     last_voice_refresh_at: voiceRefresh.lastRefreshAt,

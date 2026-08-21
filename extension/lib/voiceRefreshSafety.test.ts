@@ -37,6 +37,7 @@ function res(status: number, body: unknown): Response {
 }
 const okBody = (profileJson: string, posts = 18) => ({
   profileJson, postsAnalyzed: posts,
+  lengthProfile: { p25: 90, median: 140, p75: 210 },
   nextEligibleAt: "2026-08-25T14:03:00.000Z",
 })
 

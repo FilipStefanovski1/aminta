@@ -7,8 +7,6 @@ import { createClient } from "@/lib/supabase/client";
 import { CREEM_FOUNDER_URL, CREEM_PRO_URL, EXTENSION_URL } from "@/lib/links";
 import { hasProAccess, type UserSubscriptionState } from "@/lib/entitlements";
 
-type BillingMode = "monthly" | "lifetime";
-
 const FREE_PLAN = {
   name: "Free",
   price: "$0",
@@ -18,13 +16,10 @@ const FREE_PLAN = {
   features: [
     "5 Included AI credits / day",
     "No API key required",
-    "Tweet Generator",
-    "Reply Generator",
-    "Tweet Polisher",
-    "Basic Aminta",
-    "Voice Profile",
+    "Generate, Reply, Polish",
+    "Aminta DNA (writing examples + Instincts)",
     "Insert into X",
-    "BYOK (Groq / Gemini / OpenRouter)",
+    "Optional BYOK (Groq / Gemini / OpenRouter)",
   ],
   cta: "Get the Extension",
   ctaHref: EXTENSION_URL,
@@ -41,13 +36,9 @@ const PRO_PLAN = {
     "Serious posting power for creators who want to show up consistently.",
   features: [
     "1,000 Included AI credits / month",
-    "Aminta DNA",
-    "Thread mode (coming soon)",
-    "Multiple Amintas (coming soon)",
-    "Saved content (coming soon)",
-    "Advanced voice controls (coming soon)",
-    "Future premium features",
-    "Discord community",
+    "Everything in Free",
+    "Thread Creator — 3 options, one generate",
+    "Voice Refresh — weekly Aminta DNA update from your X history",
   ],
   cta: "Upgrade to Pro",
   ctaHref: CREEM_PRO_URL,
@@ -61,20 +52,15 @@ const FOUNDER_PLAN = {
   price: "$49",
   billing: "once",
   description:
-    "Lock lifetime access before subscriptions become the default.",
+    "Everything in Pro, yours for life, for one payment instead of a subscription.",
   features: [
-    "Everything in Aminta Pro",
-    "Lifetime access",
-    "Future premium features included",
-    "Founder Discord",
+    "Everything in Pro",
+    "Lifetime access — pay once, never billed again",
     "Founder badge",
-    "Founder wall",
-    "Roadmap voting",
-    "Early access to new features",
   ],
   cta: "Get Founder Access",
   ctaHref: CREEM_FOUNDER_URL,
-  badge: "LIMITED",
+  badge: "LIFETIME",
   highlight: true,
   disabled: false,
 };
@@ -104,15 +90,6 @@ function LockIcon() {
     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
       <rect x="4" y="11" width="16" height="10" rx="2" />
       <path d="M8 11V7a4 4 0 0 1 8 0v4" />
-    </svg>
-  );
-}
-
-function PixelPlus({ size = 8, className = "" }: { size?: number; className?: string }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 5 5" className={`pixelated ${className}`} aria-hidden>
-      <rect x="2" y="0" width="1" height="5" fill="var(--accent)" />
-      <rect x="0" y="2" width="5" height="1" fill="var(--accent)" />
     </svg>
   );
 }
@@ -244,18 +221,14 @@ function PricingCard({
 }
 
 export default function Pricing() {
-  const [mode, setMode] = useState<BillingMode>("monthly");
   const [userId, setUserId] = useState<string | null>(null);
   const [profile, setProfile] = useState<UserSubscriptionState | null>(null);
-  const paidPlan = mode === "monthly" ? PRO_PLAN : FOUNDER_PLAN;
 
   // Tags the Creem checkout with the logged-in user's id so the webhook can
   // match the payment back to this account without relying on the buyer
   // typing the exact same email at checkout as their Aminta login. Also
   // fetches plan/subscription_status so an already-paying user isn't shown
-  // a checkout button for a plan they already have — this was previously
-  // missing entirely, which is why the account in the bug report kept
-  // seeing "Upgrade to Pro" despite being Pro everywhere else.
+  // a checkout button for a plan they already have.
   useEffect(() => {
     const supabase = createClient();
     supabase.auth.getSession().then(async ({ data }) => {
@@ -275,16 +248,11 @@ export default function Pricing() {
   const currentPlan = profile?.plan ?? "free";
   const ownsPro = entitled && (currentPlan === "pro" || currentPlan === "lifetime");
   const ownsFounder = entitled && currentPlan === "lifetime";
-  const ownsSelectedTier = mode === "monthly" ? ownsPro : ownsFounder;
 
-  const paidCtaHref = userId
-    ? `${paidPlan.ctaHref}${paidPlan.ctaHref.includes("?") ? "&" : "?"}metadata[user_id]=${encodeURIComponent(userId)}`
-    : paidPlan.ctaHref;
-
-  function handleBillingMode(next: BillingMode) {
-    setMode(next);
-    posthog.capture("pricing_billing_mode_changed", { mode: next });
-  }
+  const ctaHrefFor = (plan: typeof PRO_PLAN | typeof FOUNDER_PLAN) =>
+    userId
+      ? `${plan.ctaHref}${plan.ctaHref.includes("?") ? "&" : "?"}metadata[user_id]=${encodeURIComponent(userId)}`
+      : plan.ctaHref;
 
   return (
     <section
@@ -292,7 +260,7 @@ export default function Pricing() {
       className="relative py-20 md:py-28 scroll-mt-20 overflow-hidden"
     >
 
-      <div className="relative mx-auto max-w-5xl px-5">
+      <div className="relative mx-auto max-w-6xl px-5">
         {/* heading */}
         <Reveal className="text-center">
           <p className="font-pixel text-xs text-accent uppercase tracking-widest">
@@ -301,82 +269,42 @@ export default function Pricing() {
           <h2 className="mt-4 font-pixel text-2xl sm:text-3xl text-white leading-snug">
             Simple. No tricks.
           </h2>
-        </Reveal>
-
-        {/* billing toggle — the badge is a child of the Lifetime slot itself
-            (not a separate row above the whole bar), positioned with
-            `bottom-full` + a margin. That means its position is computed
-            entirely from the Lifetime slot's own box — no hardcoded top
-            offset to keep in sync with the badge's height — so it reads as
-            one attached component instead of a badge floating near a toggle. */}
-        <Reveal className="mt-10 flex justify-center">
-          <div className="flex items-center rounded-full border border-line bg-panel p-1.5 h-14 w-full max-w-[320px]">
-            <button
-              onClick={() => handleBillingMode("monthly")}
-              className={`flex-1 h-full m-0.5 flex items-center justify-center rounded-full text-xs font-semibold transition-all duration-200 ${
-                mode === "monthly"
-                  ? "bg-accent text-black shadow-[0_2px_12px_rgba(116,247,181,0.3)]"
-                  : "text-muted hover:text-white"
-              }`}
-            >
-              Monthly
-            </button>
-
-            <div className="relative flex-1 h-full m-0.5">
-              <button
-                onClick={() => handleBillingMode("lifetime")}
-                className={`w-full h-full flex items-center justify-center rounded-full text-xs font-semibold transition-all duration-200 ${
-                  mode === "lifetime"
-                    ? "bg-accent text-black shadow-[0_2px_12px_rgba(116,247,181,0.3)]"
-                    : "text-muted hover:text-white"
-                }`}
-              >
-                Lifetime
-              </button>
-
-              {/* mb-4 (16px), not mb-2 — this wrapper is itself inset 8px from
-                  the track's visible top edge (track p-1.5 + this slot's
-                  m-0.5), so the badge needs that much extra margin to land
-                  a true 6–8px gap below the track's actual border. */}
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-4 pointer-events-none">
-                <Reveal delay={150}>
-                  <div className="pixel-badge-float">
-                    <div className="pixel-badge relative flex items-center justify-center bg-accent px-2.5 h-[22px]">
-                      <span className="pixel-badge-tab pixel-badge-tab-left" />
-                      <span className="pixel-badge-tab pixel-badge-tab-right" />
-                      <PixelPlus size={5} className="absolute -top-1.5 -left-2" />
-                      <PixelPlus size={5} className="absolute -top-1.5 -right-2" />
-                      <span className="font-pixel text-[6.5px] text-black uppercase tracking-wider whitespace-nowrap">
-                        Best Value
-                      </span>
-                    </div>
-                  </div>
-                </Reveal>
-              </div>
-            </div>
-          </div>
+          {/* Pro and Founder are two different products (a subscription and a
+              one-time purchase), not billing-frequency variants of the same
+              plan — shown side by side rather than behind a monthly/lifetime
+              toggle so that's clear at a glance. */}
+          <p className="mt-3 text-sm text-muted">
+            Pro is a monthly subscription. Founder is a one-time purchase for lifetime Pro access.
+          </p>
         </Reveal>
 
         {/* cards */}
-        <div className="mt-10 grid sm:grid-cols-2 gap-5 items-stretch">
+        <div className="mt-10 grid sm:grid-cols-2 lg:grid-cols-3 gap-5 items-stretch">
           <Reveal delay={0}>
-            <PricingCard {...FREE_PLAN} onCtaClick={() => posthog.capture("pricing_cta_clicked", { plan: "free", billing_mode: mode })} />
+            <PricingCard {...FREE_PLAN} onCtaClick={() => posthog.capture("pricing_cta_clicked", { plan: "free" })} />
           </Reveal>
           <Reveal delay={80}>
             <PricingCard
-              key={paidPlan.name}
-              {...paidPlan}
-              ctaHref={paidCtaHref}
-              ownsThis={ownsSelectedTier}
-              onCtaClick={() => posthog.capture("pricing_cta_clicked", { plan: paidPlan.name, billing_mode: mode })}
+              {...PRO_PLAN}
+              ctaHref={ctaHrefFor(PRO_PLAN)}
+              ownsThis={ownsPro}
+              onCtaClick={() => posthog.capture("pricing_cta_clicked", { plan: "Pro" })}
+            />
+          </Reveal>
+          <Reveal delay={160}>
+            <PricingCard
+              {...FOUNDER_PLAN}
+              ctaHref={ctaHrefFor(FOUNDER_PLAN)}
+              ownsThis={ownsFounder}
+              onCtaClick={() => posthog.capture("pricing_cta_clicked", { plan: "Founder" })}
             />
           </Reveal>
         </div>
 
         <Reveal className="mt-10 text-center">
           <p className="text-xs text-muted">
-            Every plan uses your own AI key (Groq, Gemini, or OpenRouter). Groq has a free tier.{" "}
-            <span className="text-white/50">Your key stays on your device.</span>
+            Every plan includes Included AI — no API key required. Prefer your own key instead?{" "}
+            <span className="text-white/50">Switch to BYOK (Groq, Gemini, or OpenRouter) any time in Settings — it never touches your Aminta credits.</span>
           </p>
         </Reveal>
       </div>

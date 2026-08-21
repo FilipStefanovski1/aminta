@@ -34,6 +34,23 @@ import {
 
 const UUID_RE = /^[0-9a-f-]{36}$/i
 
+// Same MIN_POSTS/percentile logic as extension/lib/styleProfile.ts's
+// computeLengthProfile() — duplicated deliberately (separate deployments,
+// same convention as lib/entitlements.ts). Percentiles, not mean, so one
+// outlier post can't drag "medium" toward it.
+const MIN_POSTS_FOR_LENGTH_BASELINE = 4
+function percentile(sortedLens: number[], p: number): number {
+  const idx = (sortedLens.length - 1) * p
+  const lo = Math.floor(idx), hi = Math.ceil(idx)
+  if (lo === hi) return sortedLens[lo]
+  return Math.round(sortedLens[lo] + (sortedLens[hi] - sortedLens[lo]) * (idx - lo))
+}
+function computeLengthProfile(charLens: number[]): { p25: number; median: number; p75: number } | null {
+  if (charLens.length < MIN_POSTS_FOR_LENGTH_BASELINE) return null
+  const lens = [...charLens].sort((a, b) => a - b)
+  return { p25: percentile(lens, 0.25), median: percentile(lens, 0.5), p75: percentile(lens, 0.75) }
+}
+
 function fail(error: string, code: string, status: number, extra?: Record<string, unknown>) {
   return NextResponse.json({ error, code, ...extra }, { status })
 }
@@ -185,9 +202,12 @@ export async function POST(request: NextRequest) {
     await completeVoiceRefresh(user.id, requestId, stats.fetched, stats.used)
 
     // The raw corpus goes out of scope here and is never persisted anywhere.
+    // lengthProfile is 3 numbers of plain arithmetic on corpus.text.length —
+    // no extra model call, no raw post text crosses back to the client.
     return NextResponse.json({
       profileJson: result.text,
       postsAnalyzed: stats.used,
+      lengthProfile: computeLengthProfile(corpus.map((c) => c.text.length)),
       nextEligibleAt: new Date(Date.now() + VOICE_REFRESH_COOLDOWN_MS).toISOString(),
     })
   } catch (e) {
