@@ -10,10 +10,20 @@ import {
   searchInstinctPresets,
   type InstinctPreset,
 } from "~lib/instinctPresets"
+import { mergeExamples, parseBulkPosts } from "~lib/bulkExamples"
+import { getStore } from "~lib/storage"
 import type { AmintaStore, VoiceProfile } from "~lib/storage"
+import { getOrBuildStyleProfile } from "~lib/styleProfile"
 import { C } from "~lib/theme"
 import { Card, Sprite } from "~components/ui"
 import VoiceRefreshCard from "~components/VoiceRefreshCard"
+
+// Free users build DNA from manual examples alone — no cap tuned for a
+// single-add-at-a-time flow anymore now that bulk paste is the primary
+// path. Anything past ~10 stops adding real confidence anyway (see
+// computeConfidenceScore in lib/styleProfile.ts), so this is generous
+// headroom, not an invitation to paste unlimited text into one prompt.
+const MAX_EXAMPLES = 15
 
 interface Props {
   store: AmintaStore
@@ -158,6 +168,12 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
   })
   const [newPost,  setNewPost]  = useState("")
   const [adding,   setAdding]   = useState(false)
+  // Bulk paste — the primary training path. Individual add/remove (above)
+  // stays available for touching up one example at a time.
+  const [bulkText,     setBulkText]     = useState("")
+  const [bulkOpen,     setBulkOpen]     = useState(false)
+  const [analyzing,    setAnalyzing]    = useState(false)
+  const [bulkError,    setBulkError]    = useState("")
   const [rules,    setRules]    = useState<string[]>(() =>
     (initial?.customRules ?? "").split("\n").map(s => s.trim()).filter(Boolean)
   )
@@ -251,6 +267,49 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
     react("Removed.", "sprite-think aminta-glow")
   }
 
+  // Saves the merged examples, then runs ONE extraction over the whole
+  // corpus — not one call per pasted post. Reuses the exact same
+  // getOrBuildStyleProfile()/extractStyleProfile() pipeline every other
+  // training path already goes through: if this account's DNA is
+  // X-history-sourced, that early-return in getOrBuildStyleProfile keeps
+  // firing exactly as before, so bulk-pasting more examples can never
+  // silently overwrite a Voice-Refreshed profile — it only ever adds
+  // examples available for the next successful Voice Refresh + manual
+  // retrain to use.
+  const learnFromWriting = async () => {
+    const parsed = parseBulkPosts(bulkText)
+    if (parsed.length === 0) return
+    setBulkError("")
+    const merged = mergeExamples(examples, parsed, MAX_EXAMPLES)
+    setExamples(merged)
+    setBulkText("")
+    setBulkOpen(false)
+    setAnalyzing(true)
+    try {
+      await onSave({
+        niche:            topics.join(", "),
+        tone:             voiceStyle,
+        voiceStyle,
+        voiceInspiration: voiceInspiration.join(", "),
+        examples:         JSON.stringify(merged),
+        customRules:      rules.join("\n"),
+      })
+      baselineRef.current = snapshot(topics, voiceStyle, voiceInspiration, merged, rules)
+      const freshStore = await getStore()
+      await getOrBuildStyleProfile(freshStore)
+      onRefreshed?.()
+      react("I've learned from what you shared.", "sprite-celebrate aminta-sparkle")
+    } catch {
+      // Examples are already saved above — only the proactive analysis
+      // failed. Not a dead end: getOrBuildStyleProfile() runs again lazily
+      // on the next Generate, same as the existing behavior for every
+      // other manual-training path.
+      setBulkError("Saved your examples. I'll finish learning from them on your next generate.")
+    } finally {
+      setAnalyzing(false)
+    }
+  }
+
   const handleVoiceStyle = (id: string) => {
     setVoiceStyle(id)
   }
@@ -330,8 +389,13 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
         </div>
       </Card>
 
-      {/* ── Learn from your X — primary training action, near the top ── */}
-      <VoiceRefreshCard store={store} onRefreshed={onRefreshed ?? (() => {})} />
+      {/* ── Voice Refresh — Pro/Founder only, stays at the top: it's their
+          primary training action. Free users train manually first (below);
+          Voice Refresh appears later as an optional upsell, never as a
+          gate in front of manual training. */}
+      {store.aiIncludedPaid && (
+        <VoiceRefreshCard store={store} onRefreshed={onRefreshed ?? (() => {})} />
+      )}
 
       {/* ── Teaching sections — one unified card ── */}
       <Card pad={false} className="animate-card-in overflow-hidden" style={{ animationDelay: "30ms" }}>
@@ -400,6 +464,53 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
             }
           </p>
 
+          {/* Bulk paste — the primary training path. Shown up front when
+              there's nothing yet, or on demand via "+ Paste more" once
+              examples already exist. */}
+          {(examples.length === 0 || bulkOpen) && !adding && (
+            <div className="rounded-xl p-3 mb-2" style={{ backgroundColor: C.cardInner, border: `1px solid ${tint}44` }}>
+              {examples.length === 0 && (
+                <>
+                  <p className="text-[12px] font-medium" style={{ color: C.text }}>Teach Aminta how you write</p>
+                  <p className="text-[10px] mt-1 mb-2.5 leading-relaxed" style={{ color: C.textDim }}>
+                    Paste some posts you've written before — leave a blank line between each one. Aminta will use them to understand your writing style.
+                  </p>
+                </>
+              )}
+              <textarea
+                value={bulkText}
+                onChange={e => setBulkText(e.target.value)}
+                rows={6}
+                placeholder={"First post you've written…\n\nSecond post — separated by a blank line…"}
+                autoFocus={bulkOpen}
+                className="w-full text-[12px] bg-transparent resize-none outline-none leading-relaxed"
+                style={{ color: C.text }}
+              />
+              {bulkError && (
+                <p className="text-[10px] mt-1.5" style={{ color: "#f5b50a" }}>{bulkError}</p>
+              )}
+              <div className="flex items-center gap-3 mt-1.5 pt-1.5" style={{ borderTop: `1px solid ${C.borderSoft}` }}>
+                <button
+                  onClick={learnFromWriting}
+                  disabled={!bulkText.trim() || analyzing}
+                  className="font-pixel text-[8px] disabled:opacity-30 transition-opacity"
+                  style={{ color: tint }}>
+                  {analyzing ? "Learning…" : "Learn from my writing"}
+                </button>
+                {(bulkOpen || examples.length === 0) && (
+                  <button
+                    onClick={() => {
+                      setBulkText(""); setBulkError("")
+                      if (examples.length === 0) { setAdding(true) } else { setBulkOpen(false) }
+                    }}
+                    className="font-pixel text-[8px]"
+                    style={{ color: C.textDim }}>
+                    {examples.length === 0 ? "or add one at a time" : "Cancel"}
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
           <div className="space-y-2">
             {examples.map((post, i) => {
               const lesson = MEMORY_LESSONS[i % MEMORY_LESSONS.length]
@@ -435,18 +546,6 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
               )
             })}
 
-            {examples.length === 0 && !adding && (
-              <div
-                className="rounded-xl py-7 flex flex-col items-center gap-2 cursor-pointer transition-colors"
-                style={{ border: `1px dashed ${C.border}` }}
-                onClick={() => setAdding(true)}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = tint + "55" }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = C.border }}>
-                <p className="font-pixel text-[7px]" style={{ color: C.textDim }}>no examples yet.</p>
-                <p className="text-[10px]" style={{ color: C.textDim }}>your real posts are my best teacher.</p>
-              </div>
-            )}
-
             {adding ? (
               <div className="rounded-xl p-2.5" style={{ backgroundColor: C.cardInner, border: `1px solid ${tint}44` }}>
                 <textarea
@@ -478,23 +577,41 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
                   </button>
                 </div>
               </div>
-            ) : examples.length < 5 ? (
-              <button
-                onClick={() => setAdding(true)}
-                className="w-full rounded-xl py-3 font-pixel text-[7px] flex items-center justify-center gap-1.5 transition-all duration-150 active:scale-[0.98]"
-                style={{ border: `1px solid ${C.border}`, color: C.text }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.borderColor = tint + "66"
-                  e.currentTarget.style.color = tint
-                  e.currentTarget.style.backgroundColor = tint + "08"
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.borderColor = C.border
-                  e.currentTarget.style.color = C.text
-                  e.currentTarget.style.backgroundColor = "transparent"
-                }}>
-                + Add another example
-              </button>
+            ) : bulkOpen ? null : examples.length > 0 && examples.length < MAX_EXAMPLES ? (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setBulkOpen(true)}
+                  className="flex-1 rounded-xl py-3 font-pixel text-[7px] flex items-center justify-center gap-1.5 transition-all duration-150 active:scale-[0.98]"
+                  style={{ border: `1px solid ${C.border}`, color: C.text }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.borderColor = tint + "66"
+                    e.currentTarget.style.color = tint
+                    e.currentTarget.style.backgroundColor = tint + "08"
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.borderColor = C.border
+                    e.currentTarget.style.color = C.text
+                    e.currentTarget.style.backgroundColor = "transparent"
+                  }}>
+                  + Paste more
+                </button>
+                <button
+                  onClick={() => setAdding(true)}
+                  className="flex-1 rounded-xl py-3 font-pixel text-[7px] flex items-center justify-center gap-1.5 transition-all duration-150 active:scale-[0.98]"
+                  style={{ border: `1px solid ${C.border}`, color: C.text }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.borderColor = tint + "66"
+                    e.currentTarget.style.color = tint
+                    e.currentTarget.style.backgroundColor = tint + "08"
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.borderColor = C.border
+                    e.currentTarget.style.color = C.text
+                    e.currentTarget.style.backgroundColor = "transparent"
+                  }}>
+                  + Add one
+                </button>
+              </div>
             ) : null}
           </div>
         </div>
@@ -718,6 +835,12 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
         </div>
 
       </Card>
+
+      {/* ── Voice Refresh — Free users only, as a low-key optional upsell
+          after manual training, never a gate. */}
+      {!store.aiIncludedPaid && (
+        <VoiceRefreshCard store={store} onRefreshed={onRefreshed ?? (() => {})} />
+      )}
 
       {/* ── Save — only shown once there's something unsaved to act on ── */}
       {(isDirty || saved) && (

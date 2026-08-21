@@ -17,7 +17,7 @@ const FREE_PLAN = {
     "5 Included AI credits / day",
     "No API key required",
     "Generate, Reply, Polish",
-    "Aminta DNA (writing examples + Instincts)",
+    "Personalized to your writing (Aminta DNA)",
     "Insert into X",
     "Optional BYOK (Groq / Gemini / OpenRouter)",
   ],

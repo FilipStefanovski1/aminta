@@ -501,3 +501,43 @@ describe("buildMessages — no raw voice data ever reaches the prompt", () => {
     expect(highSystem).toContain("well-established pattern")
   })
 })
+
+describe("Free-user manual DNA — no X connection, no Pro entitlement required", () => {
+  it("builds a StyleProfile from bulk-pasted manual examples alone, with no X connection and no Pro entitlement", async () => {
+    const store = await makeStore({
+      apiKey: "gsk_test",
+      aiIncludedPaid: false,  // Free
+      xConnected: false,      // never connected X — irrelevant to manual training
+      voice: baseVoice({
+        examples: JSON.stringify(["first pasted post", "second pasted post", "third pasted post"]),
+      }),
+      tweetDNA: [],
+    })
+    const profile = await getOrBuildStyleProfile(store)
+    expect(profile).not.toBeNull()
+    expect(profile!.confidence).toBe("assertive")
+  })
+
+  it("a 10-post bulk paste is analyzed in exactly ONE extraction call, not one per post", async () => {
+    const tenPosts = Array.from({ length: 10 }, (_, i) => `bulk pasted post number ${i + 1}`)
+    const store = await makeStore({
+      apiKey: "gsk_test",
+      voice: baseVoice({ examples: JSON.stringify(tenPosts) }),
+      tweetDNA: [],
+    })
+    await getOrBuildStyleProfile(store)
+    expect(mockGenerate).toHaveBeenCalledTimes(1)
+  })
+
+  it("Free entitlement (aiIncludedPaid=false) does not block manual DNA building", async () => {
+    const store = await makeStore({
+      apiKey: "gsk_test",
+      aiIncludedPaid: false,
+      xConnected: false,
+      voice: baseVoice({ examples: JSON.stringify(["a real post", "another real post"]) }),
+      tweetDNA: [],
+    })
+    const profile = await getOrBuildStyleProfile(store)
+    expect(profile).not.toBeNull()
+  })
+})

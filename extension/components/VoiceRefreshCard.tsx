@@ -113,17 +113,24 @@ export default function VoiceRefreshCard({ store, onRefreshed }: Props) {
   return (
     <div className="rounded-xl overflow-hidden" style={{ backgroundColor: "#262628", border: "1px solid #404048" }}>
       <div className="px-3.5 pt-3.5 pb-3">
-        {/* ── Free: Pro-gated ── */}
+        {/* ── Free: optional Pro convenience, never a gate. Manual training
+            (writing examples) already fully builds a Free user's Aminta
+            DNA — this only offers automatic, X-sourced upkeep on top. */}
         {!entitled && (
           <>
-            <label className={`${label} block mb-1.5`} style={{ color: "#888896" }}>Learn from your X</label>
-            <p className="text-[12px] font-medium" style={{ color: "#e8e8ea" }}>Keep Aminta in sync with how you actually write.</p>
-            <div className="mt-3 rounded-lg px-3 py-2.5" style={{ backgroundColor: "#2a2a30", border: `1px solid ${C.border}` }}>
-              <p className="font-pixel text-[8px]" style={{ color: "#f5d060" }}>PRO</p>
-              <p className="text-[10px] mt-1.5 leading-snug" style={{ color: "#888896" }}>
-                Voice Refresh is part of Pro. Upgrade to let Aminta learn directly from your recent posts.
-              </p>
-            </div>
+            <label className={`${label} block mb-1.5`} style={{ color: "#888896" }}>Voice Refresh</label>
+            <p className="text-[12px] font-medium" style={{ color: "#e8e8ea" }}>Keep your DNA up to date automatically</p>
+            <p className="text-[10px] mt-1.5 leading-snug" style={{ color: "#888896" }}>
+              With Pro, Aminta can refresh your writing style from your recent X posts once every week.
+            </p>
+            <a
+              href="https://www.amintaapp.com/#pricing"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-block mt-3 font-pixel text-[8px]"
+              style={{ color: tint }}>
+              Unlock Voice Refresh →
+            </a>
           </>
         )}
 
