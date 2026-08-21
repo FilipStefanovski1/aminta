@@ -40,7 +40,7 @@ const PRO_PLAN = {
     "Thread Creator — 3 options, one generate",
     "Voice Refresh — weekly Aminta DNA update from your X history",
   ],
-  cta: "Upgrade to Pro",
+  cta: "Get Aminta Pro",
   ctaHref: CREEM_PRO_URL,
   badge: "PRO",
   highlight: true,
@@ -105,13 +105,14 @@ interface CardProps {
   badge: string | null;
   highlight: boolean;
   disabled: boolean;
-  // True when the logged-in user already has this tier (or better) — swaps
-  // the checkout CTA for a "you already have this" state instead of asking
-  // an already-paying customer to buy it again.
-  ownsThis?: boolean;
   onCtaClick?: () => void;
 }
 
+// One CTA shape for every card, regardless of login/ownership state — only
+// the label and destination change (computed by the caller). No separate
+// "you already have this" alert treatment: owning the plan is communicated
+// entirely through the CTA text ("Manage Pro" / "Manage Account"), so the
+// card layout never shifts based on auth/subscription state.
 function PricingCard({
   name,
   price,
@@ -123,10 +124,9 @@ function PricingCard({
   badge,
   highlight,
   disabled,
-  ownsThis,
   onCtaClick,
 }: CardProps) {
-  const isExternal = !ownsThis && ctaHref.startsWith("http");
+  const isExternal = ctaHref.startsWith("http");
   const locked = disabled && highlight;
 
   return (
@@ -148,12 +148,12 @@ function PricingCard({
         <p className="font-pixel text-[10px] uppercase tracking-widest text-muted">
           {name}
         </p>
-        {(badge || ownsThis) && (
+        {badge && (
           <span className={`shrink-0 flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-pixel text-[8px] uppercase tracking-widest ${
             locked ? "border-line bg-white/5 text-muted" : "border-accent/30 bg-accent/10 text-accent"
           }`}>
             {locked && <LockIcon />}
-            {ownsThis ? "Your Plan" : badge}
+            {badge}
           </span>
         )}
       </div>
@@ -170,15 +170,7 @@ function PricingCard({
 
       <p className="mt-4 text-sm text-muted leading-relaxed">{description}</p>
 
-      {ownsThis ? (
-        <a
-          href="/dashboard"
-          onClick={onCtaClick}
-          className="mt-7 flex items-center justify-center gap-1.5 rounded-xl py-3 text-sm font-semibold border border-accent/40 bg-accent/10 text-accent transition-all duration-200 hover:bg-accent/15"
-        >
-          You already have this, manage in Dashboard
-        </a>
-      ) : disabled ? (
+      {disabled ? (
         <span
           className="mt-7 flex items-center justify-center gap-1.5 rounded-xl py-3 text-sm font-semibold border border-line text-muted/50 cursor-not-allowed"
           aria-disabled="true"
@@ -249,10 +241,18 @@ export default function Pricing() {
   const ownsPro = entitled && (currentPlan === "pro" || currentPlan === "lifetime");
   const ownsFounder = entitled && currentPlan === "lifetime";
 
-  const ctaHrefFor = (plan: typeof PRO_PLAN | typeof FOUNDER_PLAN) =>
+  const checkoutHrefFor = (plan: typeof PRO_PLAN | typeof FOUNDER_PLAN) =>
     userId
       ? `${plan.ctaHref}${plan.ctaHref.includes("?") ? "&" : "?"}metadata[user_id]=${encodeURIComponent(userId)}`
       : plan.ctaHref;
+
+  // Same CTA slot, different label/destination — owning the plan routes to
+  // the existing dashboard account-management flow instead of checkout;
+  // it never swaps in a separate alert-style treatment.
+  const proCta = ownsPro ? "Manage Pro" : "Get Aminta Pro";
+  const proCtaHref = ownsPro ? "/dashboard" : checkoutHrefFor(PRO_PLAN);
+  const founderCta = ownsFounder ? "Manage Account" : "Get Founder Access";
+  const founderCtaHref = ownsFounder ? "/dashboard" : checkoutHrefFor(FOUNDER_PLAN);
 
   return (
     <section
@@ -286,17 +286,17 @@ export default function Pricing() {
           <Reveal delay={80}>
             <PricingCard
               {...PRO_PLAN}
-              ctaHref={ctaHrefFor(PRO_PLAN)}
-              ownsThis={ownsPro}
-              onCtaClick={() => posthog.capture("pricing_cta_clicked", { plan: "Pro" })}
+              cta={proCta}
+              ctaHref={proCtaHref}
+              onCtaClick={() => posthog.capture("pricing_cta_clicked", { plan: "Pro", owns_plan: ownsPro })}
             />
           </Reveal>
           <Reveal delay={160}>
             <PricingCard
               {...FOUNDER_PLAN}
-              ctaHref={ctaHrefFor(FOUNDER_PLAN)}
-              ownsThis={ownsFounder}
-              onCtaClick={() => posthog.capture("pricing_cta_clicked", { plan: "Founder" })}
+              cta={founderCta}
+              ctaHref={founderCtaHref}
+              onCtaClick={() => posthog.capture("pricing_cta_clicked", { plan: "Founder", owns_plan: ownsFounder })}
             />
           </Reveal>
         </div>
