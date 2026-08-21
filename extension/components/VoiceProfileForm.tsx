@@ -211,8 +211,19 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
     { label: "Writing examples", done: examples.length >= 3 },
     { label: "Instincts",        done: voiceInspiration.length > 0 || rules.length > 0 },
   ]
-  const learnedCount  = STEPS.filter(s => s.done).length
-  const confidencePct = Math.round((learnedCount / 4) * 100)
+  const learnedCount = STEPS.filter(s => s.done).length
+
+  // Human-readable state from real data — no fabricated "voice confidence %".
+  // Voice Refresh eligibility (cooldown) is the freshest, most concrete
+  // signal when it applies; otherwise fall back to whether anything has
+  // been taught manually at all.
+  const hasAnyTraining = topics.length > 0 || !!voiceStyle || examples.length > 0 || !!store.styleProfile
+  const trainedStateMessage =
+    !hasAnyTraining
+      ? "Aminta is still learning your voice."
+      : store.lastVoiceRefreshAt && !store.voiceRefreshEligible
+        ? "Your voice was refreshed recently."
+        : "Your voice is trained."
 
   const baseMessage =
     learnedCount === 0 ? "Teach me your voice." :
@@ -237,7 +248,7 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
   }
   const removeExample = (i: number) => {
     setExamples(prev => prev.filter((_, j) => j !== i))
-    react("Memory faded.", "sprite-think aminta-glow")
+    react("Removed.", "sprite-think aminta-glow")
   }
 
   const handleVoiceStyle = (id: string) => {
@@ -290,40 +301,26 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
   return (
     <div className="space-y-3 pb-4">
 
-      {/* ── Hero ── */}
+      {/* ── Hero — real-data state, no fabricated percentage ── */}
       <Card glow={tint} className="animate-card-in">
         <div className="flex items-center gap-4">
           <Sprite xp={store.xp ?? 0} size={56} animClass={animCls} />
 
           <div className="flex-1 min-w-0">
-            {/* Confidence readout */}
-            <div className="flex items-end gap-1 mb-1.5">
-              <span
-                className="font-pixel leading-none"
-                style={{ fontSize: 20, color: tint, lineHeight: 1 }}>
-                {confidencePct}
-              </span>
-              <span
-                className="font-pixel leading-none mb-[3px]"
-                style={{ fontSize: 10, color: tint + "88" }}>
-                %
-              </span>
-              <span
-                className="font-pixel leading-none mb-[3px] ml-1"
-                style={{ fontSize: 7, color: C.textDim }}>
-                voice confidence
-              </span>
-            </div>
+            <p className="text-[13px] font-medium leading-snug mb-1" style={{ color: C.text }}>
+              {trainedStateMessage}
+            </p>
 
             {/* Live speech / status — transitions between reaction and base */}
             <p
               key={displayMessage}
               className="text-[11px] leading-snug mb-3 animate-fade-in"
-              style={{ color: speech ? tint : C.text }}>
+              style={{ color: speech ? tint : C.textDim }}>
               {displayMessage}
             </p>
 
-            {/* Pixel step checklist — 2-col */}
+            {/* Pixel step checklist — 2-col. Real per-field completion, not
+                an aggregated fake score. */}
             <div className="grid grid-cols-2 gap-x-3 gap-y-[7px]">
               {STEPS.map(({ label, done }) => (
                 <PixelStep key={label} done={done} label={label} tint={tint} />
@@ -333,58 +330,11 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
         </div>
       </Card>
 
+      {/* ── Learn from your X — primary training action, near the top ── */}
+      <VoiceRefreshCard store={store} onRefreshed={onRefreshed ?? (() => {})} />
+
       {/* ── Teaching sections — one unified card ── */}
       <Card pad={false} className="animate-card-in overflow-hidden" style={{ animationDelay: "30ms" }}>
-
-        {/* Topics */}
-        <div className="p-4">
-          <SectionHead label="What you write about" tipKey="niche" />
-          {topics.length > 0 && (
-            <div className="flex flex-wrap gap-2 mb-3">
-              {topics.map((topic, i) => (
-                <span
-                  key={i}
-                  className="group/chip inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px]"
-                  style={{ backgroundColor: C.cardInner, border: `1px solid ${C.border}`, color: C.text }}>
-                  {topic}
-                  <button
-                    onClick={() => removeTopic(i)}
-                    className="opacity-30 group-hover/chip:opacity-80 hover:!opacity-100 transition-opacity leading-none"
-                    style={{ color: C.textDim, fontSize: 14 }}>
-                    ×
-                  </button>
-                </span>
-              ))}
-            </div>
-          )}
-          {topics.length < 10 && (
-            <div
-              className="flex items-center gap-2 rounded-xl px-3 py-2"
-              style={{ backgroundColor: C.cardInner, border: `1px solid ${C.border}` }}>
-              <input
-                value={newTopic}
-                onChange={e => setNewTopic(e.target.value)}
-                placeholder={topics.length === 0 ? "e.g. indie hacking, AI tools, B2B SaaS…" : "Add another topic…"}
-                className="flex-1 bg-transparent text-[11px] outline-none min-w-0"
-                style={{ color: C.text }}
-                onKeyDown={e => {
-                  if (e.key === "Enter") { e.preventDefault(); addTopic() }
-                  if (e.key === "Escape") setNewTopic("")
-                }}
-              />
-              {newTopic.trim() && (
-                <button
-                  onClick={addTopic}
-                  className="font-pixel text-[7px] shrink-0"
-                  style={{ color: tint }}>
-                  Add
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-
-        <Divider />
 
         {/* Voice style */}
         <div className="p-4">
@@ -420,10 +370,10 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
 
         <Divider />
 
-        {/* Memory */}
+        {/* Writing examples */}
         <div className="p-4">
           <SectionHead
-            label="Aminta's memory"
+            label="Writing examples"
             tipKey="examples"
             meta={
               <div className="flex items-center gap-[4px]">
@@ -446,7 +396,7 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
                 ? "One more example and I'll start understanding your pacing."
                 : examples.length === 2
                   ? "One more and I'll have enough to write in your voice."
-                  : `${examples.length} memories. I'm beginning to understand how you write.`
+                  : `${examples.length} examples. I'm beginning to understand how you write.`
             }
           </p>
 
@@ -492,7 +442,7 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
                 onClick={() => setAdding(true)}
                 onMouseEnter={e => { e.currentTarget.style.borderColor = tint + "55" }}
                 onMouseLeave={e => { e.currentTarget.style.borderColor = C.border }}>
-                <p className="font-pixel text-[7px]" style={{ color: C.textDim }}>no memories yet.</p>
+                <p className="font-pixel text-[7px]" style={{ color: C.textDim }}>no examples yet.</p>
                 <p className="text-[10px]" style={{ color: C.textDim }}>your real posts are my best teacher.</p>
               </div>
             )}
@@ -518,7 +468,7 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
                     disabled={!newPost.trim()}
                     className="font-pixel text-[8px] disabled:opacity-30 transition-opacity"
                     style={{ color: tint }}>
-                    Save memory
+                    Save example
                   </button>
                   <button
                     onClick={() => { setNewPost(""); setAdding(false) }}
@@ -543,7 +493,7 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
                   e.currentTarget.style.color = C.text
                   e.currentTarget.style.backgroundColor = "transparent"
                 }}>
-                + Teach me another post
+                + Add another example
               </button>
             ) : null}
           </div>
@@ -719,6 +669,54 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
           )}
         </div>
 
+        <Divider />
+
+        {/* Topics — supporting context, demoted to a single compact row */}
+        <div className="p-4">
+          <SectionHead label="Topics" tipKey="niche" />
+          <div className="flex flex-wrap gap-2">
+            {topics.map((topic, i) => (
+              <span
+                key={i}
+                className="group/chip inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px]"
+                style={{ backgroundColor: C.cardInner, border: `1px solid ${C.border}`, color: C.text }}>
+                {topic}
+                <button
+                  onClick={() => removeTopic(i)}
+                  className="opacity-30 group-hover/chip:opacity-80 hover:!opacity-100 transition-opacity leading-none"
+                  style={{ color: C.textDim, fontSize: 14 }}>
+                  ×
+                </button>
+              </span>
+            ))}
+            {topics.length < 10 && (
+              <div
+                className="flex items-center gap-2 rounded-xl px-2.5 py-1.5"
+                style={{ backgroundColor: C.cardInner, border: `1px solid ${C.border}` }}>
+                <input
+                  value={newTopic}
+                  onChange={e => setNewTopic(e.target.value)}
+                  placeholder={topics.length === 0 ? "e.g. indie hacking, AI tools, B2B SaaS…" : "Add another…"}
+                  className="bg-transparent text-[10px] outline-none min-w-[90px]"
+                  style={{ color: C.text }}
+                  onKeyDown={e => {
+                    if (e.key === "Enter") { e.preventDefault(); addTopic() }
+                    if (e.key === "Escape") setNewTopic("")
+                  }}
+                />
+                {newTopic.trim() && (
+                  <button
+                    onClick={addTopic}
+                    className="font-pixel text-[7px] shrink-0"
+                    style={{ color: tint }}>
+                    Add
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
       </Card>
 
       {/* ── Save — only shown once there's something unsaved to act on ── */}
@@ -757,9 +755,6 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
           )}
         </div>
       )}
-
-      {/* Voice Refresh — same Train surface, not a separate section. */}
-      <VoiceRefreshCard store={store} onRefreshed={onRefreshed ?? (() => {})} />
 
     </div>
   )

@@ -117,7 +117,6 @@ export interface AmintaStore {
   apiKey: string
   model: string
   voice: VoiceProfile | null
-  companionName: string
   avatarDataUrl: string
   displayName: string
   bio: string
@@ -129,6 +128,10 @@ export interface AmintaStore {
   onboardingDone: boolean
   xp: number
   generationsTotal: number
+  // Lifetime count of CONFIRMED publishes (see lib/xp.ts → resolvePendingXP),
+  // not generate-clicks. Distinct from generationsTotal, which counts every
+  // Generate press regardless of whether the draft was ever posted.
+  postsPublishedTotal: number
   earnedHashes: string[]
   xpToday: number
   xpTodayDate: string
@@ -138,6 +141,13 @@ export interface AmintaStore {
   missionDate: string
   missionGenerates: number
   missionPublished: number
+  // Daily-reset, per-mode "did a confirmed publish of this mode happen
+  // today" flags — the basis for the 3 daily goals (Write one post / Join a
+  // conversation / Polish one post). Booleans, not counters: a goal is done
+  // or not, so re-publishing the same mode again can't be gamed into
+  // "more progress." Reset alongside missionDate, same pattern as
+  // missionGenerates/missionPublished above.
+  missionModes: { tweet: boolean; reply: boolean; polish: boolean }
   plan: Plan
   // Mirrors Supabase users.subscription_status — synced alongside plan (see
   // lib/sync.ts). Used together with `plan` by lib/entitlements.ts; never
@@ -199,7 +209,6 @@ const DEFAULTS: AmintaStore = {
   apiKey: "",
   model: DEFAULT_MODEL,
   voice: null,
-  companionName: "",
   avatarDataUrl: "",
   displayName: "",
   bio: "",
@@ -211,6 +220,7 @@ const DEFAULTS: AmintaStore = {
   onboardingDone: false,
   xp: 0,
   generationsTotal: 0,
+  postsPublishedTotal: 0,
   earnedHashes: [],
   xpToday: 0,
   xpTodayDate: "",
@@ -220,6 +230,7 @@ const DEFAULTS: AmintaStore = {
   missionDate: "",
   missionGenerates: 0,
   missionPublished: 0,
+  missionModes: { tweet: false, reply: false, polish: false },
   plan: "free",
   subscriptionStatus: null,
   aiIncluded: false,
@@ -249,11 +260,10 @@ export async function setStore(patch: Partial<AmintaStore>): Promise<void> {
 // Device-scoped: tied to this browser/install, not to whoever is signed in.
 // Everything else in AmintaStore is account-scoped and must never survive
 // a switch to a different Supabase auth user.
-// companionName/avatarDataUrl aren't synced to the cloud (no schema column,
-// purely a local nicety) — device-scoped so they survive
-// clearAccountScopedState() on sign-out instead of silently vanishing with
-// nothing to restore them from.
-const DEVICE_SCOPED_KEYS = new Set<keyof AmintaStore>(["apiKey", "model", "companionName", "avatarDataUrl", "providerMode"])
+// avatarDataUrl isn't synced to the cloud (no schema column, purely a local
+// nicety) — device-scoped so it survives clearAccountScopedState() on
+// sign-out instead of silently vanishing with nothing to restore it from.
+const DEVICE_SCOPED_KEYS = new Set<keyof AmintaStore>(["apiKey", "model", "avatarDataUrl", "providerMode"])
 
 export const ACCOUNT_SCOPED_KEYS = (Object.keys(DEFAULTS) as (keyof AmintaStore)[])
   .filter((k) => !DEVICE_SCOPED_KEYS.has(k))

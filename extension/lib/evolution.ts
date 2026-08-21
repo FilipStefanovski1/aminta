@@ -197,7 +197,7 @@ export const FORMS: Form[] = [
   // ── Form 4: Excited ── raised eyebrows; bicolor sparkle eyes; blush; 6M open grin; crystal teeth; tongue
   {
     level: 4, name: "Excited", color: "#6a8cff", rarity: "UNCOMMON",
-    blurb: "Hungry for the next post.", revealed: true,
+    blurb: "", revealed: true,
     skin: {
       body: "#3a52c8", horn: "#222e88", eye: "#c8d8ff",
       mark:    "#e86050",  // X = coral blush

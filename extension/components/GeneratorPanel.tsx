@@ -19,7 +19,6 @@ import { incrementGenerations } from "~lib/xp"
 
 import OutputCard from "~components/OutputCard"
 import TemplatesModal from "~components/TemplatesModal"
-import { Sprite } from "~components/ui"
 
 // ─── Mode config ───────────────────────────────────────────────────────────────
 
@@ -179,32 +178,6 @@ function shuffledCopy<T>(items: T[]): T[] {
     ;[copy[i], copy[j]] = [copy[j], copy[i]]
   }
   return copy
-}
-
-// ─── Header speech bubble ─────────────────────────────────────────────────────
-
-function HeaderBubble({ text }: { text: string }) {
-  return (
-    <div className="relative ml-2">
-      <div
-        className="px-2.5 py-2 text-[9.5px] font-medium leading-snug"
-        style={{
-          background: "#fff",
-          border: "2px solid #000",
-          boxShadow: "2px 2px 0 #000",
-          color: "#000",
-          maxWidth: 90,
-        }}>
-        {text}
-      </div>
-      <svg
-        width="8" height="10" viewBox="0 0 8 10"
-        style={{ position: "absolute", left: -7, top: 10, imageRendering: "pixelated" }}>
-        <polygon points="8,0 8,10 0,5" fill="#000" />
-        <polygon points="8,2 8,8 2,5" fill="#fff" />
-      </svg>
-    </div>
-  )
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -534,20 +507,7 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
     // to `tint`, so the textarea focus ring was the one thing still hardcoded
     // to mint regardless of level/color. Scoped locally so Settings/Train/
     // Templates keep the real mint default.
-    <div className="space-y-4 pb-4" style={{ "--mint": tint } as React.CSSProperties}>
-
-      {/* ── Header ── */}
-      <div className="flex items-start justify-between gap-2 pt-1">
-        <h2 className="flex-1 text-[16px] font-semibold text-white leading-snug">
-          What are we<br />creating today?
-        </h2>
-        <div className="flex items-start gap-0 shrink-0">
-          <div style={{ marginTop: 6 }}>
-            <Sprite xp={xp} size={56} float />
-          </div>
-          <HeaderBubble text="I'll help make it great." />
-        </div>
-      </div>
+    <div className="space-y-4 pt-1 pb-4" style={{ "--mint": tint } as React.CSSProperties}>
 
       {/* ── Mode + Templates, icon-only circular buttons in a row ── */}
       <div className="flex items-center justify-between px-2">
@@ -703,7 +663,8 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
                 onClick={() => setTone(t.id)}
                 onMouseEnter={() => setHoveredTone(t.id)}
                 onMouseLeave={() => setHoveredTone(null)}
-                className="flex flex-col items-center gap-1.5 pt-3 pb-2.5 px-1 rounded-xl"
+                title={t.desc}
+                className="flex flex-col items-center gap-1.5 py-3 px-1 rounded-xl"
                 style={{
                   backgroundColor: active ? tint + "14" : C.card,
                   border: `1.5px solid ${active ? tint : hovered ? tint + "55" : C.border}`,
@@ -722,11 +683,6 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
                   className="font-semibold text-[10px] leading-none"
                   style={{ color: active ? tint : hovered ? C.text : C.textDim }}>
                   {t.label}
-                </span>
-                <span
-                  className="text-[8px] leading-none"
-                  style={{ color: active ? tint + "cc" : C.textFaint }}>
-                  {t.desc}
                 </span>
               </button>
             )

@@ -117,6 +117,7 @@ export type ResolvedXP =
       total: number
       firstPost: boolean
       levelUp?: { level: number; stage: string }
+      mode: Mode
     }
   | null
 
@@ -141,6 +142,10 @@ export async function resolvePendingXP(): Promise<ResolvedXP> {
   const xpRes = await tryAwardXP(candidate.hash, candidate.amount)
   if ("error" in xpRes) return null
 
+  // Lifetime, real-publish count — distinct from generationsTotal (every
+  // Generate click) and from the daily mission counters (reset nightly).
+  await setStore({ postsPublishedTotal: (store.postsPublishedTotal ?? 0) + 1 })
+
   const oldLevel = getLevel(prevXP)
   const newLevel = getLevel(xpRes.total)
   const firstPost = prevXP === 0
@@ -150,5 +155,6 @@ export async function resolvePendingXP(): Promise<ResolvedXP> {
     total: xpRes.total,
     firstPost,
     levelUp: newLevel > oldLevel ? { level: newLevel, stage: getForm(xpRes.total).name } : undefined,
+    mode: candidate.mode,
   }
 }

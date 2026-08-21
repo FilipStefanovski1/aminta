@@ -155,9 +155,17 @@ export default function VoiceRefreshCard({ store, onRefreshed }: Props) {
                 Connected as @{store.xUsername}
               </span>
               <button
-                onClick={busy ? undefined : () => act("disconnect", disconnectX)}
-                className="text-[9px] underline"
-                style={{ color: "#666672" }}>
+                onClick={busy ? undefined : () => act("disconnect", async () => {
+                  await disconnectX()
+                  // disconnectX() already clears xConnected/xUsername in
+                  // storage — without this, the panel keeps showing the old
+                  // "Connected as @handle" state until something else
+                  // happens to trigger a re-render, which reads as "the
+                  // Disconnect button doesn't work."
+                  onRefreshed()
+                })}
+                className="text-[10px] underline"
+                style={{ color: "#888896" }}>
                 {busy === "disconnect" ? "Disconnecting…" : "Disconnect"}
               </button>
             </div>
@@ -176,7 +184,7 @@ export default function VoiceRefreshCard({ store, onRefreshed }: Props) {
                 </p>
                 {learnedToggle}
                 {nextEligibleLabel && (
-                  <p className="text-[9px] mt-2 leading-none" style={{ color: "#666672" }}>
+                  <p className="text-[10px] mt-2 leading-none" style={{ color: "#9a9aa6" }}>
                     Next refresh {nextEligibleLabel}
                   </p>
                 )}
@@ -199,7 +207,7 @@ export default function VoiceRefreshCard({ store, onRefreshed }: Props) {
                   disabled={needsReconnect}>
                   Refresh my voice
                 </PrimaryButton>
-                <p className="text-[9px] mt-1.5 leading-none" style={{ color: "#55555f" }}>Available now</p>
+                <p className="text-[10px] mt-1.5 leading-none" style={{ color: "#9a9aa6" }}>Available now</p>
               </div>
             ) : (
               // ── LOCKED ──
@@ -207,13 +215,13 @@ export default function VoiceRefreshCard({ store, onRefreshed }: Props) {
                 <label className={`${label} block mb-1`} style={{ color: "#888896" }}>Learn from your X</label>
                 <p className="text-[10px] leading-snug" style={{ color: "#666672" }}>Your voice is up to date.</p>
                 {lastRefreshedLabel && (
-                  <p className="text-[9px] mt-1 leading-none" style={{ color: "#666672" }}>
+                  <p className="text-[10px] mt-1 leading-none" style={{ color: "#9a9aa6" }}>
                     Last refreshed {lastRefreshedLabel}
                   </p>
                 )}
                 {learnedToggle}
                 {nextEligibleLabel && (
-                  <p className="text-[9px] mt-2 leading-none" style={{ color: "#666672" }}>
+                  <p className="text-[10px] mt-2 leading-none" style={{ color: "#9a9aa6" }}>
                     Refresh available {nextEligibleLabel}
                   </p>
                 )}

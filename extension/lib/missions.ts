@@ -1,6 +1,7 @@
 import { todayLocal, yesterdayLocal } from "~lib/dates"
 import { getStore, setStore, type AmintaStore } from "~lib/storage"
 import { tryAwardBountyXP } from "~lib/xp"
+import type { Mode } from "~lib/prompts"
 
 // Count of writing samples Aminta has learned from — voice examples + liked DNA.
 export function sampleCount(store: AmintaStore): number {
@@ -41,20 +42,26 @@ export async function tryCompleteTrainingQuest(store: AmintaStore): Promise<bool
   return !("error" in res)
 }
 
-// Daily missions: reset daily, +150 XP when all done
+// Daily goals: reset daily, +150 XP when all done. Each goal is a
+// CONFIRMED-PUBLISH flag for one generation mode — not a training/teaching
+// task, and not gameable by re-publishing the same mode twice in one day
+// (booleans, not counters).
+const EMPTY_MODES = { tweet: false, reply: false, polish: false }
+
 export function getMissionProgress(store: AmintaStore) {
   const today = todayLocal()
   const isToday = store.missionDate === today
+  const modes = isToday ? (store.missionModes ?? EMPTY_MODES) : EMPTY_MODES
   return {
-    generates: isToday ? (store.missionGenerates ?? 0) : 0,
-    published: isToday ? (store.missionPublished ?? 0) : 0,
-    dnaTrained: sampleCount(store) >= 3,
+    postDone: modes.tweet,
+    replyDone: modes.reply,
+    polishDone: modes.polish,
   }
 }
 
 export async function tryCompleteDailyMissions(store: AmintaStore): Promise<boolean> {
-  const { generates, published, dnaTrained } = getMissionProgress(store)
-  if (generates < 3 || published < 1 || !dnaTrained) return false
+  const { postDone, replyDone, polishDone } = getMissionProgress(store)
+  if (!postDone || !replyDone || !polishDone) return false
   const res = await tryAwardBountyXP(`daily-missions:${todayLocal()}`, 150)
   return !("error" in res)
 }
@@ -67,17 +74,26 @@ export async function incrementMissionGenerates(): Promise<void> {
     missionDate: today,
     missionGenerates: (isToday ? (store.missionGenerates ?? 0) : 0) + 1,
     missionPublished: isToday ? (store.missionPublished ?? 0) : 0,
+    missionModes: isToday ? (store.missionModes ?? EMPTY_MODES) : EMPTY_MODES,
   })
 }
 
-export async function incrementMissionPublished(): Promise<void> {
+// mode: which generation mode was actually confirmed-published — drives
+// which of the 3 daily goals (post/reply/polish) this publish satisfies.
+export async function incrementMissionPublished(mode: Mode): Promise<void> {
   const store = await getStore()
   const today = todayLocal()
   const isToday = store.missionDate === today
+  const modes = isToday ? (store.missionModes ?? EMPTY_MODES) : EMPTY_MODES
   await setStore({
     missionDate: today,
     missionGenerates: isToday ? (store.missionGenerates ?? 0) : 0,
     missionPublished: (isToday ? (store.missionPublished ?? 0) : 0) + 1,
+    missionModes: {
+      tweet: modes.tweet || mode === "tweet",
+      reply: modes.reply || mode === "reply",
+      polish: modes.polish || mode === "polish",
+    },
   })
 }
 

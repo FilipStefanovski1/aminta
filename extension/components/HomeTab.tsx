@@ -21,7 +21,6 @@ import { Card, Sprite, SpeechBubble, XPBar } from "~components/ui"
 interface Props {
   store: AmintaStore
   onCreate: () => void
-  onTrain: () => void
   onOpenCompanion?: () => void
   onOpenSettings?: () => void
   onUpdate?: () => void
@@ -32,7 +31,7 @@ interface Props {
   onContext?: (event: CompanionEvent) => void
 }
 
-export default function HomeTab({ store, onCreate, onTrain, onOpenCompanion, onOpenSettings, onUpdate, animClass, animKey, speech, onContext }: Props) {
+export default function HomeTab({ store, onCreate, onOpenCompanion, onOpenSettings, onUpdate, animClass, animKey, speech, onContext }: Props) {
   const xp          = store.xp ?? 0
   const currentForm = getForm(xp)
   const level       = getLevel(xp)
@@ -80,12 +79,12 @@ export default function HomeTab({ store, onCreate, onTrain, onOpenCompanion, onO
 
   useEffect(() => {
     tryCompleteDailyMissions(store).then(ok => { if (ok && onUpdate) onUpdate() })
-  }, [mission.generates, mission.published, mission.dnaTrained])
+  }, [mission.postDone, mission.replyDone, mission.polishDone])
 
   const tasks = [
-    { label: "Write one post",      done: mission.published >= 1, action: onCreate },
-    { label: "Reply to someone",    done: mission.generates >= 3, action: onCreate },
-    { label: "Teach me your voice", done: mission.dnaTrained,     action: onTrain  },
+    { label: "Write one post",       done: mission.postDone,   action: onCreate },
+    { label: "Join a conversation",  done: mission.replyDone,  action: onCreate },
+    { label: "Polish one post",      done: mission.polishDone, action: onCreate },
   ]
   const allDone = tasks.every(t => t.done)
 
@@ -139,7 +138,7 @@ export default function HomeTab({ store, onCreate, onTrain, onOpenCompanion, onO
           backgroundSize: "8px 8px",
           backgroundColor: "#0e1018",
         }}>
-        <div className="px-4 pt-5 pb-6" style={{ position: "relative" }}>
+        <div className="px-4 pt-6 pb-7" style={{ position: "relative" }}>
           {onOpenSettings && (
             <button
               onClick={onOpenSettings}
@@ -153,7 +152,7 @@ export default function HomeTab({ store, onCreate, onTrain, onOpenCompanion, onO
               </svg>
             </button>
           )}
-          <div className="flex items-center justify-center gap-2 mb-2">
+          <div className="flex items-center justify-center gap-2 mb-3">
             <p className="font-pixel text-[8px] tracking-widest" style={{ color: tint }}>
               {stage}
             </p>
@@ -166,9 +165,11 @@ export default function HomeTab({ store, onCreate, onTrain, onOpenCompanion, onO
               </span>
             )}
           </div>
-          {/* Mascot — bubble absolutely anchored above head, not in flow */}
-          <div className="flex justify-center mb-5" style={{ position: "relative", marginTop: 48 }}>
-            <div style={{ position: "absolute", bottom: "100%", left: "50%", transform: "translateX(-50%)", marginBottom: 4, zIndex: 2 }}>
+          {/* Mascot — bubble absolutely anchored above head, not in flow.
+              marginTop leaves room for a two-line bubble above the header
+              row rather than colliding with the stage name/plan badge. */}
+          <div className="flex justify-center mb-6" style={{ position: "relative", marginTop: 64 }}>
+            <div style={{ position: "absolute", bottom: "100%", left: "50%", transform: "translateX(-50%)", marginBottom: 8, zIndex: 2 }}>
               <SpeechBubble key={bubbleKey} text={speech} />
             </div>
             <button onClick={onOpenCompanion} className="cursor-pointer" style={{ background: "none", border: "none", padding: 0 }}>
@@ -193,7 +194,7 @@ export default function HomeTab({ store, onCreate, onTrain, onOpenCompanion, onO
             )}
           </div>
           <div className="flex items-baseline justify-between mb-1.5">
-            <span className="font-pixel text-[7px]" style={{ color: "#666672" }}>Level {level}</span>
+            <span className="font-pixel text-[7px]" style={{ color: "#8a8a96" }}>Level {level}</span>
             <span className="font-pixel text-[8px]" style={{ color: tint }}>{xpInLevel} / {getLevelSpan(xp)} XP</span>
           </div>
           <XPBar progress={progress} tint={tint} />
@@ -206,7 +207,7 @@ export default function HomeTab({ store, onCreate, onTrain, onOpenCompanion, onO
           <p className="font-pixel text-[7px]" style={{ color: C.text }}>Today</p>
           {allDone
             ? <span className="font-pixel text-[6px]" style={{ color: tint }}>All done ✓</span>
-            : <span className="text-[10px]" style={{ color: "#666672" }}>{tasks.filter(t => t.done).length}/{tasks.length}</span>}
+            : <span className="text-[10px]" style={{ color: "#8a8a96" }}>{tasks.filter(t => t.done).length}/{tasks.length}</span>}
         </div>
         <div>
           {tasks.map((t, i) => (
@@ -244,7 +245,7 @@ export default function HomeTab({ store, onCreate, onTrain, onOpenCompanion, onO
         ] as { label: string; value: string }[]).map(({ label, value }, i, arr) => (
           <div key={label} className="flex-1 text-center py-3" style={{ borderRight: i < arr.length - 1 ? `1px solid ${C.border}` : undefined }}>
             <p className="font-pixel text-[9px]" style={{ color: C.text }}>{value}</p>
-            <p className="text-[9px] mt-1.5 uppercase tracking-[0.06em]" style={{ color: "#666672" }}>{label}</p>
+            <p className="text-[10px] mt-1.5 uppercase tracking-[0.06em]" style={{ color: "#8a8a96" }}>{label}</p>
           </div>
         ))}
       </div>

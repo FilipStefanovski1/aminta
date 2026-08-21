@@ -70,7 +70,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, _sendResponse) => {
     .then(async (result) => {
       if (!result) return
       await recordStreak()
-      await incrementMissionPublished()
+      await incrementMissionPublished(result.mode)
       chrome.runtime.sendMessage({ type: "AMINTA_XP_AWARDED", ...result }).catch(() => {})
     })
     .catch((err) => console.error("[Aminta bg] resolvePendingXP failed:", err))

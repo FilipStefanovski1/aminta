@@ -37,7 +37,6 @@
       "storage",
       "sidePanel",
       "tabs",
-      "identity",
       "scripting"
     ],
     "host_permissions": [
@@ -57,14 +56,6 @@
     },
     "action": {
       "default_title": "Open Aminta"
-    },
-    "oauth2": {
-      "client_id": "110269399450-vfmckhcemps4s9k3okeb1ebh4bk17po7.apps.googleusercontent.com",
-      "scopes": [
-        "openid",
-        "email",
-        "profile"
-      ]
     }
   }
 }
