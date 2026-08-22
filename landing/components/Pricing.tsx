@@ -61,7 +61,11 @@ const FOUNDER_PLAN = {
   cta: "Get Founder Access",
   ctaHref: CREEM_FOUNDER_URL,
   badge: "LIFETIME",
-  highlight: true,
+  // Pro is the one recommended plan (lower commitment, default upgrade
+  // path) — Founder stays premium via its own LIFETIME badge, not by
+  // sharing Pro's mint border/glow treatment. Only one plan is ever
+  // highlighted at a time.
+  highlight: false,
   disabled: false,
 };
 
@@ -131,20 +135,27 @@ function PricingCard({
 
   return (
     <div
-      className={`relative flex flex-col rounded-2xl p-7 md:p-8 h-full transition-all duration-300 ${
+      className={`relative flex flex-col rounded-2xl p-7 md:p-8 h-full transition-all duration-300 border-2 ${
         locked
-          ? "border border-line bg-panel/40 opacity-60 grayscale"
+          ? "border-line bg-panel/40 opacity-60 grayscale"
           : highlight
-            ? "border-2 border-accent bg-panel shadow-[0_0_60px_rgba(116,247,181,0.10),inset_0_1px_0_rgba(116,247,181,0.08)]"
-            : "border border-line bg-panel/60"
+            ? "border-accent bg-panel shadow-[0_0_60px_rgba(116,247,181,0.10),inset_0_1px_0_rgba(116,247,181,0.08)]"
+            : "border-line bg-panel/60"
       }`}
     >
       {highlight && !locked && (
         <div className="absolute -top-px left-1/2 -translate-x-1/2 h-px w-3/4 bg-gradient-to-r from-transparent via-accent/60 to-transparent" />
       )}
 
-      {/* header */}
-      <div className="flex items-start justify-between gap-3">
+      {/* ── Shared layout structure across all 3 cards: label row, price
+          area, description, CTA slot, feature list. Each of the first
+          three sections gets a fixed min-height so the CTA slot starts at
+          the exact same vertical position regardless of how each card's
+          content naturally wraps — not left to flow, per-card margins, or
+          content length. ── */}
+
+      {/* label row */}
+      <div className="flex items-start justify-between gap-3 min-h-[22px]">
         <p className="font-pixel text-[10px] uppercase tracking-widest text-muted">
           {name}
         </p>
@@ -158,21 +169,31 @@ function PricingCard({
         )}
       </div>
 
-      {/* price */}
-      <div className="mt-3 flex items-baseline gap-1.5">
-        <span className={`font-pixel text-4xl md:text-5xl leading-none ${locked ? "text-muted" : "text-white"}`}>
+      {/* price area — billing label stacks BELOW the price, not beside it.
+          A same-line "$8.99 / month" pairing wraps onto 2 lines the moment
+          the price digits (Pro's 5 chars vs Free's/Founder's 2-3) leave too
+          little row width for the label, silently inflating just that
+          card's price-row height and shifting its CTA down — stacking
+          removes that dependency on price width entirely. */}
+      <div className="mt-3 min-h-[60px] md:min-h-[72px]">
+        <span className={`block font-pixel text-4xl md:text-5xl leading-none ${locked ? "text-muted" : "text-white"}`}>
           {price}
         </span>
         {billing && (
-          <span className="text-sm text-muted">{billing}</span>
+          <span className="block mt-1 text-sm text-muted">{billing}</span>
         )}
       </div>
 
-      <p className="mt-4 text-sm text-muted leading-relaxed">{description}</p>
+      {/* description */}
+      <p className="mt-4 text-sm text-muted leading-relaxed min-h-[56px] sm:min-h-[48px]">{description}</p>
 
+      {/* CTA slot — same vertical position AND same explicit height in
+          every card (h-[46px], border-box, regardless of whether that
+          variant has a visible border) — ownership only ever changes the
+          label/href passed in, never this structure or size. */}
       {disabled ? (
         <span
-          className="mt-7 flex items-center justify-center gap-1.5 rounded-xl py-3 text-sm font-semibold border border-line text-muted/50 cursor-not-allowed"
+          className="mt-7 h-[46px] flex items-center justify-center gap-1.5 rounded-xl text-sm font-semibold border border-line text-muted/50 cursor-not-allowed"
           aria-disabled="true"
         >
           <LockIcon />
@@ -183,16 +204,17 @@ function PricingCard({
           href={ctaHref}
           {...(isExternal ? { target: "_blank", rel: "noopener noreferrer" } : {})}
           onClick={onCtaClick}
-          className={`mt-7 block text-center rounded-xl py-3 text-sm font-semibold transition-all duration-200 ${
+          className={`mt-7 h-[46px] flex items-center justify-center text-center rounded-xl text-sm font-semibold border transition-all duration-200 ${
             highlight
-              ? "bg-accent text-black hover:brightness-110 shadow-[0_4px_24px_rgba(116,247,181,0.25)]"
-              : "border border-line text-white hover:border-accent/40 hover:bg-accent/5"
+              ? "border-transparent bg-accent text-black hover:brightness-110 shadow-[0_4px_24px_rgba(116,247,181,0.25)]"
+              : "border-line text-white hover:border-accent/40 hover:bg-accent/5"
           }`}
         >
           {cta}
         </a>
       )}
 
+      {/* feature list */}
       <ul className="mt-8 space-y-3">
         {features.map((f) => {
           const isSoon = f.includes("(coming soon)")
