@@ -355,3 +355,39 @@ describe("Plan changes mid-period", () => {
     expect(credits!.balance).toBe(5)
   })
 })
+
+// Regression: a fresh account completing onboarding used to show 4/5
+// credits immediately — the "Make it sound like me" demo post (onboarding's
+// AI-powered step) was dispatched as a normal "tweet" generation and billed
+// like one, even though the user never pressed Generate for it. Fixed by
+// routing that call through the dedicated "onboarding_demo" mode (priced at
+// 0 — see credits.ts), leaving the FIRST REAL generation as the first
+// charge.
+describe("Fresh onboarding does not consume a generation credit", () => {
+  it("full flow: 5/5 before onboarding, still 5/5 after the AI-powered onboarding step, 4/5 after the first real generation", () => {
+    const c = ctxFor("free", new Date("2026-08-14T12:00:00Z"))
+
+    // 1. Fresh account starts at the full allowance.
+    expect(c.allowance).toBe(5)
+
+    // 2 & 3. Complete the AI-powered onboarding path ("Make it sound like
+    // me") — priced at 0, so the allowance must not move.
+    const onboarding = reserve("onboarding-1", creditCostFor("onboarding_demo"), c.allowance, c.periodStart, c.planKey)
+    expect(onboarding.ok).toBe(true)
+    expect(credits!.balance).toBe(5)
+
+    // 4 & 5. The first ACTUAL content generation — a normal tweet — is the
+    // one and only charge, dropping the balance by exactly 1.
+    const firstRealGeneration = reserve("generate-1", creditCostFor("tweet"), c.allowance, c.periodStart, c.planKey)
+    expect(firstRealGeneration.ok).toBe(true)
+    expect(credits!.balance).toBe(4)
+  })
+
+  it("onboarding_demo is free even if run multiple times (retry, re-onboarding)", () => {
+    const c = ctxFor("free", new Date("2026-08-14T12:00:00Z"))
+    reserve("onboarding-1", creditCostFor("onboarding_demo"), c.allowance, c.periodStart, c.planKey)
+    reserve("onboarding-2", creditCostFor("onboarding_demo"), c.allowance, c.periodStart, c.planKey)
+    reserve("onboarding-3", creditCostFor("onboarding_demo"), c.allowance, c.periodStart, c.planKey)
+    expect(credits!.balance).toBe(5)
+  })
+})

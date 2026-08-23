@@ -13,12 +13,15 @@
 // generations costing 2, a premium model costing 3) is a one-line edit that
 // the client physically cannot disagree with — the server is authoritative.
 
-export type CreditedMode = "tweet" | "reply" | "polish" | "style_profile" | "thread"
+export type CreditedMode = "tweet" | "reply" | "polish" | "style_profile" | "thread" | "onboarding_demo"
 
 // V1: every user-initiated Included AI action costs exactly 1 credit.
 // style_profile is a background-ish extraction the user doesn't explicitly
 // ask for, so it's free — charging for it would make a user's credits drain
-// for something they never pressed a button for.
+// for something they never pressed a button for. onboarding_demo is the
+// same principle applied to the one-time "Make it sound like me" post
+// shown during onboarding — same prompt shape as a real tweet, but the
+// product triggers it, not the user pressing Generate.
 //
 // thread costs 3, not 1 and not 3x-via-3-calls: it's still exactly ONE
 // Gemini call (see lib/ai/prompts.ts's buildThreadMessages — one structured
@@ -33,6 +36,7 @@ const CREDIT_COSTS: Record<CreditedMode, number> = {
   polish: 1,
   style_profile: 0,
   thread: 3,
+  onboarding_demo: 0,
 }
 
 // Internal/system callers (future Auto Voice Refresh, admin tooling) run

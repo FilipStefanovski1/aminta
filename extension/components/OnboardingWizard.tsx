@@ -3,7 +3,7 @@ import { useEffect, useState } from "react"
 import type { AmintaStore, VoiceProfile } from "~lib/storage"
 import { C } from "~lib/theme"
 import { isGoogleKey, isGroqKey } from "~lib/ai"
-import { dispatchGenerate } from "~lib/backendGenerate"
+import { backendGenerate, dispatchGenerate } from "~lib/backendGenerate"
 import { canUseByok, shouldUseIncludedAi } from "~lib/entitlements"
 import { FORMS } from "~lib/evolution"
 import { focusOrCreateXTab } from "~lib/xTab"
@@ -350,17 +350,34 @@ export default function OnboardingWizard({ store, onDone }: Props) {
         customRules: store.voice?.customRules || "",
       }
       const seed = INTENT_OPTIONS.find(o => o.id === intent)?.seed ?? "an introduction post"
-      const text = await dispatchGenerate(
-        { ...store, apiKey },
-        {
-          generationMode: "tweet",
-          input: seed,
-          voice,
-          styleProfile: null,
-          tone: "witty",
-          length: "medium",
-        }
-      )
+      // This is a demo generation the product triggers, not one the user
+      // explicitly asked for by pressing Generate — it must not consume a
+      // normal content-generation credit (same principle as style_profile
+      // being free). Included AI routes through the dedicated
+      // "onboarding_demo" mode, which the server prices at 0 (see
+      // landing/lib/ai/credits.ts) but otherwise builds the exact same
+      // tweet-shaped prompt. BYOK has no credit concept to protect either
+      // way, so it keeps using dispatchGenerate's normal "tweet" path.
+      const text = includedAi
+        ? await backendGenerate({
+            generationMode: "onboarding_demo",
+            input: seed,
+            voice,
+            styleProfile: null,
+            tone: "witty",
+            length: "medium",
+          })
+        : await dispatchGenerate(
+            { ...store, apiKey },
+            {
+              generationMode: "tweet",
+              input: seed,
+              voice,
+              styleProfile: null,
+              tone: "witty",
+              length: "medium",
+            }
+          )
       setFirstPost(text)
     } catch (err) {
       setGenerateError(err instanceof Error ? err.message : "Couldn't generate a post right now.")

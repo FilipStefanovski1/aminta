@@ -53,7 +53,26 @@ export interface ThreadGenerateArgs {
   postCount?: ThreadPostCount
 }
 
-type BackendGenerateArgs = TextGenerateArgs | StyleProfileGenerateArgs | ThreadGenerateArgs
+// Onboarding's one-time "Make it sound like me" demo post — same shape and
+// same prompt as a real tweet generation, but the user never pressed
+// Generate for it, so it must not cost a normal generation credit (same
+// principle as style_profile being free: an action the product triggers on
+// the user's behalf, not one they explicitly asked for). A distinct
+// generationMode is what actually makes this free server-side — see
+// landing/lib/ai/credits.ts's CREDIT_COSTS and app/api/generate/route.ts,
+// which treats this identically to "tweet" for prompt-building but prices
+// it at 0. BYOK never reaches this at all (no credit involved there
+// regardless of mode) — see OnboardingWizard.tsx's generateFirstPost().
+export interface OnboardingDemoGenerateArgs {
+  generationMode: "onboarding_demo"
+  input: string
+  voice: VoiceProfile
+  styleProfile: StyleProfile | null
+  tone: Tone
+  length: OutputLength
+}
+
+type BackendGenerateArgs = TextGenerateArgs | StyleProfileGenerateArgs | ThreadGenerateArgs | OnboardingDemoGenerateArgs
 
 interface GenerateResponse {
   text?: string

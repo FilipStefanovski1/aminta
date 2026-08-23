@@ -21,7 +21,7 @@ describe("credit cost mapping (centralized, server-side)", () => {
   it("resolves every generation type through the same mapping", () => {
     // The point of the central map: adding a type or repricing one is a
     // single-file change, and the client can't disagree.
-    for (const mode of ["tweet", "reply", "polish", "style_profile"]) {
+    for (const mode of ["tweet", "reply", "polish", "style_profile", "onboarding_demo"]) {
       expect(typeof creditCostFor(mode)).toBe("number")
     }
   })
@@ -30,6 +30,14 @@ describe("credit cost mapping (centralized, server-side)", () => {
     // The user never pressed a button for this — charging would silently
     // drain their balance.
     expect(creditCostFor("style_profile")).toBe(0)
+  })
+
+  it("does not charge for onboarding's one-time demo post", () => {
+    // Regression: a fresh account completing onboarding used to show
+    // 4/5 credits immediately — the "Make it sound like me" demo was
+    // dispatched as a normal "tweet" generation and billed like one, even
+    // though the user never pressed Generate for it.
+    expect(creditCostFor("onboarding_demo")).toBe(0)
   })
 
   it("charges thread more than a single post, but as ONE flat reservation", () => {

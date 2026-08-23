@@ -25,7 +25,7 @@ export const runtime = "nodejs"
 
 // ─── Request validation limits — hardcoded, never client-overridable ───────
 const MAX_INPUT_CHARS = 4_000
-const MODES = new Set<Mode | "style_profile" | "thread">(["tweet", "reply", "polish", "style_profile", "thread"])
+const MODES = new Set<Mode | "style_profile" | "thread" | "onboarding_demo">(["tweet", "reply", "polish", "style_profile", "thread", "onboarding_demo"])
 const TONES = new Set<Tone>(["direct", "witty", "analytical", "inspiring"])
 const LENGTHS = new Set<OutputLength>(["short", "medium", "long"])
 const POST_COUNTS = new Set<ThreadPostCount>([2, 3, 4, 5, "6+"])
@@ -142,12 +142,20 @@ export async function POST(request: NextRequest) {
   if (!requestId || typeof requestId !== "string" || !/^[0-9a-f-]{36}$/i.test(requestId)) {
     return errorResponse("Missing or invalid requestId.", "INVALID_REQUEST", 400)
   }
-  if (!generationMode || !MODES.has(generationMode as Mode | "style_profile" | "thread")) {
+  if (!generationMode || !MODES.has(generationMode as Mode | "style_profile" | "thread" | "onboarding_demo")) {
     return errorResponse("Invalid generationMode.", "INVALID_REQUEST", 400)
   }
 
   const isStyleProfile = generationMode === "style_profile"
   const isThread = generationMode === "thread"
+  // Onboarding's one-time "Make it sound like me" demo — priced at 0
+  // credits (see lib/ai/credits.ts's CREDIT_COSTS) because the product
+  // triggers it, not the user pressing Generate, but it's otherwise a
+  // completely normal tweet-shaped generation: same prompt, same output
+  // handling. promptMode is what actually reaches buildMessages() below —
+  // Mode has no "onboarding_demo" case, so this is the one place that
+  // distinction gets translated back to "tweet" for prompt purposes only.
+  const promptMode: Mode = generationMode === "onboarding_demo" ? "tweet" : (generationMode as Mode)
 
   if (isStyleProfile) {
     const corpusCheck = validateCorpus(body.corpus)
@@ -273,7 +281,7 @@ export async function POST(request: NextRequest) {
         ? buildThreadMessages(body.voice!, body.input!, body.styleProfile ?? null, body.tone ?? "direct", body.length ?? "medium", body.postCount ?? 4)
         : withImages(
             buildMessages(
-              generationMode as Mode,
+              promptMode,
               body.voice!,
               body.input!,
               body.styleProfile ?? null,
