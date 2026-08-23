@@ -49,7 +49,7 @@ const SHARED_INSTRUCTIONAL_STRINGS = [
   "this changes everything",
   "thoughts?",
   "agree?",
-  "never run two separate thoughts together with no separator",
+  "Never run two separate thoughts together with no separator",
   "Don't default to em dashes",
   "No hashtags or emojis unless their examples use them.",
   'Never say "as an AI"',
@@ -57,8 +57,19 @@ const SHARED_INSTRUCTIONAL_STRINGS = [
   "Here's a polished version:",
   "never your thinking, notes, or process",
   // WRITING STYLE header — anti-caricature framing
-  "apply these as tendencies, not an exaggerated impression",
-  "recognizable, not a caricature",
+  "hard constraints on HOW to write, not decoration",
+  "recognizable not a caricature",
+  // Style-fidelity fix: an active default against the model's own bias
+  // toward compressed lowercase "AI-caption" X style, present regardless of
+  // whether a StyleProfile exists yet — and an explicit rule that tone
+  // never overrides the user's real punctuation/line-break identity.
+  "Never default to a compressed lowercase AI-caption style",
+  "Tone changes attitude and word choice ONLY",
+  "Witty does not mean fragment-only",
+  "PUNCTUATION: Match exactly how this person uses commas, periods, dashes, and apostrophes",
+  "LINE BREAKS & SPACING: Match how this person separates sentences and thoughts",
+  "CADENCE: Match this person's sentence lengths and transitions",
+  "Follow the PUNCTUATION and LINE BREAKS & SPACING instructions in WRITING STYLE above exactly",
   // Length targets (mode-aware, character ranges — not fixed paragraph counts)
   "40-100 characters",
   "150-260 characters",

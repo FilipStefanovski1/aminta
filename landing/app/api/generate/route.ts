@@ -12,7 +12,7 @@ import { NextResponse, type NextRequest } from "next/server"
 import { aiIncluded } from "@/lib/entitlements"
 import { isIncludedAiAvailable } from "@/lib/ai/config"
 import { callGemini } from "@/lib/ai/gemini"
-import { buildMessages, buildStyleProfileMessages, buildThreadMessages, withImages, type Mode, type OutputLength, type Tone, type VoiceProfile, type StyleProfile, type StyleCorpusEntry } from "@/lib/ai/prompts"
+import { buildMessages, buildStyleProfileMessages, buildThreadMessages, withImages, type Mode, type OutputLength, type ThreadPostCount, type Tone, type VoiceProfile, type StyleProfile, type StyleCorpusEntry } from "@/lib/ai/prompts"
 import { checkAndIncrementRateLimits, claimConcurrencySlot, clearInflight } from "@/lib/ai/rateLimit"
 import { loadUserEntitlement, resolveLimits, claimRequestId, completeUsageLog } from "@/lib/ai/quota"
 import { reserveCredits, refundCredits } from "@/lib/ai/creditService"
@@ -28,6 +28,7 @@ const MAX_INPUT_CHARS = 4_000
 const MODES = new Set<Mode | "style_profile" | "thread">(["tweet", "reply", "polish", "style_profile", "thread"])
 const TONES = new Set<Tone>(["direct", "witty", "analytical", "inspiring"])
 const LENGTHS = new Set<OutputLength>(["short", "medium", "long"])
+const POST_COUNTS = new Set<ThreadPostCount>([2, 3, 4, 5, "6+"])
 const MAX_TEMPLATE_INSTRUCTION_CHARS = 1_000
 
 interface GenerateBody {
@@ -40,6 +41,8 @@ interface GenerateBody {
   styleProfile?: StyleProfile | null
   tone?: Tone
   length?: OutputLength
+  // Thread Creator only — how many posts, independent from `length`.
+  postCount?: ThreadPostCount
   templateInstruction?: string
   corpus?: StyleCorpusEntry[]
 }
@@ -158,6 +161,7 @@ export async function POST(request: NextRequest) {
     }
     if (body.tone && !TONES.has(body.tone)) return errorResponse("Invalid tone.", "INVALID_REQUEST", 400)
     if (body.length && !LENGTHS.has(body.length)) return errorResponse("Invalid length.", "INVALID_REQUEST", 400)
+    if (body.postCount !== undefined && !POST_COUNTS.has(body.postCount)) return errorResponse("Invalid postCount.", "INVALID_REQUEST", 400)
     if (!body.voice || typeof body.voice !== "object") return errorResponse("Missing voice profile.", "INVALID_REQUEST", 400)
     if (body.templateInstruction !== undefined) {
       if (typeof body.templateInstruction !== "string" || body.templateInstruction.length > MAX_TEMPLATE_INSTRUCTION_CHARS) {
@@ -266,7 +270,7 @@ export async function POST(request: NextRequest) {
     const messages = isStyleProfile
       ? buildStyleProfileMessages(body.corpus!)
       : isThread
-        ? buildThreadMessages(body.voice!, body.input!, body.styleProfile ?? null, body.tone ?? "direct")
+        ? buildThreadMessages(body.voice!, body.input!, body.styleProfile ?? null, body.tone ?? "direct", body.length ?? "medium", body.postCount ?? 4)
         : withImages(
             buildMessages(
               generationMode as Mode,
@@ -285,7 +289,22 @@ export async function POST(request: NextRequest) {
     // Structured `{ text }` output only for real single-post generation —
     // style_profile and thread both keep their own JSON-via-prompt contract
     // (parsed client-side).
-    const result = await callGemini(messages, { structuredText: !isStyleProfile && !isThread, generationType: generationMode })
+    //
+    // Thread needs a much larger output budget than the 400-token default:
+    // 3 thread options, each with several Medium-depth (or longer) posts,
+    // in one JSON response. The shared default was silently truncating that
+    // JSON mid-response once posts were asked to be developed (see
+    // lib/ai/prompts.ts's threadPostDepthGuide), producing invalid JSON
+    // that failed to parse client-side — surfacing as "Couldn't generate
+    // distinct threads" even though no distinctness check was ever involved.
+    // Server-decided, never client-supplied — same rule as model/provider
+    // choice above. 30s (vs the 15s default) because ~2000 tokens
+    // legitimately takes longer to generate than ~400.
+    const result = await callGemini(messages, {
+      structuredText: !isStyleProfile && !isThread,
+      generationType: generationMode,
+      ...(isThread ? { maxOutputTokens: 2000, totalDeadlineMs: 30_000 } : {}),
+    })
     const latencyMs = Date.now() - startedAt
     // style_profile/thread return raw JSON for client-side parsing —
     // cleanup (label/quote stripping, punctuation normalization) is only

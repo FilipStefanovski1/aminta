@@ -54,7 +54,17 @@ export interface CallGeminiOptions {
   // first attempt) so a caller can show "Retrying automatically…" instead of
   // leaving a raw provider error on screen mid-retry.
   onRetry?: (attempt: number, maxAttempts: number) => void
+  // Defaults to 400 (fine for a single tweet/reply/polish). Thread Creator
+  // asks for 3 developed thread options in one JSON response and needs far
+  // more room — see lib/backendGenerate.ts's THREAD_MAX_OUTPUT_TOKENS. A
+  // fixed 400 regardless of task was silently truncating thread JSON
+  // mid-response once posts were asked to be developed (Medium-depth fix),
+  // producing invalid JSON that failed to parse — not a distinctness
+  // rejection, an output-budget bug.
+  maxOutputTokens?: number
 }
+
+const DEFAULT_MAX_OUTPUT_TOKENS = 400
 
 // Whole-operation deadline. Interactive post/reply/polish generation must
 // never leave the UI's loading state waiting anywhere near a minute — 15s
@@ -293,7 +303,8 @@ export async function callGemini(
     structuredText = false,
     totalDeadlineMs = TOTAL_DEADLINE_MS,
     generationType,
-    onRetry
+    onRetry,
+    maxOutputTokens = DEFAULT_MAX_OUTPUT_TOKENS
   } = options
 
   if (!apiKey.trim()) {
@@ -318,7 +329,7 @@ export async function callGemini(
     contents,
     ...(system ? { systemInstruction: { parts: [{ text: system }] } } : {}),
     generationConfig: {
-      maxOutputTokens: 400,
+      maxOutputTokens,
       // Gemini 3 series: lowest thinking level for a simple writing task —
       // cuts latency and avoids the model's own reasoning/analysis bleeding
       // into the visible answer. Never combined with the legacy

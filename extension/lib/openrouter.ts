@@ -9,12 +9,22 @@ export interface ChatMessage {
   content: string | ContentPart[]
 }
 
+// Default for a single tweet/reply/polish generation. Thread Creator asks
+// for 3 developed thread options in one response and needs far more room —
+// see THREAD_MAX_TOKENS below and lib/backendGenerate.ts's call site. A
+// fixed 400 here regardless of task was silently truncating thread JSON
+// mid-response once posts were asked to be developed (Medium-depth fix),
+// producing invalid JSON that failed to parse — not a distinctness
+// rejection, an output-budget bug.
+const DEFAULT_MAX_TOKENS = 400
+
 export async function callOpenAICompat(
   endpoint: string,
   apiKey: string,
   model: string,
   messages: ChatMessage[],
-  label: string
+  label: string,
+  maxTokens: number = DEFAULT_MAX_TOKENS
 ): Promise<string> {
   if (!apiKey.trim()) {
     throw new Error(`Missing API key. Add your ${label} key in Settings.`)
@@ -32,7 +42,7 @@ export async function callOpenAICompat(
         model,
         messages,
         temperature: 0.9,
-        max_tokens: 400
+        max_tokens: maxTokens
       }),
       signal: AbortSignal.timeout(60_000)
     })
@@ -76,27 +86,31 @@ export async function callOpenAICompat(
 export function callOpenRouter(
   apiKey: string,
   model: string,
-  messages: ChatMessage[]
+  messages: ChatMessage[],
+  maxTokens?: number
 ): Promise<string> {
   return callOpenAICompat(
     "https://openrouter.ai/api/v1/chat/completions",
     apiKey,
     model,
     messages,
-    "OpenRouter"
+    "OpenRouter",
+    maxTokens
   )
 }
 
 export function callGroq(
   apiKey: string,
   model: string,
-  messages: ChatMessage[]
+  messages: ChatMessage[],
+  maxTokens?: number
 ): Promise<string> {
   return callOpenAICompat(
     "https://api.groq.com/openai/v1/chat/completions",
     apiKey,
     model,
     messages,
-    "Groq"
+    "Groq",
+    maxTokens
   )
 }

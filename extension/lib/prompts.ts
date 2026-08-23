@@ -5,6 +5,10 @@ export type Platform     = "x"
 export type Mode         = "tweet" | "reply" | "polish"
 export type Tone         = "direct" | "witty" | "analytical" | "inspiring"
 export type OutputLength = "short" | "medium" | "long"
+// Thread Creator only — how many posts, independent from OutputLength
+// (which controls per-post depth, not post count). "6+" lets the model pick
+// a sensible count in [6, 8] rather than a fixed number.
+export type ThreadPostCount = 2 | 3 | 4 | 5 | "6+"
 
 const TONE_GUIDE: Record<Tone, string> = {
   direct:     "Be direct and concise. Cut all fluff. Get to the point fast.",
@@ -104,27 +108,70 @@ function confidencePrefix(score: number): string {
   return ""
 }
 
+// Without an active countermeasure, the model's own pretraining bias
+// pulls generic X writing toward compressed, lowercase, fragment-heavy
+// "AI-caption" style regardless of what a specific user's profile says —
+// especially when a field is thin/empty (small corpus) and there's nothing
+// forceful pushing back. This is the default EVERY prompt gets, populated
+// profile or not, so there's always an active instruction to write like a
+// real person unless the profile clearly says this person doesn't.
+const DEFAULT_FORM_BASELINE =
+  "DEFAULT — unless a field below clearly says otherwise: write real sentences with normal commas, periods, capitalization, and natural spacing between thoughts, the way an actual person writes. Never default to a compressed lowercase AI-caption style (no punctuation, one fragment per line) just because this is X — that is not how most people actually write, and it is a formatting habit to avoid, not a target."
+
+// Tone (direct/witty/analytical/inspiring) only ever changes attitude and
+// word choice — it must never be read as license to drop the punctuation/
+// line-break identity above. This used to be unstated, which let a
+// "direct" tone alone push the model toward fragments even when the
+// profile clearly showed normal punctuation.
+const TONE_VS_FORM_INDEPENDENCE =
+  "Tone changes attitude and word choice ONLY — it never overrides the punctuation, capitalization, or line-break instructions above. A direct tone still uses this person's normal commas and full sentences; it does not mean fragments or no punctuation. Witty does not mean fragment-only. Analytical does not mean generic structured AI prose."
+
+// Headed, imperative constraints (not decorative bullets) for the fields
+// most responsible for a generated post actually resembling the user's
+// real writing rather than generic AI-caption formatting. Each header maps
+// to a real StyleProfile field rather than inventing new schema — rhythm
+// and cadence both describe pacing, so they're folded into one CADENCE
+// line rather than two overlapping ones.
+function structuralConstraints(sp: StyleProfile): string {
+  const punctuation = sp.punctuation
+    ? `PUNCTUATION: Match exactly how this person uses commas, periods, dashes, and apostrophes — ${sp.punctuation}.`
+    : ""
+  const lineBreaks = sp.formattingPreferences
+    ? `LINE BREAKS & SPACING: Match how this person separates sentences and thoughts, and how they break lines or paragraphs — ${sp.formattingPreferences}.`
+    : ""
+  const cadenceSource = [sp.cadence, sp.rhythm].filter(Boolean).join("; ")
+  const cadence = cadenceSource
+    ? `CADENCE: Match this person's sentence lengths and transitions — ${cadenceSource}.`
+    : ""
+  return [punctuation, lineBreaks, cadence].filter(Boolean).join("\n")
+}
+
 function styleProfileBlock(sp: StyleProfile | null): string {
-  if (!sp) return ""
+  const header = "WRITING STYLE (hard constraints on HOW to write, not decoration — apply as tendencies, recognizable not a caricature; never introduce topics, names, brands, opinions, or facts):"
+
+  if (!sp) return [header, DEFAULT_FORM_BASELINE].join("\n")
+
   const lines = [
     `- Confidence: ${sp.confidence}`,
     `- Energy: ${sp.energy}`,
     `- Vocabulary: ${sp.vocabularyComplexity}`,
     `- Capitalization: ${sp.capitalization}`,
     `- Directness: ${sp.directness}`,
-    sp.rhythm && `- Rhythm: ${sp.rhythm}`,
-    sp.punctuation && `- Punctuation: ${sp.punctuation}`,
     sp.emojiUsage && `- Emoji usage: ${sp.emojiUsage}`,
     sp.humorStyle && `- Humor: ${sp.humorStyle}`,
-    sp.formattingPreferences && `- Formatting: ${sp.formattingPreferences}`,
     sp.rhetoricalDevices && `- Rhetorical devices: ${sp.rhetoricalDevices}`,
-    sp.cadence && `- Cadence: ${sp.cadence}`,
   ].filter(Boolean)
 
   const prefix = confidencePrefix(sp.confidenceScore)
-  const header = "WRITING STYLE (apply these as tendencies, not an exaggerated impression — recognizable, not a caricature; never introduce topics, names, brands, opinions, or facts):"
 
-  return [header, prefix, ...lines].filter(Boolean).join("\n")
+  return [
+    header,
+    DEFAULT_FORM_BASELINE,
+    prefix,
+    structuralConstraints(sp),
+    ...lines,
+    TONE_VS_FORM_INDEPENDENCE,
+  ].filter(Boolean).join("\n")
 }
 
 // Templates are a third, independent input alongside topic and style — they
@@ -167,7 +214,7 @@ function systemX(mode: Mode, voice: VoiceProfile, styleProfile: StyleProfile | n
     "RULES:",
     "- Write like a real person posting on X, not marketing copy — no corporate tone, no forced enthusiasm, no hedge-everything disclaimers.",
     "- Avoid worn-out openers (\"hot take\", \"unpopular opinion\", \"here's the thing\", \"let that sink in\", \"this changes everything\") and worn-out closers (\"thoughts?\", \"agree?\", generic motivational lines) — use them only if they'd genuinely fit, which is rare.",
-    "- Write complete, grammatically correct sentences with normal punctuation — never run two separate thoughts together with no separator — unless WRITING STYLE explicitly says the user's own posts drop punctuation; don't infer that from brevity alone.",
+    "- Follow the PUNCTUATION and LINE BREAKS & SPACING instructions in WRITING STYLE above exactly. Never run two separate thoughts together with no separator, and never collapse into a compressed lowercase fragment style unless WRITING STYLE clearly says this person's own posts actually look like that — don't infer that from brevity or tone alone.",
     "- Don't default to em dashes — only if WRITING STYLE's punctuation notes show the user's own writing actually uses them.",
     "- No hashtags or emojis unless their examples use them.",
     '- Never say "as an AI". Sound human.',
@@ -185,6 +232,18 @@ function systemX(mode: Mode, voice: VoiceProfile, styleProfile: StyleProfile | n
 // anti-leakage instruction — one contributing factor (alongside no
 // thinking-level cap and no structured output) in style-profile prose
 // occasionally surfacing as the "generated post" instead of real output.
+// A sparse topic ("solana summit serbia") was collapsing into a near-
+// verbatim paraphrase instead of a developed post — the model was letting
+// the INPUT's brevity dictate the OUTPUT's length/depth, overriding the
+// LENGTH TARGET below it. This is the active countermeasure: the topic is
+// explicitly reframed as a premise to develop, not a sentence to rewrite,
+// with an explicit boundary against inventing facts (the failure mode the
+// opposite instruction — "add more" — would otherwise invite). Tweet mode
+// only: replies/polish already have real source content to work from, not
+// a bare topic that needs developing.
+const PREMISE_DEVELOPMENT_RULE =
+  "The topic above is a SEED, not a complete draft — a short topic (a few words) is not an instruction to write a short post, and it is never a reason to refuse or ask for more detail. Infer a safe, subjective angle: opinion, anticipation, personal perspective, general observation, a builder's/founder's angle, a question, or a reflection. Develop that angle into a complete, substantive thought that actually reaches the LENGTH TARGET below — while still following the WRITING STYLE punctuation/formatting/cadence instructions above, not generic AI paragraph structure. Do NOT invent statistics, event details not provided, speaker names, dates, attendance numbers, announcements, or any claim presented as factual knowledge the topic didn't provide. If factual specificity isn't known, stay subjective/general — that is a feature of a good response here, not a limitation."
+
 const FINAL_OUTPUT_INSTRUCTION =
   "\n\nFINAL INSTRUCTION — this overrides everything above if there's ever a conflict: return only the finished post. Do not return writing instructions, tone descriptions, analysis, labels, quotation marks, markdown, or commentary."
 
@@ -231,26 +290,70 @@ export interface ThreadOption {
   posts: string[]
 }
 
+// Thread Creator's Short/Medium/Long selector was completely disconnected
+// from generation — buildThreadMessages took no length parameter at all,
+// so every thread (regardless of what the user picked in the UI) used one
+// fixed "under 280 characters" per-post cap with no floor, which is exactly
+// what let a real generation collapse into 13-character slogans like "time
+// to build". This restores the connection AND personalizes it: when the
+// user has a real lengthProfile (Voice Refresh / enough manual examples),
+// their own median post length anchors what "developed" actually means for
+// them, instead of a generic paragraph. Deliberately phrased around DEPTH
+// (thought development, not just characters) per the product requirement —
+// characters are secondary guidance, not the definition.
+function threadPostDepthGuide(length: OutputLength, styleProfile: StyleProfile | null): string {
+  const lp = styleProfile?.lengthProfile
+  const anchor = lp
+    ? ` This person's own posts typically run around ${lp.median} characters — use that as the real anchor for what "developed" means for them, not a generic paragraph length.`
+    : ""
+
+  if (length === "short") {
+    return `PER-POST DEPTH: SHORT — noticeably tighter than this person's normal post: one clear, complete thought, said efficiently. Tight does not mean a bare slogan or tagline — it still has to read as a real sentence with a point.${anchor}`
+  }
+  if (length === "long") {
+    return `PER-POST DEPTH: LONG — more developed than this person's normal post: real reasoning, a concrete detail, or a fuller turn of thought in the posts that call for it — not uniform padding across every post.${anchor}`
+  }
+  return `PER-POST DEPTH: MEDIUM — roughly this person's own normal post depth: a developed thought with real content, not a one-line fragment or slogan.${anchor} A post under about 60-80 characters should be rare and only when it's a deliberately earned beat (e.g. a punchline close) — not the default shape for most posts in the thread.`
+}
+
+// Independent from threadPostDepthGuide: this controls HOW MANY posts, that
+// controls how developed each one is. A fixed count (2-5) is a hard
+// instruction — the model must not pad a weak idea to reach it, but should
+// find genuinely different angles/steps rather than repeating itself.
+// "6+" is a range, not a fixed number: the model picks what the topic
+// actually supports, never forced up to 8 for its own sake.
+function threadPostCountGuide(postCount: ThreadPostCount): string {
+  if (postCount === "6+") {
+    return "POST COUNT: choose a sensible number of posts between 6 and 8 based on what this topic can actually support. Never pad a weak idea just to reach 6 — if it can't sustain that many posts without repeating itself, it's better as a shorter, genuinely distinct sequence than a padded one."
+  }
+  return `POST COUNT: write EXACTLY ${postCount} posts in this thread — not more, not fewer. If the topic doesn't obviously fill ${postCount} posts on its own, develop different angles, steps, or supporting details rather than repeating the same point in different words.`
+}
+
 export function buildThreadMessages(
   voice: VoiceProfile,
   input: string,
   styleProfile: StyleProfile | null,
-  tone: Tone = "direct"
+  tone: Tone = "direct",
+  length: OutputLength = "medium",
+  postCount: ThreadPostCount = 4
 ): ChatMessage[] {
+  const postCountLabel = postCount === "6+" ? "6-8" : String(postCount)
   const system = [
     "You write X (Twitter) threads for a specific person. Match their voice precisely.",
     voiceBlock(voice, styleProfile),
     `TONE DIRECTION: ${TONE_GUIDE[tone]}`,
     "THINK FIRST, SILENTLY (never write this part down): this topic can be approached from genuinely different angles — pick 3 that are ACTUALLY different premises (e.g. a personal story, a contrarian take, a step-by-step breakdown), not 3 rewrites of the same point. Each thread must stand on its own: a different opening idea, different supporting posts, a different close. Never reuse the same hook, transition phrase, or closing line across the 3 threads.",
     "RULES FOR EVERY THREAD:",
+    "- The topic is a SEED, not a complete draft — a short topic (a few words) is not an instruction to write a short, thin thread, and it is never a reason to refuse or ask for a more detailed topic. Infer a safe, subjective angle (opinion, anticipation, personal perspective, general observation, a builder's/founder's angle, a question, a reflection) and develop real substance across the posts. Do NOT invent statistics, event details not provided, speaker names, dates, attendance numbers, announcements, or any claim presented as factual knowledge the topic didn't provide — stay subjective/general when specifics aren't known.",
+    "- THREAD SHAPE (a flexible guide, not a rigid template — adapt to what the idea actually needs): a hook/observation, then why it matters, then a perspective (personal, builder's, contrarian — whatever actually fits), then a close that pays it off. The one rule that always holds: every consecutive post must add something NEW. Never restate the same point in slightly different words just to hit a post count — a thread of near-duplicate one-liners is a failure, not a valid thread.",
+    threadPostCountGuide(postCount),
+    threadPostDepthGuide(length, styleProfile),
     "- The FIRST post must work as a strong standalone X hook — someone scrolling past should want to open the thread from that post alone.",
-    "- Choose a sensible number of posts for the idea (roughly 3-7) — never pad to hit a count, never cram everything into 2 posts if the idea needs more room.",
-    "- Each post should be a complete thought that also flows into the next — not a sentence chopped mid-idea.",
     "- Avoid a generic AI-sounding conclusion (\"In summary...\", \"The bottom line is...\", forced calls to action) unless it's genuinely earned.",
     "- Write like a real person, not marketing copy. No hashtags or emojis unless their examples use them.",
-    "- Each individual post should read naturally as a single X post (roughly under 280 characters where possible; a little over is fine if the idea needs it, never pad to fill space).",
+    "- Stay within X's ~280 character ceiling per post where possible — a little over is fine if the idea genuinely needs it, but this is an upper bound, not the depth target above.",
     "",
-    "Return ONLY a JSON object: { \"threads\": [ { \"angle\": \"short label for this thread's angle\", \"posts\": [\"post 1\", \"post 2\", ...] }, ... 3 items total ] }",
+    `Return ONLY a JSON object: { "threads": [ { "angle": "short label for this thread's angle", "posts": ["post 1", "post 2", ...] (exactly ${postCountLabel} posts) }, ... 3 items total ] }`,
     "No markdown fences, no explanation, no text outside the JSON object.",
   ].filter(Boolean).join("\n")
 
@@ -263,27 +366,124 @@ export function buildThreadMessages(
 }
 
 /** Parses+validates the model's thread JSON — never throws; returns [] on anything malformed. */
+function normalizeThreadCandidate(t: unknown): ThreadOption | null {
+  if (typeof t !== "object" || t === null) return null
+  const obj = t as { angle?: unknown; posts?: unknown }
+  const posts = Array.isArray(obj.posts)
+    ? obj.posts.filter((p): p is string => typeof p === "string" && p.trim().length > 0).map((p) => p.trim())
+    : []
+  if (posts.length < 2) return null
+  const angle = typeof obj.angle === "string" && obj.angle.trim() ? obj.angle.trim() : "Thread"
+  return { angle, posts }
+}
+
+// Recovers as many complete, valid thread objects as possible from a
+// `{"threads":[{...},{...},...]}` payload even when the tail is truncated —
+// a real output-budget failure mode (see lib/backendGenerate.ts's
+// THREAD_MAX_OUTPUT_TOKENS), not a hypothetical. A finished thread 1 and 2
+// followed by a cut-off thread 3 should still surface 2 usable threads, not
+// zero — this is what makes that possible instead of one strict JSON.parse
+// discarding the whole response over its unfinished tail.
+//
+// Walks the "threads" array's top-level `{...}` objects one at a time,
+// tracking string/escape state so a brace inside quoted post text is never
+// mistaken for structure, and parses each individually. Stops at the first
+// object that isn't complete/valid JSON — everything after that point is
+// presumed to be the truncated remainder, not "malformed content" to work
+// around further.
+function extractThreadObjects(text: string): unknown[] {
+  const arrayStart = text.indexOf("[")
+  if (arrayStart === -1) return []
+
+  const results: unknown[] = []
+  let i = arrayStart + 1
+  while (i < text.length) {
+    while (i < text.length && /[\s,]/.test(text[i])) i++
+    if (i >= text.length || text[i] === "]") break
+    if (text[i] !== "{") break
+
+    let depth = 0
+    let inString = false
+    let escaped = false
+    let j = i
+    let closed = false
+    for (; j < text.length; j++) {
+      const ch = text[j]
+      if (inString) {
+        if (escaped) escaped = false
+        else if (ch === "\\") escaped = true
+        else if (ch === '"') inString = false
+        continue
+      }
+      if (ch === '"') { inString = true; continue }
+      if (ch === "{") depth++
+      else if (ch === "}") {
+        depth--
+        if (depth === 0) { closed = true; break }
+      }
+    }
+    if (!closed) break // truncated mid-object — nothing further is recoverable
+
+    try {
+      results.push(JSON.parse(text.slice(i, j + 1)))
+    } catch {
+      break // malformed — stop rather than risk skipping into unrelated text
+    }
+    i = j + 1
+  }
+  return results
+}
+
+/**
+ * Parses+validates the model's thread JSON — never throws.
+ *
+ * Graceful degradation, not all-or-nothing: 3 good options is ideal, but a
+ * truncated or partially malformed response that still contains 1-2
+ * complete, valid threads returns those rather than an empty array. There
+ * is no separate "distinctness" check here or anywhere in this pipeline —
+ * distinctness is a PROMPT-TIME instruction to the model (see
+ * buildThreadMessages' angle-diversity guidance), never a post-hoc filter
+ * that can reject already-generated threads.
+ */
 export function parseThreadResponse(raw: string): ThreadOption[] {
   const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/i)
   const candidate = fenced ? fenced[1] : raw
   const start = candidate.indexOf("{")
-  const end = candidate.lastIndexOf("}")
-  if (start === -1 || end === -1 || end < start) return []
-  try {
-    const parsed = JSON.parse(candidate.slice(start, end + 1)) as { threads?: unknown }
-    if (!Array.isArray(parsed.threads)) return []
-    return parsed.threads
-      .filter((t): t is { angle: unknown; posts: unknown } => typeof t === "object" && t !== null)
-      .map((t) => ({
-        angle: typeof t.angle === "string" && t.angle.trim() ? t.angle.trim() : "Thread",
-        posts: Array.isArray(t.posts)
-          ? t.posts.filter((p): p is string => typeof p === "string" && p.trim().length > 0).map((p) => p.trim())
-          : [],
-      }))
-      .filter((t) => t.posts.length >= 2)
-  } catch {
-    return []
+  if (start === -1) return []
+  const sliced = candidate.slice(start)
+
+  // Fast path: the whole response is valid, complete JSON (the common case).
+  const end = sliced.lastIndexOf("}")
+  if (end !== -1) {
+    try {
+      const parsed = JSON.parse(sliced.slice(0, end + 1)) as { threads?: unknown }
+      if (Array.isArray(parsed.threads)) {
+        const valid = parsed.threads.map(normalizeThreadCandidate).filter((t): t is ThreadOption => t !== null)
+        if (valid.length > 0) return valid
+      }
+    } catch {
+      // fall through to partial recovery below — likely a truncated response
+    }
   }
+
+  // Slow path: recover whichever complete thread objects exist before
+  // wherever the response was cut off or malformed, instead of discarding
+  // the whole generation.
+  return extractThreadObjects(sliced)
+    .map(normalizeThreadCandidate)
+    .filter((t): t is ThreadOption => t !== null)
+}
+
+// Deterministic safety net for the "generate exactly N" contract in
+// buildThreadMessages' POST COUNT rule — never pads a thread that came back
+// short (padding a weak idea is explicitly forbidden), only trims one that
+// came back long. A thread trimmed below 2 posts (shouldn't happen — the
+// smallest selectable count is 2) is dropped rather than kept malformed.
+export function enforcePostCount(threads: ThreadOption[], postCount: ThreadPostCount): ThreadOption[] {
+  const max = postCount === "6+" ? 8 : postCount
+  return threads
+    .map((t) => (t.posts.length > max ? { ...t, posts: t.posts.slice(0, max) } : t))
+    .filter((t) => t.posts.length >= 2)
 }
 
 export function buildMessages(
@@ -301,7 +501,8 @@ export function buildMessages(
   // input instead of assuming `input` is the whole post.
   hasImages?: boolean
 ): ChatMessage[] {
-  const toneNote = `\nTONE DIRECTION: ${TONE_GUIDE[tone]}\n${resolveLengthGuide(mode, length, styleProfile)}`
+  const premiseNote = mode === "tweet" ? `\n${PREMISE_DEVELOPMENT_RULE}` : ""
+  const toneNote = `\nTONE DIRECTION: ${TONE_GUIDE[tone]}${premiseNote}\n${resolveLengthGuide(mode, length, styleProfile)}`
   const trimmed = input.trim()
 
   const system = systemX(mode, voice, styleProfile, templateInstruction) + toneNote + FINAL_OUTPUT_INSTRUCTION

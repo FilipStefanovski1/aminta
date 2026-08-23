@@ -9,7 +9,7 @@ import { getAuthSession, refreshAuthSession } from "~lib/auth"
 import { getDeviceId } from "~lib/deviceId"
 import { effectiveApiKey, shouldUseIncludedAi } from "~lib/entitlements"
 import { generate as runAI, generateFromImage, type GenerateOptions } from "~lib/ai"
-import { buildMessages, buildThreadMessages, parseThreadResponse, type Mode, type OutputLength, type Tone, type ThreadOption } from "~lib/prompts"
+import { buildMessages, buildThreadMessages, enforcePostCount, parseThreadResponse, type Mode, type OutputLength, type ThreadPostCount, type Tone, type ThreadOption } from "~lib/prompts"
 import { cleanGenerationOutput } from "~lib/textCleanup"
 import { setStore, type AmintaStore, type StyleProfile, type VoiceProfile } from "~lib/storage"
 
@@ -43,6 +43,14 @@ export interface ThreadGenerateArgs {
   voice: VoiceProfile
   styleProfile: StyleProfile | null
   tone: Tone
+  // Was missing entirely — Thread Creator's Short/Medium/Long selector had
+  // no way to reach generation at all. See lib/prompts.ts's
+  // threadPostDepthGuide for why this mattered (fragment-collapse bug).
+  length: OutputLength
+  // How many posts — independent from `length` (per-post depth). Optional
+  // here purely so existing call sites/tests that don't care about it don't
+  // need updating; runThreadGenerate always supplies a real value (default 4).
+  postCount?: ThreadPostCount
 }
 
 type BackendGenerateArgs = TextGenerateArgs | StyleProfileGenerateArgs | ThreadGenerateArgs
@@ -148,6 +156,23 @@ export async function backendGenerate(args: BackendGenerateArgs): Promise<string
     : cleanGenerationOutput(json.text)
 }
 
+// 3 thread options, each with several Medium-depth (or longer) posts, in
+// ONE JSON response, needs far more room than a single tweet/reply/polish —
+// the shared 400-token default was silently truncating that JSON mid-
+// response once posts were asked to be developed (see lib/prompts.ts's
+// threadPostDepthGuide), producing invalid JSON that failed to parse. That
+// surfaced as "Couldn't generate distinct threads from that" even though
+// there was never an actual distinctness check involved — the response
+// just never finished. 2000 tokens comfortably covers 3 threads x up to 7
+// Medium/Long posts with real headroom; verified against the actual prompt
+// (lib/premiseAndLength.test.ts's fixtures) rather than picked at random.
+export const THREAD_MAX_OUTPUT_TOKENS = 2000
+// Generating ~2000 tokens legitimately takes longer than the default 15s
+// interactive deadline (tuned for a ~400-token single post) — without this,
+// a thread response that would have completed successfully could instead
+// be cut off by the deadline itself.
+export const THREAD_DEADLINE_MS = 30_000
+
 /**
  * Thread Creator — ONE model call, 3 thread options, one credit
  * reservation (Included) / one provider call (BYOK). Never throws on a
@@ -156,15 +181,20 @@ export async function backendGenerate(args: BackendGenerateArgs): Promise<string
  */
 export async function runThreadGenerate(
   store: AmintaStore,
-  args: { input: string; voice: VoiceProfile; styleProfile: StyleProfile | null; tone: Tone }
+  args: { input: string; voice: VoiceProfile; styleProfile: StyleProfile | null; tone: Tone; length: OutputLength; postCount?: ThreadPostCount }
 ): Promise<ThreadOption[]> {
+  const postCount = args.postCount ?? 4
   if (shouldUseIncludedAi(store)) {
-    const raw = await backendGenerate({ generationMode: "thread", ...args })
-    return parseThreadResponse(raw)
+    const raw = await backendGenerate({ generationMode: "thread", ...args, postCount })
+    return enforcePostCount(parseThreadResponse(raw), postCount)
   }
-  const messages = buildThreadMessages(args.voice, args.input, args.styleProfile, args.tone)
-  const raw = await runAI(effectiveApiKey(store), store.model, messages)
-  return parseThreadResponse(raw)
+  const messages = buildThreadMessages(args.voice, args.input, args.styleProfile, args.tone, args.length, postCount)
+  const raw = await runAI(effectiveApiKey(store), store.model, messages, {
+    generationType: "thread",
+    maxOutputTokens: THREAD_MAX_OUTPUT_TOKENS,
+    totalDeadlineMs: THREAD_DEADLINE_MS,
+  })
+  return enforcePostCount(parseThreadResponse(raw), postCount)
 }
 
 // Dispatcher for the direct call sites in GeneratorPanel.tsx (tweet/polish,

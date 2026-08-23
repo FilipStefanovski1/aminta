@@ -277,7 +277,7 @@ describe("style-profile extraction — benchmark scenarios", () => {
   it("extraction prompt caps free-text fields to short phrases, preventing topic-length leakage", () => {
     const messages = buildExtractionMessages(buildCorpus(["sample"], []))
     const system = messages.find((m) => m.role === "system")!.content as string
-    expect(system).toMatch(/SHORT phrase \(under 8 words\)/i)
+    expect(system).toMatch(/SHORT phrase \(under 14 words\)/i)
   })
 })
 

@@ -17,7 +17,7 @@
 import type { ChatMessage, ContentPart } from "./prompts"
 import { GEMINI_INCLUDED_MODEL } from "./config"
 
-const MAX_OUTPUT_TOKENS = 400
+const DEFAULT_MAX_OUTPUT_TOKENS = 400
 
 function toGeminiParts(content: string | ContentPart[]): object[] {
   if (typeof content === "string") return [{ text: content }]
@@ -85,6 +85,13 @@ export interface CallGeminiOptions {
   structuredText?: boolean
   // Label only, for the latency log — never sent to the provider.
   generationType?: string
+  // SOURCE OF TRUTH: extension/lib/gemini.ts's identical field — see there
+  // for the full rationale. A fixed 400 regardless of task silently
+  // truncated Thread Creator's 3-option JSON once posts were asked to be
+  // developed (Medium-depth fix), producing invalid JSON that failed to
+  // parse. This is server-decided (route.ts), never client-supplied —
+  // matches the existing "model/provider chosen entirely server-side" rule.
+  maxOutputTokens?: number
 }
 
 // Whole-operation deadline. Interactive post/reply/polish generation must
@@ -304,7 +311,12 @@ async function attemptOnce(
 }
 
 export async function callGemini(messages: ChatMessage[], options: CallGeminiOptions = {}): Promise<GeminiResult> {
-  const { totalDeadlineMs = TOTAL_DEADLINE_MS, structuredText = false, generationType } = options
+  const {
+    totalDeadlineMs = TOTAL_DEADLINE_MS,
+    structuredText = false,
+    generationType,
+    maxOutputTokens = DEFAULT_MAX_OUTPUT_TOKENS,
+  } = options
 
   const apiKey = process.env.GEMINI_API_KEY
   if (!apiKey) {
@@ -324,7 +336,7 @@ export async function callGemini(messages: ChatMessage[], options: CallGeminiOpt
     contents,
     ...(system ? { systemInstruction: { parts: [{ text: system }] } } : {}),
     generationConfig: {
-      maxOutputTokens: MAX_OUTPUT_TOKENS,
+      maxOutputTokens,
       // Gemini 3 series: lowest thinking level for a simple writing task —
       // cuts latency and avoids the model's own reasoning/analysis bleeding
       // into the visible answer. Never combined with the legacy

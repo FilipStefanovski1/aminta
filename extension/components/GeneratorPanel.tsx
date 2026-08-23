@@ -9,7 +9,7 @@ import { canUseByok, effectiveApiKey, shouldUseIncludedAi } from "~lib/entitleme
 import { fetchImageAsDataUrl } from "~lib/images"
 import { findNextReplyTarget, readActivePost } from "~lib/messaging"
 import { incrementMissionGenerates } from "~lib/missions"
-import type { Mode, OutputLength, Platform, ThreadOption, Tone } from "~lib/prompts"
+import type { Mode, OutputLength, Platform, ThreadOption, ThreadPostCount, Tone } from "~lib/prompts"
 import { generateReply } from "~lib/replyGeneration"
 import { getOrBuildStyleProfile } from "~lib/styleProfile"
 import type { AmintaStore, TemplateMode } from "~lib/storage"
@@ -148,6 +148,16 @@ const LENGTH_CONFIG: { id: OutputLength; label: string; desc: string }[] = [
   { id: "long",   label: "Long",   desc: "3 paragraphs" },
 ]
 
+// ─── Post count config (Thread Creator only) ───────────────────────────────
+// How many posts — independent from Length (per-post depth, above).
+const POST_COUNT_CONFIG: { id: ThreadPostCount; label: string }[] = [
+  { id: 2,    label: "2"  },
+  { id: 3,    label: "3"  },
+  { id: 4,    label: "4"  },
+  { id: 5,    label: "5"  },
+  { id: "6+", label: "6+" },
+]
+
 // ─── Placeholder map ─────────────────────────────────────────────────────────
 
 const TOPIC_PLACEHOLDER: Record<UiMode, string> = {
@@ -241,6 +251,10 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
   const [threadError,   setThreadError]   = useState("")
   const [tone,     setTone]     = useState<Tone>("direct")
   const [length,   setLength]   = useState<OutputLength>("medium")
+  // Thread Creator only. Independent from `length` — this is post COUNT,
+  // length is per-post DEPTH. No stored preference (matches `length`'s own
+  // per-session default), so 4 is simply the initial value.
+  const [postCount, setPostCount] = useState<ThreadPostCount>(4)
   const [hoveredTone, setHoveredTone] = useState<Tone | null>(null)
   const [topic,    setTopic]    = useState("")
   const [context,  setContext]  = useState("")
@@ -459,9 +473,15 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
     if (mode === "thread") {
       try {
         const styleProfile = await getOrBuildStyleProfile(store)
-        const threads = await runThreadGenerate(store, { input: combined, voice: store.voice, styleProfile, tone })
+        const threads = await runThreadGenerate(store, { input: combined, voice: store.voice, styleProfile, tone, length, postCount })
         if (threads.length === 0) {
-          setThreadError("Couldn't generate distinct threads from that. Try rephrasing the topic.")
+          // Genuinely nothing usable came back — a provider hiccup or a
+          // fully malformed/empty response, never "the topic was too
+          // short." A sparse premise like "solana summit serbia" is
+          // expected to work; blaming the topic here would be wrong (see
+          // lib/prompts.ts's premise-development rule and
+          // lib/backendGenerate.ts's THREAD_MAX_OUTPUT_TOKENS).
+          setThreadError("Couldn't generate a thread right now. Try again in a moment.")
         } else {
           setThreadOptions(threads)
         }
@@ -742,6 +762,34 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
           })}
         </div>
       </div>
+
+      {/* ── Posts (Thread Creator only) — how many posts, independent from
+          Length below (per-post depth). ── */}
+      {mode === "thread" && (
+        <div className="space-y-1.5">
+          <p className="text-[11px] font-medium" style={{ color: C.textFaint }}>Posts</p>
+          <div className="flex rounded-xl overflow-hidden" style={{ border: `1.5px solid ${C.border}` }}>
+            {POST_COUNT_CONFIG.map((p, i) => {
+              const active = postCount === p.id
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => setPostCount(p.id)}
+                  className="flex-1 flex items-center justify-center py-2.5 transition-all"
+                  style={{
+                    backgroundColor: active ? tint + "18" : "transparent",
+                    borderRight: i < POST_COUNT_CONFIG.length - 1 ? `1px solid ${C.border}` : undefined,
+                    color: active ? tint : C.textGhost,
+                  }}>
+                  <span className="text-[10px] font-semibold" style={{ color: active ? tint : C.textDim }}>
+                    {p.label}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* ── Length ── */}
       <div className="space-y-1.5">

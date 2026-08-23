@@ -70,9 +70,9 @@ export function generate(
     return callGemini(apiKey, normalizeGeminiModel(model), messages, options)
   }
   if (isGroqKey(apiKey)) {
-    return callGroq(apiKey, normalizeGroqModel(model), messages)
+    return callGroq(apiKey, normalizeGroqModel(model), messages, options?.maxOutputTokens)
   }
-  return callOpenRouter(apiKey, model, messages)
+  return callOpenRouter(apiKey, model, messages, options?.maxOutputTokens)
 }
 
 // Generate from one or more images — injects them into the last user

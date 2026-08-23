@@ -116,6 +116,25 @@ describe("native X thread-composer builder — manual '+' / auto-fill relay", ()
     ])
   })
 
+  // The builder itself never hardcodes a post count — it just loops
+  // 0..total. Thread Creator's Posts selector (2/3/4/5/6+) feeds it
+  // whatever-length array the user picked; no special-casing needed here.
+  it.each([
+    ["2 posts", ["Post 1", "Post 2"]],
+    ["3 posts", ["Post 1", "Post 2", "Post 3"]],
+    ["5 posts", ["Post 1", "Post 2", "Post 3", "Post 4", "Post 5"]],
+  ] as const)("handles a %s thread with no special-casing — inserts every post, ends ready", async (_label, posts) => {
+    const { handlers, calls } = makeHandlers()
+    const ctrl = startThreadBuild([...posts], handlers)
+    if ("error" in ctrl) throw new Error(ctrl.error)
+    const final = await ctrl.done
+
+    expect(final.status).toBe("ready")
+    expect(final.builtCount).toBe(posts.length)
+    const inserts = calls.filter((c) => c.fn === "insertAndVerify").map((c) => c.arg)
+    expect(inserts).toEqual(posts.map((text, index) => ({ index, text })))
+  })
+
   it("a four-post thread creates exactly four populated composers and ends ready", async () => {
     const { handlers } = makeHandlers()
     const ctrl = startThreadBuild(FOUR_POSTS, handlers)

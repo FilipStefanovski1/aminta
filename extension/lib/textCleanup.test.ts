@@ -110,6 +110,15 @@ describe("cleanGenerationOutput", () => {
     expect(cleanGenerationOutput("Line one.   \nLine two.  ")).toBe("Line one.\nLine two.")
   })
 
+  // Style-fidelity regression guard: cleanup must never be the thing that
+  // flattens a properly punctuated, multi-paragraph post into a compressed
+  // fragment — that would silently undo the prompt-side style-fidelity fix
+  // (see lib/prompts.ts's DEFAULT_FORM_BASELINE) at the very last step.
+  it("preserves a properly punctuated two-paragraph post exactly — commas, periods, and the blank line between thoughts", () => {
+    const text = "this is one thought, with a comma.\n\nthis is another thought."
+    expect(cleanGenerationOutput(text)).toBe(text)
+  })
+
   it("does not alter intentional lowercase style", () => {
     const text = "shipped a small thing today. felt good."
     expect(cleanGenerationOutput(text)).toBe(text)

@@ -45,6 +45,10 @@ export function withImages(messages: ChatMessage[], imageDataUrls: string[]): Ch
 export type Mode = "tweet" | "reply" | "polish"
 export type Tone = "direct" | "witty" | "analytical" | "inspiring"
 export type OutputLength = "short" | "medium" | "long"
+// Thread Creator only — how many posts, independent from OutputLength
+// (which controls per-post depth, not post count). SOURCE OF TRUTH:
+// extension/lib/prompts.ts's identical type.
+export type ThreadPostCount = 2 | 3 | 4 | 5 | "6+"
 
 export interface VoiceProfile {
   niche: string
@@ -75,6 +79,14 @@ export interface StyleProfile {
   rhetoricalDevices: string
   cadence: string
   confidenceScore: number
+  // SOURCE OF TRUTH: extension/lib/storage.ts's StyleProfile — was missing
+  // here entirely, which meant Included AI generation (this file) silently
+  // never received the user's personalized posting length at all: the
+  // client sends the full profile including this field over the wire, but
+  // without it in this type/resolveLengthGuide below, Medium/Short/Long
+  // always fell back to the generic fixed LENGTH_GUIDE range for every
+  // Included AI user, regardless of how long their own posts actually are.
+  lengthProfile?: { p25: number; median: number; p75: number } | null
 }
 
 const TONE_GUIDE: Record<Tone, string> = {
@@ -115,6 +127,37 @@ const LENGTH_GUIDE: Record<Mode, Record<OutputLength, string>> = {
     medium: "LENGTH: keep the draft's approximate length as-is. Polish is about quality, not length.",
     long:   "LENGTH: only expand the draft if that's clearly what's being asked for. Otherwise keep its approximate length as-is — polish is about quality, not length.",
   },
+}
+
+// Personalizes Short/Medium/Long against the user's own learned posting
+// length instead of one fixed range for everyone.
+//
+// SOURCE OF TRUTH: extension/lib/prompts.ts's identical resolveLengthGuide —
+// this was missing here entirely (this file always used the flat
+// LENGTH_GUIDE above regardless of styleProfile.lengthProfile), which was
+// the primary reason Included AI generation (Free/Pro without BYOK) ignored
+// personalized length altogether. Tweet mode only: replies/polish already
+// scale off the source post/draft itself. Falls back to the fixed
+// LENGTH_GUIDE when there's no baseline yet (never refreshed, or too few
+// posts) — generation must never break either way.
+export function resolveLengthGuide(mode: Mode, length: OutputLength, styleProfile: StyleProfile | null): string {
+  const lp = mode === "tweet" ? styleProfile?.lengthProfile : null
+  if (!lp) return LENGTH_GUIDE[mode][length]
+
+  const { p25, median, p75 } = lp
+  if (length === "short") {
+    const lo = Math.max(20, Math.round(p25 * 0.55))
+    const hi = Math.max(lo + 15, p25)
+    return `LENGTH TARGET: roughly ${lo}-${hi} characters — noticeably shorter than this person's normal post (their usual range centers around ${median} characters). One tight, complete thought.`
+  }
+  if (length === "long") {
+    const lo = Math.max(p75, median + 20)
+    const hi = Math.max(lo + 100, Math.round(p75 * 1.6))
+    return `LENGTH TARGET: roughly ${lo}-${hi} characters — longer and more developed than this person's normal post (their usual range centers around ${median} characters). Real substance, not padding.`
+  }
+  const lo = Math.min(p25, median - 10)
+  const hi = Math.max(p75, median + 10)
+  return `LENGTH TARGET: roughly ${lo}-${hi} characters — this is close to how this person normally writes (their usual length centers around ${median} characters). Don't force it longer or shorter than the idea needs.`
 }
 
 // Explicit, ordered priority for what wins when inputs pull in different
@@ -178,27 +221,56 @@ function confidencePrefix(score: number): string {
   return ""
 }
 
+// SOURCE OF TRUTH: extension/lib/prompts.ts's identical constants — see
+// there for the full rationale (model's own pretraining bias toward
+// compressed lowercase "AI-caption" X style, active regardless of profile
+// confidence, and tone being wrongly read as license to drop punctuation).
+const DEFAULT_FORM_BASELINE =
+  "DEFAULT — unless a field below clearly says otherwise: write real sentences with normal commas, periods, capitalization, and natural spacing between thoughts, the way an actual person writes. Never default to a compressed lowercase AI-caption style (no punctuation, one fragment per line) just because this is X — that is not how most people actually write, and it is a formatting habit to avoid, not a target."
+
+const TONE_VS_FORM_INDEPENDENCE =
+  "Tone changes attitude and word choice ONLY — it never overrides the punctuation, capitalization, or line-break instructions above. A direct tone still uses this person's normal commas and full sentences; it does not mean fragments or no punctuation. Witty does not mean fragment-only. Analytical does not mean generic structured AI prose."
+
+function structuralConstraints(sp: StyleProfile): string {
+  const punctuation = sp.punctuation
+    ? `PUNCTUATION: Match exactly how this person uses commas, periods, dashes, and apostrophes — ${sp.punctuation}.`
+    : ""
+  const lineBreaks = sp.formattingPreferences
+    ? `LINE BREAKS & SPACING: Match how this person separates sentences and thoughts, and how they break lines or paragraphs — ${sp.formattingPreferences}.`
+    : ""
+  const cadenceSource = [sp.cadence, sp.rhythm].filter(Boolean).join("; ")
+  const cadence = cadenceSource
+    ? `CADENCE: Match this person's sentence lengths and transitions — ${cadenceSource}.`
+    : ""
+  return [punctuation, lineBreaks, cadence].filter(Boolean).join("\n")
+}
+
 function styleProfileBlock(sp: StyleProfile | null): string {
-  if (!sp) return ""
+  const header = "WRITING STYLE (hard constraints on HOW to write, not decoration — apply as tendencies, recognizable not a caricature; never introduce topics, names, brands, opinions, or facts):"
+
+  if (!sp) return [header, DEFAULT_FORM_BASELINE].join("\n")
+
   const lines = [
     `- Confidence: ${sp.confidence}`,
     `- Energy: ${sp.energy}`,
     `- Vocabulary: ${sp.vocabularyComplexity}`,
     `- Capitalization: ${sp.capitalization}`,
     `- Directness: ${sp.directness}`,
-    sp.rhythm && `- Rhythm: ${sp.rhythm}`,
-    sp.punctuation && `- Punctuation: ${sp.punctuation}`,
     sp.emojiUsage && `- Emoji usage: ${sp.emojiUsage}`,
     sp.humorStyle && `- Humor: ${sp.humorStyle}`,
-    sp.formattingPreferences && `- Formatting: ${sp.formattingPreferences}`,
     sp.rhetoricalDevices && `- Rhetorical devices: ${sp.rhetoricalDevices}`,
-    sp.cadence && `- Cadence: ${sp.cadence}`,
   ].filter(Boolean)
 
   const prefix = confidencePrefix(sp.confidenceScore)
-  const header = "WRITING STYLE (apply these as tendencies, not an exaggerated impression — recognizable, not a caricature; never introduce topics, names, brands, opinions, or facts):"
 
-  return [header, prefix, ...lines].filter(Boolean).join("\n")
+  return [
+    header,
+    DEFAULT_FORM_BASELINE,
+    prefix,
+    structuralConstraints(sp),
+    ...lines,
+    TONE_VS_FORM_INDEPENDENCE,
+  ].filter(Boolean).join("\n")
 }
 
 function templateBlock(templateInstruction?: string): string {
@@ -237,7 +309,7 @@ function systemX(mode: Mode, voice: VoiceProfile, styleProfile: StyleProfile | n
     "RULES:",
     "- Write like a real person posting on X, not marketing copy — no corporate tone, no forced enthusiasm, no hedge-everything disclaimers.",
     "- Avoid worn-out openers (\"hot take\", \"unpopular opinion\", \"here's the thing\", \"let that sink in\", \"this changes everything\") and worn-out closers (\"thoughts?\", \"agree?\", generic motivational lines) — use them only if they'd genuinely fit, which is rare.",
-    "- Write complete, grammatically correct sentences with normal punctuation — never run two separate thoughts together with no separator — unless WRITING STYLE explicitly says the user's own posts drop punctuation; don't infer that from brevity alone.",
+    "- Follow the PUNCTUATION and LINE BREAKS & SPACING instructions in WRITING STYLE above exactly. Never run two separate thoughts together with no separator, and never collapse into a compressed lowercase fragment style unless WRITING STYLE clearly says this person's own posts actually look like that — don't infer that from brevity or tone alone.",
     "- Don't default to em dashes — only if WRITING STYLE's punctuation notes show the user's own writing actually uses them.",
     "- No hashtags or emojis unless their examples use them.",
     '- Never say "as an AI". Sound human.',
@@ -253,6 +325,13 @@ function systemX(mode: Mode, voice: VoiceProfile, styleProfile: StyleProfile | n
 const FINAL_OUTPUT_INSTRUCTION =
   "\n\nFINAL INSTRUCTION — this overrides everything above if there's ever a conflict: return only the finished post. Do not return writing instructions, tone descriptions, analysis, labels, quotation marks, markdown, or commentary."
 
+// SOURCE OF TRUTH: extension/lib/prompts.ts's identical constant — see
+// there for the full rationale (a sparse topic was collapsing into a
+// near-verbatim paraphrase instead of a developed post, overriding the
+// LENGTH TARGET below it).
+const PREMISE_DEVELOPMENT_RULE =
+  "The topic above is a SEED, not a complete draft — a short topic (a few words) is not an instruction to write a short post, and it is never a reason to refuse or ask for more detail. Infer a safe, subjective angle: opinion, anticipation, personal perspective, general observation, a builder's/founder's angle, a question, or a reflection. Develop that angle into a complete, substantive thought that actually reaches the LENGTH TARGET below — while still following the WRITING STYLE punctuation/formatting/cadence instructions above, not generic AI paragraph structure. Do NOT invent statistics, event details not provided, speaker names, dates, attendance numbers, announcements, or any claim presented as factual knowledge the topic didn't provide. If factual specificity isn't known, stay subjective/general — that is a feature of a good response here, not a limitation."
+
 // ─── Thread Creator — SOURCE OF TRUTH: extension/lib/prompts.ts's
 // buildThreadMessages/parseThreadResponse (identical duplicate, same
 // convention as the rest of this file). ONE model call requests all 3
@@ -263,26 +342,65 @@ export interface ThreadOption {
   posts: string[]
 }
 
+// SOURCE OF TRUTH: extension/lib/prompts.ts's identical function — see
+// there for the full rationale. Thread Creator's Short/Medium/Long selector
+// was completely disconnected from generation here (buildThreadMessages
+// took no length parameter at all), so every thread used one fixed
+// "under 280 characters" per-post cap with no floor regardless of what the
+// user picked in the UI — exactly what let a real generation collapse into
+// 13-character slogans.
+function threadPostDepthGuide(length: OutputLength, styleProfile: StyleProfile | null): string {
+  const lp = styleProfile?.lengthProfile
+  const anchor = lp
+    ? ` This person's own posts typically run around ${lp.median} characters — use that as the real anchor for what "developed" means for them, not a generic paragraph length.`
+    : ""
+
+  if (length === "short") {
+    return `PER-POST DEPTH: SHORT — noticeably tighter than this person's normal post: one clear, complete thought, said efficiently. Tight does not mean a bare slogan or tagline — it still has to read as a real sentence with a point.${anchor}`
+  }
+  if (length === "long") {
+    return `PER-POST DEPTH: LONG — more developed than this person's normal post: real reasoning, a concrete detail, or a fuller turn of thought in the posts that call for it — not uniform padding across every post.${anchor}`
+  }
+  return `PER-POST DEPTH: MEDIUM — roughly this person's own normal post depth: a developed thought with real content, not a one-line fragment or slogan.${anchor} A post under about 60-80 characters should be rare and only when it's a deliberately earned beat (e.g. a punchline close) — not the default shape for most posts in the thread.`
+}
+
+// SOURCE OF TRUTH: extension/lib/prompts.ts's identical function.
+// Independent from threadPostDepthGuide: this controls HOW MANY posts, that
+// controls how developed each one is. A fixed count (2-5) is a hard
+// instruction — the model must not pad a weak idea to reach it. "6+" is a
+// range, not a fixed number: the model picks what the topic supports.
+function threadPostCountGuide(postCount: ThreadPostCount): string {
+  if (postCount === "6+") {
+    return "POST COUNT: choose a sensible number of posts between 6 and 8 based on what this topic can actually support. Never pad a weak idea just to reach 6 — if it can't sustain that many posts without repeating itself, it's better as a shorter, genuinely distinct sequence than a padded one."
+  }
+  return `POST COUNT: write EXACTLY ${postCount} posts in this thread — not more, not fewer. If the topic doesn't obviously fill ${postCount} posts on its own, develop different angles, steps, or supporting details rather than repeating the same point in different words.`
+}
+
 export function buildThreadMessages(
   voice: VoiceProfile,
   input: string,
   styleProfile: StyleProfile | null,
-  tone: Tone = "direct"
+  tone: Tone = "direct",
+  length: OutputLength = "medium",
+  postCount: ThreadPostCount = 4
 ): ChatMessage[] {
+  const postCountLabel = postCount === "6+" ? "6-8" : String(postCount)
   const system = [
     "You write X (Twitter) threads for a specific person. Match their voice precisely.",
     voiceBlock(voice, styleProfile),
     `TONE DIRECTION: ${TONE_GUIDE[tone]}`,
     "THINK FIRST, SILENTLY (never write this part down): this topic can be approached from genuinely different angles — pick 3 that are ACTUALLY different premises (e.g. a personal story, a contrarian take, a step-by-step breakdown), not 3 rewrites of the same point. Each thread must stand on its own: a different opening idea, different supporting posts, a different close. Never reuse the same hook, transition phrase, or closing line across the 3 threads.",
     "RULES FOR EVERY THREAD:",
+    "- The topic is a SEED, not a complete draft — a short topic (a few words) is not an instruction to write a short, thin thread, and it is never a reason to refuse or ask for a more detailed topic. Infer a safe, subjective angle (opinion, anticipation, personal perspective, general observation, a builder's/founder's angle, a question, a reflection) and develop real substance across the posts. Do NOT invent statistics, event details not provided, speaker names, dates, attendance numbers, announcements, or any claim presented as factual knowledge the topic didn't provide — stay subjective/general when specifics aren't known.",
+    "- THREAD SHAPE (a flexible guide, not a rigid template — adapt to what the idea actually needs): a hook/observation, then why it matters, then a perspective (personal, builder's, contrarian — whatever actually fits), then a close that pays it off. The one rule that always holds: every consecutive post must add something NEW. Never restate the same point in slightly different words just to hit a post count — a thread of near-duplicate one-liners is a failure, not a valid thread.",
+    threadPostCountGuide(postCount),
+    threadPostDepthGuide(length, styleProfile),
     "- The FIRST post must work as a strong standalone X hook — someone scrolling past should want to open the thread from that post alone.",
-    "- Choose a sensible number of posts for the idea (roughly 3-7) — never pad to hit a count, never cram everything into 2 posts if the idea needs more room.",
-    "- Each post should be a complete thought that also flows into the next — not a sentence chopped mid-idea.",
     "- Avoid a generic AI-sounding conclusion (\"In summary...\", \"The bottom line is...\", forced calls to action) unless it's genuinely earned.",
     "- Write like a real person, not marketing copy. No hashtags or emojis unless their examples use them.",
-    "- Each individual post should read naturally as a single X post (roughly under 280 characters where possible; a little over is fine if the idea needs it, never pad to fill space).",
+    "- Stay within X's ~280 character ceiling per post where possible — a little over is fine if the idea genuinely needs it, but this is an upper bound, not the depth target above.",
     "",
-    "Return ONLY a JSON object: { \"threads\": [ { \"angle\": \"short label for this thread's angle\", \"posts\": [\"post 1\", \"post 2\", ...] }, ... 3 items total ] }",
+    `Return ONLY a JSON object: { "threads": [ { "angle": "short label for this thread's angle", "posts": ["post 1", "post 2", ...] (exactly ${postCountLabel} posts) }, ... 3 items total ] }`,
     "No markdown fences, no explanation, no text outside the JSON object.",
   ].filter(Boolean).join("\n")
 
@@ -304,7 +422,8 @@ export function buildMessages(
   templateInstruction?: string,
   hasImages?: boolean
 ): ChatMessage[] {
-  const toneNote = `\nTONE DIRECTION: ${TONE_GUIDE[tone]}\n${LENGTH_GUIDE[mode][length]}`
+  const premiseNote = mode === "tweet" ? `\n${PREMISE_DEVELOPMENT_RULE}` : ""
+  const toneNote = `\nTONE DIRECTION: ${TONE_GUIDE[tone]}${premiseNote}\n${resolveLengthGuide(mode, length, styleProfile)}`
   const trimmed = input.trim()
 
   const system = systemX(mode, voice, styleProfile, templateInstruction) + toneNote + FINAL_OUTPUT_INSTRUCTION
@@ -353,15 +472,16 @@ export function buildStyleProfileMessages(corpus: StyleCorpusEntry[]): ChatMessa
     `- vocabularyComplexity: one of ${JSON.stringify(VOCAB_VALUES)}`,
     `- capitalization: one of ${JSON.stringify(CAPITALIZATION_VALUES)}`,
     `- directness: one of ${JSON.stringify(DIRECTNESS_VALUES)}`,
-    `- rhythm: short phrase, sentence-length/pacing pattern only (e.g. "short, punchy, frequent fragments")`,
-    `- punctuation: short phrase, punctuation habits only (e.g. "dashes over commas, no semicolons")`,
+    `- rhythm: short phrase, sentence-length/pacing pattern only (e.g. "short, punchy, frequent fragments" or "longer flowing sentences with subordinate clauses")`,
+    `- punctuation: short phrase, punctuation habits only (e.g. "commas and periods used naturally, occasional dash for emphasis" or "dashes over commas, no semicolons")`,
     `- emojiUsage: short phrase (e.g. "none" or "sparing, 1 per post")`,
     `- humorStyle: short phrase, the FORM of humor only, never its subject (e.g. "dry, deadpan" — NOT "dry humor about X")`,
-    `- formattingPreferences: short phrase (e.g. "single-line, no line breaks")`,
+    `- formattingPreferences: short phrase describing how they separate sentences/thoughts and break lines or paragraphs (e.g. "blank line between separate thoughts, full sentences" or "single-line, no line breaks")`,
     `- rhetoricalDevices: short phrase (e.g. "rhetorical questions, contrast pairs")`,
     `- cadence: short phrase, rhythm/flow only (e.g. "builds to a short punchline")`,
     "",
-    "Every free-text value must be a SHORT phrase (under 8 words) describing a structural/stylistic trait only — it must never contain a topic, name, brand, or opinion. If you cannot describe a dimension without referencing content, leave it as an empty string.",
+    "IMPORTANT — most real writing uses normal commas, periods, capitalization, and multi-sentence structure. Describe punctuation/formatting/rhythm as minimal, fragment-only, single-line, or lowercase-only ONLY if the samples clearly and consistently show that. Do not default to a compressed 'X-caption' description out of habit — describe what the samples actually show, even when that's ordinary, fully-punctuated writing.",
+    "Every free-text value must be a SHORT phrase (under 14 words) describing a structural/stylistic trait only — it must never contain a topic, name, brand, or opinion. If you cannot describe a dimension without referencing content, leave it as an empty string.",
     "Return raw JSON only — no markdown code fences, no explanation.",
   ].join("\n")
 

@@ -109,9 +109,9 @@ describe("sanitizeStyleText", () => {
     )
   })
 
-  it("caps free text to 8 words", () => {
-    const long = "one two three four five six seven eight nine ten"
-    expect(sanitizeStyleText(long).split(" ")).toHaveLength(8)
+  it("caps free text to 14 words", () => {
+    const long = Array.from({ length: 20 }, (_, i) => `word${i + 1}`).join(" ")
+    expect(sanitizeStyleText(long).split(" ")).toHaveLength(14)
   })
 
   it("returns empty string for empty input", () => {
