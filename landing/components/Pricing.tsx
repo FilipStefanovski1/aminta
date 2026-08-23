@@ -19,7 +19,6 @@ const FREE_PLAN = {
     "Generate, Reply, Polish",
     "Personalized to your writing (Aminta DNA)",
     "Insert into X",
-    "Optional BYOK (Groq / Gemini / OpenRouter)",
   ],
   cta: "Get the Extension",
   ctaHref: EXTENSION_URL,
@@ -37,6 +36,7 @@ const PRO_PLAN = {
   features: [
     "1,000 Included AI credits / month",
     "Everything in Free",
+    "Use your own AI key (Groq / Gemini / OpenRouter)",
     "Thread Creator — 3 options, one generate",
     "Voice Refresh — weekly Aminta DNA update from your X history",
   ],
@@ -52,7 +52,7 @@ const FOUNDER_PLAN = {
   price: "$49",
   billing: "once",
   description:
-    "Everything in Pro, yours for life, for one payment instead of a subscription.",
+    "Lifetime Pro access for the first 50 Founder members.",
   features: [
     "Everything in Pro",
     "Lifetime access — pay once, never billed again",
@@ -60,9 +60,9 @@ const FOUNDER_PLAN = {
   ],
   cta: "Get Founder Access",
   ctaHref: CREEM_FOUNDER_URL,
-  badge: "LIFETIME",
+  badge: "FOUNDING 50",
   // Pro is the one recommended plan (lower commitment, default upgrade
-  // path) — Founder stays premium via its own LIFETIME badge, not by
+  // path) — Founder stays premium via its own FOUNDING 50 badge, not by
   // sharing Pro's mint border/glow treatment. Only one plan is ever
   // highlighted at a time.
   highlight: false,
@@ -131,7 +131,10 @@ function PricingCard({
   onCtaClick,
 }: CardProps) {
   const isExternal = ctaHref.startsWith("http");
-  const locked = disabled && highlight;
+  // Any disabled card (Founder sold out, or a future disabled Pro state)
+  // reads as visually locked — muted badge, greyscale card, lock icon —
+  // not only when it also happens to be the highlighted plan.
+  const locked = disabled;
 
   return (
     <div
@@ -237,6 +240,11 @@ function PricingCard({
 export default function Pricing() {
   const [userId, setUserId] = useState<string | null>(null);
   const [profile, setProfile] = useState<UserSubscriptionState | null>(null);
+  // null = not checked yet. Defaults to "not sold out" so the CTA never
+  // flashes disabled-then-enabled while this loads, and so a failed fetch
+  // (see /api/founder-availability's own fail-open behavior) never falsely
+  // blocks a real buyer.
+  const [founderSoldOut, setFounderSoldOut] = useState(false);
 
   // Tags the Creem checkout with the logged-in user's id so the webhook can
   // match the payment back to this account without relying on the buyer
@@ -258,6 +266,15 @@ export default function Pricing() {
     });
   }, []);
 
+  // Real, DB-backed Founder seat count (see lib/founder.ts) — never a
+  // fabricated "X spots left," just whether the cap has been reached.
+  useEffect(() => {
+    fetch("/api/founder-availability")
+      .then((res) => res.json())
+      .then((data) => setFounderSoldOut(!!data.soldOut))
+      .catch(() => {});
+  }, []);
+
   const entitled = hasProAccess(profile ?? {});
   const currentPlan = profile?.plan ?? "free";
   const ownsPro = entitled && (currentPlan === "pro" || currentPlan === "lifetime");
@@ -273,7 +290,12 @@ export default function Pricing() {
   // it never swaps in a separate alert-style treatment.
   const proCta = ownsPro ? "Manage Pro" : "Get Aminta Pro";
   const proCtaHref = ownsPro ? "/dashboard" : checkoutHrefFor(PRO_PLAN);
-  const founderCta = ownsFounder ? "Manage Account" : "Get Founder Access";
+
+  // Sold out only ever affects someone who doesn't already own Founder —
+  // an existing Founder always keeps "Manage Account", retaining their
+  // lifetime access regardless of the current seat count.
+  const founderLocked = founderSoldOut && !ownsFounder;
+  const founderCta = ownsFounder ? "Manage Account" : founderLocked ? "Sold Out" : "Get Founder Access";
   const founderCtaHref = ownsFounder ? "/dashboard" : checkoutHrefFor(FOUNDER_PLAN);
 
   return (
@@ -318,15 +340,17 @@ export default function Pricing() {
               {...FOUNDER_PLAN}
               cta={founderCta}
               ctaHref={founderCtaHref}
-              onCtaClick={() => posthog.capture("pricing_cta_clicked", { plan: "Founder", owns_plan: ownsFounder })}
+              badge={founderLocked ? "SOLD OUT" : FOUNDER_PLAN.badge}
+              disabled={founderLocked}
+              onCtaClick={() => posthog.capture("pricing_cta_clicked", { plan: "Founder", owns_plan: ownsFounder, sold_out: founderLocked })}
             />
           </Reveal>
         </div>
 
         <Reveal className="mt-10 text-center">
           <p className="text-xs text-muted">
-            Every plan includes Included AI — no API key required. Prefer your own key instead?{" "}
-            <span className="text-white/50">Switch to BYOK (Groq, Gemini, or OpenRouter) any time in Settings — it never touches your Aminta credits.</span>
+            Every plan includes Included AI — no API key required.{" "}
+            <span className="text-white/50">Pro and Founder can also bring their own key (Groq, Gemini, or OpenRouter) any time in Settings — it never touches your Aminta credits.</span>
           </p>
         </Reveal>
       </div>

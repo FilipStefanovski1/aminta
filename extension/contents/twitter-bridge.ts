@@ -2,7 +2,7 @@ import type { PlasmoCSConfig } from "plasmo"
 
 import { dispatchGenerate } from "~lib/backendGenerate"
 import { resolveAmintaInsertion, type ManagedRegion } from "~lib/composerRegion"
-import { shouldUseIncludedAi } from "~lib/entitlements"
+import { effectiveApiKey, shouldUseIncludedAi } from "~lib/entitlements"
 import { pickNextReplyTarget, type ReplyPostData } from "~lib/replyTargets"
 import { getStore } from "~lib/storage"
 import { getOrBuildStyleProfile } from "~lib/styleProfile"
@@ -405,7 +405,7 @@ function setBarStatus(bar: HTMLElement, msg: string, isError = false) {
 
 async function runGenerate(bar: HTMLElement, mode: "tweet" | "polish", prefill?: string) {
   const store = await getStore()
-  if (!store.apiKey && !shouldUseIncludedAi(store)) { setBarStatus(bar, "No API key. Open Aminta Settings", true); return }
+  if (!effectiveApiKey(store) && !shouldUseIncludedAi(store)) { setBarStatus(bar, "No API key. Open Aminta Settings", true); return }
   if (!store.voice)  { setBarStatus(bar, "Train Aminta first", true); return }
 
   const composerText = getComposerText(bar)

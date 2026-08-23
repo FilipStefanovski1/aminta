@@ -162,8 +162,8 @@ describe("dispatchGenerate", () => {
     vi.stubGlobal("crypto", { randomUUID: () => "req-uuid-2" })
   })
 
-  it("routes non-aiIncluded (free/BYOK) users through generate() unchanged", async () => {
-    const store = { ...baseStore, apiKey: "AIzaSomeKey", plan: "free", subscriptionStatus: null, aiIncluded: false } as AmintaStore
+  it("routes non-included (Pro/Founder BYOK) users through generate() unchanged", async () => {
+    const store = { ...baseStore, apiKey: "AIzaSomeKey", plan: "pro", subscriptionStatus: "active", aiIncluded: false } as AmintaStore
     const text = await dispatchGenerate(store, {
       generationMode: "tweet",
       input: "topic",
@@ -178,6 +178,27 @@ describe("dispatchGenerate", () => {
       { structuredText: true, generationType: "tweet" }
     )
     expect(fetch).not.toHaveBeenCalled()
+  })
+
+  // Security-critical: BYOK is Pro/Founder only (lib/entitlements.ts's
+  // canUseByok()) — a Free user's stored key, however it got there, must
+  // never reach a provider call. Plan entitlement wins over presence of a
+  // key. See extension/lib/entitlements.test.ts for the effectiveApiKey()
+  // unit coverage this call site relies on.
+  it("Free plan + a stale/manually-set BYOK key: the key is NEVER passed to generate()", async () => {
+    const store = { ...baseStore, apiKey: "AIzaSomeStaleKey", plan: "free", subscriptionStatus: null, aiIncluded: false } as AmintaStore
+    await dispatchGenerate(store, {
+      generationMode: "tweet",
+      input: "topic",
+      voice: {} as any,
+      styleProfile: null,
+      tone: "direct",
+      length: "medium",
+    })
+    expect(mockRunAI).toHaveBeenCalledWith(
+      "", "gemini-3.5-flash", expect.any(Array),
+      { structuredText: true, generationType: "tweet" }
+    )
   })
 
   it("routes aiIncluded=true (Pro/Founder) users through the backend even with no apiKey set", async () => {
@@ -247,7 +268,7 @@ describe("dispatchGenerate", () => {
   })
 
   it("routes non-included users with images through generateFromImage", async () => {
-    const store = { ...baseStore, apiKey: "AIzaSomeKey", plan: "free", subscriptionStatus: null, aiIncluded: false } as AmintaStore
+    const store = { ...baseStore, apiKey: "AIzaSomeKey", plan: "pro", subscriptionStatus: "active", aiIncluded: false } as AmintaStore
     const text = await dispatchGenerate(store, {
       generationMode: "reply",
       input: "topic",

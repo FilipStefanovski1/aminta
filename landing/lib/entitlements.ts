@@ -56,6 +56,18 @@ export function aiIncluded(
   return hasProAccess(user) || !!user.ai_included_override
 }
 
+// BYOK entitlement: Free users get Included AI only; Pro and Founder/
+// lifetime can bring their own provider key. Identical to hasProAccess()
+// today (paid access implies BYOK) — kept as its own named function so call
+// sites express BYOK intent directly, and so the two can diverge later
+// without re-auditing every caller. Mirrored in extension/lib/entitlements.ts.
+// BYOK generation itself never touches this server (extension calls the
+// user's provider directly) — this export exists for pricing copy /
+// dashboard entitlement display, not request-time enforcement.
+export function canUseByok(user: UserSubscriptionState): boolean {
+  return hasProAccess(user)
+}
+
 // Discord community gate (components/DashboardClient.tsx). Onboarding gate,
 // not a security boundary: unlocks once the extension has authenticated/
 // synced at least once (extension_connected_at IS NOT NULL — set by

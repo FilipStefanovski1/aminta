@@ -4,7 +4,7 @@ import type { AmintaStore, VoiceProfile } from "~lib/storage"
 import { C } from "~lib/theme"
 import { isGoogleKey, isGroqKey } from "~lib/ai"
 import { dispatchGenerate } from "~lib/backendGenerate"
-import { shouldUseIncludedAi } from "~lib/entitlements"
+import { canUseByok, shouldUseIncludedAi } from "~lib/entitlements"
 import { FORMS } from "~lib/evolution"
 import { focusOrCreateXTab } from "~lib/xTab"
 import AiKeyInput from "~components/AiKeyInput"
@@ -313,7 +313,7 @@ export default function OnboardingWizard({ store, onDone }: Props) {
 
   // ── AI key ──
   const malformed  = looksMalformed(apiKey)
-  const canGenerate = includedAi || !!apiKey.trim()
+  const canGenerate = includedAi || (canUseByok(store) && !!apiKey.trim())
 
   // Auto-advance the "learning" screen into the payoff step
   useEffect(() => {
@@ -471,6 +471,28 @@ export default function OnboardingWizard({ store, onDone }: Props) {
         {step === 2 && (
           <div className="animate-slide-up space-y-5">
             {includedAi ? (
+              <>
+                <div>
+                  <h2 className="font-pixel text-[11px] leading-relaxed" style={{ color: C.text }}>
+                    You&apos;re ready.
+                  </h2>
+                  <p className="text-[12px] mt-3 leading-relaxed" style={{ color: C.textDim }}>
+                    AI generation is already included.<br /><br />Let&apos;s write something.
+                  </p>
+                </div>
+                <Card>
+                  <p className="text-[12px] leading-relaxed font-medium" style={{ color: C.mint }}>
+                    ✓ AI generation included on your plan
+                  </p>
+                </Card>
+              </>
+            ) : !canUseByok(store) ? (
+              // Free account, not yet synced as aiIncluded (transient —
+              // every Free account gets ai_included:true from the server,
+              // see app/api/sync/route.ts) — never offer the BYOK key form
+              // here: BYOK is Pro/Founder only, and a Free user typing a key
+              // in this step would just hit a silent dead end once
+              // dispatchGenerate's entitlement check drops it anyway.
               <>
                 <div>
                   <h2 className="font-pixel text-[11px] leading-relaxed" style={{ color: C.text }}>
@@ -839,7 +861,7 @@ export default function OnboardingWizard({ store, onDone }: Props) {
         {step === 0 && <PrimaryButton onClick={next}>Meet Aminta</PrimaryButton>}
         {step === 1 && <PrimaryButton onClick={next} disabled={!intent}>Continue</PrimaryButton>}
         {step === 2 && (
-          includedAi ? (
+          includedAi || !canUseByok(store) ? (
             <PrimaryButton onClick={next}>Continue</PrimaryButton>
           ) : (
             <>

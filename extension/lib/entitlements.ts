@@ -47,6 +47,29 @@ export function storeHasProAccess(store: Pick<AmintaStore, "plan" | "subscriptio
   return hasProAccess({ plan: store.plan, subscriptionStatus: store.subscriptionStatus })
 }
 
+// BYOK entitlement: Free users get Included AI only; Pro and Founder/
+// lifetime can bring their own provider key. Identical to hasProAccess()
+// today (paid access implies BYOK) — kept as its own named function so call
+// sites express BYOK intent directly, and so the two can diverge later
+// (e.g. a future paid tier without BYOK) without re-auditing every caller.
+// Mirrored in landing/lib/entitlements.ts.
+export function canUseByok(user: UserSubscriptionState): boolean {
+  return hasProAccess(user)
+}
+
+// THE only BYOK key value any generation call site should ever read. A
+// Free user can have a non-empty store.apiKey — entered back when BYOK was
+// open to everyone, or placed directly into extension storage — and that
+// value must never reach a provider call unless canUseByok() says so.
+// Plan entitlement wins over mere presence of a key: never read
+// store.apiKey directly at a generation/dispatch call site, go through this
+// instead. (Settings UI/model pickers reading the raw stored value to
+// populate a form field are a different concern and unaffected.)
+export function effectiveApiKey(store: Pick<AmintaStore, "apiKey" | "plan" | "subscriptionStatus">): string {
+  if (!canUseByok({ plan: store.plan, subscriptionStatus: store.subscriptionStatus })) return ""
+  return store.apiKey ?? ""
+}
+
 // THE single routing decision for "does this generate call go to Aminta's
 // backend or straight to the user's own BYOK key." Every call site that
 // dispatches a generation (backendGenerate.ts, GeneratorPanel.tsx,

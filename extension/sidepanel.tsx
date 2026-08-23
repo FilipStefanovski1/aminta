@@ -14,7 +14,7 @@ import VoiceProfileForm from "~components/VoiceProfileForm"
 import FaqPage from "~components/FaqPage"
 import { GhostButton, PrimaryButton } from "~components/ui"
 import { FORMS, getStageTint } from "~lib/evolution"
-import { planLabel as computePlanLabel, providerModeFor } from "~lib/entitlements"
+import { canUseByok, planLabel as computePlanLabel, providerModeFor } from "~lib/entitlements"
 import { isGoogleKey, isGroqKey, GEMINI_DEFAULT, GROQ_DEFAULT, SUPPORTED_GEMINI_MODELS, SUPPORTED_GROQ_MODELS } from "~lib/ai"
 import { PROVIDERS, detectProvider } from "~lib/providers"
 import { C } from "~lib/theme"
@@ -563,7 +563,36 @@ function SettingsOverlay({
               </div>
             )}
 
-            {!includedActive && (
+            {/* BYOK is Pro/Founder only — a Free user whose providerMode
+                resolves to "byok" (aiIncluded false, or they picked "My API
+                Key" before this shipped) gets the locked upsell card
+                instead of the raw key form. Never a silent disappearance:
+                same explained-locked-feature pattern as the zero-credit
+                card in GeneratorPanel.tsx, just inline here since Settings
+                has no shared "locked feature" component yet. */}
+            {!includedActive && !canUseByok(store) && (
+              <div className="px-3.5 py-4 space-y-2.5">
+                <p className="font-pixel text-[8px]" style={{ color: avatarTint }}>
+                  USE YOUR OWN AI KEY
+                </p>
+                <p className="text-[9px] uppercase tracking-[0.06em]" style={{ color: "#888896" }}>
+                  Available with Pro
+                </p>
+                <p className="text-[11px] leading-snug" style={{ color: "#a0a0aa" }}>
+                  Connect your own Gemini, Groq, or OpenRouter API key and use Aminta with your own provider.
+                </p>
+                <a
+                  href="https://www.amintaapp.com/#pricing"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn-pixel block w-full mt-1.5 py-2 rounded-lg font-pixel text-[8px] text-center"
+                  style={{ backgroundColor: avatarTint, color: "#000", border: "2px solid #000", boxShadow: "2px 2px 0 #000" }}>
+                  Upgrade to Pro
+                </a>
+              </div>
+            )}
+
+            {!includedActive && canUseByok(store) && (
               <>
                 {/* API Key */}
                 <div className="px-3.5 pt-3.5 pb-3">

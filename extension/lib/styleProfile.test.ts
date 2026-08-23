@@ -4,8 +4,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 vi.mock("~lib/ai", () => ({
   generate: vi.fn(),
 }))
+// Mock lib/backendGenerate.ts's backendGenerate() — the Included-AI path
+// (shouldUseIncludedAi(store) === true), a real network call otherwise.
+// Needed for the "Free-user manual DNA" suite below: a Free account's real
+// entitlement is aiIncluded:true funded by its own small daily allowance
+// (see app/api/sync/route.ts's `ai_included: true`), not BYOK — BYOK is now
+// Pro/Founder only (lib/entitlements.ts's canUseByok()).
+vi.mock("~lib/backendGenerate", () => ({
+  backendGenerate: vi.fn(),
+}))
 
 import { generate } from "~lib/ai"
+import { backendGenerate } from "~lib/backendGenerate"
 import { buildMessages } from "~lib/prompts"
 import { getStore, setStore, type AmintaStore, type StyleProfile, type VoiceProfile } from "~lib/storage"
 import {
@@ -20,6 +30,7 @@ import {
 } from "~lib/styleProfile"
 
 const mockGenerate = vi.mocked(generate)
+const mockBackendGenerate = vi.mocked(backendGenerate)
 
 // In-memory chrome.storage.local stand-in — keeps getStore/setStore working
 // under Vitest's node environment (no real chrome global).
@@ -49,9 +60,15 @@ function baseVoice(overrides: Partial<VoiceProfile> = {}): VoiceProfile {
   }
 }
 
+// Defaults to Pro so the many `apiKey: "gsk_test"` fixtures throughout this
+// file keep exercising the BYOK extraction path they were written to test —
+// none of those tests are about plan/entitlement, and BYOK now requires
+// Pro/Founder (lib/entitlements.ts's canUseByok()). The "Free-user manual
+// DNA" suite below explicitly overrides plan back to "free" to test that
+// case specifically.
 async function makeStore(overrides: Partial<AmintaStore> = {}): Promise<AmintaStore> {
   const store = await getStore()
-  const merged = { ...store, ...overrides }
+  const merged = { ...store, plan: "pro" as const, ...overrides }
   await setStore(merged)
   return merged
 }
@@ -502,11 +519,23 @@ describe("buildMessages — no raw voice data ever reaches the prompt", () => {
   })
 })
 
+// A real Free account's entitlement is aiIncluded:true (funded by its own
+// smaller daily allowance, not BYOK — see app/api/sync/route.ts's
+// `ai_included: true` and lib/entitlements.ts's canUseByok(), which now
+// requires Pro/Founder). These tests route through backendGenerate()
+// (mocked above), never a BYOK key, since a Free plan can no longer use one.
 describe("Free-user manual DNA — no X connection, no Pro entitlement required", () => {
+  beforeEach(() => {
+    mockBackendGenerate.mockReset()
+    mockBackendGenerate.mockResolvedValue(VALID_EXTRACTION_JSON)
+  })
+
   it("builds a StyleProfile from bulk-pasted manual examples alone, with no X connection and no Pro entitlement", async () => {
     const store = await makeStore({
-      apiKey: "gsk_test",
+      apiKey: "",
+      aiIncluded: true,       // Free's own Included-AI allowance, not Pro/Founder
       aiIncludedPaid: false,  // Free
+      plan: "free",
       xConnected: false,      // never connected X — irrelevant to manual training
       voice: baseVoice({
         examples: JSON.stringify(["first pasted post", "second pasted post", "third pasted post"]),
@@ -521,23 +550,41 @@ describe("Free-user manual DNA — no X connection, no Pro entitlement required"
   it("a 10-post bulk paste is analyzed in exactly ONE extraction call, not one per post", async () => {
     const tenPosts = Array.from({ length: 10 }, (_, i) => `bulk pasted post number ${i + 1}`)
     const store = await makeStore({
-      apiKey: "gsk_test",
+      apiKey: "",
+      aiIncluded: true,
+      plan: "free",
       voice: baseVoice({ examples: JSON.stringify(tenPosts) }),
       tweetDNA: [],
     })
     await getOrBuildStyleProfile(store)
-    expect(mockGenerate).toHaveBeenCalledTimes(1)
+    expect(mockBackendGenerate).toHaveBeenCalledTimes(1)
   })
 
   it("Free entitlement (aiIncludedPaid=false) does not block manual DNA building", async () => {
     const store = await makeStore({
-      apiKey: "gsk_test",
+      apiKey: "",
+      aiIncluded: true,
       aiIncludedPaid: false,
+      plan: "free",
       xConnected: false,
       voice: baseVoice({ examples: JSON.stringify(["a real post", "another real post"]) }),
       tweetDNA: [],
     })
     const profile = await getOrBuildStyleProfile(store)
     expect(profile).not.toBeNull()
+  })
+
+  it("Free entitlement + a stale/manually-set BYOK key: still routes through Included AI, never the stale key", async () => {
+    const store = await makeStore({
+      apiKey: "gsk_stale_free_key",
+      aiIncluded: true,
+      plan: "free",
+      voice: baseVoice({ examples: JSON.stringify(["a real post", "another real post"]) }),
+      tweetDNA: [],
+    })
+    const profile = await getOrBuildStyleProfile(store)
+    expect(profile).not.toBeNull()
+    expect(mockBackendGenerate).toHaveBeenCalledTimes(1)
+    expect(mockGenerate).not.toHaveBeenCalled()
   })
 })

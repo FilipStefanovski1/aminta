@@ -5,7 +5,7 @@ import { backendGenerate, dispatchGenerate, runThreadGenerate } from "~lib/backe
 import type { CompanionEvent } from "~lib/companion"
 import { todayLocal } from "~lib/dates"
 import { getStageTint } from "~lib/evolution"
-import { shouldUseIncludedAi } from "~lib/entitlements"
+import { canUseByok, effectiveApiKey, shouldUseIncludedAi } from "~lib/entitlements"
 import { fetchImageAsDataUrl } from "~lib/images"
 import { findNextReplyTarget, readActivePost } from "~lib/messaging"
 import { incrementMissionGenerates } from "~lib/missions"
@@ -424,7 +424,7 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
     const combined = topic.trim() + (context.trim() ? `\n\nAdditional context: ${context.trim()}` : "")
     const styleProfile = await getOrBuildStyleProfile(store)
     return {
-      apiKey: store.apiKey,
+      apiKey: effectiveApiKey(store),
       model: store.model,
       voice: store.voice,
       styleProfile,
@@ -444,7 +444,7 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
   const generate = async () => {
     reset()
     if (!navigator.onLine) { setError("You're offline. Check your connection and try again."); return }
-    if (!store.apiKey && !shouldUseIncludedAi(store)) { setError("Add your AI key in Settings first."); return }
+    if (!effectiveApiKey(store) && !shouldUseIncludedAi(store)) { setError("Add your AI key in Settings first."); return }
     if (!store.voice)  { setError("Teach Aminta your voice first. Go to Teach."); return }
     const combined = topic.trim() + (context.trim() ? `\n\nAdditional context: ${context.trim()}` : "")
     const hasPostImages = mode === "reply" && postImageUrls.length > 0
@@ -493,7 +493,7 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
       if (hasPostImages) {
         setAnalyzingImage(true)
         const result = await generateReply(
-          store.apiKey, store.model, store.voice, combined, postImageUrls,
+          effectiveApiKey(store), store.model, store.voice, combined, postImageUrls,
           styleProfile, tone, length,
           {
             isGroqKey,
@@ -547,7 +547,7 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
     }
   }
 
-  const canGenerate = (!!store.apiKey || shouldUseIncludedAi(store)) && !!store.voice && (!!topic.trim() || !!imageDataUrl || postImageUrls.length > 0) && !creditsExhausted
+  const canGenerate = (!!effectiveApiKey(store) || shouldUseIncludedAi(store)) && !!store.voice && (!!topic.trim() || !!imageDataUrl || postImageUrls.length > 0) && !creditsExhausted
   const topicLabel =
     mode === "reply"  ? "Who are we replying to?" :
     mode === "polish" ? "Your draft"               :
@@ -598,7 +598,7 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
       </div>
 
       {/* ── Image upload ── (hidden for Groq keys — Groq has no vision support) */}
-      {mode === "tweet" && !isGroqKey(store.apiKey ?? "") && (
+      {mode === "tweet" && !isGroqKey(effectiveApiKey(store)) && (
         <div className="space-y-1.5">
           <p className="text-[11px] font-medium" style={{ color: C.textFaint }}>
             Photo{" "}
@@ -800,8 +800,10 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
         </p>
       )}
 
-      {/* Zero-credit state. BYOK stays the escape hatch on both plans; paid
-          users just wait for renewal, free users get the upgrade path. */}
+      {/* Zero-credit state. BYOK stays the escape hatch for plans that
+          actually have it (Pro/Founder); Free users can't BYOK anymore, so
+          they only ever get the upgrade path here, never a dead-end
+          "Use my API key" button that leads to a locked Settings card. */}
       {!loading && creditsExhausted && (
         <div className="animate-fade-in rounded-xl px-4 py-3 space-y-2" style={{ backgroundColor: tint + "12", border: `1px solid ${tint}30` }}>
           <p className="font-pixel text-[8px]" style={{ color: tint }}>
@@ -825,23 +827,37 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
                 Upgrade to Pro
               </a>
             )}
-            <button
-              onClick={onOpenSettings}
-              className="w-full py-1.5 rounded-lg font-pixel text-[8px]"
-              style={{ backgroundColor: "transparent", color: C.textFaint, border: `1px solid ${C.border}` }}>
-              Use my API key
-            </button>
+            {canUseByok(store) && (
+              <button
+                onClick={onOpenSettings}
+                className="w-full py-1.5 rounded-lg font-pixel text-[8px]"
+                style={{ backgroundColor: "transparent", color: C.textFaint, border: `1px solid ${C.border}` }}>
+                Use my API key
+              </button>
+            )}
           </div>
         </div>
       )}
-      {!loading && !creditsExhausted && !store.apiKey && !shouldUseIncludedAi(store) && (
+      {!loading && !creditsExhausted && !effectiveApiKey(store) && !shouldUseIncludedAi(store) && (
         <p className="text-[11px] animate-fade-in px-1" style={{ color: C.textFaint }}>
-          Add your AI key in{" "}
-          <button onClick={onOpenSettings} className="underline" style={{ color: C.text }}>Settings</button>
-          {" "}to start generating.
+          {canUseByok(store) ? (
+            <>
+              Add your AI key in{" "}
+              <button onClick={onOpenSettings} className="underline" style={{ color: C.text }}>Settings</button>
+              {" "}to start generating.
+            </>
+          ) : (
+            <>
+              You're out of free credits.{" "}
+              <a href="https://www.amintaapp.com/#pricing" target="_blank" rel="noreferrer" className="underline" style={{ color: C.text }}>
+                Upgrade to Pro
+              </a>
+              {" "}to use your own AI key.
+            </>
+          )}
         </p>
       )}
-      {!loading && !creditsExhausted && (!!store.apiKey || shouldUseIncludedAi(store)) && !store.voice && (
+      {!loading && !creditsExhausted && (!!effectiveApiKey(store) || shouldUseIncludedAi(store)) && !store.voice && (
         <p className="text-[11px] animate-fade-in px-1" style={{ color: C.textFaint }}>
           Go to{" "}
           <button onClick={onTeach} className="underline" style={{ color: C.text }}>Train</button>

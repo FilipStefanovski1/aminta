@@ -7,7 +7,7 @@
 // lib/sync.ts's authedFetch, just pointed at a different endpoint.
 import { getAuthSession, refreshAuthSession } from "~lib/auth"
 import { getDeviceId } from "~lib/deviceId"
-import { shouldUseIncludedAi } from "~lib/entitlements"
+import { effectiveApiKey, shouldUseIncludedAi } from "~lib/entitlements"
 import { generate as runAI, generateFromImage, type GenerateOptions } from "~lib/ai"
 import { buildMessages, buildThreadMessages, parseThreadResponse, type Mode, type OutputLength, type Tone, type ThreadOption } from "~lib/prompts"
 import { cleanGenerationOutput } from "~lib/textCleanup"
@@ -163,7 +163,7 @@ export async function runThreadGenerate(
     return parseThreadResponse(raw)
   }
   const messages = buildThreadMessages(args.voice, args.input, args.styleProfile, args.tone)
-  const raw = await runAI(store.apiKey, store.model, messages)
+  const raw = await runAI(effectiveApiKey(store), store.model, messages)
   return parseThreadResponse(raw)
 }
 
@@ -201,7 +201,7 @@ export async function dispatchGenerate(
   // so this is always real generation, never extraction.
   const geminiOptions: GenerateOptions = { structuredText: true, generationType: args.generationMode, onRetry }
   const raw = args.images && args.images.length > 0
-    ? await generateFromImage(store.apiKey, store.model, messages, args.images, geminiOptions)
-    : await runAI(store.apiKey, store.model, messages, geminiOptions)
+    ? await generateFromImage(effectiveApiKey(store), store.model, messages, args.images, geminiOptions)
+    : await runAI(effectiveApiKey(store), store.model, messages, geminiOptions)
   return cleanGenerationOutput(raw)
 }
