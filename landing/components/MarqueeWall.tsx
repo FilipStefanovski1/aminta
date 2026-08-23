@@ -379,7 +379,7 @@ export default function MarqueeWall() {
       <div className="mx-auto max-w-7xl px-5">
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="font-pixel text-2xl sm:text-3xl text-white leading-snug">
-            Loved by builders.
+            Early feedback from builders.
           </h2>
         </div>
 

@@ -92,11 +92,11 @@ export default function PrivacyPage() {
 
           <Section id="controller" label="§ 1" title="Data Controller">
             <p>
-              Aminta is operated by an individual developer based in Belgium. For the purposes of
+              Aminta is operated by an independent developer based in North Macedonia. For the purposes of
               EU data protection law, the data controller is:
             </p>
             <div className="mt-3 text-sm space-y-1.5">
-              <p className="text-[#888]">Aminta, Belgium</p>
+              <p className="text-[#888]">Aminta, North Macedonia</p>
               <p className="text-[#888]">
                 Email:{" "}
                 <span className="font-mono text-accent">hello@amintaapp.com</span>
@@ -536,11 +536,11 @@ export default function PrivacyPage() {
               To exercise any of these rights, contact us at{" "}
               <span className="font-mono text-accent">hello@amintaapp.com</span>. We will
               respond within 30 days. You also have the right to lodge a complaint with your local
-              supervisory authority. In Belgium, this is the{" "}
+              supervisory authority. In North Macedonia, this is the{" "}
               <strong className="text-white">
-                Gegevensbeschermingsautoriteit (GBA) / Autorité de protection des données (APD)
+                Agency for Personal Data Protection (Агенција за заштита на личните податоци)
               </strong>
-              , reachable at gegevensbeschermingsautoriteit.be.
+              , reachable at privacy.mk.
             </p>
           </Section>
 
@@ -607,7 +607,7 @@ export default function PrivacyPage() {
               how we handle your personal data, please contact us:
             </p>
             <div className="mt-4 text-sm space-y-1.5">
-              <p className="text-[#888]">Aminta, Belgium</p>
+              <p className="text-[#888]">Aminta, North Macedonia</p>
               <p className="text-[#888]">
                 Email:{" "}
                 <span className="font-mono text-accent">hello@amintaapp.com</span>

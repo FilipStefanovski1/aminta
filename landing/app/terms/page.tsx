@@ -69,8 +69,8 @@ export default function TermsPage() {
         <LegalHero title="Terms of Service" effective="June 15, 2026" updated="June 15, 2026">
           <p>
             These Terms of Service (&quot;Terms&quot;) govern your access to and use of the Aminta
-            Chrome extension and web application (&quot;Service&quot;), operated by an individual
-            developer based in Belgium (&quot;Aminta,&quot; &quot;we,&quot; &quot;us,&quot; or
+            Chrome extension and web application (&quot;Service&quot;), operated by an independent
+            developer based in North Macedonia (&quot;Aminta,&quot; &quot;we,&quot; &quot;us,&quot; or
             &quot;our&quot;). By using Aminta, you agree to these Terms. Please read them carefully.
           </p>
         </LegalHero>
@@ -468,7 +468,7 @@ export default function TermsPage() {
               reliable.
             </p>
             <p>
-              Consumer protection laws in Belgium and the EU may grant you statutory rights that
+              Consumer protection laws in North Macedonia and the EU may grant you statutory rights that
               cannot be excluded by these Terms. Nothing in this section limits those statutory
               rights.
             </p>
@@ -530,7 +530,7 @@ export default function TermsPage() {
             <Sub title="15.1 Governing Law">
               <p>
                 These Terms and any disputes arising out of or related to them or the Service are
-                governed by and construed in accordance with the laws of <strong className="text-white">Belgium</strong>,
+                governed by and construed in accordance with the laws of <strong className="text-white">North Macedonia</strong>,
                 without regard to conflict-of-law principles.
               </p>
             </Sub>
@@ -538,7 +538,7 @@ export default function TermsPage() {
             <Sub title="15.2 Jurisdiction">
               <p>
                 Any legal dispute arising under these Terms shall be subject to the exclusive
-                jurisdiction of the courts of <strong className="text-white">Belgium</strong>.
+                jurisdiction of the courts of <strong className="text-white">North Macedonia</strong>.
                 If you are a consumer resident in another EU member state, you also retain the
                 right to bring claims before the courts of your country of residence under EU
                 consumer protection law.
@@ -571,7 +571,7 @@ export default function TermsPage() {
               regarding the Service:
             </p>
             <div className="mt-4 text-sm space-y-1.5">
-              <p className="text-[#888]">Aminta, Belgium</p>
+              <p className="text-[#888]">Aminta, North Macedonia</p>
               <p className="text-[#888]">
                 Email:{" "}
                 <span className="font-mono text-accent">hello@amintaapp.com</span>
