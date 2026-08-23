@@ -8,9 +8,16 @@ export const C = {
   border:     "#343438", // default border / divider — matches landing --color-line
   borderSoft: "#2a2a2a", // faint inner dividers
   borderHover:"#444448", // hover border
-  text:       "#e7e7ef", // primary text
-  textDim:    "#8a8a96", // secondary text
-  textFaint:  "#55555f", // tertiary / hints
-  textGhost:  "#3a3a4a", // disabled / decorative
+  // Contrast pass: these were tuned too dark against C.bg/C.card (#1f1f1f/
+  // #242424), producing gray-on-gray text that was barely legible for
+  // normal body copy, descriptions, counters, and placeholders — anything
+  // that isn't actually a disabled control. Brightened as one shared scale
+  // so every screen reading from C.* picks it up automatically. Disabled
+  // controls stay dim via their own opacity modifiers (e.g. Tailwind's
+  // disabled:opacity-40), not by a separate darker token.
+  text:       "#f5f5f7", // primary text / important headings
+  textDim:    "#d8d8dc", // normal body text
+  textFaint:  "#aeb0b7", // secondary descriptions
+  textGhost:  "#8e919a", // muted / helper text (counters, hints, "(optional)")
   mint:       "#74f7b5", // brand accent
 } as const

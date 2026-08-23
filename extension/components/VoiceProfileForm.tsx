@@ -43,15 +43,6 @@ const VOICE_STYLES: { id: string; desc: string }[] = [
   { id: "Analytical",   desc: "Data-driven, precise" },
 ]
 
-const STYLE_PREVIEWS: Record<string, string> = {
-  Casual:       "shipped a thing. not sure it works. going to sleep.",
-  Direct:       "Three features. One bug. Net positive.",
-  Witty:        "My deploy script has more trust issues than my last relationship.",
-  Raw:          "I almost gave up yesterday. I didn't. That's the whole story.",
-  Motivational: "Every post you skip is a post someone else made instead.",
-  Analytical:   "Engagement peaks 8–10 AM and 6–8 PM. That's the window.",
-}
-
 const INFO_TIPS: Record<string, string> = {
   niche:       "Be specific. 'crypto' is too broad, 'DeFi protocol security' is useful. Aminta uses this to stay on-topic when generating.",
   voice:       "Pick the style closest to how you actually write, not how you want to write. Aminta mimics your current voice, not an ideal one.",
@@ -109,14 +100,19 @@ function InfoTip({ tip }: { tip: string }) {
   )
 }
 
-function SectionHead({ label, tipKey, meta }: { label: string; tipKey: string; meta?: React.ReactNode }) {
+function SectionHead({ label, tipKey, desc, meta }: { label: string; tipKey: string; desc?: string; meta?: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-between mb-3">
-      <div className="flex items-center">
-        <p className="font-pixel text-[7px] uppercase tracking-widest" style={{ color: C.textDim }}>{label}</p>
-        <InfoTip tip={INFO_TIPS[tipKey]} />
+    <div className="mb-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center">
+          <p className="font-pixel text-[10px] uppercase tracking-widest" style={{ color: C.text }}>{label}</p>
+          <InfoTip tip={INFO_TIPS[tipKey]} />
+        </div>
+        {meta}
       </div>
-      {meta}
+      {desc && (
+        <p className="text-[10px] mt-1.5 leading-relaxed" style={{ color: C.textFaint }}>{desc}</p>
+      )}
     </div>
   )
 }
@@ -358,10 +354,11 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
   }
 
   return (
-    <div className="space-y-3 pb-4">
+    <div className="space-y-4 pb-4">
 
       {/* ── Hero — real-data state, no fabricated percentage ── */}
       <Card glow={tint} className="animate-card-in">
+        <p className="font-pixel text-[10px] uppercase tracking-widest mb-3" style={{ color: C.text }}>Voice status</p>
         <div className="flex items-center gap-4">
           <Sprite xp={store.xp ?? 0} size={56} animClass={animCls} />
 
@@ -401,7 +398,7 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
       <Card pad={false} className="animate-card-in overflow-hidden" style={{ animationDelay: "30ms" }}>
 
         {/* Voice style */}
-        <div className="p-4">
+        <div className="p-5">
           <SectionHead label="How you sound" tipKey="voice" />
           <div className="grid grid-cols-2 gap-2">
             {VOICE_STYLES.map(({ id, desc }) => {
@@ -423,22 +420,16 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
               )
             })}
           </div>
-          {voiceStyle && (
-            <p
-              className="mt-3 text-[11px] italic leading-relaxed"
-              style={{ color: C.textDim, borderLeft: `2px solid ${tint}44`, paddingLeft: 10 }}>
-              "{STYLE_PREVIEWS[voiceStyle]}"
-            </p>
-          )}
         </div>
 
         <Divider />
 
         {/* Writing examples */}
-        <div className="p-4">
+        <div className="p-5">
           <SectionHead
             label="Writing examples"
             tipKey="examples"
+            desc="Paste real things you've written. Aminta learns your style."
             meta={
               <div className="flex items-center gap-[4px]">
                 {[0, 1, 2, 3, 4].map(i => (
@@ -453,30 +444,11 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
             }
           />
 
-          <p className="text-[10px] -mt-1 mb-3 leading-relaxed" style={{ color: C.textDim }}>
-            {examples.length === 0
-              ? "Paste real things you've written. Raw drafts are fine."
-              : examples.length === 1
-                ? "One more example and I'll start understanding your pacing."
-                : examples.length === 2
-                  ? "One more and I'll have enough to write in your voice."
-                  : `${examples.length} examples. I'm beginning to understand how you write.`
-            }
-          </p>
-
           {/* Bulk paste — the primary training path. Shown up front when
               there's nothing yet, or on demand via "+ Paste more" once
               examples already exist. */}
           {(examples.length === 0 || bulkOpen) && !adding && (
             <div className="rounded-xl p-3 mb-2" style={{ backgroundColor: C.cardInner, border: `1px solid ${tint}44` }}>
-              {examples.length === 0 && (
-                <>
-                  <p className="text-[12px] font-medium" style={{ color: C.text }}>Teach Aminta how you write</p>
-                  <p className="text-[10px] mt-1 mb-2.5 leading-relaxed" style={{ color: C.textDim }}>
-                    Paste some posts you've written before — leave a blank line between each one. Aminta will use them to understand your writing style.
-                  </p>
-                </>
-              )}
               <textarea
                 value={bulkText}
                 onChange={e => setBulkText(e.target.value)}
@@ -619,13 +591,8 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
         <Divider />
 
         {/* Instincts / rules */}
-        <div className="p-4">
-          <SectionHead label="Instincts (optional)" tipKey="rules" />
-          {rules.length === 0 && (
-            <p className="text-[10px] mb-3 leading-relaxed" style={{ color: C.textDim }}>
-              Writing preferences I should always follow. Search, pick a popular one, or type your own.
-            </p>
-          )}
+        <div className="p-5">
+          <SectionHead label="Instincts (optional)" tipKey="rules" desc="Rules Aminta should always follow." />
 
           {/* 1. Selected — same chip UI as before, nothing changed here. A
               rule that matches a preset's internalPrompt displays that
@@ -789,7 +756,7 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
         <Divider />
 
         {/* Topics — supporting context, demoted to a single compact row */}
-        <div className="p-4">
+        <div className="p-5">
           <SectionHead label="Topics" tipKey="niche" />
           <div className="flex flex-wrap gap-2">
             {topics.map((topic, i) => (

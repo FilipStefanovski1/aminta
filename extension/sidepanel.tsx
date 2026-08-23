@@ -308,7 +308,7 @@ function SettingsOverlay({
         case "signed_out":
           setSyncLine({ text: "Session expired. Sign in to keep syncing", color: "#f87171" }); break
         default:
-          setSyncLine(ago ? { text: `Synced ${ago}`, color: "#666672" } : null)
+          setSyncLine(ago ? { text: `Synced ${ago}`, color: C.textGhost } : null)
       }
     }
     load()
@@ -405,7 +405,7 @@ function SettingsOverlay({
 
         {/* ── ACCOUNT ── */}
         <section className="space-y-1.5">
-          <p className={sectionLabel} style={{ color: "#666672" }}>Account</p>
+          <p className={sectionLabel} style={{ color: C.textGhost }}>Account</p>
 
           {session ? (
             <div className="rounded-xl p-3" style={{ backgroundColor: C.card, border: `1px solid ${C.border}` }}>
@@ -492,7 +492,7 @@ function SettingsOverlay({
 
         {/* ── AMINTA BRAIN ── dominant card: heavier border + elevated bg ── */}
         <section className="space-y-1.5">
-          <p className={sectionLabel} style={{ color: "#666672" }}>Aminta Brain</p>
+          <p className={sectionLabel} style={{ color: C.textGhost }}>Aminta Brain</p>
 
           <div className="rounded-xl overflow-hidden" style={{ backgroundColor: "#262628", border: "1px solid #404048" }}>
 
@@ -536,7 +536,7 @@ function SettingsOverlay({
                     My API Key
                   </button>
                 </div>
-                <p className="text-[10px] mt-1.5 leading-snug" style={{ color: "#666672" }}>
+                <p className="text-[10px] mt-1.5 leading-snug" style={{ color: C.textGhost }}>
                   {includedActive
                     ? "Included in your plan — no API key needed."
                     : "Using your own API key below."}
@@ -555,7 +555,7 @@ function SettingsOverlay({
                     <p className="text-[11px] leading-none" style={{ color: "#ccccd2" }}>
                       {store.creditsBalance.toLocaleString()} / {store.creditsAllowance.toLocaleString()} credits
                     </p>
-                    <p className="text-[9px] mt-1 leading-none" style={{ color: "#666672" }}>
+                    <p className="text-[9px] mt-1 leading-none" style={{ color: C.textGhost }}>
                       {CREDIT_RESET_LABEL[store.creditsPeriodKind] ?? "Resets each period"}
                     </p>
                   </div>
@@ -639,7 +639,7 @@ function SettingsOverlay({
                       className="w-full mt-3 py-2 rounded-lg font-pixel text-[8px] cursor-default"
                       style={{
                         backgroundColor: "transparent",
-                        color: justSaved ? avatarTint : "#666672",
+                        color: justSaved ? avatarTint : C.textGhost,
                         border: `1px solid ${justSaved ? avatarTint + "55" : C.border}`,
                       }}>
                       Saved
@@ -653,7 +653,7 @@ function SettingsOverlay({
 
         {/* ── ADVANCED ── same card treatment as Account, for consistent section weight */}
         <section className="space-y-1.5">
-          <p className={sectionLabel} style={{ color: "#666672" }}>Advanced</p>
+          <p className={sectionLabel} style={{ color: C.textGhost }}>Advanced</p>
           <div className="rounded-xl p-3" style={{ backgroundColor: C.card, border: `1px solid ${C.border}` }}>
             <GhostButton onClick={() => { onClose(); onResetOnboarding() }} className="!py-2 text-[8px]">
               Restart setup wizard

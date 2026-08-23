@@ -89,16 +89,16 @@ export default function VoiceRefreshCard({ store, onRefreshed }: Props) {
       </button>
       {showLearned && (
         <div className="mt-2.5 pt-2.5" style={{ borderTop: `1px solid ${C.borderSoft}` }}>
-          <p className={`${label} mb-2`} style={{ color: "#888896" }}>What Aminta learned</p>
+          <p className={`${label} mb-2`} style={{ color: C.textFaint }}>What Aminta learned</p>
           <div className="space-y-2.5">
             {learned.map((s) => (
               <div key={s.title}>
-                <p className="text-[10px] leading-none mb-1" style={{ color: "#ccccd2" }}>{s.title}</p>
+                <p className="text-[10px] leading-none mb-1" style={{ color: C.textFaint }}>{s.title}</p>
                 {s.inline && (
-                  <p className="text-[10px] leading-snug" style={{ color: "#888896" }}>{s.inline}</p>
+                  <p className="text-[10px] leading-snug" style={{ color: C.textFaint }}>{s.inline}</p>
                 )}
                 {s.lines.map((line) => (
-                  <p key={line} className="text-[10px] leading-snug" style={{ color: "#888896" }}>
+                  <p key={line} className="text-[10px] leading-snug" style={{ color: C.textFaint }}>
                     {s.lines.length > 1 ? `• ${line}` : line}
                   </p>
                 ))}
@@ -113,15 +113,15 @@ export default function VoiceRefreshCard({ store, onRefreshed }: Props) {
   return (
     <div className="rounded-xl overflow-hidden" style={{ backgroundColor: "#262628", border: "1px solid #404048" }}>
       <div className="px-3.5 pt-3.5 pb-3">
+        <p className="font-pixel text-[10px] uppercase tracking-widest mb-1.5" style={{ color: C.text }}>Learn from your X</p>
+
         {/* ── Free: optional Pro convenience, never a gate. Manual training
             (writing examples) already fully builds a Free user's Aminta
             DNA — this only offers automatic, X-sourced upkeep on top. */}
         {!entitled && (
           <>
-            <label className={`${label} block mb-1.5`} style={{ color: "#888896" }}>Voice Refresh</label>
-            <p className="text-[12px] font-medium" style={{ color: "#e8e8ea" }}>Keep your DNA up to date automatically</p>
-            <p className="text-[10px] mt-1.5 leading-snug" style={{ color: "#888896" }}>
-              With Pro, Aminta can refresh your writing style from your recent X posts once every week.
+            <p className="text-[10px] leading-snug" style={{ color: C.textFaint }}>
+              Voice Refresh learns from your recent X posts.
             </p>
             <a
               href="https://www.amintaapp.com/#pricing"
@@ -137,8 +137,9 @@ export default function VoiceRefreshCard({ store, onRefreshed }: Props) {
         {/* ── Pro, not connected ── */}
         {entitled && !store.xConnected && (
           <>
-            <label className={`${label} block mb-1.5`} style={{ color: "#888896" }}>Learn from your X</label>
-            <p className="text-[12px] font-medium" style={{ color: "#e8e8ea" }}>Keep Aminta in sync with how you actually write.</p>
+            <p className="text-[10px] leading-snug" style={{ color: C.textFaint }}>
+              Voice Refresh learns from your recent X posts.
+            </p>
             <div className="mt-3">
               <PrimaryButton
                 onClick={busy ? undefined : () => act("connect", startXConnect)}
@@ -147,7 +148,7 @@ export default function VoiceRefreshCard({ store, onRefreshed }: Props) {
                 disabled={!!busy}>
                 {busy === "connect" ? "Opening X…" : "Connect X"}
               </PrimaryButton>
-              <p className="text-[9px] mt-1.5 leading-snug" style={{ color: "#55555f" }}>
+              <p className="text-[9px] mt-1.5 leading-snug" style={{ color: C.textGhost }}>
                 Read-only. Aminta never posts, likes, or follows for you.
               </p>
             </div>
@@ -158,7 +159,7 @@ export default function VoiceRefreshCard({ store, onRefreshed }: Props) {
         {entitled && store.xConnected && (
           <div>
             <div className="flex items-center justify-between mb-2.5">
-              <span className="text-[10px]" style={{ color: "#ccccd2" }}>
+              <span className="text-[10px]" style={{ color: C.textFaint }}>
                 Connected as @{store.xUsername}
               </span>
               <button
@@ -172,26 +173,26 @@ export default function VoiceRefreshCard({ store, onRefreshed }: Props) {
                   onRefreshed()
                 })}
                 className="text-[10px] underline"
-                style={{ color: "#888896" }}>
+                style={{ color: C.textFaint }}>
                 {busy === "disconnect" ? "Disconnecting…" : "Disconnect"}
               </button>
             </div>
 
             {busy === "refresh" ? (
               // ── REFRESHING ──
-              <p className="text-[10px] leading-snug" style={{ color: "#ccccd2" }}>
+              <p className="text-[10px] leading-snug" style={{ color: C.textFaint }}>
                 Analyzing your recent posts…
               </p>
             ) : affordance.kind === "fresh" && !error ? (
               // ── SUCCESS ──
               <div>
                 <p className="font-pixel text-[7px] mb-1.5" style={{ color: tint }}>✓ Voice updated</p>
-                <p className="text-[10px] leading-snug" style={{ color: "#ccccd2" }}>
+                <p className="text-[10px] leading-snug" style={{ color: C.textFaint }}>
                   Learned from {affordance.postsAnalyzed} recent posts
                 </p>
                 {learnedToggle}
                 {nextEligibleLabel && (
-                  <p className="text-[10px] mt-2 leading-none" style={{ color: "#9a9aa6" }}>
+                  <p className="text-[10px] mt-2 leading-none" style={{ color: C.textFaint }}>
                     Next refresh {nextEligibleLabel}
                   </p>
                 )}
@@ -199,8 +200,7 @@ export default function VoiceRefreshCard({ store, onRefreshed }: Props) {
             ) : eligible ? (
               // ── AVAILABLE ──
               <div>
-                <label className={`${label} block mb-1`} style={{ color: "#888896" }}>Learn from your X</label>
-                <p className="text-[10px] mb-2.5 leading-snug" style={{ color: "#666672" }}>
+                <p className="text-[10px] mb-2.5 leading-snug" style={{ color: C.textFaint }}>
                   Keep Aminta in sync with how you actually write.
                 </p>
                 <PrimaryButton
@@ -214,21 +214,20 @@ export default function VoiceRefreshCard({ store, onRefreshed }: Props) {
                   disabled={needsReconnect}>
                   Refresh my voice
                 </PrimaryButton>
-                <p className="text-[10px] mt-1.5 leading-none" style={{ color: "#9a9aa6" }}>Available now</p>
+                <p className="text-[10px] mt-1.5 leading-none" style={{ color: C.textFaint }}>Available now</p>
               </div>
             ) : (
               // ── LOCKED ──
               <div>
-                <label className={`${label} block mb-1`} style={{ color: "#888896" }}>Learn from your X</label>
-                <p className="text-[10px] leading-snug" style={{ color: "#666672" }}>Your voice is up to date.</p>
+                <p className="text-[10px] leading-snug" style={{ color: C.textFaint }}>Your voice is up to date.</p>
                 {lastRefreshedLabel && (
-                  <p className="text-[10px] mt-1 leading-none" style={{ color: "#9a9aa6" }}>
+                  <p className="text-[10px] mt-1 leading-none" style={{ color: C.textFaint }}>
                     Last refreshed {lastRefreshedLabel}
                   </p>
                 )}
                 {learnedToggle}
                 {nextEligibleLabel && (
-                  <p className="text-[10px] mt-2 leading-none" style={{ color: "#9a9aa6" }}>
+                  <p className="text-[10px] mt-2 leading-none" style={{ color: C.textFaint }}>
                     Refresh available {nextEligibleLabel}
                   </p>
                 )}
@@ -241,13 +240,13 @@ export default function VoiceRefreshCard({ store, onRefreshed }: Props) {
                   onClick={() => setShowHow((v) => !v)}
                   aria-label="How posts are chosen"
                   className="text-[9px] leading-none"
-                  style={{ color: "#55555f" }}>
+                  style={{ color: C.textGhost }}>
                   ⓘ how posts are chosen
                 </button>
               </div>
             )}
             {showHow && (
-              <p className="text-[9px] mt-1 leading-snug" style={{ color: "#666672" }}>
+              <p className="text-[9px] mt-1 leading-snug" style={{ color: C.textGhost }}>
                 Aminta analyzes your recent original posts and automatically chooses the
                 strongest examples of your writing. Replies and reposts aren't used.
               </p>

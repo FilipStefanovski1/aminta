@@ -3,6 +3,7 @@ import { useEffect, useState } from "react"
 import { insertImage, insertText } from "~lib/messaging"
 import type { Mode, Platform } from "~lib/prompts"
 import { cooldownSecondsRemaining } from "~lib/publishCooldown"
+import { C } from "~lib/theme"
 import { hashText, queuePendingXP, XP_PER_MODE } from "~lib/xp"
 
 const X_CHAR_LIMIT = 280
@@ -87,7 +88,7 @@ export default function OutputCard({ text, mode, platform, imageDataUrl, onRegen
 
   const charLimit = X_CHAR_LIMIT
   const charCount = text.length
-  const charColor = charCount > charLimit ? "#f87171" : charCount > charLimit * 0.9 ? "#fbbf24" : "#444"
+  const charColor = charCount > charLimit ? "#f87171" : charCount > charLimit * 0.9 ? "#fbbf24" : C.textGhost
 
   return (
     <div className="animate-card-in bg-[#111318] border border-[#1e2028] rounded-xl p-3 space-y-3">
@@ -98,7 +99,7 @@ export default function OutputCard({ text, mode, platform, imageDataUrl, onRegen
           className="w-full rounded-lg object-cover max-h-36"
         />
       )}
-      <p className="text-sm whitespace-pre-wrap leading-relaxed text-[#e7e7ef]">{text}</p>
+      <p className="text-sm whitespace-pre-wrap leading-relaxed" style={{ color: C.text }}>{text}</p>
 
       {/* Character count */}
       <div className="flex justify-end">
@@ -110,7 +111,8 @@ export default function OutputCard({ text, mode, platform, imageDataUrl, onRegen
       <div className="flex gap-2">
         <button
           onClick={copy}
-          className="flex-1 border border-[#1e2028] rounded py-2 text-[10px] text-[#666] hover:border-[#333] hover:text-[#888] transition-colors active:scale-[0.97]">
+          className="flex-1 border border-[#1e2028] rounded py-2 text-[10px] hover:border-[#333] transition-colors active:scale-[0.97]"
+          style={{ color: C.textFaint }}>
           {copied ? "Copied ✓" : "Copy"}
         </button>
         <button
@@ -126,14 +128,16 @@ export default function OutputCard({ text, mode, platform, imageDataUrl, onRegen
         {onRegenerate && (
           <button
             onClick={onRegenerate}
-            className="flex-1 border border-[#1e2028] rounded py-1.5 text-[10px] text-[#555] hover:border-[#333] hover:text-[#888] transition-colors">
+            className="flex-1 border border-[#1e2028] rounded py-1.5 text-[10px] hover:border-[#333] transition-colors"
+            style={{ color: C.textFaint }}>
             ↻ Try again
           </button>
         )}
         {onSaveAsTemplate && (
           <button
             onClick={() => onSaveAsTemplate(text)}
-            className="flex-1 border border-[#1e2028] rounded py-1.5 text-[10px] text-[#555] hover:border-[#333] hover:text-[#888] transition-colors">
+            className="flex-1 border border-[#1e2028] rounded py-1.5 text-[10px] hover:border-[#333] transition-colors"
+            style={{ color: C.textFaint }}>
             + Save as template
           </button>
         )}
@@ -141,7 +145,7 @@ export default function OutputCard({ text, mode, platform, imageDataUrl, onRegen
 
       <div className="space-y-0.5">
         {insertStatus && (
-          <p className="text-[10px] text-[#555] animate-fade-in">{insertStatus}</p>
+          <p className="text-[10px] animate-fade-in" style={{ color: C.textFaint }}>{insertStatus}</p>
         )}
       </div>
     </div>

@@ -633,7 +633,7 @@ export default function OnboardingWizard({ store, onDone }: Props) {
                   I&apos;d post this.
                 </h2>
                 <Card className="w-full text-left mt-5">
-                  <p className="text-[13px] leading-relaxed" style={{ color: "#ccc" }}>{firstPost}</p>
+                  <p className="text-[13px] leading-relaxed" style={{ color: C.text }}>{firstPost}</p>
                   <button onClick={copyFirstPost}
                     className="w-full rounded-xl py-2.5 mt-3 text-[11px] font-semibold transition-colors"
                     style={{ border: `1px dashed ${C.mint}88`, color: C.mint }}>
@@ -789,7 +789,7 @@ export default function OnboardingWizard({ store, onDone }: Props) {
               <div className="space-y-2">
                 {examples.map((p, i) => (
                   <div key={i} className="group flex gap-2 rounded-xl p-2.5" style={{ backgroundColor: C.cardInner, border: `1px solid ${C.border}` }}>
-                    <p className="flex-1 text-[11px] leading-relaxed break-words min-w-0" style={{ color: "#ccc" }}>{p}</p>
+                    <p className="flex-1 text-[11px] leading-relaxed break-words min-w-0" style={{ color: C.text }}>{p}</p>
                     <button onClick={() => setExamples(prev => prev.filter((_, j) => j !== i))}
                       aria-label="Remove post"
                       className="shrink-0 text-xs opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: C.textDim }}>✕</button>
