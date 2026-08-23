@@ -12,6 +12,47 @@ import { getCreditStatus } from "@/lib/ai/creditService"
 // so reaching either handler with a valid user already proves that. Guarded
 // by `.is(..., null)` so it's a no-op write after the first call, and once
 // set it's never cleared.
+export interface LoginXIdentity {
+  authedViaX: boolean
+  username: string | null
+  displayName: string | null
+  avatarUrl: string | null
+}
+
+// Basic X identity (avatar/name/handle) must reach the extension the moment
+// someone signs in with X — they shouldn't have to separately run the
+// Voice-Refresh-specific "Connect X" flow just so Settings can show their
+// real profile instead of an initial + email. Supabase already captured
+// this at OAuth time; the caller only falls back to it when x_connections
+// has no row (that table is a different, fresher signal used once Voice
+// Refresh has actually run, and always wins when it exists).
+//
+// Only ever sourced from an X-linked identity — never Google — since these
+// same fields also feed the wrong-X-account safety guard. Exported for unit
+// testing — no I/O, just field extraction from the Supabase user shape.
+export function deriveLoginXIdentity(user: {
+  app_metadata?: { provider?: string } | null
+  identities?: { provider: string }[] | null
+  user_metadata?: Record<string, unknown> | null
+}): LoginXIdentity {
+  const authedViaX =
+    user.app_metadata?.provider === "x" ||
+    (user.identities ?? []).some((i) => i.provider === "x")
+
+  const meta = authedViaX ? (user.user_metadata ?? {}) : {}
+  const pick = (key: string): string | null => {
+    const v = meta[key]
+    return typeof v === "string" && v.trim() ? v.trim() : null
+  }
+
+  return {
+    authedViaX,
+    username: pick("preferred_username") ?? pick("user_name"),
+    displayName: pick("full_name") ?? pick("name"),
+    avatarUrl: pick("avatar_url") ?? pick("picture"),
+  }
+}
+
 async function markExtensionConnected(userId: string): Promise<void> {
   const service = await createServiceClient()
   const { error } = await service
@@ -109,6 +150,10 @@ export async function GET(request: NextRequest) {
       .then((r) => r.data, () => null),
   ])
 
+  // See deriveLoginXIdentity() above — the fallback source for basic X
+  // identity when x_connections (above) has no row for this user yet.
+  const loginX = deriveLoginXIdentity(user)
+
   // ai_included is the ONE canonical entitlement field the extension should
   // route Included-AI generation on — it's aiIncluded() from
   // lib/entitlements.ts, not a re-derivation. A gifted user (plan='free',
@@ -139,10 +184,10 @@ export async function GET(request: NextRequest) {
     credits_period_end: credits.periodEnd,
     credits_period_kind: credits.periodKind,
     credits_plan_key: credits.planKey,
-    x_connected: !!xConn,
-    x_username: xConn?.x_username ?? null,
-    x_display_name: xConn?.x_display_name ?? null,
-    x_avatar_url: xConn?.x_avatar_url ?? null,
+    x_connected: !!xConn || loginX.authedViaX,
+    x_username: xConn?.x_username ?? loginX.username,
+    x_display_name: xConn?.x_display_name ?? loginX.displayName,
+    x_avatar_url: xConn?.x_avatar_url ?? loginX.avatarUrl,
     voice_refresh_eligible: voiceRefresh.eligible,
     voice_refresh_next_eligible_at: voiceRefresh.nextEligibleAt,
     last_voice_refresh_at: voiceRefresh.lastRefreshAt,

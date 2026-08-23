@@ -325,6 +325,10 @@ function SettingsOverlay({
   // ── Avatar ──────────────────────────────────────────────────────────────────
   const avatarInputRef = useRef<HTMLInputElement>(null)
   const [avatarError, setAvatarError] = useState("")
+  // A broken X avatar URL falls back to the initial-letter circle, never a
+  // blank image — reset whenever the URL itself changes (a later Voice
+  // Refresh / re-sync may supply a working one).
+  const [xAvatarBroken, setXAvatarBroken] = useState(false)
 
   const handleAvatarFile = async (file: File) => {
     if (!file.type.startsWith("image/")) { setAvatarError("Please select an image file."); return }
@@ -413,24 +417,34 @@ function SettingsOverlay({
           {session ? (
             <div className="rounded-xl p-3" style={{ backgroundColor: C.card, border: `1px solid ${C.border}` }}>
               <div className="flex items-center gap-3 min-w-0">
-                {/* Avatar — tap to upload a photo (cropped/downscaled locally,
-                    stored as a data URL — device-only, no backend needed).
-                    Falls back to an initial letter, tinted to the current
-                    evolution color, when no photo has been set. */}
+                {/* Avatar — read-only whenever a real X identity is
+                    connected; the profile picture comes from X, not from
+                    something the user sets inside Aminta. Only accounts
+                    with no X identity at all keep the manual-photo-upload
+                    fallback (cropped/downscaled locally, stored as a data
+                    URL — device-only, no backend needed). */}
                 <button
-                  onClick={() => avatarInputRef.current?.click()}
-                  title="Change photo"
+                  onClick={identity.usingXIdentity ? undefined : () => avatarInputRef.current?.click()}
+                  title={identity.usingXIdentity ? undefined : "Change photo"}
                   className="shrink-0 relative rounded-full overflow-hidden group"
                   style={{ width: 40, height: 40, border: `2px solid ${avatarTint}55` }}>
-                  {store.avatarDataUrl ? (
+                  {identity.usingXIdentity ? (
+                    identity.avatarUrl && !xAvatarBroken ? (
+                      <img
+                        src={identity.avatarUrl}
+                        alt=""
+                        className="w-full h-full object-cover"
+                        onError={() => setXAvatarBroken(true)}
+                      />
+                    ) : (
+                      <div
+                        className="w-full h-full flex items-center justify-center font-pixel text-[13px]"
+                        style={{ backgroundColor: avatarTint + "22", color: avatarTint }}>
+                        {identity.displayName?.[0]?.toUpperCase() ?? "?"}
+                      </div>
+                    )
+                  ) : store.avatarDataUrl ? (
                     <img src={store.avatarDataUrl} alt="" className="w-full h-full object-cover" />
-                  ) : identity.avatarUrl ? (
-                    <img
-                      src={identity.avatarUrl}
-                      alt=""
-                      className="w-full h-full object-cover"
-                      onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none" }}
-                    />
                   ) : (
                     <div
                       className="w-full h-full flex items-center justify-center font-pixel text-[13px]"
@@ -438,21 +452,25 @@ function SettingsOverlay({
                       {identity.displayName?.[0]?.toUpperCase() ?? "?"}
                     </div>
                   )}
-                  <div
-                    className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                    style={{ backgroundColor: "rgba(0,0,0,0.55)" }}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-                    </svg>
-                  </div>
+                  {!identity.usingXIdentity && (
+                    <div
+                      className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      style={{ backgroundColor: "rgba(0,0,0,0.55)" }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                      </svg>
+                    </div>
+                  )}
                 </button>
-                <input
-                  ref={avatarInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => { const f = e.target.files?.[0]; if (f) handleAvatarFile(f) }}
-                />
+                {!identity.usingXIdentity && (
+                  <input
+                    ref={avatarInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => { const f = e.target.files?.[0]; if (f) handleAvatarFile(f) }}
+                  />
+                )}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 min-w-0">
                     {/* X identity takes priority once connected — it's the
