@@ -19,11 +19,28 @@ export default function LoginScreen({ onSignedIn: _onSignedIn }: Props) {
   const [state, setState] = useState<State>("idle")
 
   // If sign-in hasn't completed after 90s, stop spinning and offer a retry —
-  // the user may have closed the tab or hit an error on the website.
+  // the user may have closed the tab or hit an error on the website. This is
+  // the fallback of last resort; the listener below usually gets there first.
   useEffect(() => {
     if (state !== "waiting") return
     const t = setTimeout(() => setState("stalled"), 90_000)
     return () => clearTimeout(t)
+  }, [state])
+
+  // Active failure signal — /login posts AMINTA_AUTH_ERROR (relayed via
+  // aminta-auth-bridge.ts -> background.ts) the moment it loads with
+  // ?error=..., e.g. right after Supabase fails to exchange the X OAuth
+  // code. Lets a same-second failure leave "Connecting to X…" immediately
+  // instead of the user staring at a spinner for up to 90s while the
+  // website already knows it failed. Reuses the exact same "stalled" state
+  // the 90s timeout falls back to — one error UI, two ways to reach it.
+  useEffect(() => {
+    if (state !== "waiting") return
+    const listener = (msg: { type?: string }) => {
+      if (msg?.type === "AMINTA_AUTH_ERROR") setState("stalled")
+    }
+    chrome.runtime.onMessage.addListener(listener)
+    return () => chrome.runtime.onMessage.removeListener(listener)
   }, [state])
 
   function openLoginPage() {

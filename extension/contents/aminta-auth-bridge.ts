@@ -24,6 +24,19 @@ console.log("[Aminta bridge] content script loaded on", window.location.href)
 // who landed on www.amintaapp.com.
 const ALLOWED_ORIGINS = ["https://amintaapp.com", "https://www.amintaapp.com"]
 
+// /login posts this when it loads with ?error=... — e.g. /auth/callback
+// redirecting back after Supabase couldn't exchange the X OAuth code. Relays
+// to background.ts so the sidepanel can leave its "Connecting to X…" state
+// immediately instead of waiting out its own stall timeout. See
+// extension/components/LoginScreen.tsx.
+window.addEventListener("message", (event) => {
+  if (!ALLOWED_ORIGINS.includes(event.origin)) return
+  if (!event.data || event.data.type !== "AMINTA_AUTH_ERROR") return
+
+  console.log("[Aminta bridge] received AMINTA_AUTH_ERROR from", event.origin, "—", event.data.error)
+  chrome.runtime.sendMessage({ type: "AMINTA_AUTH_ERROR_FROM_BRIDGE", error: event.data.error }).catch(() => {})
+})
+
 window.addEventListener("message", async (event) => {
   // Only accept messages from our own origin.
   if (!ALLOWED_ORIGINS.includes(event.origin)) return

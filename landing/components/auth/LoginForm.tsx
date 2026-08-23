@@ -33,6 +33,13 @@ export function LoginForm({ providers }: { providers: AuthProvidersConfig }) {
   // Hides the form while we check for an existing session, so a
   // browser that's already signed in never flashes a blank login form.
   const [checkingSession, setCheckingSession] = useState(true)
+  // Set when this page loads with ?error=... — e.g. /auth/callback
+  // redirecting here after Supabase couldn't exchange the X OAuth code
+  // ("Unable to exchange external code..." — a provider/credential-level
+  // failure on Supabase's side, not something this page caused). Shown
+  // inline so a user retrying directly on this tab sees why the first
+  // attempt didn't work, not just a blank form again.
+  const [oauthError, setOauthError] = useState(false)
   // Default view only shows what `providers` allows (X-only today). If
   // anything is hidden, "Sign in with another method" flips this to reveal
   // every implemented method in place — same route, same form, no separate
@@ -53,6 +60,24 @@ export function LoginForm({ providers }: { providers: AuthProvidersConfig }) {
       const qs = params.toString()
       window.location.replace("/signup" + (qs ? `?${qs}` : ""))
       return
+    }
+
+    // /auth/callback redirects here with ?error=... when Supabase couldn't
+    // complete the OAuth flow (e.g. "Unable to exchange external code" — a
+    // provider-side token-exchange failure, not a bug in this page). If the
+    // attempt started from the extension (ext_id persisted to localStorage
+    // when this page first loaded, before the OAuth redirect — it's never
+    // on this failure redirect's own URL), tell the extension immediately
+    // via the same content-script bridge extension-auth uses for success,
+    // rather than leaving the sidepanel spinning until its own timeout.
+    // See extension/contents/aminta-auth-bridge.ts.
+    if (params.get("error")) {
+      setOauthError(true)
+      window.history.replaceState({}, "", "/login")
+      const extId = localStorage.getItem("aminta_ext_id")
+      if (extId) {
+        window.postMessage({ type: "AMINTA_AUTH_ERROR", error: "auth_failed" }, window.location.origin)
+      }
     }
 
     // If this browser already has a live Supabase session, don't show a
@@ -155,6 +180,10 @@ export function LoginForm({ providers }: { providers: AuthProvidersConfig }) {
             </p>
           )}
         </div>
+
+        {oauthError && (
+          <p className="text-xs text-red-400">Couldn&apos;t connect to X. Try again.</p>
+        )}
 
         <OAuthButtons onGoogle={handleGoogle} onX={handleX} showGoogle={visible.google} showX={visible.x} />
 

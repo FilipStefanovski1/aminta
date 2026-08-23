@@ -58,6 +58,19 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   return true // keep port open for async sendResponse
 })
 
+// Relayed from aminta-auth-bridge.ts when /login loads with ?error=... —
+// Supabase couldn't complete the X OAuth flow (e.g. "Unable to exchange
+// external code", a provider/credential-level failure on Supabase's side).
+// Broadcasts to the sidepanel so LoginScreen.tsx can leave "Connecting to
+// X…" immediately instead of waiting out its own stall timeout. Never
+// writes to storage and never closes the tab — unlike the success path,
+// there's no session to persist, and the user may want to retry right there.
+chrome.runtime.onMessage.addListener((msg, _sender, _sendResponse) => {
+  if (msg?.type !== "AMINTA_AUTH_ERROR_FROM_BRIDGE") return false
+  chrome.runtime.sendMessage({ type: "AMINTA_AUTH_ERROR" }).catch(() => {})
+  return false
+})
+
 // Confirmed-publish signal, relayed from twitter-publish-detector.ts (MAIN
 // world, watches X's own network calls) via twitter-bridge.ts (ISOLATED
 // world, has chrome.runtime access). Resolves whichever insert was queued
