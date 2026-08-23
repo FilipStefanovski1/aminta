@@ -6,6 +6,14 @@ import { effectiveApiKey, shouldUseIncludedAi } from "~lib/entitlements"
 import { pickNextReplyTarget, type ReplyPostData } from "~lib/replyTargets"
 import { getStore } from "~lib/storage"
 import { getOrBuildStyleProfile } from "~lib/styleProfile"
+import {
+  debugSnapshotComposer,
+  getActiveXComposer,
+  insertAndVerifyThreadPost,
+  readThreadComposerText,
+  waitForNextComposerOrRegression,
+  waitForThreadComposerAt,
+} from "~lib/threadComposerDom"
 import { processTweetImageUrls } from "~lib/tweetMedia"
 
 export const config: PlasmoCSConfig = {
@@ -189,18 +197,15 @@ async function findNextReplyTarget(): Promise<{ text: string; imageUrls: string[
 
 // ─── Composer open/focus (shared by "Create with Aminta" etc.) ─────────────
 
-function isComposerOpen(): boolean {
-  return !!document.querySelector('[data-testid="tweetTextarea_0"]')
-}
-
 // Opens X's own compose modal without navigating away from wherever the
 // user currently is — preserves any other in-progress draft on the page.
 // Fragile: relies on the desktop left-nav "Post" button; if X renames or
 // hides it (e.g. narrow layouts), this returns false and the caller's own
 // fallback (a fresh tab straight at /compose/post) takes over instead.
 function openOrFocusComposer(): boolean {
-  if (isComposerOpen()) {
-    getComposerBox()?.focus()
+  const existing = getActiveXComposer(0)
+  if (existing) {
+    existing.focus()
     return true
   }
   const newPostBtn = document.querySelector<HTMLElement>('[data-testid="SideNav_NewTweet_Button"]')
@@ -244,6 +249,39 @@ async function insertImageIntoComposer(dataUrl: string): Promise<boolean> {
   } catch {
     return false
   }
+}
+
+// ─── Thread builder: X's NATIVE multi-post thread composer ──────────────
+// Builds the complete thread as a DRAFT inside X's own thread composer —
+// Aminta inserts post 1, then the USER clicks X's own "+" (add another
+// post) themselves; Aminta detects the composer that produces and inserts
+// post 2 into it, and so on. Aminta never clicks "+" or the final Post/
+// Post-all button itself — see lib/threadBuilder.ts's file-header comment
+// for why "+" is a user action now. See lib/threadBuilder.ts for the
+// orchestrating state machine and lib/threadComposerDom.ts for the DOM
+// reading/writing this wires up (centralized + independently testable
+// there).
+
+// Set true by THREAD_BUILD_STOP (the user pressed Stop while
+// THREAD_BUILD_WAIT_FOR_COMPOSER was polling for their "+" click), reset by
+// THREAD_BUILD_PREPARE at the start of a build. Module-level rather than
+// threaded through every message because the wait it interrupts is a
+// long-running, user-paced poll already in flight when Stop is pressed —
+// there's no other channel back into that poll's closure.
+let threadBuildCancelled = false
+
+// Opens/focuses a composer and refuses to build a thread on top of an
+// existing draft — never silently erases what the user already typed.
+async function prepareThreadBuild(): Promise<{ ok: boolean; error?: string }> {
+  const opened = openOrFocusComposer()
+  if (isDev) console.log("[Aminta thread] prepare — openOrFocusComposer:", opened, debugSnapshotComposer(0))
+  if (!opened) return { ok: false, error: "composer_not_found" }
+  const ready = await waitForThreadComposerAt(0)
+  if (isDev) console.log("[Aminta thread] prepare — waited for composer 0:", ready, debugSnapshotComposer(0))
+  if (!ready) return { ok: false, error: "composer_not_found" }
+  const current = readThreadComposerText(0)
+  if (current && current.trim().length > 0) return { ok: false, error: "composer_not_clean" }
+  return { ok: true }
 }
 
 function findTextAreaWrapper(bar?: HTMLElement): HTMLElement | null {
@@ -682,6 +720,53 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 
   if (msg?.type === "OPEN_COMPOSER") {
     sendResponse({ ok: openOrFocusComposer() })
+    return true
+  }
+
+  // ── Thread builder (extension/lib/threadBuilder.ts) — builds the full
+  // thread as a DRAFT inside X's own native multi-post composer. Aminta
+  // inserts each post and verifies it; "+" (add another post) is the USER's
+  // own click — Aminta only waits for the composer it produces and never
+  // clicks it, or Post/Post-all, itself. See extension/lib/threadComposerDom.ts
+  // for the DOM this relies on.
+
+  if (msg?.type === "THREAD_BUILD_PREPARE") {
+    threadBuildCancelled = false
+    prepareThreadBuild().then(sendResponse)
+    return true
+  }
+
+  if (msg?.type === "THREAD_BUILD_INSERT_AND_VERIFY") {
+    // Dev-only diagnostic for the active-composer false-positive class of
+    // bug: structural facts only (counts, testid, rect, aria-hidden,
+    // connected state) — never post content. Logged before AND after so a
+    // live failure report can show whether the selected node changed
+    // (remount) or was wrong from the start.
+    if (isDev) console.log("[Aminta thread] before insert:", debugSnapshotComposer(msg.index))
+    insertAndVerifyThreadPost(msg.index, msg.text ?? "").then((result) => {
+      if (isDev) console.log("[Aminta thread] after verify:", debugSnapshotComposer(msg.index), result)
+      sendResponse(result)
+    })
+    return true
+  }
+
+  // Waits for the user's own "+" click to produce the next composer —
+  // unbounded/user-paced (see waitForNextComposerOrRegression's doc
+  // comment), interruptible via THREAD_BUILD_STOP below. Also watches
+  // composer `previousIndex` on every poll tick, so a destructive change to
+  // the already-verified draft fails fast with "previous_composer_cleared"
+  // instead of an opaque timeout.
+  if (msg?.type === "THREAD_BUILD_WAIT_FOR_COMPOSER") {
+    waitForNextComposerOrRegression(msg.index, msg.previousIndex, msg.previousText ?? "", () => threadBuildCancelled).then((result) => {
+      if (isDev) console.log("[Aminta thread] wait-for-next result:", result, debugSnapshotComposer(msg.index))
+      sendResponse(result)
+    })
+    return true
+  }
+
+  if (msg?.type === "THREAD_BUILD_STOP") {
+    threadBuildCancelled = true
+    sendResponse({ ok: true })
     return true
   }
 

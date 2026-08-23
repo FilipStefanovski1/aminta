@@ -69,3 +69,68 @@ export function insertText(platform: Platform, text: string): Promise<BridgeResp
 export function insertImage(platform: Platform, imageDataUrl: string): Promise<BridgeResponse> {
   return send({ type: "INSERT_IMAGE", imageDataUrl }, platform)
 }
+
+// ─── Tab-targeted helpers (thread builder only) ────────────────────────────
+// The rest of this file always re-queries "the active tab," which is wrong
+// for a multi-step background flow: if the user switches browser tabs while
+// a thread draft is being built, `send()` would silently start targeting
+// whatever tab is active now instead of the X tab Aminta is actually
+// building in. lib/threadBuilder.ts captures a tabId once at the start of a
+// build and drives every step against that specific tab via these instead.
+// No navigation happens anywhere in this flow — the whole thread is built
+// inside X's own native multi-post composer on the page the user is
+// already on, so there's no tab-load-waiting helper here anymore.
+
+async function sendToTab(tabId: number, message: unknown): Promise<BridgeResponse> {
+  try {
+    const res = (await chrome.tabs.sendMessage(tabId, message)) as BridgeResponse | undefined
+    return res ?? { ok: false, error: "No response from the page." }
+  } catch {
+    try {
+      await chrome.scripting.executeScript({ target: { tabId }, files: ["contents/twitter-bridge.js"] })
+      await new Promise((r) => setTimeout(r, 300))
+      const retry = (await chrome.tabs.sendMessage(tabId, message)) as BridgeResponse | undefined
+      return retry ?? { ok: false, error: "No response from the page." }
+    } catch {
+      return { ok: false, error: "Lost connection to the X tab." }
+    }
+  }
+}
+
+/** Opens/focuses a composer and refuses to build on top of an existing draft. */
+export function prepareThreadBuild(tabId: number): Promise<BridgeResponse> {
+  return sendToTab(tabId, { type: "THREAD_BUILD_PREPARE" })
+}
+
+/** Inserts `text` into composer `index`, then re-reads it to confirm the insert actually landed. */
+export function insertAndVerifyThreadPost(tabId: number, index: number, text: string): Promise<BridgeResponse> {
+  return sendToTab(tabId, { type: "THREAD_BUILD_INSERT_AND_VERIFY", index, text })
+}
+
+/**
+ * Waits for the USER to click X's own "+" and produce composer `index` —
+ * unbounded/user-paced, not a short automatic retry (the user might take a
+ * while reviewing the current post first). Also watches composer
+ * `previousIndex` (must still contain `previousText`) so a destructive
+ * change to the already-verified draft fails fast with a specific reason
+ * instead of an opaque timeout.
+ */
+export function waitForThreadComposerAt(
+  tabId: number,
+  index: number,
+  previousIndex: number,
+  previousText: string
+): Promise<BridgeResponse> {
+  return sendToTab(tabId, { type: "THREAD_BUILD_WAIT_FOR_COMPOSER", index, previousIndex, previousText })
+}
+
+/** Interrupts an in-flight waitForThreadComposerAt() call — the user pressed Stop. */
+export function stopThreadBuildWait(tabId: number): Promise<BridgeResponse> {
+  return sendToTab(tabId, { type: "THREAD_BUILD_STOP" })
+}
+
+export async function getActiveXTabId(): Promise<number | null> {
+  const tab = await getActiveTab()
+  if (!isXTab(tab) || !tab?.id) return null
+  return tab.id
+}
