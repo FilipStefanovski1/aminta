@@ -18,3 +18,10 @@ export const AMINTA_WEB_ORIGIN = "https://amintaapp.com"
 export function loginUrl(extId: string): string {
   return `${AMINTA_WEB_ORIGIN}/login?ext_id=${extId}`
 }
+
+// The one canonical destination for every upgrade/manage-plan CTA in the
+// extension — checkout itself (Creem) is only ever reached through this
+// page, never called directly from the extension. Every call site that
+// needs to send a user toward buying or managing a plan should link here
+// instead of hardcoding the URL or building a second checkout path.
+export const PRICING_URL = "https://www.amintaapp.com/#pricing"

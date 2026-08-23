@@ -6,6 +6,7 @@ import { effectiveApiKey, shouldUseIncludedAi } from "~lib/entitlements"
 import { pickNextReplyTarget, type ReplyPostData } from "~lib/replyTargets"
 import { getStore } from "~lib/storage"
 import { getOrBuildStyleProfile } from "~lib/styleProfile"
+import { assertActiveXAccountMatchesConnectedAccount } from "~lib/xAccountGuard"
 import {
   debugSnapshotComposer,
   getActiveXComposer,
@@ -690,20 +691,26 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   }
 
   if (msg?.type === "INSERT_TEXT") {
-    const ok = insertAmintaText(msg.text)
-    sendResponse(ok
-      ? { ok: true }
-      : { ok: false, error: "Couldn't insert. Click inside the X compose box first, then try again." }
-    )
+    assertActiveXAccountMatchesConnectedAccount().then((check) => {
+      if (!check.ok) { sendResponse({ ok: false, error: check.error }); return }
+      const ok = insertAmintaText(msg.text)
+      sendResponse(ok
+        ? { ok: true }
+        : { ok: false, error: "Couldn't insert. Click inside the X compose box first, then try again." }
+      )
+    })
     return true
   }
 
   if (msg?.type === "INSERT_IMAGE") {
-    insertImageIntoComposer(msg.imageDataUrl).then((ok) => {
-      sendResponse(ok
-        ? { ok: true }
-        : { ok: false, error: "Couldn't attach image. Make sure the X composer is open." }
-      )
+    assertActiveXAccountMatchesConnectedAccount().then((check) => {
+      if (!check.ok) { sendResponse({ ok: false, error: check.error }); return }
+      insertImageIntoComposer(msg.imageDataUrl).then((ok) => {
+        sendResponse(ok
+          ? { ok: true }
+          : { ok: false, error: "Couldn't attach image. Make sure the X composer is open." }
+        )
+      })
     })
     return true
   }
@@ -731,21 +738,27 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   // for the DOM this relies on.
 
   if (msg?.type === "THREAD_BUILD_PREPARE") {
-    threadBuildCancelled = false
-    prepareThreadBuild().then(sendResponse)
+    assertActiveXAccountMatchesConnectedAccount().then((check) => {
+      if (!check.ok) { sendResponse({ ok: false, error: check.error }); return }
+      threadBuildCancelled = false
+      prepareThreadBuild().then(sendResponse)
+    })
     return true
   }
 
   if (msg?.type === "THREAD_BUILD_INSERT_AND_VERIFY") {
-    // Dev-only diagnostic for the active-composer false-positive class of
-    // bug: structural facts only (counts, testid, rect, aria-hidden,
-    // connected state) — never post content. Logged before AND after so a
-    // live failure report can show whether the selected node changed
-    // (remount) or was wrong from the start.
-    if (isDev) console.log("[Aminta thread] before insert:", debugSnapshotComposer(msg.index))
-    insertAndVerifyThreadPost(msg.index, msg.text ?? "").then((result) => {
-      if (isDev) console.log("[Aminta thread] after verify:", debugSnapshotComposer(msg.index), result)
-      sendResponse(result)
+    assertActiveXAccountMatchesConnectedAccount().then((check) => {
+      if (!check.ok) { sendResponse({ ok: false, error: check.error }); return }
+      // Dev-only diagnostic for the active-composer false-positive class of
+      // bug: structural facts only (counts, testid, rect, aria-hidden,
+      // connected state) — never post content. Logged before AND after so a
+      // live failure report can show whether the selected node changed
+      // (remount) or was wrong from the start.
+      if (isDev) console.log("[Aminta thread] before insert:", debugSnapshotComposer(msg.index))
+      insertAndVerifyThreadPost(msg.index, msg.text ?? "").then((result) => {
+        if (isDev) console.log("[Aminta thread] after verify:", debugSnapshotComposer(msg.index), result)
+        sendResponse(result)
+      })
     })
     return true
   }

@@ -15,6 +15,7 @@ import { getOrBuildStyleProfile } from "~lib/styleProfile"
 import type { AmintaStore, TemplateMode } from "~lib/storage"
 import type { RunTemplateContext } from "~lib/templates"
 import { C } from "~lib/theme"
+import { PRICING_URL } from "~lib/webUrl"
 import { incrementGenerations } from "~lib/xp"
 
 import OutputCard from "~components/OutputCard"
@@ -867,7 +868,7 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
           <div className="flex flex-col gap-1.5 pt-0.5">
             {!store.aiIncludedPaid && (
               <a
-                href="https://www.amintaapp.com/#pricing"
+                href={PRICING_URL}
                 target="_blank"
                 rel="noreferrer"
                 className="btn-pixel w-full py-1.5 rounded-lg font-pixel text-[8px] text-center"
@@ -897,7 +898,7 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
           ) : (
             <>
               You're out of free credits.{" "}
-              <a href="https://www.amintaapp.com/#pricing" target="_blank" rel="noreferrer" className="underline" style={{ color: C.text }}>
+              <a href={PRICING_URL} target="_blank" rel="noreferrer" className="underline" style={{ color: C.text }}>
                 Upgrade to Pro
               </a>
               {" "}to use your own AI key.

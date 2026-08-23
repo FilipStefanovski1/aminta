@@ -24,6 +24,8 @@ import { pullFromCloud, pushToCloud } from "~lib/sync"
 import { handleAuthUserChanged } from "~lib/accountScope"
 import { deleteAccount } from "~lib/account"
 import { PUBLISH_COOLDOWN_MS } from "~lib/publishCooldown"
+import { PRICING_URL } from "~lib/webUrl"
+import { getProductIdentity } from "~lib/xIdentity"
 import { useCompanion } from "~hooks/useCompanion"
 
 type Tab = "home" | "create" | "train"
@@ -285,6 +287,7 @@ function SettingsOverlay({
   const planLabel  = computePlanLabel({ plan: store.plan, subscriptionStatus: store.subscriptionStatus })
   const planColor  = planLabel === "FOUNDER" ? "#f5d060" : planLabel === "PRO" ? "#74f7b5" : C.textDim
   const avatarTint = getStageTint(store.xp ?? 0)
+  const identity   = getProductIdentity(store, session?.email ?? null)
 
   // ── Sync status (written by lib/sync.ts) ────────────────────────────────────
   const [syncLine, setSyncLine] = useState<{ text: string; color: string } | null>(null)
@@ -421,9 +424,9 @@ function SettingsOverlay({
                   style={{ width: 40, height: 40, border: `2px solid ${avatarTint}55` }}>
                   {store.avatarDataUrl ? (
                     <img src={store.avatarDataUrl} alt="" className="w-full h-full object-cover" />
-                  ) : store.xConnected && store.xAvatarUrl ? (
+                  ) : identity.avatarUrl ? (
                     <img
-                      src={store.xAvatarUrl}
+                      src={identity.avatarUrl}
                       alt=""
                       className="w-full h-full object-cover"
                       onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none" }}
@@ -432,7 +435,7 @@ function SettingsOverlay({
                     <div
                       className="w-full h-full flex items-center justify-center font-pixel text-[13px]"
                       style={{ backgroundColor: avatarTint + "22", color: avatarTint }}>
-                      {(store.xConnected && store.xUsername ? store.xUsername : session.email)?.[0]?.toUpperCase() ?? "?"}
+                      {identity.displayName?.[0]?.toUpperCase() ?? "?"}
                     </div>
                   )}
                   <div
@@ -454,22 +457,22 @@ function SettingsOverlay({
                   <div className="flex items-center gap-2 min-w-0">
                     {/* X identity takes priority once connected — it's the
                         identity that actually matters for Voice Refresh and
-                        publish detection. Email stays as the fallback/
-                        secondary line, never buried entirely (still needed
-                        for sign-in/account recovery context). */}
+                        publish detection. Email is only ever the fallback
+                        for accounts with no X connection at all — see
+                        lib/xIdentity.ts's getProductIdentity(), the one
+                        normalized identity this and the X-account mismatch
+                        guard both read from. */}
                     <p className="text-[12px] truncate leading-none" style={{ color: C.text }}>
-                      {store.xConnected && store.xUsername
-                        ? store.xDisplayName || `@${store.xUsername}`
-                        : session.email}
+                      {identity.displayName}
                     </p>
                     <span className="font-pixel text-[6px] px-1.5 py-0.5 rounded shrink-0"
                       style={{ backgroundColor: planColor + "1a", color: planColor, border: `1px solid ${planColor}33` }}>
                       {planLabel}
                     </span>
                   </div>
-                  {store.xConnected && store.xUsername && (
+                  {identity.handle && identity.handle !== identity.displayName && (
                     <p className="text-[10px] mt-0.5 truncate" style={{ color: "#8a8a96" }}>
-                      {store.xDisplayName ? `@${store.xUsername}` : session.email}
+                      {identity.handle}
                     </p>
                   )}
                   {syncLine && (
@@ -495,6 +498,37 @@ function SettingsOverlay({
           <p className={sectionLabel} style={{ color: C.textGhost }}>Aminta Brain</p>
 
           <div className="rounded-xl overflow-hidden" style={{ backgroundColor: "#262628", border: "1px solid #404048" }}>
+
+            {/* Plan / Upgrade — actionable regardless of AI Provider mode
+                (Included vs BYOK), so it's always visible here rather than
+                nested under the credits display below. Free gets an actual
+                path to Pro instead of a dead-end plan label; Pro gets the
+                same destination framed as "Manage plan" (there is no
+                separate customer-portal implementation anywhere in this
+                codebase — see landing/app/api/account/route.ts's billing
+                comment — so this reuses the one real checkout destination
+                every other upgrade CTA already points to); Founder is a
+                one-time lifetime purchase with nothing to upgrade or
+                manage, so it gets no CTA at all, just its state. Skipped
+                for a Free user currently on the BYOK tab — that state
+                already has its own "Upgrade to Pro" CTA a few lines down,
+                and showing both here would just duplicate it. */}
+            {(planLabel !== "FREE" || includedActive) && (
+              <div className="px-3.5 pt-3.5 pb-3" style={{ borderBottom: `1px solid ${C.borderSoft}` }}>
+                {planLabel === "FOUNDER" ? (
+                  <p className="text-[10px] leading-snug" style={{ color: C.textFaint }}>Lifetime Pro access</p>
+                ) : (
+                  <a
+                    href={PRICING_URL}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="btn-pixel block w-full py-2 rounded-lg font-pixel text-[8px] text-center"
+                    style={{ backgroundColor: avatarTint, color: "#000", border: "2px solid #000", boxShadow: "2px 2px 0 #000" }}>
+                    {planLabel === "FREE" ? "Upgrade to Pro" : "Manage plan"}
+                  </a>
+                )}
+              </div>
+            )}
 
             {/* AI Provider — only shown to accounts the backend actually
                 entitles (store.aiIncluded, synced from the server's

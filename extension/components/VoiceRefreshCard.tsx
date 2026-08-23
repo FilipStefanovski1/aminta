@@ -15,6 +15,7 @@ import { PrimaryButton } from "~components/ui"
 import type { AmintaStore } from "~lib/storage"
 import { disconnectX, fetchConnectionState, runVoiceRefresh, startXConnect } from "~lib/voiceRefresh"
 import { summarizeStyleProfile, summaryAffordanceFor } from "~lib/styleProfileSummary"
+import { PRICING_URL } from "~lib/webUrl"
 
 interface Props {
   store: AmintaStore
@@ -124,7 +125,7 @@ export default function VoiceRefreshCard({ store, onRefreshed }: Props) {
               Voice Refresh learns from your recent X posts.
             </p>
             <a
-              href="https://www.amintaapp.com/#pricing"
+              href={PRICING_URL}
               target="_blank"
               rel="noreferrer"
               className="inline-block mt-3 font-pixel text-[8px]"
