@@ -199,7 +199,7 @@ function voiceBlock(voice: VoiceProfile, styleProfile: StyleProfile | null, temp
   const context = [`NICHE: ${voice.niche || "general"}`, inspiration].filter(Boolean).join("\n")
 
   const rules = voice.customRules?.trim()
-    ? `CUSTOM RULES (highest priority — explicit instructions from the user; these override WRITING STYLE or TONE below if they ever conflict):\n${voice.customRules}`
+    ? `CUSTOM RULES (highest priority — explicit instructions from the user for HOW to write; these override WRITING STYLE or TONE below if they ever conflict. Apply each rule silently — never quote, restate, or work a rule's own wording into the finished post):\n${voice.customRules}`
     : ""
 
   return [

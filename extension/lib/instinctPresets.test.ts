@@ -5,6 +5,8 @@ import {
   POPULAR_INSTINCT_PRESETS,
   PRESET_BY_LABEL,
   PRESET_BY_PROMPT,
+  findConflictingPreset,
+  parseCustomRules,
   searchInstinctPresets,
 } from "~lib/instinctPresets"
 
@@ -97,5 +99,52 @@ describe("searchInstinctPresets", () => {
 
   it("returns an empty array when nothing matches", () => {
     expect(searchInstinctPresets("xyzzy-not-a-real-instinct")).toEqual([])
+  })
+})
+
+describe("parseCustomRules", () => {
+  it("splits newline-joined active instincts, trimming and dropping blanks", () => {
+    expect(parseCustomRules("no hashtags\nkeep it concise\n\n  use lowercase  \n")).toEqual([
+      "no hashtags", "keep it concise", "use lowercase",
+    ])
+  })
+
+  it("returns [] for empty/undefined", () => {
+    expect(parseCustomRules("")).toEqual([])
+    expect(parseCustomRules(undefined)).toEqual([])
+  })
+})
+
+describe("findConflictingPreset — deterministic, no AI call", () => {
+  const lowercase = INSTINCT_PRESETS.find(p => p.id === "fmt-lowercase")!
+  const properCaps = INSTINCT_PRESETS.find(p => p.id === "fmt-standard-capitalization")!
+  const concise = INSTINCT_PRESETS.find(p => p.id === "len-concise")!
+  const expand = INSTINCT_PRESETS.find(p => p.id === "len-expand")!
+  const noHashtags = INSTINCT_PRESETS.find(p => p.id === "fmt-no-hashtags")!
+
+  it("finds the conflicting active preset in one direction (lowercase vs. proper capitalization)", () => {
+    const conflict = findConflictingPreset(properCaps, [lowercase.internalPrompt])
+    expect(conflict?.id).toBe("fmt-lowercase")
+  })
+
+  it("finds the conflict in the other direction too", () => {
+    const conflict = findConflictingPreset(lowercase, [properCaps.internalPrompt])
+    expect(conflict?.id).toBe("fmt-standard-capitalization")
+  })
+
+  it("finds the concise/expand conflict", () => {
+    expect(findConflictingPreset(expand, [concise.internalPrompt])?.id).toBe("len-concise")
+  })
+
+  it("returns null when there's no conflict", () => {
+    expect(findConflictingPreset(noHashtags, [lowercase.internalPrompt])).toBeNull()
+  })
+
+  it("returns null for a freeform custom instinct (no preset, no conflict metadata)", () => {
+    expect(findConflictingPreset(undefined, [lowercase.internalPrompt])).toBeNull()
+  })
+
+  it("returns null when the conflicting preset isn't actually active", () => {
+    expect(findConflictingPreset(properCaps, ["some unrelated custom rule"])).toBeNull()
   })
 })

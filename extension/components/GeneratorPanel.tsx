@@ -7,6 +7,7 @@ import { todayLocal } from "~lib/dates"
 import { getStageTint } from "~lib/evolution"
 import { canUseByok, effectiveApiKey, shouldUseIncludedAi } from "~lib/entitlements"
 import { fetchImageAsDataUrl } from "~lib/images"
+import { parseCustomRules } from "~lib/instinctPresets"
 import { findNextReplyTarget, readActivePost } from "~lib/messaging"
 import { incrementMissionGenerates } from "~lib/missions"
 import type { Mode, OutputLength, Platform, ThreadOption, ThreadPostCount, Tone } from "~lib/prompts"
@@ -971,6 +972,7 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
           onRegenerate={generate}
           onSaveAsTemplate={openSaveAsTemplate}
           publishCooldownUntil={publishCooldownUntil}
+          instinctCount={parseCustomRules(store.voice?.customRules).length}
         />
       )}
 

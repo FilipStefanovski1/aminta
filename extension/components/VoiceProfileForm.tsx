@@ -7,6 +7,8 @@ import {
   POPULAR_INSTINCT_PRESETS,
   PRESET_BY_LABEL,
   PRESET_BY_PROMPT,
+  findConflictingPreset,
+  parseCustomRules,
   searchInstinctPresets,
   type InstinctPreset,
 } from "~lib/instinctPresets"
@@ -155,9 +157,7 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
   })
   const [newPost,  setNewPost]  = useState("")
   const [adding,   setAdding]   = useState(false)
-  const [rules,    setRules]    = useState<string[]>(() =>
-    (initial?.customRules ?? "").split("\n").map(s => s.trim()).filter(Boolean)
-  )
+  const [rules,    setRules]    = useState<string[]>(() => parseCustomRules(initial?.customRules))
   // Doubles as the preset-library search box and the free-text "type your
   // own instinct" input — one field, per the UX spec (search filters the
   // library live; Enter with no matching preset adds it as a custom
@@ -282,27 +282,74 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
   // Adds an instinct by its already-resolved internal prompt string
   // (whatever ends up stored/sent to the model — a preset's internalPrompt,
   // or raw custom text). Shared by both the preset chips and the free-text
-  // Enter path so dedupe/cap logic lives in exactly one place.
-  const addInstinct = (prompt: string) => {
+  // Enter path so dedupe/cap logic lives in exactly one place. `matched` is
+  // the preset it resolved from, if any — only presets carry conflict
+  // metadata, so a freely-typed custom instinct is never blocked this way.
+  const addInstinct = (prompt: string, matched?: InstinctPreset) => {
     const p = prompt.trim()
     if (!p || rules.includes(p) || rules.length >= 10) return
+    const conflict = findConflictingPreset(matched, rules)
+    if (conflict) {
+      react(`That conflicts with "${conflict.label}," which you already have.`, "sprite-think aminta-glow")
+      return
+    }
     setRules(prev => [...prev, p])
     react("I'll remember that every time I write.")
   }
 
-  const addPreset = (preset: InstinctPreset) => addInstinct(preset.internalPrompt)
+  const addPreset = (preset: InstinctPreset) => addInstinct(preset.internalPrompt, preset)
 
-  const addRule = () => {
-    const typed = instinctQuery.trim()
-    if (!typed) return
-    // Typing a preset's own label (e.g. "no hashtags") maps to that preset's
-    // internal prompt instead of storing the label text as a second, oddly-
-    // worded duplicate of the same intent — see instinctPresets.ts.
+  // Typing a preset's own label (e.g. "no hashtags") maps to that preset's
+  // internal prompt instead of storing the label text as a second, oddly-
+  // worded duplicate of the same intent — see instinctPresets.ts. Also
+  // collapses internal whitespace (never rewrites the actual wording).
+  const resolveInstinctInput = (raw: string): { prompt: string; matched?: InstinctPreset } => {
+    const typed = raw.trim().replace(/\s+/g, " ")
     const matched = PRESET_BY_LABEL.get(typed.toLowerCase())
-    addInstinct(matched ? matched.internalPrompt : typed)
+    return { prompt: matched ? matched.internalPrompt : typed, matched }
+  }
+
+  // Only freeform custom instincts are editable in place — a preset's own
+  // wording is fixed by design (see instinctPresets.ts), so a preset-backed
+  // rule only ever gets removed and replaced, never rewritten.
+  const [editingRuleIndex, setEditingRuleIndex] = useState<number | null>(null)
+
+  const startEditRule = (i: number) => {
+    if (PRESET_BY_PROMPT.has(rules[i])) return
+    setEditingRuleIndex(i)
+    setInstinctQuery(rules[i])
+  }
+  const cancelEditRule = () => {
+    setEditingRuleIndex(null)
     setInstinctQuery("")
   }
-  const removeRule = (i: number) => setRules(prev => prev.filter((_, j) => j !== i))
+
+  const submitInstinctQuery = () => {
+    const raw = instinctQuery.trim()
+    if (!raw) return
+    const { prompt, matched } = resolveInstinctInput(raw)
+
+    if (editingRuleIndex !== null) {
+      const others = rules.filter((_, j) => j !== editingRuleIndex)
+      if (others.includes(prompt)) { cancelEditRule(); return }
+      const conflict = findConflictingPreset(matched, others)
+      if (conflict) {
+        react(`That conflicts with "${conflict.label}," which you already have.`, "sprite-think aminta-glow")
+        return
+      }
+      setRules(prev => prev.map((r, j) => (j === editingRuleIndex ? prompt : r)))
+      cancelEditRule()
+      react("Got it — updated.")
+      return
+    }
+
+    addInstinct(prompt, matched)
+    setInstinctQuery("")
+  }
+  const removeRule = (i: number) => {
+    setRules(prev => prev.filter((_, j) => j !== i))
+    if (editingRuleIndex === i) cancelEditRule()
+  }
 
   const save = async () => {
     setError("")
@@ -491,27 +538,44 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
         <div className="p-5">
           <SectionHead label="Instincts (optional)" tipKey="rules" desc="Rules Aminta should always follow." />
 
-          {/* 1. Selected — same chip UI as before, nothing changed here. A
-              rule that matches a preset's internalPrompt displays that
-              preset's friendly label; anything else (pre-existing freeform
-              instincts, and any genuinely custom one) displays as the raw
-              text it's always been. */}
+          {/* 1. Selected — a rule that matches a preset's internalPrompt
+              displays that preset's friendly label and isn't editable (its
+              wording is fixed by design, see instinctPresets.ts); anything
+              else — freeform custom instincts — can be clicked to edit in
+              place instead of remove-and-retype. No icon marks this: the
+              label itself becomes the click target, same as any other text
+              button in this file. */}
           {rules.length > 0 && (
             <div className="flex flex-wrap gap-2 mb-3">
-              {rules.map((rule, i) => (
-                <span
-                  key={i}
-                  className="group/chip inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px]"
-                  style={{ backgroundColor: C.cardInner, border: `1px solid ${C.border}`, color: C.text }}>
-                  {PRESET_BY_PROMPT.get(rule)?.label ?? rule}
-                  <button
-                    onClick={() => removeRule(i)}
-                    className="opacity-30 group-hover/chip:opacity-80 hover:!opacity-100 transition-opacity leading-none"
-                    style={{ color: C.textDim, fontSize: 14 }}>
-                    ×
-                  </button>
-                </span>
-              ))}
+              {rules.map((rule, i) => {
+                const preset = PRESET_BY_PROMPT.get(rule)
+                const editable = !preset
+                const editing = editingRuleIndex === i
+                return (
+                  <span
+                    key={i}
+                    className="group/chip inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px]"
+                    style={{
+                      backgroundColor: C.cardInner,
+                      border: `1px solid ${editing ? tint : C.border}`,
+                      color: C.text,
+                    }}>
+                    {editable ? (
+                      <button onClick={() => startEditRule(i)} className="text-left">
+                        {rule}
+                      </button>
+                    ) : (
+                      preset.label
+                    )}
+                    <button
+                      onClick={() => removeRule(i)}
+                      className="opacity-30 group-hover/chip:opacity-80 hover:!opacity-100 transition-opacity leading-none"
+                      style={{ color: C.textDim, fontSize: 14 }}>
+                      ×
+                    </button>
+                  </span>
+                )
+              })}
             </div>
           )}
 
@@ -530,10 +594,21 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
               <>
                 {/* 2. Search — directly under Selected. Doubles as the
                     free-text input; Enter adds a matching preset (if the
-                    typed text is one) or a custom instinct otherwise. */}
+                    typed text is one) or a custom instinct otherwise. While
+                    editing an existing custom instinct (see
+                    startEditRule), this same field holds its current text
+                    and Enter/Save replaces it in place instead of adding. */}
+                {editingRuleIndex !== null && (
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[10px]" style={{ color: C.textFaint }}>Editing instinct</span>
+                    <button onClick={cancelEditRule} className="text-[10px]" style={{ color: C.textDim }}>
+                      Cancel
+                    </button>
+                  </div>
+                )}
                 <div
                   className="flex items-center gap-2 rounded-xl px-3 py-2 mb-3"
-                  style={{ backgroundColor: C.cardInner, border: `1px solid ${C.border}` }}>
+                  style={{ backgroundColor: C.cardInner, border: `1px solid ${editingRuleIndex !== null ? tint : C.border}` }}>
                   <input
                     value={instinctQuery}
                     onChange={e => setInstinctQuery(e.target.value)}
@@ -541,21 +616,25 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
                     className="flex-1 bg-transparent text-[11px] outline-none min-w-0"
                     style={{ color: C.text }}
                     onKeyDown={e => {
-                      if (e.key === "Enter") { e.preventDefault(); addRule() }
-                      if (e.key === "Escape") setInstinctQuery("")
+                      if (e.key === "Enter") { e.preventDefault(); submitInstinctQuery() }
+                      if (e.key === "Escape") cancelEditRule()
                     }}
                   />
                   {query && (
                     <button
-                      onClick={addRule}
+                      onClick={submitInstinctQuery}
                       className="font-pixel text-[7px] shrink-0"
                       style={{ color: tint }}>
-                      Add
+                      {editingRuleIndex !== null ? "Save" : "Add"}
                     </button>
                   )}
                 </div>
 
-                {isSearching ? (
+                {/* Suggestions are hidden while editing an existing custom
+                    instinct — clicking a preset here would otherwise ADD a
+                    new rule instead of updating the one being edited, which
+                    is confusing. The input above still works normally. */}
+                {editingRuleIndex === null && (isSearching ? (
                   // Actively searching — replace Popular/Browse-all with a
                   // flat list of matches so nothing shows twice.
                   searchResults.length > 0 ? (
@@ -638,7 +717,7 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
                       </div>
                     )}
                   </>
-                )}
+                ))}
               </>
             )
           })()}

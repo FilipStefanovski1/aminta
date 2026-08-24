@@ -75,6 +75,9 @@ const SHARED_INSTRUCTIONAL_STRINGS = [
   "STYLE PRIORITY (highest to lowest): CUSTOM RULES",
   "CUSTOM RULES wins",
   "CUSTOM RULES (highest priority",
+  // Instincts overhaul: explicit anti-echo instruction — a rule like
+  // "first line should be a hook" must never surface verbatim in output.
+  "Apply each rule silently — never quote, restate, or work a rule's own wording into the finished post",
   "CADENCE: Match this person's sentence lengths and transitions",
   "Follow the PUNCTUATION and LINE BREAKS & SPACING instructions in WRITING STYLE above exactly",
   // Length targets (mode-aware, character ranges — not fixed paragraph counts)

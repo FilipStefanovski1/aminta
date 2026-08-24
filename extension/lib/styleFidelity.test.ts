@@ -178,3 +178,71 @@ describe("style-fidelity: every mode receives voice context", () => {
     expect(system).toContain("commas and periods used naturally")
   })
 })
+
+// Instincts overhaul: every generation-writing mode (Post/Reply/Polish/
+// Thread) must receive active Instincts (VoiceProfile.customRules), and a
+// user with zero Instincts must never see a CUSTOM RULES section at all —
+// an empty/absent block is prompt noise, not a neutral default.
+describe("Instincts reach every mode, and add no noise when empty", () => {
+  const VOICE_WITH_RULES = { ...VOICE, customRules: "no hashtags\nkeep it concise" }
+
+  it("post (tweet) mode receives active instincts", () => {
+    const system = systemPrompt(PROFILE_A, VOICE_WITH_RULES)
+    expect(system).toContain("no hashtags")
+    expect(system).toContain("keep it concise")
+  })
+
+  it("reply mode receives active instincts", () => {
+    const messages = buildMessages("x", "reply", VOICE_WITH_RULES, "someone's post", PROFILE_A)
+    const system = messages.find((m) => m.role === "system")!.content as string
+    expect(system).toContain("no hashtags")
+  })
+
+  it("polish mode receives active instincts", () => {
+    const messages = buildMessages("x", "polish", VOICE_WITH_RULES, "rough draft", PROFILE_A)
+    const system = messages.find((m) => m.role === "system")!.content as string
+    expect(system).toContain("no hashtags")
+  })
+
+  it("thread mode receives active instincts", () => {
+    const messages = buildThreadMessages(VOICE_WITH_RULES, "a topic", PROFILE_A)
+    const system = messages.find((m) => m.role === "system")!.content as string
+    expect(system).toContain("no hashtags")
+    expect(system).toContain("keep it concise")
+  })
+
+  it("zero instincts: the populated CUSTOM RULES block never appears (STYLE PRIORITY's own explanatory mention of the concept is unrelated and always present)", () => {
+    for (const mode of ["tweet", "reply", "polish"] as const) {
+      const messages = buildMessages("x", mode, VOICE, "input text", PROFILE_A)
+      const system = messages.find((m) => m.role === "system")!.content as string
+      expect(system).not.toContain("CUSTOM RULES (highest priority")
+    }
+    const threadMessages = buildThreadMessages(VOICE, "a topic", PROFILE_A)
+    const threadSystem = threadMessages.find((m) => m.role === "system")!.content as string
+    expect(threadSystem).not.toContain("CUSTOM RULES (highest priority")
+  })
+})
+
+// The exact scenario from the product spec: a writing example implies
+// normal capitalization, but an explicit Instinct says "use lowercase."
+// We never call a live model here — this proves the PROMPT ITSELF states
+// the hierarchy unambiguously, which is all that's mechanically testable.
+describe("Instincts override a conflicting learned tendency — the prompt says so explicitly", () => {
+  it("explicit 'use lowercase' instinct is framed as overriding standard-capitalization style evidence", () => {
+    // Style evidence extracted from a normally-capitalized writing example
+    // ("I Think This Is Actually Pretty Interesting.") — see
+    // lib/styleProfile.ts's extraction schema for the `capitalization` enum.
+    const normalCapsProfile = baseProfile({ capitalization: "standard" })
+    const voiceWithLowercaseInstinct = { ...VOICE, customRules: "Write entirely in lowercase unless proper nouns require capitalization." }
+
+    const system = systemPrompt(normalCapsProfile, voiceWithLowercaseInstinct)
+
+    // Both pieces of (conflicting) evidence are present in the prompt...
+    expect(system).toContain("Capitalization: standard")
+    expect(system).toContain("Write entirely in lowercase")
+    // ...but the prompt explicitly states which one wins, and why.
+    expect(system).toContain("STYLE PRIORITY (highest to lowest): CUSTOM RULES")
+    expect(system).toContain("CUSTOM RULES wins")
+    expect(system).toContain("CUSTOM RULES (highest priority")
+  })
+})

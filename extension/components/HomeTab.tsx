@@ -11,6 +11,7 @@ import {
   getXpProgress,
 } from "~lib/evolution"
 import { hasProAccess, planLabel as computePlanLabel, shouldUseIncludedAi } from "~lib/entitlements"
+import { parseCustomRules } from "~lib/instinctPresets"
 import { getMissionProgress, tryCompleteDailyMissions } from "~lib/missions"
 import type { AmintaStore } from "~lib/storage"
 import { C } from "~lib/theme"
@@ -53,7 +54,7 @@ export function countExamples(raw: string | undefined): number {
 }
 
 export function countInstincts(raw: string | undefined): number {
-  return (raw ?? "").split("\n").map((s) => s.trim()).filter(Boolean).length
+  return parseCustomRules(raw).length
 }
 
 // Reads the SAME deterministic confidenceScore generation already uses

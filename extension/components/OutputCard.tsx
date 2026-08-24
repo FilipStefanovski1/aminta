@@ -17,9 +17,16 @@ interface Props {
   onSaveAsTemplate?: (text: string) => void
   /** Anti-spam: ms-epoch when Aminta will allow another post/reply insert. */
   publishCooldownUntil?: number | null
+  /**
+   * How many active Instincts were supplied to this generation — purely a
+   * "these were given to the model" fact, not a claim that all of them are
+   * verifiably followed (no second call to check that). 0/undefined shows
+   * nothing.
+   */
+  instinctCount?: number
 }
 
-export default function OutputCard({ text, mode, platform, imageDataUrl, onRegenerate, onSaveAsTemplate, publishCooldownUntil }: Props) {
+export default function OutputCard({ text, mode, platform, imageDataUrl, onRegenerate, onSaveAsTemplate, publishCooldownUntil, instinctCount }: Props) {
   const [copied, setCopied] = useState(false)
   const [insertStatus, setInsertStatus] = useState("")
 
@@ -101,8 +108,13 @@ export default function OutputCard({ text, mode, platform, imageDataUrl, onRegen
       )}
       <p className="text-sm whitespace-pre-wrap leading-relaxed" style={{ color: C.text }}>{text}</p>
 
-      {/* Character count */}
-      <div className="flex justify-end">
+      {/* Character count + how many active Instincts fed this generation */}
+      <div className="flex items-center justify-between">
+        {instinctCount ? (
+          <span className="text-[10px]" style={{ color: C.textFaint }}>
+            Following {instinctCount} instinct{instinctCount === 1 ? "" : "s"}
+          </span>
+        ) : <span />}
         <span className="font-pixel text-[8px]" style={{ color: charColor }}>
           {charCount}/{charLimit}
         </span>

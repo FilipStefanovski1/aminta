@@ -26,6 +26,13 @@ export interface InstinctPreset {
   // other instincts by "\n") and sent to the model — never shown in the UI.
   internalPrompt: string
   popular: boolean
+  // IDs of presets this one is directly, deterministically opposed to (e.g.
+  // "use lowercase" vs. "use proper capitalization"). Deliberately only set
+  // for a handful of genuinely mutually-exclusive pairs — this is not a
+  // general compatibility system, just enough to stop a user from having
+  // both halves of an obvious contradiction active at once. See
+  // VoiceProfileForm.tsx's addInstinct().
+  conflictsWith?: string[]
 }
 
 export const INSTINCT_CATEGORIES: InstinctCategory[] = [
@@ -40,7 +47,11 @@ export const INSTINCT_CATEGORIES: InstinctCategory[] = [
 export const INSTINCT_PRESETS: InstinctPreset[] = [
   // ── Formatting ──────────────────────────────────────────────────────────
   { id: "fmt-lowercase", label: "use lowercase", category: "Formatting", popular: true,
-    internalPrompt: "Write entirely in lowercase unless proper nouns require capitalization." },
+    internalPrompt: "Write entirely in lowercase unless proper nouns require capitalization.",
+    conflictsWith: ["fmt-standard-capitalization"] },
+  { id: "fmt-standard-capitalization", label: "use proper capitalization", category: "Formatting", popular: false,
+    internalPrompt: "Use standard capitalization and sentence case — never write in all lowercase.",
+    conflictsWith: ["fmt-lowercase"] },
   { id: "fmt-no-hashtags", label: "no hashtags", category: "Formatting", popular: true,
     internalPrompt: "Never include hashtags." },
   { id: "fmt-no-emojis", label: "no emojis", category: "Formatting", popular: false,
@@ -64,13 +75,15 @@ export const INSTINCT_PRESETS: InstinctPreset[] = [
 
   // ── Length ──────────────────────────────────────────────────────────────
   { id: "len-concise", label: "keep it concise", category: "Length", popular: true,
-    internalPrompt: "Keep the post as concise as possible — cut every word that isn't essential." },
+    internalPrompt: "Keep the post as concise as possible — cut every word that isn't essential.",
+    conflictsWith: ["len-expand"] },
   { id: "len-under-100", label: "under 100 characters", category: "Length", popular: false,
     internalPrompt: "Keep the entire post under 100 characters." },
   { id: "len-under-180", label: "under 180 characters", category: "Length", popular: false,
     internalPrompt: "Keep the entire post under 180 characters." },
   { id: "len-expand", label: "expand the idea", category: "Length", popular: false,
-    internalPrompt: "Develop the idea with more depth and detail rather than staying brief." },
+    internalPrompt: "Develop the idea with more depth and detail rather than staying brief.",
+    conflictsWith: ["len-concise"] },
   { id: "len-thread-ready", label: "thread-ready", category: "Length", popular: false,
     internalPrompt: "Write with enough substance that it could open a multi-post thread." },
 
@@ -155,4 +168,30 @@ export function searchInstinctPresets(query: string): InstinctPreset[] {
   const q = query.trim().toLowerCase()
   if (!q) return INSTINCT_PRESETS
   return INSTINCT_PRESETS.filter(p => p.label.toLowerCase().includes(q))
+}
+
+// THE one parse for VoiceProfile.customRules (newline-joined active
+// instincts, preset-resolved or freeform — see the file header). Every
+// call site that needs the active list — Train's own state init, Home's
+// voice-progress count, generation's instinct-count display — reads
+// through this instead of re-deriving its own split/trim/filter.
+export function parseCustomRules(raw: string | undefined): string[] {
+  return (raw ?? "").split("\n").map((s) => s.trim()).filter(Boolean)
+}
+
+// Deterministic, metadata-driven only — never an AI call. Finds an
+// ALREADY-ACTIVE rule (by its stored internalPrompt) that the given preset
+// is declared to conflict with, if any. `preset` is undefined for a
+// freeform custom instinct — those carry no conflict metadata and are
+// never blocked this way. See VoiceProfileForm.tsx's addInstinct().
+export function findConflictingPreset(
+  preset: InstinctPreset | undefined,
+  activeInternalPrompts: readonly string[]
+): InstinctPreset | null {
+  if (!preset?.conflictsWith?.length) return null
+  for (const id of preset.conflictsWith) {
+    const other = INSTINCT_PRESETS.find((p) => p.id === id)
+    if (other && activeInternalPrompts.includes(other.internalPrompt)) return other
+  }
+  return null
 }
