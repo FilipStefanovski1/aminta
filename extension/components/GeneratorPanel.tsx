@@ -873,14 +873,16 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
       {!loading && creditsExhausted && (
         <div className="animate-fade-in rounded-xl px-4 py-3 space-y-2" style={{ backgroundColor: tint + "12", border: `1px solid ${tint}30` }}>
           <p className="font-pixel text-[8px]" style={{ color: tint }}>
-            {store.aiIncludedPaid
-              ? "You've used your 1,000 Included AI credits for this billing period."
-              : "You're out of free credits for today."}
+            {store.creditsPeriodKind === "day"
+              ? "You're out of free credits for today."
+              : `You've used your ${store.creditsAllowance.toLocaleString()} Included AI credits for this period.`}
           </p>
           <p className="text-[11px] leading-snug" style={{ color: C.textFaint }}>
-            {store.aiIncludedPaid
-              ? "Your credits renew at the start of your next billing period."
-              : "Credits reset tomorrow."}
+            {store.creditsPeriodKind === "day"
+              ? "Credits reset tomorrow."
+              : store.creditsPeriodKind === "billing"
+                ? "Your credits renew at the start of your next billing period."
+                : "Your credits renew next month."}
           </p>
           <div className="flex flex-col gap-1.5 pt-0.5">
             {!store.aiIncludedPaid && (

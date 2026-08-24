@@ -122,3 +122,16 @@ export function providerModeFor(store: Pick<AmintaStore, "aiIncluded" | "provide
 export function shouldUseIncludedAi(store: Pick<AmintaStore, "aiIncluded" | "providerMode">): boolean {
   return providerModeFor(store) === "included"
 }
+
+// THE one place credit-reset copy is decided, keyed by the exact
+// PeriodKind values landing/lib/ai/credits.ts's resolvePeriod() returns
+// and syncs down as store.creditsPeriodKind ("day" for Free, "billing" for
+// Pro's real Creem cycle, "monthly" for Founder/Gifted's rolling window).
+// Every surface that shows a credit balance (Settings, Home) must read
+// through this — never hardcode "Resets daily" itself, since that's wrong
+// for any plan whose period isn't actually daily.
+export const CREDIT_RESET_LABEL: Record<string, string> = {
+  day: "Resets daily",
+  billing: "Resets each billing period",
+  monthly: "Resets monthly",
+}

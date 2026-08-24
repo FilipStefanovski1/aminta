@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { canUseByok, effectiveApiKey } from "~lib/entitlements"
+import { CREDIT_RESET_LABEL, canUseByok, effectiveApiKey, planLabel } from "~lib/entitlements"
 
 describe("canUseByok — BYOK is Pro/Founder only", () => {
   it("Free (no plan, or plan: 'free') cannot use BYOK", () => {
@@ -69,5 +69,39 @@ describe("effectiveApiKey — plan entitlement wins over presence of a key", () 
 
   it("Pro with a revoked subscriptionStatus (e.g. expired): key stops being usable", () => {
     expect(effectiveApiKey({ apiKey: "AIzaFakeGeminiKey", plan: "pro", subscriptionStatus: "expired" })).toBe("")
+  })
+})
+
+// Regression guard: a Founder/lifetime account must show "FOUNDER"
+// everywhere — the same value planLabel() has always produced here, pinned
+// after a matching bug was found on the dashboard (landing/components/
+// DashboardClient.tsx was rendering the raw "lifetime" plan value instead
+// of going through this helper).
+describe("planLabel", () => {
+  it("never shows the raw 'lifetime' plan value — maps it to FOUNDER", () => {
+    expect(planLabel({ plan: "lifetime" })).toBe("FOUNDER")
+  })
+
+  it("maps an entitled pro subscription to PRO", () => {
+    expect(planLabel({ plan: "pro", subscriptionStatus: "active" })).toBe("PRO")
+  })
+
+  it("falls back to FREE for a revoked pro subscription", () => {
+    expect(planLabel({ plan: "pro", subscriptionStatus: "expired" })).toBe("FREE")
+  })
+})
+
+// Regression guard: Home and GeneratorPanel's zero-credit state both used to
+// show hardcoded "today"/"billing period" copy regardless of the account's
+// real period kind — wrong for Founder/Gifted's monthly rolling window.
+// Both now read through this one mapping, keyed by the exact PeriodKind
+// values landing/lib/ai/credits.ts's resolvePeriod() returns.
+describe("CREDIT_RESET_LABEL", () => {
+  it("covers every real PeriodKind with distinct, accurate copy", () => {
+    expect(CREDIT_RESET_LABEL.day).toBe("Resets daily")
+    expect(CREDIT_RESET_LABEL.billing).toBe("Resets each billing period")
+    expect(CREDIT_RESET_LABEL.monthly).toBe("Resets monthly")
+    const values = Object.values(CREDIT_RESET_LABEL)
+    expect(new Set(values).size).toBe(values.length)
   })
 })

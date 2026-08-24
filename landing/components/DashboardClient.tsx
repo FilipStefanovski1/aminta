@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import posthog from "posthog-js"
 import { createClient } from "@/lib/supabase/client"
 import { EXTENSION_URL } from "@/lib/links"
-import { communityUnlocked, hasProAccess } from "@/lib/entitlements"
+import { communityUnlocked, hasProAccess, planLabel } from "@/lib/entitlements"
 
 const THRESHOLDS = [0, 300, 750, 1400, 2300, 3500, 5200, 7500, 10500, 14500]
 
@@ -121,6 +121,11 @@ export default function DashboardClient({
   plan, subscriptionStatus, hasState, lastSyncedAt, extensionConnected,
 }: Props) {
   const entitled = hasProAccess({ plan, subscription_status: subscriptionStatus })
+  // "lifetime" (the raw DB plan value) must never be shown to a user — the
+  // extension already maps this through the same shared helper to "FOUNDER";
+  // this badge was bypassing it and showing the literal plan string instead,
+  // so a Founder account saw "LIFETIME" here but "FOUNDER" everywhere else.
+  const planBadge = planLabel({ plan, subscription_status: subscriptionStatus })
   const discordUnlocked = communityUnlocked(extensionConnected)
   // Mission flags only count if they were recorded on the user's local
   // "today" — the extension stamps mission_date with a local date. Same
@@ -317,7 +322,7 @@ export default function DashboardClient({
                 border: `2px solid ${entitled ? form.color + "40" : "#333"}`,
                 boxShadow: "2px 2px 0 #000",
               }}>
-              {plan.toUpperCase()}
+              {planBadge}
             </span>
           </div>
 

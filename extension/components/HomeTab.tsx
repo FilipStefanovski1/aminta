@@ -10,7 +10,7 @@ import {
   getXpInLevel,
   getXpProgress,
 } from "~lib/evolution"
-import { hasProAccess, planLabel as computePlanLabel, shouldUseIncludedAi } from "~lib/entitlements"
+import { CREDIT_RESET_LABEL, hasProAccess, planLabel as computePlanLabel, shouldUseIncludedAi } from "~lib/entitlements"
 import { parseCustomRules } from "~lib/instinctPresets"
 import { getMissionProgress, tryCompleteDailyMissions } from "~lib/missions"
 import type { AmintaStore } from "~lib/storage"
@@ -318,10 +318,15 @@ export default function HomeTab({ store, onCreate, onOpenCompanion, onOpenSettin
         </div>
       </Card>
 
-      {/* ── ACCOUNT STATUS — only genuinely real, current data. ── */}
+      {/* ── ACCOUNT STATUS — only genuinely real, current data. Reset copy
+          is period-aware (day/billing/monthly, from the same
+          store.creditsPeriodKind Settings reads) — "today" would be wrong
+          for Pro's billing-cycle or Founder's monthly rolling allowance. ── */}
       {showCredits && (
         <div className="flex items-center justify-between px-4 py-2.5 rounded-xl animate-card-in" style={{ animationDelay: "110ms", backgroundColor: C.card, border: `1px solid ${C.border}` }}>
-          <span className="text-[11px]" style={{ color: C.textFaint }}>Credits today</span>
+          <span className="text-[11px]" style={{ color: C.textFaint }}>
+            {CREDIT_RESET_LABEL[store.creditsPeriodKind] ?? "Resets each period"}
+          </span>
           <span className="font-pixel text-[8px]" style={{ color: tint }}>
             {store.creditsBalance} / {store.creditsAllowance}
           </span>

@@ -14,7 +14,7 @@ import VoiceProfileForm from "~components/VoiceProfileForm"
 import FaqPage from "~components/FaqPage"
 import { GhostButton, PrimaryButton } from "~components/ui"
 import { FORMS, getStageTint } from "~lib/evolution"
-import { canUseByok, planLabel as computePlanLabel, providerModeFor } from "~lib/entitlements"
+import { CREDIT_RESET_LABEL, canUseByok, planLabel as computePlanLabel, providerModeFor } from "~lib/entitlements"
 import { isGoogleKey, isGroqKey, GEMINI_DEFAULT, GROQ_DEFAULT, SUPPORTED_GEMINI_MODELS, SUPPORTED_GROQ_MODELS } from "~lib/ai"
 import { PROVIDERS, detectProvider } from "~lib/providers"
 import { C } from "~lib/theme"
@@ -184,16 +184,6 @@ async function cropAvatarSquare(file: File): Promise<string> {
     img.onerror = reject
     img.src = url
   })
-}
-
-// Reset copy per credit period kind. Keys match the server's PeriodKind
-// (landing/lib/ai/credits.ts) — "billing" is a real Creem subscription cycle,
-// "monthly" is the rolling fallback used by Founder/Gifted and by comped Pro
-// accounts that have no Creem subscription, so the two can't share wording.
-const CREDIT_RESET_LABEL: Record<string, string> = {
-  day: "Resets daily",
-  billing: "Resets each billing period",
-  monthly: "Resets monthly",
 }
 
 function DangerZone({ onSignOut }: { onSignOut: () => void }) {
@@ -542,17 +532,22 @@ function SettingsOverlay({
             {/* Plan / Upgrade — actionable regardless of AI Provider mode
                 (Included vs BYOK), so it's always visible here rather than
                 nested under the credits display below. Free gets an actual
-                path to Pro instead of a dead-end plan label; Pro gets the
-                same destination framed as "Manage plan" (there is no
+                path to Pro instead of a dead-end plan label; Pro links to
+                the same pricing page every other upgrade CTA already points
+                to — labeled "View plan" rather than "Manage plan" since
+                this link itself doesn't manage anything, it's the pricing
+                page's OWN logic (landing/components/Pricing.tsx) that
+                detects an already-paying user and swaps in a real "Manage
+                Pro" CTA to /dashboard once they land there. There is no
                 separate customer-portal implementation anywhere in this
-                codebase — see landing/app/api/account/route.ts's billing
-                comment — so this reuses the one real checkout destination
-                every other upgrade CTA already points to); Founder is a
-                one-time lifetime purchase with nothing to upgrade or
-                manage, so it gets no CTA at all, just its state. Skipped
-                for a Free user currently on the BYOK tab — that state
-                already has its own "Upgrade to Pro" CTA a few lines down,
-                and showing both here would just duplicate it. */}
+                codebase (see landing/app/api/account/route.ts's billing
+                comment), so promising "manage" directly from here would be
+                overstating what one click from Settings actually does.
+                Founder is a one-time lifetime purchase with nothing to
+                upgrade or manage, so it gets no CTA at all, just its state.
+                Skipped for a Free user currently on the BYOK tab — that
+                state already has its own "Upgrade to Pro" CTA a few lines
+                down, and showing both here would just duplicate it. */}
             {(planLabel !== "FREE" || includedActive) && (
               <div className="px-3.5 pt-3.5 pb-3" style={{ borderBottom: `1px solid ${C.borderSoft}` }}>
                 {planLabel === "FOUNDER" ? (
@@ -564,7 +559,7 @@ function SettingsOverlay({
                     rel="noreferrer"
                     className="btn-pixel block w-full py-2 rounded-lg font-pixel text-[8px] text-center"
                     style={{ backgroundColor: avatarTint, color: "#000", border: "2px solid #000", boxShadow: "2px 2px 0 #000" }}>
-                    {planLabel === "FREE" ? "Upgrade to Pro" : "Manage plan"}
+                    {planLabel === "FREE" ? "Upgrade to Pro" : "View plan"}
                   </a>
                 )}
               </div>
