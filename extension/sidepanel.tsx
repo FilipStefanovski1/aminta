@@ -19,7 +19,7 @@ import { isGoogleKey, isGroqKey, GEMINI_DEFAULT, GROQ_DEFAULT, SUPPORTED_GEMINI_
 import { PROVIDERS, detectProvider } from "~lib/providers"
 import { C } from "~lib/theme"
 import { getStore, setStore, type AmintaStore } from "~lib/storage"
-import { getAuthSession, clearAuthSession, type AuthSession } from "~lib/auth"
+import { getAuthSession, clearAuthSession, signOutEverywhere, type AuthSession } from "~lib/auth"
 import { pullFromCloud, pushToCloud } from "~lib/sync"
 import { handleAuthUserChanged } from "~lib/accountScope"
 import { deleteAccount } from "~lib/account"
@@ -322,6 +322,26 @@ function SettingsOverlay({
     return () => chrome.storage.local.onChanged.removeListener(listener)
   }, [])
 
+  // ── Sign out ────────────────────────────────────────────────────────────────
+  const [signingOut, setSigningOut] = useState(false)
+  const [signOutError, setSignOutError] = useState("")
+
+  const handleSignOutClick = async () => {
+    if (signingOut) return
+    setSigningOut(true)
+    setSignOutError("")
+    const result = await signOutEverywhere()
+    if (!result.ok) {
+      // Local state is deliberately left alone here — see
+      // signOutEverywhere()'s doc comment. Half-logging-out would be worse
+      // than staying logged in with a visible error to retry.
+      setSignOutError(result.error ?? "Sign out failed. Try again.")
+      setSigningOut(false)
+      return
+    }
+    onSignOut()
+  }
+
   // ── Avatar ──────────────────────────────────────────────────────────────────
   const avatarInputRef = useRef<HTMLInputElement>(null)
   const [avatarError, setAvatarError] = useState("")
@@ -499,11 +519,13 @@ function SettingsOverlay({
                 </div>
               </div>
               {avatarError && <p className="font-pixel text-[7px] text-red-400 mt-2">{avatarError}</p>}
+              {signOutError && <p className="font-pixel text-[7px] text-red-400 mt-2">{signOutError}</p>}
               <button
-                onClick={onSignOut}
-                className="btn-pixel w-full mt-3 py-1.5 rounded-lg font-pixel text-[7px]"
+                onClick={handleSignOutClick}
+                disabled={signingOut}
+                className="btn-pixel w-full mt-3 py-1.5 rounded-lg font-pixel text-[7px] disabled:opacity-60"
                 style={{ backgroundColor: "#2a1616", color: "#f87171", border: "2px solid #000", boxShadow: "2px 2px 0 #000" }}>
-                Sign out
+                {signingOut ? "Signing out…" : "Sign out"}
               </button>
             </div>
           ) : (

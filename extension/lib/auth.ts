@@ -31,6 +31,55 @@ export async function clearAuthSession(): Promise<void> {
   await chrome.storage.local.remove(AUTH_KEYS as unknown as string[])
 }
 
+const LOGOUT_URL = "https://amintaapp.com/api/auth/logout"
+
+// Not a discriminated union on purpose — see lib/xAccountGuard.ts's
+// GuardResult for why: this project builds with `strict: false`, under
+// which `if (!result.ok)` does not reliably narrow a
+// `{ok:true}|{ok:false,error}` union at every call site.
+export interface SignOutResult {
+  ok: boolean
+  error?: string
+}
+
+/**
+ * Signs out everywhere, not just this device. Clearing local storage alone
+ * (the old behavior) left the underlying Supabase session — and its
+ * refresh token — valid server-side, so a still-open web tab, or the
+ * extension's own refresh flow, could silently keep the "signed out"
+ * session alive. This revokes it server-side first (POST /api/auth/logout,
+ * scope "global" — see that route), then clears the local copy.
+ *
+ * On failure, local state is deliberately left untouched: clearing it
+ * anyway would show the UI as logged out while the session is still live
+ * server-side — an ambiguous half-logged-out state, not a real sign-out.
+ */
+export async function signOutEverywhere(): Promise<SignOutResult> {
+  const session = await getAuthSession()
+  if (!session?.accessToken) {
+    // Nothing to revoke server-side.
+    await clearAuthSession()
+    return { ok: true }
+  }
+
+  let res: Response
+  try {
+    res = await fetch(LOGOUT_URL, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${session.accessToken}` },
+    })
+  } catch {
+    return { ok: false, error: "Couldn't reach Aminta to sign out. Check your connection and try again." }
+  }
+
+  if (!res.ok) {
+    return { ok: false, error: "Sign out failed. Try again." }
+  }
+
+  await clearAuthSession()
+  return { ok: true }
+}
+
 const REFRESH_URL = "https://amintaapp.com/api/auth/refresh"
 
 // Exchange the stored refresh token for a fresh access token via the website
