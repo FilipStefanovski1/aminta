@@ -12,7 +12,7 @@ const VOICE = { niche: "general", tone: "natural", examples: "", voiceStyle: "",
 const profileWithBaseline: StyleProfile = {
   confidence: "balanced", energy: "moderate", vocabularyComplexity: "moderate",
   capitalization: "standard", directness: "balanced",
-  rhythm: "", punctuation: "", emojiUsage: "", humorStyle: "", formattingPreferences: "", rhetoricalDevices: "", cadence: "",
+  rhythm: "", punctuation: "", emojiUsage: "", hashtagUsage: "", humorStyle: "", formattingPreferences: "", rhetoricalDevices: "", cadence: "",
   confidenceScore: 0.85,
   lengthProfile: { p25: 180, median: 220, p75: 260 },
 }

@@ -51,7 +51,7 @@ const SHARED_INSTRUCTIONAL_STRINGS = [
   "agree?",
   "Never run two separate thoughts together with no separator",
   "Don't default to em dashes",
-  "No hashtags or emojis unless their examples use them.",
+  "No hashtags unless WRITING STYLE's Hashtag usage line clearly shows this person uses them",
   'Never say "as an AI"',
   "no labels like",
   "Here's a polished version:",
@@ -68,6 +68,13 @@ const SHARED_INSTRUCTIONAL_STRINGS = [
   "Witty does not mean fragment-only",
   "PUNCTUATION: Match exactly how this person uses commas, periods, dashes, and apostrophes",
   "LINE BREAKS & SPACING: Match how this person separates sentences and thoughts",
+  // Style-fidelity pass: explicit Instincts > learned style > tone
+  // hierarchy, and a grounded hashtag-usage field (previously only emoji
+  // usage was captured, so the "no hashtags unless their examples use
+  // them" rule had nothing in the profile to actually point at).
+  "STYLE PRIORITY (highest to lowest): CUSTOM RULES",
+  "CUSTOM RULES wins",
+  "CUSTOM RULES (highest priority",
   "CADENCE: Match this person's sentence lengths and transitions",
   "Follow the PUNCTUATION and LINE BREAKS & SPACING instructions in WRITING STYLE above exactly",
   // Length targets (mode-aware, character ranges — not fixed paragraph counts)

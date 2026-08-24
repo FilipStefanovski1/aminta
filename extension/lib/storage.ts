@@ -41,6 +41,11 @@ export interface StyleProfile {
   rhythm: string
   punctuation: string
   emojiUsage: string
+  // Was previously ungrounded: systemX() told the model "no hashtags...
+  // unless their examples use them" but the model never sees the raw
+  // examples — only this extracted profile. Without this field there was
+  // nothing in the profile for that instruction to actually point at.
+  hashtagUsage: string
   humorStyle: string
   formattingPreferences: string
   rhetoricalDevices: string

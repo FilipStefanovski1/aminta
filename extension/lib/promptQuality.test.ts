@@ -41,7 +41,7 @@ function styleProfile(overrides: Partial<StyleProfile> = {}): StyleProfile {
     directness: "balanced",
     rhythm: "",
     punctuation: "",
-    emojiUsage: "",
+    emojiUsage: "", hashtagUsage: "",
     humorStyle: "",
     formattingPreferences: "",
     rhetoricalDevices: "",
@@ -68,7 +68,7 @@ function expectBaselineQualityRules(system: string) {
   expect(system).toContain("let that sink in")
   expect(system).toContain("thoughts?")
   expect(system).toContain("em dash")
-  expect(system).toContain("No hashtags or emojis unless their examples use them.")
+  expect(system).toContain("No hashtags unless WRITING STYLE's Hashtag usage line clearly shows this person uses them")
   expect(system).toContain('no labels like "Tweet:" or "Reply:"')
   expect(system).toContain("never your thinking, notes, or process")
   expect(system).not.toContain("exactly TWO short paragraphs")

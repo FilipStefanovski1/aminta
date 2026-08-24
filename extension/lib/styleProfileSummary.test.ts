@@ -16,7 +16,7 @@ const REAL: StyleProfile = {
   directness: "direct",
   rhythm: "very short, abrupt fragments",
   punctuation: "completely omitted punctuation",
-  emojiUsage: "none",
+  emojiUsage: "none", hashtagUsage: "",
   humorStyle: "earnest and literal",
   formattingPreferences: "single-sentence posts",
   rhetoricalDevices: "implied subjects, brief observations",
@@ -27,7 +27,7 @@ const REAL: StyleProfile = {
 /** The shape a thin corpus produces: enums set, all free text empty. */
 const SPARSE: StyleProfile = {
   ...REAL,
-  rhythm: "", punctuation: "", emojiUsage: "", humorStyle: "",
+  rhythm: "", punctuation: "", emojiUsage: "", hashtagUsage: "", humorStyle: "",
   formattingPreferences: "", rhetoricalDevices: "", cadence: "",
   confidenceScore: 0.3,
 }

@@ -50,6 +50,14 @@ const LENGTH_GUIDE: Record<Mode, Record<OutputLength, string>> = {
 const CONTEXT_PRIORITY =
   "CONTEXT PRIORITY (highest to lowest): the topic/request below, then the source post if replying, then an attached image if present, then WRITING STYLE, then tone. WRITING STYLE is a pattern to follow, never a script to copy line-for-line, and it never changes WHAT gets said — only HOW."
 
+// A separate axis from CONTEXT_PRIORITY above: that one governs WHAT gets
+// said (content), this one governs HOW (style) — CUSTOM RULES weren't
+// previously ranked against WRITING STYLE/TONE at all, so an explicit
+// instinct like "no hashtags" had no stated precedence over a learned
+// pattern showing hashtag use, or over whatever a tone happened to imply.
+const STYLE_PRIORITY =
+  "STYLE PRIORITY (highest to lowest): CUSTOM RULES (explicit instructions from the user) > WRITING STYLE (patterns learned from real writing) > TONE DIRECTION > generic default phrasing. If CUSTOM RULES ever conflicts with a pattern in WRITING STYLE or with TONE DIRECTION, CUSTOM RULES wins — e.g. a learned pattern showing past hashtag use never overrides an explicit 'no hashtags' rule."
+
 // Distinct premises/angles a tweet can take on the same topic — sampled
 // externally (Math.random, see pickAngles below) rather than left to the
 // model's own judgment. Asking the model to "just pick a different angle
@@ -158,6 +166,7 @@ function styleProfileBlock(sp: StyleProfile | null): string {
     `- Capitalization: ${sp.capitalization}`,
     `- Directness: ${sp.directness}`,
     sp.emojiUsage && `- Emoji usage: ${sp.emojiUsage}`,
+    sp.hashtagUsage && `- Hashtag usage: ${sp.hashtagUsage}`,
     sp.humorStyle && `- Humor: ${sp.humorStyle}`,
     sp.rhetoricalDevices && `- Rhetorical devices: ${sp.rhetoricalDevices}`,
   ].filter(Boolean)
@@ -190,11 +199,12 @@ function voiceBlock(voice: VoiceProfile, styleProfile: StyleProfile | null, temp
   const context = [`NICHE: ${voice.niche || "general"}`, inspiration].filter(Boolean).join("\n")
 
   const rules = voice.customRules?.trim()
-    ? `CUSTOM RULES:\n${voice.customRules}`
+    ? `CUSTOM RULES (highest priority — explicit instructions from the user; these override WRITING STYLE or TONE below if they ever conflict):\n${voice.customRules}`
     : ""
 
   return [
     CONTEXT_PRIORITY,
+    STYLE_PRIORITY,
     templateBlock(templateInstruction),
     `CONTEXT (use only if relevant to the current request):\n${context}`,
     `TONE: ${voice.tone || "natural, human"}`,
@@ -216,7 +226,7 @@ function systemX(mode: Mode, voice: VoiceProfile, styleProfile: StyleProfile | n
     "- Avoid worn-out openers (\"hot take\", \"unpopular opinion\", \"here's the thing\", \"let that sink in\", \"this changes everything\") and worn-out closers (\"thoughts?\", \"agree?\", generic motivational lines) — use them only if they'd genuinely fit, which is rare.",
     "- Follow the PUNCTUATION and LINE BREAKS & SPACING instructions in WRITING STYLE above exactly. Never run two separate thoughts together with no separator, and never collapse into a compressed lowercase fragment style unless WRITING STYLE clearly says this person's own posts actually look like that — don't infer that from brevity or tone alone.",
     "- Don't default to em dashes — only if WRITING STYLE's punctuation notes show the user's own writing actually uses them.",
-    "- No hashtags or emojis unless their examples use them.",
+    "- No hashtags unless WRITING STYLE's Hashtag usage line clearly shows this person uses them; no emojis unless WRITING STYLE's Emoji usage line shows the same. Never invent either from the topic alone.",
     '- Never say "as an AI". Sound human.',
     "- Return ONLY the finished text — never your thinking, notes, or process. No surrounding quotes, no labels like \"Tweet:\" or \"Reply:\" or \"Here's a polished version:\", no preamble, no explanation.",
   ]
@@ -350,7 +360,7 @@ export function buildThreadMessages(
     threadPostDepthGuide(length, styleProfile),
     "- The FIRST post must work as a strong standalone X hook — someone scrolling past should want to open the thread from that post alone.",
     "- Avoid a generic AI-sounding conclusion (\"In summary...\", \"The bottom line is...\", forced calls to action) unless it's genuinely earned.",
-    "- Write like a real person, not marketing copy. No hashtags or emojis unless their examples use them.",
+    "- Write like a real person, not marketing copy. No hashtags unless WRITING STYLE's Hashtag usage line clearly shows this person uses them; no emojis unless WRITING STYLE's Emoji usage line shows the same.",
     "- Stay within X's ~280 character ceiling per post where possible — a little over is fine if the idea genuinely needs it, but this is an upper bound, not the depth target above.",
     "",
     `Return ONLY a JSON object: { "threads": [ { "angle": "short label for this thread's angle", "posts": ["post 1", "post 2", ...] (exactly ${postCountLabel} posts) }, ... 3 items total ] }`,

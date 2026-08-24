@@ -3,7 +3,7 @@
 // just mention it in passing — and must never fall back to a generic
 // compressed "AI-caption" default when the profile is thin or absent.
 import { describe, expect, it } from "vitest"
-import { buildMessages } from "~lib/prompts"
+import { buildMessages, buildThreadMessages } from "~lib/prompts"
 import type { StyleProfile } from "~lib/storage"
 
 const VOICE = {
@@ -15,6 +15,13 @@ const VOICE = {
   customRules: "",
 }
 
+// Real writing examples (a founder's own posts) — used to prove they NEVER
+// reach a generation prompt directly. Only the extracted, topic-free
+// StyleProfile does (see lib/styleProfile.ts's file-header comment) — this
+// is what makes "learn style, never copy content" structurally guaranteed
+// rather than merely instructed.
+const RAW_EXAMPLES_TEXT = "solana has been cooking lately, distribution matters way more than people admit"
+
 function baseProfile(overrides: Partial<StyleProfile>): StyleProfile {
   return {
     confidence: "balanced",
@@ -25,6 +32,7 @@ function baseProfile(overrides: Partial<StyleProfile>): StyleProfile {
     rhythm: "",
     punctuation: "",
     emojiUsage: "",
+    hashtagUsage: "",
     humorStyle: "",
     formattingPreferences: "",
     rhetoricalDevices: "",
@@ -52,8 +60,8 @@ const PROFILE_B = baseProfile({
   capitalization: "lowercase-leaning",
 })
 
-function systemPrompt(styleProfile: StyleProfile | null): string {
-  const messages = buildMessages("x", "tweet", VOICE, "a topic", styleProfile)
+function systemPrompt(styleProfile: StyleProfile | null, voice: typeof VOICE = VOICE): string {
+  const messages = buildMessages("x", "tweet", voice, "a topic", styleProfile)
   return messages.find((m) => m.role === "system")!.content as string
 }
 
@@ -101,5 +109,72 @@ describe("style-fidelity: prompt instructions materially differ per profile", ()
     const a = systemPrompt(PROFILE_A)
     expect(a).toContain("Tone changes attitude and word choice ONLY")
     expect(a).toContain("Witty does not mean fragment-only")
+  })
+
+  it("hashtag usage is a grounded field, distinct from emoji usage, and reaches the prompt", () => {
+    const withHashtags = systemPrompt(baseProfile({ hashtagUsage: "one relevant hashtag at the end" }))
+    const withoutHashtags = systemPrompt(baseProfile({ hashtagUsage: "never" }))
+    expect(withHashtags).toContain("Hashtag usage: one relevant hashtag at the end")
+    expect(withoutHashtags).toContain("Hashtag usage: never")
+    expect(withHashtags).toContain("Hashtag usage line clearly shows this person uses them")
+  })
+})
+
+describe("style-fidelity: content vs style — real writing examples never leak into generation", () => {
+  it("raw example text never appears in a tweet prompt even when voice.examples is populated", () => {
+    const voiceWithExamples = { ...VOICE, examples: RAW_EXAMPLES_TEXT }
+    const messages = buildMessages("x", "tweet", voiceWithExamples, "ai agents", PROFILE_A)
+    const all = messages.map((m) => m.content).join("\n")
+    expect(all).not.toContain(RAW_EXAMPLES_TEXT)
+    expect(all).not.toContain("solana")
+    expect(all).not.toContain("cooking lately")
+  })
+
+  it("raw example text never appears in a thread prompt either", () => {
+    const voiceWithExamples = { ...VOICE, examples: RAW_EXAMPLES_TEXT }
+    const messages = buildThreadMessages(voiceWithExamples, "ai agents", PROFILE_A)
+    const all = messages.map((m) => m.content).join("\n")
+    expect(all).not.toContain(RAW_EXAMPLES_TEXT)
+    expect(all).not.toContain("solana")
+  })
+})
+
+describe("style-fidelity: explicit Instincts outrank inferred style", () => {
+  it("custom rules (Instincts) reach the prompt and are framed as highest priority", () => {
+    const voiceWithRules = { ...VOICE, customRules: "no hashtags\nkeep it under 200 characters" }
+    const system = systemPrompt(PROFILE_A, voiceWithRules)
+    expect(system).toContain("no hashtags")
+    expect(system).toContain("keep it under 200 characters")
+    expect(system).toContain("CUSTOM RULES (highest priority")
+  })
+
+  it("the explicit style-priority hierarchy is stated: custom rules > writing style > tone > defaults", () => {
+    const system = systemPrompt(PROFILE_A)
+    expect(system).toContain("STYLE PRIORITY (highest to lowest): CUSTOM RULES")
+    expect(system).toContain("CUSTOM RULES wins")
+  })
+})
+
+describe("style-fidelity: every mode receives voice context", () => {
+  it("reply mode includes the WRITING STYLE block", () => {
+    const messages = buildMessages("x", "reply", VOICE, "someone's post", PROFILE_A)
+    const system = messages.find((m) => m.role === "system")!.content as string
+    expect(system).toContain("WRITING STYLE")
+    expect(system).toContain("commas and periods used naturally")
+  })
+
+  it("polish mode includes the WRITING STYLE block AND explicit voice-preservation instructions", () => {
+    const messages = buildMessages("x", "polish", VOICE, "rough draft text", PROFILE_A)
+    const system = messages.find((m) => m.role === "system")!.content as string
+    const user = messages.find((m) => m.role === "user")!.content as string
+    expect(system).toContain("WRITING STYLE")
+    expect(user).toContain("PRESERVE my meaning, personality, formality, and language exactly")
+  })
+
+  it("thread mode includes the WRITING STYLE block", () => {
+    const messages = buildThreadMessages(VOICE, "a topic", PROFILE_A)
+    const system = messages.find((m) => m.role === "system")!.content as string
+    expect(system).toContain("WRITING STYLE")
+    expect(system).toContain("commas and periods used naturally")
   })
 })

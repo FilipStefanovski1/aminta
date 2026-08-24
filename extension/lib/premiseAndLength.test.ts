@@ -50,7 +50,7 @@ describe("personalized Medium length actually reaches the prompt", () => {
   const profileWithBaseline: StyleProfile = {
     confidence: "balanced", energy: "moderate", vocabularyComplexity: "moderate",
     capitalization: "standard", directness: "balanced",
-    rhythm: "", punctuation: "", emojiUsage: "", humorStyle: "", formattingPreferences: "", rhetoricalDevices: "", cadence: "",
+    rhythm: "", punctuation: "", emojiUsage: "", hashtagUsage: "", humorStyle: "", formattingPreferences: "", rhetoricalDevices: "", cadence: "",
     confidenceScore: 0.85,
     lengthProfile: { p25: 180, median: 220, p75: 260 },
   }
@@ -127,7 +127,7 @@ describe("thread prompt requires substantive progression, not fragment padding",
     const profileWithBaseline: StyleProfile = {
       confidence: "balanced", energy: "moderate", vocabularyComplexity: "moderate",
       capitalization: "standard", directness: "balanced",
-      rhythm: "", punctuation: "", emojiUsage: "", humorStyle: "", formattingPreferences: "", rhetoricalDevices: "", cadence: "",
+      rhythm: "", punctuation: "", emojiUsage: "", hashtagUsage: "", humorStyle: "", formattingPreferences: "", rhetoricalDevices: "", cadence: "",
       confidenceScore: 0.85,
       lengthProfile: { p25: 180, median: 220, p75: 260 },
     }
@@ -204,7 +204,7 @@ describe("DNA formatting constraints remain present alongside the length/premise
     const profile: StyleProfile = {
       confidence: "balanced", energy: "moderate", vocabularyComplexity: "moderate",
       capitalization: "standard", directness: "balanced",
-      rhythm: "measured", punctuation: "commas and periods used naturally", emojiUsage: "",
+      rhythm: "measured", punctuation: "commas and periods used naturally", emojiUsage: "", hashtagUsage: "",
       humorStyle: "", formattingPreferences: "blank line between thoughts", rhetoricalDevices: "",
       cadence: "2-3 sentence thoughts",
       confidenceScore: 0.85, lengthProfile: null,

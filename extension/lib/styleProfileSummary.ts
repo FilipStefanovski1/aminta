@@ -1,7 +1,7 @@
 // Human-readable view of the StyleProfile that already powers generation.
 //
 // Presentation only. Nothing here reads or writes storage, calls a model, or
-// derives a new attribute — it maps the 12 style fields already in
+// derives a new attribute — it maps the 13 style fields already in
 // store.styleProfile onto four readable groups. confidenceScore is
 // deliberately excluded: it is an internal weighting computed from corpus
 // size, not a trait the user wrote, and showing it as a number invites
@@ -81,6 +81,7 @@ export function summarizeStyleProfile(sp: StyleProfile | null): SummarySection[]
     CAPITALIZATION_LABEL[sp.capitalization] ?? sp.capitalization,
     clean(sp.punctuation),
     clean(sp.emojiUsage) ? emojiLabel(sp.emojiUsage) : "",
+    clean(sp.hashtagUsage),
     VOCAB_LABEL[sp.vocabularyComplexity] ?? sp.vocabularyComplexity,
     clean(sp.rhetoricalDevices),
   ].filter(Boolean)

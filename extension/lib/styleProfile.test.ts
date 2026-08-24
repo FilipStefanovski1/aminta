@@ -82,6 +82,7 @@ const VALID_EXTRACTION_JSON = JSON.stringify({
   rhythm: "short, punchy",
   punctuation: "dashes over commas",
   emojiUsage: "none",
+  hashtagUsage: "never",
   humorStyle: "dry, deadpan",
   formattingPreferences: "single-line",
   rhetoricalDevices: "rhetorical questions",
@@ -134,6 +135,7 @@ describe("parseStyleProfile", () => {
     const profile = parseStyleProfile(VALID_EXTRACTION_JSON, 0.6)
     expect(profile.confidence).toBe("assertive")
     expect(profile.humorStyle).toBe("dry, deadpan")
+    expect(profile.hashtagUsage).toBe("never")
     expect(profile.confidenceScore).toBe(0.6)
   })
 
@@ -274,7 +276,7 @@ describe("X Voice Refresh precedence — P0 fix", () => {
     directness: "direct",
     rhythm: "very short, abrupt fragments",
     punctuation: "completely omitted punctuation",
-    emojiUsage: "none",
+    emojiUsage: "none", hashtagUsage: "",
     humorStyle: "earnest and literal",
     formattingPreferences: "single-sentence posts",
     rhetoricalDevices: "implied subjects, brief observations",

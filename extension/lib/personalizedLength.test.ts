@@ -6,7 +6,7 @@ import type { StyleProfile } from "~lib/storage"
 const baseProfile: StyleProfile = {
   confidence: "balanced", energy: "moderate", vocabularyComplexity: "moderate",
   capitalization: "standard", directness: "balanced",
-  rhythm: "", punctuation: "", emojiUsage: "", humorStyle: "",
+  rhythm: "", punctuation: "", emojiUsage: "", hashtagUsage: "", humorStyle: "",
   formattingPreferences: "", rhetoricalDevices: "", cadence: "",
   confidenceScore: 1, lengthProfile: null,
 }
