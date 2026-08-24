@@ -764,34 +764,6 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
         </div>
       </div>
 
-      {/* ── Posts (Thread Creator only) — how many posts, independent from
-          Length below (per-post depth). ── */}
-      {mode === "thread" && (
-        <div className="space-y-1.5">
-          <p className="text-[11px] font-medium" style={{ color: C.textFaint }}>Posts</p>
-          <div className="flex rounded-xl overflow-hidden" style={{ border: `1.5px solid ${C.border}` }}>
-            {POST_COUNT_CONFIG.map((p, i) => {
-              const active = postCount === p.id
-              return (
-                <button
-                  key={p.id}
-                  onClick={() => setPostCount(p.id)}
-                  className="flex-1 flex items-center justify-center py-2.5 transition-all"
-                  style={{
-                    backgroundColor: active ? tint + "18" : "transparent",
-                    borderRight: i < POST_COUNT_CONFIG.length - 1 ? `1px solid ${C.border}` : undefined,
-                    color: active ? tint : C.textGhost,
-                  }}>
-                  <span className="text-[10px] font-semibold" style={{ color: active ? tint : C.textDim }}>
-                    {p.label}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
-        </div>
-      )}
-
       {/* ── Length ── */}
       <div className="space-y-1.5">
         <div className="flex items-center gap-1.5">
@@ -821,6 +793,34 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
           })}
         </div>
       </div>
+
+      {/* ── Posts (Thread Creator only) — how many posts, independent from
+          Length above (per-post depth). ── */}
+      {mode === "thread" && (
+        <div className="space-y-1.5">
+          <p className="text-[11px] font-medium" style={{ color: C.textFaint }}>Posts</p>
+          <div className="flex rounded-xl overflow-hidden" style={{ border: `1.5px solid ${C.border}` }}>
+            {POST_COUNT_CONFIG.map((p, i) => {
+              const active = postCount === p.id
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => setPostCount(p.id)}
+                  className="flex-1 flex items-center justify-center py-2.5 transition-all"
+                  style={{
+                    backgroundColor: active ? tint + "18" : "transparent",
+                    borderRight: i < POST_COUNT_CONFIG.length - 1 ? `1px solid ${C.border}` : undefined,
+                    color: active ? tint : C.textGhost,
+                  }}>
+                  <span className="text-[10px] font-semibold" style={{ color: active ? tint : C.textDim }}>
+                    {p.label}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* ── Generate ── */}
       <button

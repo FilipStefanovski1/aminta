@@ -307,7 +307,7 @@ describe("runThreadGenerate — token/deadline budget", () => {
   const store = { apiKey: "AIzaSomeKey", model: "gemini-3.5-flash", plan: "pro", subscriptionStatus: "active", aiIncluded: false, providerMode: "included" } as any
 
   it("BYOK thread generation requests a real output budget, not the 400-token default", async () => {
-    await runThreadGenerate(store, { input: "solana summit serbia", voice: {} as any, styleProfile: null, tone: "direct", length: "medium" })
+    await runThreadGenerate(store, { input: "solana summit serbia", voice: {} as any, styleProfile: null, tone: "direct", length: "medium", postCount: 2 })
 
     expect(mockRunAI).toHaveBeenCalledTimes(1)
     const [, , , options] = mockRunAI.mock.calls[0]
@@ -331,7 +331,7 @@ describe("runThreadGenerate — token/deadline budget", () => {
   })
 
   it("parses the recovered threads normally once the real budget prevents truncation", async () => {
-    const threads = await runThreadGenerate(store, { input: "solana summit serbia", voice: {} as any, styleProfile: null, tone: "direct", length: "medium" })
+    const threads = await runThreadGenerate(store, { input: "solana summit serbia", voice: {} as any, styleProfile: null, tone: "direct", length: "medium", postCount: 2 })
     expect(threads).toHaveLength(2)
     expect(threads[0].angle).toBe("Personal anticipation")
   })
@@ -387,13 +387,13 @@ describe("runThreadGenerate — post count (Posts selector)", () => {
     expect(threads.every((t) => t.posts.length === 5)).toBe(true)
   })
 
-  it("2 selected: a model response that over-generates (e.g. 4 posts) is trimmed to exactly 2, never padded if it under-generates", async () => {
+  it("2 selected: a model response that over-generates (e.g. 4 posts) is rejected, never silently trimmed or accepted", async () => {
     mockRunAI.mockResolvedValue(threadsResponse(4))
     const threads = await runThreadGenerate(store, { ...baseArgs, postCount: 2 })
-    expect(threads.every((t) => t.posts.length === 2)).toBe(true)
+    expect(threads).toHaveLength(0)
   })
 
-  it("6+ selected: prompt asks for a 6-8 range, and an over-generating response is capped at 8, not forced to a fixed number", async () => {
+  it("6+ selected: prompt asks for a 6-8 range, and a response outside that range (too many or too few) is rejected", async () => {
     mockRunAI.mockResolvedValue(threadsResponse(10))
     const threads = await runThreadGenerate(store, { ...baseArgs, postCount: "6+" })
 
@@ -401,7 +401,7 @@ describe("runThreadGenerate — post count (Posts selector)", () => {
     const system = (messages as { role: string; content: string }[]).find((m) => m.role === "system")!.content
     expect(system).toContain("POST COUNT: choose a sensible number of posts between 6 and 8")
 
-    expect(threads.every((t) => t.posts.length <= 8)).toBe(true)
+    expect(threads).toHaveLength(0)
   })
 
   it("6+ selected: a response already within 6-8 is left alone (never trimmed below what the model chose)", async () => {

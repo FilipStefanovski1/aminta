@@ -474,16 +474,19 @@ export function parseThreadResponse(raw: string): ThreadOption[] {
     .filter((t): t is ThreadOption => t !== null)
 }
 
-// Deterministic safety net for the "generate exactly N" contract in
-// buildThreadMessages' POST COUNT rule — never pads a thread that came back
-// short (padding a weak idea is explicitly forbidden), only trims one that
-// came back long. A thread trimmed below 2 posts (shouldn't happen — the
-// smallest selectable count is 2) is dropped rather than kept malformed.
+// Enforces the "generate exactly N" contract in buildThreadMessages' POST
+// COUNT rule by REJECTING any option whose post count doesn't match the
+// request — never trims or pads one into shape. Silently coercing a 4-post
+// option down to 3 (or leaving a 2-post option as-is when 3 was requested)
+// would show the user something they didn't ask for, and trimming from the
+// end risks cutting the thread's actual payoff/conclusion post, which is a
+// quality regression, not a fix. Graceful degradation happens at the
+// options level instead: 3 options in, however many match the count come
+// back out (0-3) — the caller already treats an empty result as a
+// generation failure (see runThreadGenerate's doc comment).
 export function enforcePostCount(threads: ThreadOption[], postCount: ThreadPostCount): ThreadOption[] {
-  const max = postCount === "6+" ? 8 : postCount
-  return threads
-    .map((t) => (t.posts.length > max ? { ...t, posts: t.posts.slice(0, max) } : t))
-    .filter((t) => t.posts.length >= 2)
+  const [min, max] = postCount === "6+" ? [6, 8] : [postCount, postCount]
+  return threads.filter((t) => t.posts.length >= min && t.posts.length <= max)
 }
 
 export function buildMessages(

@@ -129,51 +129,48 @@ describe("same-topic, different-angle threads all survive validation", () => {
   })
 })
 
-// Deterministic safety net behind buildThreadMessages' POST COUNT prompt
-// instruction (see lib/prompts.ts) — never pads (padding a weak idea is
-// explicitly forbidden), only trims a response that came back longer than
-// requested.
+// Enforces buildThreadMessages' POST COUNT prompt instruction (see
+// lib/prompts.ts) by REJECTING any option whose count doesn't match —
+// never trims or pads a response into shape. Graceful degradation happens
+// by dropping bad options, not by silently coercing them.
 describe("enforcePostCount", () => {
   const make = (...postCounts: number[]) =>
     postCounts.map((n, i) => ({ angle: `Angle ${i + 1}`, posts: Array.from({ length: n }, (_, j) => `post ${j + 1}`) }))
 
-  it("2 selected: trims a 4-post option down to exactly 2", () => {
-    const result = enforcePostCount(make(4), 2)
+  it("2 selected: an already-2-post option is kept", () => {
+    const result = enforcePostCount(make(2), 2)
+    expect(result).toHaveLength(1)
     expect(result[0].posts).toHaveLength(2)
   })
 
-  it("3 selected: an already-3-post option is left untouched", () => {
-    const result = enforcePostCount(make(3), 3)
-    expect(result[0].posts).toHaveLength(3)
+  it("3 selected: a 4-post option is rejected, not trimmed down to 3", () => {
+    const result = enforcePostCount(make(4), 3)
+    expect(result).toHaveLength(0)
   })
 
-  it("5 selected: trims a 7-post option down to exactly 5", () => {
-    const result = enforcePostCount(make(7), 5)
-    expect(result[0].posts).toHaveLength(5)
-  })
-
-  it("never pads a 2-post option up to a higher requested count", () => {
+  it("5 selected: a 2-post option is rejected, never silently accepted as-is", () => {
     const result = enforcePostCount(make(2), 5)
-    expect(result[0].posts).toHaveLength(2)
+    expect(result).toHaveLength(0)
   })
 
-  it('"6+": caps an over-generating option at 8', () => {
-    const result = enforcePostCount(make(10), "6+")
-    expect(result[0].posts).toHaveLength(8)
+  it("wrong-sized options are rejected while valid siblings in the same batch survive", () => {
+    const result = enforcePostCount(make(3, 4, 3), 3)
+    expect(result).toHaveLength(2)
+    expect(result.every((t) => t.posts.length === 3)).toBe(true)
   })
 
-  it('"6+": leaves an option already within 6-8 alone', () => {
+  it('"6+": accepts anything within 6-8', () => {
     const result = enforcePostCount(make(6, 7, 8), "6+")
     expect(result.map((t) => t.posts.length)).toEqual([6, 7, 8])
   })
 
-  it("all options in the same batch are trimmed to the same requested count", () => {
-    const result = enforcePostCount(make(3, 4, 5), 3)
-    expect(result.map((t) => t.posts.length)).toEqual([3, 3, 3])
+  it('"6+": rejects below 6 and above 8', () => {
+    const result = enforcePostCount(make(5, 9, 10), "6+")
+    expect(result).toHaveLength(0)
   })
 
-  it("drops an option that would fall below 2 posts after trimming (shouldn't happen, but never keeps it malformed)", () => {
-    const result = enforcePostCount([{ angle: "Too short", posts: ["only one"] }], 2)
-    expect(result).toHaveLength(0)
+  it("all surviving options in the same batch match the exact requested count", () => {
+    const result = enforcePostCount(make(3, 4, 5), 3)
+    expect(result.map((t) => t.posts.length)).toEqual([3])
   })
 })
