@@ -833,6 +833,10 @@ function SidePanel() {
   const [store, setLocalStore]          = useState<AmintaStore | null>(null)
   const [tab, setTab]                   = useState<Tab>("home")
   const [tabKey, setTabKey]             = useState(0)
+  // Which Create mode to land on — set by Home's Quick Create buttons, reset
+  // for any other navigation (bottom nav, etc.) so GeneratorPanel's own
+  // default ("tweet") applies as before everywhere else.
+  const [createInitialMode, setCreateInitialMode] = useState<"tweet" | "reply" | "polish" | "thread" | undefined>(undefined)
   const [levelUpData, setLevelUpData]       = useState<LevelUpData | null>(null)
   const [newlyUnlockedLevel, setNewlyUnlockedLevel] = useState<number | null>(null)
   const newlyUnlockedTimer = useRef<ReturnType<typeof setTimeout>>()
@@ -1001,7 +1005,8 @@ function SidePanel() {
     await refresh()
   }
 
-  const switchTab = (next: Tab) => {
+  const switchTab = (next: Tab, createMode?: "tweet" | "reply" | "polish" | "thread") => {
+    setCreateInitialMode(createMode)
     setTab(next)
     setTabKey(k => k + 1)
     if (next === "home") {
@@ -1084,9 +1089,10 @@ function SidePanel() {
             {tab === "home" && (
               <HomeTab
                 store={store}
-                onCreate={() => switchTab("create")}
+                onCreate={(mode) => switchTab("create", mode)}
                 onOpenCompanion={() => setCompanionOpen(true)}
                 onOpenSettings={() => setSettingsOpen(true)}
+                onOpenTrain={() => switchTab("train")}
                 onUpdate={refresh}
                 animClass={animClass}
                 animKey={animKey}
@@ -1103,6 +1109,7 @@ function SidePanel() {
                 onContext={dispatch}
                 onTemplatesChanged={refresh}
                 publishCooldownUntil={publishCooldownUntil}
+                initialMode={createInitialMode}
               />
             )}
 

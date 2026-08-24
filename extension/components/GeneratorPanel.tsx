@@ -221,6 +221,8 @@ interface Props {
   onTemplatesChanged?: () => void
   /** Anti-spam: ms-epoch when Aminta will allow another post/reply insert. */
   publishCooldownUntil?: number | null
+  /** Which mode tab to open on. Set by Home's Quick Create; defaults to "tweet" for normal nav. */
+  initialMode?: UiMode
 }
 
 // Resize image to max 1024px on longest side and return as JPEG data URL
@@ -246,8 +248,8 @@ async function resizeImage(file: File): Promise<string> {
   })
 }
 
-export default function GeneratorPanel({ store, onTeach, onOpenSettings, onContext, onTemplatesChanged, publishCooldownUntil }: Props) {
-  const [mode,     setMode]     = useState<UiMode>("tweet")
+export default function GeneratorPanel({ store, onTeach, onOpenSettings, onContext, onTemplatesChanged, publishCooldownUntil, initialMode }: Props) {
+  const [mode,     setMode]     = useState<UiMode>(initialMode ?? "tweet")
   const [threadOptions, setThreadOptions] = useState<ThreadOption[] | null>(null)
   const [threadError,   setThreadError]   = useState("")
   const [tone,     setTone]     = useState<Tone>("direct")

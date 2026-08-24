@@ -25,3 +25,10 @@ export function loginUrl(extId: string): string {
 // needs to send a user toward buying or managing a plan should link here
 // instead of hardcoding the URL or building a second checkout path.
 export const PRICING_URL = "https://www.amintaapp.com/#pricing"
+
+// SOURCE OF TRUTH: landing/components/DashboardClient.tsx's
+// DISCORD_INVITE_URL. Landing gates this behind extension_connected_at —
+// meaningless from inside the extension itself, since anyone seeing this
+// link has, by definition, already activated it. Shown unconditionally
+// here rather than reimplementing that gate.
+export const DISCORD_INVITE_URL = "https://discord.gg/J7EbxJDwwe"

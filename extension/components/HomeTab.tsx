@@ -10,19 +10,22 @@ import {
   getXpInLevel,
   getXpProgress,
 } from "~lib/evolution"
-import { hasProAccess, planLabel as computePlanLabel } from "~lib/entitlements"
+import { hasProAccess, planLabel as computePlanLabel, shouldUseIncludedAi } from "~lib/entitlements"
 import { getMissionProgress, tryCompleteDailyMissions } from "~lib/missions"
 import type { AmintaStore } from "~lib/storage"
 import { C } from "~lib/theme"
+import { DISCORD_INVITE_URL } from "~lib/webUrl"
 import { openXComposer } from "~lib/xTab"
 import { Card, Sprite, SpeechBubble, XPBar } from "~components/ui"
 
+type QuickCreateMode = "tweet" | "reply" | "polish" | "thread"
 
 interface Props {
   store: AmintaStore
-  onCreate: () => void
+  onCreate: (mode?: QuickCreateMode) => void
   onOpenCompanion?: () => void
   onOpenSettings?: () => void
+  onOpenTrain?: () => void
   onUpdate?: () => void
   // From the Companion Engine via sidepanel
   animClass: string
@@ -31,7 +34,42 @@ interface Props {
   onContext?: (event: CompanionEvent) => void
 }
 
-export default function HomeTab({ store, onCreate, onOpenCompanion, onOpenSettings, onUpdate, animClass, animKey, speech, onContext }: Props) {
+const QUICK_CREATE_MODES: { id: QuickCreateMode; label: string }[] = [
+  { id: "tweet",  label: "Write a post" },
+  { id: "reply",  label: "Reply" },
+  { id: "polish", label: "Polish" },
+  { id: "thread", label: "Thread" },
+]
+
+// voice.examples round-trips as a JSON-stringified string[] (see
+// VoiceProfileForm.tsx's save()) — same parsing rule reused read-only here,
+// never re-implemented or re-derived.
+export function countExamples(raw: string | undefined): number {
+  if (!raw) return 0
+  if (raw.trim().startsWith("[")) {
+    try { return (JSON.parse(raw) as string[]).length } catch { /* fall through */ }
+  }
+  return raw.split("\n").map((s) => s.trim()).filter(Boolean).length
+}
+
+export function countInstincts(raw: string | undefined): number {
+  return (raw ?? "").split("\n").map((s) => s.trim()).filter(Boolean).length
+}
+
+// Reads the SAME deterministic confidenceScore generation already uses
+// (lib/styleProfile.ts's computeConfidenceScore — corpus-size staircase,
+// never self-reported by a model) — no new metric invented for Home, and no
+// extraction triggered here; this only reads whatever's already cached.
+export function voiceStatus(store: AmintaStore, hasExamples: boolean): "Learning" | "Ready" | "Strong" | null {
+  const hasAnyTraining = hasExamples || !!store.voice?.voiceStyle || !!store.styleProfile
+  if (!hasAnyTraining) return null
+  const score = store.styleProfile?.confidenceScore ?? 0
+  if (score >= 0.85) return "Strong"
+  if (score >= 0.6) return "Ready"
+  return "Learning"
+}
+
+export default function HomeTab({ store, onCreate, onOpenCompanion, onOpenSettings, onOpenTrain, onUpdate, animClass, animKey, speech, onContext }: Props) {
   const xp          = store.xp ?? 0
   const currentForm = getForm(xp)
   const level       = getLevel(xp)
@@ -102,6 +140,16 @@ export default function HomeTab({ store, onCreate, onOpenCompanion, onOpenSettin
   useEffect(() => () => clearTimeout(toastTimer.current), [])
 
   const planLabel = computePlanLabel({ plan: store.plan, subscriptionStatus: store.subscriptionStatus })
+
+  // ── Voice progress — real data only, read-only (no extraction triggered here) ──
+  const examplesCount  = countExamples(store.voice?.examples)
+  const instinctsCount = countInstincts(store.voice?.customRules)
+  const voice           = voiceStatus(store, examplesCount > 0)
+
+  // ── Credits — only meaningful for accounts actually spending them. A BYOK
+  // user's own provider usage isn't tracked here at all, so showing this
+  // balance to them would misrepresent what they're actually consuming.
+  const showCredits = shouldUseIncludedAi(store) && store.creditsAllowance > 0
 
   return (
     <div className="space-y-4 pb-6">
@@ -213,7 +261,7 @@ export default function HomeTab({ store, onCreate, onOpenCompanion, onOpenSettin
           {tasks.map((t, i) => (
             <button
               key={t.label}
-              onClick={t.action}
+              onClick={() => t.action()}
               className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left transition-colors hover:bg-white/[0.02]"
               style={{ borderTop: i > 0 ? `1px solid ${C.borderSoft}` : undefined }}>
               <div className="w-3.5 h-3.5 rounded-md border flex items-center justify-center shrink-0"
@@ -248,6 +296,77 @@ export default function HomeTab({ store, onCreate, onOpenCompanion, onOpenSettin
             <p className="text-[10px] mt-1.5 uppercase tracking-[0.06em]" style={{ color: "#8a8a96" }}>{label}</p>
           </div>
         ))}
+      </div>
+
+      {/* ── QUICK CREATE — launches the existing Create tab in the requested
+          mode; no generation logic lives here. ── */}
+      <Card pad={false} className="overflow-hidden animate-card-in" style={{ animationDelay: "90ms" }}>
+        <div className="px-4 py-2.5" style={{ borderBottom: `1px solid ${C.border}` }}>
+          <p className="font-pixel text-[7px]" style={{ color: C.text }}>Quick create</p>
+        </div>
+        <div className="grid grid-cols-2 gap-2 p-3">
+          {QUICK_CREATE_MODES.map((m) => (
+            <button
+              key={m.id}
+              onClick={() => onCreate(m.id)}
+              className="rounded-xl py-3 text-[12px] font-medium transition-colors hover:bg-white/[0.03]"
+              style={{ border: `1px solid ${C.border}`, color: C.text, backgroundColor: C.cardInner }}>
+              {m.label}
+            </button>
+          ))}
+        </div>
+      </Card>
+
+      {/* ── ACCOUNT STATUS — only genuinely real, current data. ── */}
+      {showCredits && (
+        <div className="flex items-center justify-between px-4 py-2.5 rounded-xl animate-card-in" style={{ animationDelay: "110ms", backgroundColor: C.card, border: `1px solid ${C.border}` }}>
+          <span className="text-[11px]" style={{ color: C.textFaint }}>Credits today</span>
+          <span className="font-pixel text-[8px]" style={{ color: tint }}>
+            {store.creditsBalance} / {store.creditsAllowance}
+          </span>
+        </div>
+      )}
+
+      {/* ── YOUR VOICE — entry point into Train, no duplicated controls. ── */}
+      <Card pad={false} className="overflow-hidden animate-card-in" style={{ animationDelay: "130ms" }}>
+        <div className="px-4 py-2.5" style={{ borderBottom: `1px solid ${C.border}` }}>
+          <p className="font-pixel text-[7px]" style={{ color: C.text }}>Your voice</p>
+        </div>
+        <div className="px-4 py-3">
+          <p className="text-[12px]" style={{ color: C.text }}>
+            {voice ?? "Not started"}
+            {(examplesCount > 0 || instinctsCount > 0) && (
+              <span style={{ color: C.textFaint }}>
+                {" · "}
+                {examplesCount > 0 && `${examplesCount} example${examplesCount === 1 ? "" : "s"}`}
+                {examplesCount > 0 && instinctsCount > 0 && ", "}
+                {instinctsCount > 0 && `${instinctsCount} instinct${instinctsCount === 1 ? "" : "s"}`}
+              </span>
+            )}
+          </p>
+          <button
+            onClick={onOpenTrain}
+            className="text-[11px] mt-2"
+            style={{ color: tint }}>
+            Improve voice →
+          </button>
+        </div>
+      </Card>
+
+      {/* ── COMMUNITY ── */}
+      <div className="rounded-xl p-3 animate-card-in" style={{ animationDelay: "150ms", backgroundColor: C.card, border: `1px solid ${C.border}` }}>
+        <p className="font-pixel text-[7px] mb-1.5" style={{ color: C.text }}>Aminta community</p>
+        <p className="text-[11px] leading-relaxed mb-2.5" style={{ color: C.textFaint }}>
+          Share your posts, get feedback, and meet other people building on X.
+        </p>
+        <a
+          href={DISCORD_INVITE_URL}
+          target="_blank"
+          rel="noreferrer"
+          className="text-[11px]"
+          style={{ color: tint }}>
+          Join Discord →
+        </a>
       </div>
 
     </div>
