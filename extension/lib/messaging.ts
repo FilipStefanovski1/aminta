@@ -10,6 +10,10 @@ export interface BridgeResponse {
   // populated by GET_ACTIVE_TWEET — undefined for other message types.
   imageUrls?: string[]
   error?: string
+  // One short, human-facing phrase explaining why this candidate was
+  // picked (e.g. "Matches your AI topic") — only populated by
+  // FIND_NEXT_REPLY_TARGET. Never a raw score.
+  reason?: string
 }
 
 async function getActiveTab(): Promise<chrome.tabs.Tab | null> {

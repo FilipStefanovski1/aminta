@@ -139,6 +139,24 @@ function imagesForArticle(article: HTMLElement | null): string[] {
   return processTweetImageUrls(srcs)
 }
 
+// X's reply/repost/like/view action bar renders as one `role="group"` with
+// an aria-label like "12 replies, 3 reposts, 456 likes, 7,890 views" (exact
+// counts, for accessibility — the visible spans are abbreviated, "1.2K",
+// which is why this reads the label instead). Best-effort only: a ranking
+// signal, never required — undefined (not 0) when unparseable, so a post
+// with genuinely no engagement data never looks artificially unpopular.
+function engagementForArticle(article: HTMLElement): { likeCount?: number; replyCount?: number } {
+  const label = article.querySelector('[role="group"][aria-label]')?.getAttribute("aria-label") ?? ""
+  const parse = (re: RegExp) => {
+    const m = label.match(re)
+    return m ? parseInt(m[1].replace(/,/g, ""), 10) : undefined
+  }
+  return {
+    replyCount: parse(/([\d,]+)\s*repl/i),
+    likeCount: parse(/([\d,]+)\s*like/i),
+  }
+}
+
 // DOM scraping only — ad filtering and data extraction. The actual
 // eligibility/ordering decision lives in lib/replyTargets.ts (pure, unit
 // tested) so it isn't duplicated or left untestable here.
@@ -150,7 +168,8 @@ function collectReplyCandidates(): DomReplyCandidate[] {
     if (!permalink) continue
     const text = article.querySelector<HTMLElement>('[data-testid="tweetText"]')?.innerText.trim() ?? ""
     const images = imagesForArticle(article)
-    out.push({ article, id: permalink.id, author: permalink.author, text, hasImages: images.length > 0, images })
+    const engagement = engagementForArticle(article)
+    out.push({ article, id: permalink.id, author: permalink.author, text, hasImages: images.length > 0, images, ...engagement })
   }
   return out
 }
@@ -171,10 +190,21 @@ function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
-async function findNextReplyTarget(): Promise<{ text: string; imageUrls: string[] } | { error: string }> {
+// Topics come straight from the user's existing Aminta DNA (Train's Topics
+// field) — no separate scoring config, and nothing new for the user to set
+// up. Absent entirely when there are no topics yet; rankReplyTargets()
+// already degrades cleanly to conversation-potential/engagement/position
+// alone in that case.
+async function getUserTopics(): Promise<string[]> {
+  const store = await getStore()
+  return (store.voice?.niche ?? "").split(",").map((t) => t.trim()).filter(Boolean)
+}
+
+async function findNextReplyTarget(): Promise<{ text: string; imageUrls: string[]; reason: string } | { error: string }> {
   const ownHandle = getOwnHandle()
+  const topics = await getUserTopics()
   let candidates = collectReplyCandidates()
-  let pick = pickNextReplyTarget(candidates, ownHandle, seenReplyTargetIds)
+  let pick = pickNextReplyTarget(candidates, ownHandle, seenReplyTargetIds, topics)
 
   if (!pick) {
     // Nothing eligible currently loaded — scroll further and give X's
@@ -182,18 +212,18 @@ async function findNextReplyTarget(): Promise<{ text: string; imageUrls: string[
     window.scrollBy({ top: window.innerHeight * 1.4, behavior: "smooth" })
     await sleep(1200)
     candidates = collectReplyCandidates()
-    pick = pickNextReplyTarget(candidates, ownHandle, seenReplyTargetIds)
+    pick = pickNextReplyTarget(candidates, ownHandle, seenReplyTargetIds, topics)
   }
 
   if (!pick) {
     return { error: "No good reply opportunities found yet. Scroll a little further and try again." }
   }
 
-  seenReplyTargetIds.add(pick.id)
-  const domPick = candidates.find(c => c.id === pick!.id)!
+  seenReplyTargetIds.add(pick.post.id)
+  const domPick = candidates.find(c => c.id === pick!.post.id)!
   domPick.article.scrollIntoView({ behavior: "smooth", block: "center" })
   highlightArticle(domPick.article)
-  return { text: domPick.text, imageUrls: domPick.images }
+  return { text: domPick.text, imageUrls: domPick.images, reason: pick.reason }
 }
 
 // ─── Composer open/focus (shared by "Create with Aminta" etc.) ─────────────
@@ -719,7 +749,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     findNextReplyTarget().then((res) => {
       sendResponse("error" in res
         ? { ok: false, error: res.error }
-        : { ok: true, text: res.text, imageUrls: res.imageUrls }
+        : { ok: true, text: res.text, imageUrls: res.imageUrls, reason: res.reason }
       )
     })
     return true

@@ -276,6 +276,11 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
   const [postImageUrls, setPostImageUrls]   = useState<string[]>([])
   const [analyzingImage, setAnalyzingImage] = useState(false)
   const [jumping, setJumping] = useState(false)
+  // Only ever set by "Find a post worth replying to" — one short, plain-
+  // language reason the ranked candidate was chosen (see lib/replyTargets.ts).
+  // Cleared whenever the topic is filled some other way, so it never sticks
+  // around describing a post that's no longer what's in the box.
+  const [replyReason, setReplyReason] = useState("")
 
   const [templatesOpen, setTemplatesOpen] = useState(false)
   const [templatesPrefill, setTemplatesPrefill] = useState<{ content: string; mode: TemplateMode } | undefined>(undefined)
@@ -387,6 +392,7 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
 
   const pull = async () => {
     setError("")
+    setReplyReason("")
     const res = await readActivePost(PLATFORM)
     if (res.ok) {
       if (res.text) setTopic(res.text)
@@ -396,10 +402,11 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
     }
   }
 
-  // "Post worth a reply" is a product concept — this finds a genuine reply
-  // opportunity, not just the next post in the timeline. v1 is deterministic
-  // (see lib/replyTargets.ts); this call site doesn't change when
-  // opportunity scoring gets smarter later.
+  // "Post worth a reply" is a product concept — this ranks currently-loaded
+  // timeline posts (relevance to the user's Topics, conversation potential,
+  // a small engagement signal) and picks the best one, not just the next
+  // post in the timeline. Entirely local/deterministic — no model call, so
+  // this never costs a generation credit (see lib/replyTargets.ts).
   const jumpToNextReplyTarget = async () => {
     setError("")
     setJumping(true)
@@ -408,7 +415,9 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
       if (res.ok) {
         if (res.text) setTopic(res.text)
         setPostImageUrls(res.imageUrls ?? [])
+        setReplyReason(res.reason ?? "")
       } else {
+        setReplyReason("")
         setError(res.error ?? "Couldn't find a reply opportunity.")
       }
     } finally {
@@ -590,7 +599,7 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
           return (
             <button
               key={m.id}
-              onClick={() => { if (mode !== m.id) { setMode(m.id); reset(); setPostImageUrls([]) } }}
+              onClick={() => { if (mode !== m.id) { setMode(m.id); reset(); setPostImageUrls([]); setReplyReason("") } }}
               title={m.label}
               className="flex items-center justify-center rounded-full transition-all"
               style={{
@@ -699,6 +708,11 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
         {mode === "reply" && postImageUrls.length > 0 && (
           <p className="text-[10px] animate-fade-in" style={{ color: tint }}>
             {postImageUrls.length} image{postImageUrls.length > 1 ? "s" : ""} found on this post — Aminta will look at {postImageUrls.length > 1 ? "them" : "it"} too.
+          </p>
+        )}
+        {mode === "reply" && replyReason && (
+          <p className="text-[10px] animate-fade-in" style={{ color: tint }}>
+            {replyReason}
           </p>
         )}
       </div>
