@@ -71,6 +71,21 @@ describe("buildThreadMessages: length now reaches thread generation", () => {
   it("requires narrative progression, not fragment padding", () => {
     const system = buildThreadMessages(VOICE, "solana summit serbia", null)
       .find((m) => m.role === "system")!.content as string
-    expect(system).toContain("every consecutive post must add something NEW")
+    expect(system).toContain("ONE coherent idea developing across the posts, not a single point chopped into fragments")
+  })
+
+  it("requires middle posts to each add something new, never restate the hook or an earlier point", () => {
+    const system = buildThreadMessages(VOICE, "solana summit serbia", null)
+      .find((m) => m.role === "system")!.content as string
+    expect(system).toContain("MIDDLE POSTS")
+    expect(system).toContain("each one must advance the idea with something genuinely new")
+    expect(system).toContain("Never restate or rephrase the hook")
+  })
+
+  it("treats the final post as the payoff/conclusion, not forced or generic", () => {
+    const system = buildThreadMessages(VOICE, "solana summit serbia", null)
+      .find((m) => m.role === "system")!.content as string
+    expect(system).toContain("FINAL POST (the payoff)")
+    expect(system).toContain("feel like a deliberate, earned ending")
   })
 })

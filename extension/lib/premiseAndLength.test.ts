@@ -100,7 +100,24 @@ describe("thread prompt requires substantive progression, not fragment padding",
     it("requires narrative progression across posts (hook -> why it matters -> perspective -> payoff)", () => {
       expect(system).toContain("THREAD SHAPE")
       expect(system).toContain("hook/observation, then why it matters, then a perspective")
-      expect(system).toContain("every consecutive post must add something NEW")
+      expect(system).toContain("ONE coherent idea developing across the posts, not a single point chopped into fragments")
+    })
+
+    it("requires middle posts to each add something new, never restate the hook or an earlier point", () => {
+      expect(system).toContain("MIDDLE POSTS")
+      expect(system).toContain("each one must advance the idea with something genuinely new")
+      expect(system).toContain("Never restate or rephrase the hook")
+      expect(system).toContain("Never repeat an earlier post's point to pad length or hit the count")
+    })
+
+    it("treats the final post as the payoff/conclusion, not forced or generic", () => {
+      expect(system).toContain("FINAL POST (the payoff)")
+      expect(system).toContain("feel like a deliberate, earned ending")
+      expect(system).toContain("do not default to bait like \"Agree?\" or \"Thoughts?\"")
+    })
+
+    it("forbids manual post numbering and generic AI transition glue", () => {
+      expect(system).toContain("Never number the posts yourself (no \"1/5\", \"2/5\", etc.)")
     })
 
     it("requires substantive Medium depth, not a bare slogan default", () => {
