@@ -11,6 +11,7 @@ import { parseCustomRules } from "~lib/instinctPresets"
 import { findNextReplyTarget, readActivePost } from "~lib/messaging"
 import { incrementMissionGenerates } from "~lib/missions"
 import type { Mode, OutputLength, Platform, ThreadOption, ThreadPostCount, Tone } from "~lib/prompts"
+import { saveRecentCreation } from "~lib/recentCreations"
 import { generateReply } from "~lib/replyGeneration"
 import { getOrBuildStyleProfile } from "~lib/styleProfile"
 import type { AmintaStore, TemplateMode } from "~lib/storage"
@@ -224,6 +225,8 @@ interface Props {
   publishCooldownUntil?: number | null
   /** Which mode tab to open on. Set by Home's Quick Create; defaults to "tweet" for normal nav. */
   initialMode?: UiMode
+  /** Reuse from Recent Creations: prefills the topic field with the saved output text. Thread reuse only switches mode (see Home's Recent Creations — the original input topic was never saved, only the output). */
+  initialTopic?: string
 }
 
 // Resize image to max 1024px on longest side and return as JPEG data URL
@@ -249,7 +252,7 @@ async function resizeImage(file: File): Promise<string> {
   })
 }
 
-export default function GeneratorPanel({ store, onTeach, onOpenSettings, onContext, onTemplatesChanged, publishCooldownUntil, initialMode }: Props) {
+export default function GeneratorPanel({ store, onTeach, onOpenSettings, onContext, onTemplatesChanged, publishCooldownUntil, initialMode, initialTopic }: Props) {
   const [mode,     setMode]     = useState<UiMode>(initialMode ?? "tweet")
   const [threadOptions, setThreadOptions] = useState<ThreadOption[] | null>(null)
   const [threadError,   setThreadError]   = useState("")
@@ -260,7 +263,7 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
   // per-session default), so 4 is simply the initial value.
   const [postCount, setPostCount] = useState<ThreadPostCount>(4)
   const [hoveredTone, setHoveredTone] = useState<Tone | null>(null)
-  const [topic,    setTopic]    = useState("")
+  const [topic,    setTopic]    = useState(initialTopic ?? "")
   const [context,  setContext]  = useState("")
   const [output,   setOutput]   = useState("")
   const [loading,  setLoading]  = useState(false)
@@ -497,6 +500,11 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
           setThreadError("Couldn't generate a thread right now. Try again in a moment.")
         } else {
           setThreadOptions(threads)
+          // Recent Creations remembers the first (default-selected) option —
+          // the one ThreadResults shows selected by default. One generation
+          // event, one history entry; picking a different tab in
+          // ThreadResults or editing a post there doesn't create another.
+          await saveRecentCreation({ type: "thread", posts: threads[0].posts })
         }
         await incrementGenerations()
         await incrementMissionGenerates()
@@ -544,6 +552,7 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
         setOutput(result.text)
         setOutputImage(null)
         setGenKey(k => k + 1)
+        await saveRecentCreation({ type: "reply", text: result.text })
         await incrementGenerations()
         await incrementMissionGenerates()
         onContext?.("generate_end")
@@ -567,6 +576,7 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
       setOutput(text)
       setOutputImage(imageDataUrl)
       setGenKey(k => k + 1)
+      await saveRecentCreation({ type: mode, text })
       await incrementGenerations()
       await incrementMissionGenerates()
       onContext?.("generate_end")

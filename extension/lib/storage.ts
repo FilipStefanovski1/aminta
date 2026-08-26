@@ -112,6 +112,23 @@ export interface AmintaTemplate {
   updatedAt: number
 }
 
+// ─── Recent Creations ───────────────────────────────────────────────────
+// A lightweight local memory of recent successful generations, surfaced on
+// Home so a user doesn't lose a draft after navigating away. Deliberately
+// NOT a history/analytics product — capped at MAX_RECENT_CREATIONS (see
+// lib/recentCreations.ts), local-only, no server round-trip.
+export type RecentCreationType = "tweet" | "reply" | "polish" | "thread"
+
+export interface RecentCreation {
+  id: string
+  type: RecentCreationType
+  /** Full text for tweet/reply/polish. Absent for thread (see `posts`). */
+  text?: string
+  /** Ordered posts for a thread. Absent for tweet/reply/polish. */
+  posts?: string[]
+  createdAt: number
+}
+
 export type Plan = "free" | "pro" | "lifetime"
 
 // A generate-and-insert that hasn't been confirmed as a real X post yet.
@@ -216,6 +233,8 @@ export interface AmintaStore {
   lastVoiceRefreshAt: string
 
   pendingXP: PendingXPRecord[]
+
+  recentCreations: RecentCreation[]
 }
 
 export const DEFAULT_MODEL = "google/gemini-flash-1.5"
@@ -263,6 +282,7 @@ const DEFAULTS: AmintaStore = {
   voiceRefreshNextEligibleAt: "",
   lastVoiceRefreshAt: "",
   pendingXP: [],
+  recentCreations: [],
 }
 
 export async function getStore(): Promise<AmintaStore> {

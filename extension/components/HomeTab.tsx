@@ -13,17 +13,20 @@ import {
 import { CREDIT_RESET_LABEL, hasProAccess, planLabel as computePlanLabel, shouldUseIncludedAi } from "~lib/entitlements"
 import { parseCustomRules } from "~lib/instinctPresets"
 import { getMissionProgress, tryCompleteDailyMissions } from "~lib/missions"
-import type { AmintaStore } from "~lib/storage"
+import type { AmintaStore, RecentCreation } from "~lib/storage"
 import { C } from "~lib/theme"
 import { DISCORD_INVITE_URL } from "~lib/webUrl"
 import { openXComposer } from "~lib/xTab"
 import { Card, Sprite, SpeechBubble, XPBar } from "~components/ui"
+import RecentCreations from "~components/RecentCreations"
 
 type QuickCreateMode = "tweet" | "reply" | "polish" | "thread"
 
 interface Props {
   store: AmintaStore
   onCreate: (mode?: QuickCreateMode) => void
+  /** Reuse from Recent Creations: opens Create in the matching mode, prefilled where the architecture cleanly supports it. */
+  onReuse: (c: RecentCreation) => void
   onOpenCompanion?: () => void
   onOpenSettings?: () => void
   onOpenTrain?: () => void
@@ -70,7 +73,7 @@ export function voiceStatus(store: AmintaStore, hasExamples: boolean): "Learning
   return "Learning"
 }
 
-export default function HomeTab({ store, onCreate, onOpenCompanion, onOpenSettings, onOpenTrain, onUpdate, animClass, animKey, speech, onContext }: Props) {
+export default function HomeTab({ store, onCreate, onReuse, onOpenCompanion, onOpenSettings, onOpenTrain, onUpdate, animClass, animKey, speech, onContext }: Props) {
   const xp          = store.xp ?? 0
   const currentForm = getForm(xp)
   const level       = getLevel(xp)
@@ -358,6 +361,14 @@ export default function HomeTab({ store, onCreate, onOpenCompanion, onOpenSettin
           </button>
         </div>
       </Card>
+
+      {/* ── RECENT CREATIONS ── */}
+      <RecentCreations
+        creations={store.recentCreations ?? []}
+        tint={tint}
+        onReuse={onReuse}
+        onUpdate={() => onUpdate?.()}
+      />
 
       {/* ── COMMUNITY ── */}
       <div className="rounded-xl p-3 animate-card-in" style={{ animationDelay: "150ms", backgroundColor: C.card, border: `1px solid ${C.border}` }}>

@@ -18,7 +18,7 @@ import { CREDIT_RESET_LABEL, canUseByok, planLabel as computePlanLabel, provider
 import { isGoogleKey, isGroqKey, GEMINI_DEFAULT, GROQ_DEFAULT, SUPPORTED_GEMINI_MODELS, SUPPORTED_GROQ_MODELS } from "~lib/ai"
 import { PROVIDERS, detectProvider } from "~lib/providers"
 import { C } from "~lib/theme"
-import { getStore, setStore, type AmintaStore } from "~lib/storage"
+import { getStore, setStore, type AmintaStore, type RecentCreation } from "~lib/storage"
 import { getAuthSession, clearAuthSession, signOutEverywhere, type AuthSession } from "~lib/auth"
 import { pullFromCloud, pushToCloud } from "~lib/sync"
 import { handleAuthUserChanged } from "~lib/accountScope"
@@ -832,6 +832,12 @@ function SidePanel() {
   // for any other navigation (bottom nav, etc.) so GeneratorPanel's own
   // default ("tweet") applies as before everywhere else.
   const [createInitialMode, setCreateInitialMode] = useState<"tweet" | "reply" | "polish" | "thread" | undefined>(undefined)
+  // Recent Creations "Reuse" — populates Create's topic field with the saved
+  // output text. Only the output was ever saved (not the original input
+  // topic), so this is the nearest truthful restore, not a full draft
+  // replay. Thread reuse just switches to Thread Creator (no text prefill —
+  // the topic field there seeds a NEW thread, not an edit of the old one).
+  const [createInitialTopic, setCreateInitialTopic] = useState<string | undefined>(undefined)
   const [levelUpData, setLevelUpData]       = useState<LevelUpData | null>(null)
   const [newlyUnlockedLevel, setNewlyUnlockedLevel] = useState<number | null>(null)
   const newlyUnlockedTimer = useRef<ReturnType<typeof setTimeout>>()
@@ -1002,12 +1008,20 @@ function SidePanel() {
 
   const switchTab = (next: Tab, createMode?: "tweet" | "reply" | "polish" | "thread") => {
     setCreateInitialMode(createMode)
+    if (next !== "create") setCreateInitialTopic(undefined)
     setTab(next)
     setTabKey(k => k + 1)
     if (next === "home") {
       refresh()
       dispatch("open")
     }
+  }
+
+  // Recent Creations reuse: take the saved output back into the matching
+  // Create mode. Never triggers generation — purely a text prefill.
+  const handleReuse = (c: RecentCreation) => {
+    setCreateInitialTopic(c.type === "thread" ? undefined : c.text)
+    switchTab("create", c.type)
   }
 
   if (!authChecked || !store) {
@@ -1085,6 +1099,7 @@ function SidePanel() {
               <HomeTab
                 store={store}
                 onCreate={(mode) => switchTab("create", mode)}
+                onReuse={handleReuse}
                 onOpenCompanion={() => setCompanionOpen(true)}
                 onOpenSettings={() => setSettingsOpen(true)}
                 onOpenTrain={() => switchTab("train")}
@@ -1105,6 +1120,7 @@ function SidePanel() {
                 onTemplatesChanged={refresh}
                 publishCooldownUntil={publishCooldownUntil}
                 initialMode={createInitialMode}
+                initialTopic={createInitialTopic}
               />
             )}
 
