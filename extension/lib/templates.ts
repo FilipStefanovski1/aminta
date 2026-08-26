@@ -10,7 +10,51 @@
 import type { ChatMessage } from "~lib/ai"
 import { buildMessages, type Mode, type OutputLength, type Platform, type Tone } from "~lib/prompts"
 import { getStore, setStore } from "~lib/storage"
-import type { AmintaTemplate, StyleProfile, TemplateMode, TemplateVariable, VoiceProfile } from "~lib/storage"
+import type { AmintaTemplate, StyleProfile, TemplateCategory, TemplateMode, TemplateVariable, VoiceProfile } from "~lib/storage"
+
+// ── Categories ──────────────────────────────────────────────────────────
+// Deliberately small and curated — do not add more without a real product
+// reason. "other" is also the safe default for pre-existing templates that
+// predate this field (see normalizeTemplate).
+
+export const TEMPLATE_CATEGORIES: { id: TemplateCategory; label: string }[] = [
+  { id: "build_in_public", label: "Build in Public" },
+  { id: "launch",          label: "Launch" },
+  { id: "opinion",         label: "Opinion" },
+  { id: "story",           label: "Story" },
+  { id: "educational",     label: "Educational" },
+  { id: "product",         label: "Product" },
+  { id: "other",           label: "Other" },
+]
+
+const VALID_CATEGORIES = new Set(TEMPLATE_CATEGORIES.map((c) => c.id))
+
+// Templates saved before `category` existed have it as `undefined` at
+// runtime (chrome.storage merge is shallow — DEFAULTS doesn't reach inside
+// array items). Every read site should go through this rather than trusting
+// the field raw.
+export function normalizeTemplate(t: AmintaTemplate): AmintaTemplate {
+  return { ...t, category: t.category && VALID_CATEGORIES.has(t.category) ? t.category : "other" }
+}
+
+export function filterByCategory(templates: AmintaTemplate[], category: TemplateCategory | "all"): AmintaTemplate[] {
+  if (category === "all") return templates
+  return templates.filter((t) => normalizeTemplate(t).category === category)
+}
+
+export function isThreadTemplate(t: AmintaTemplate): boolean {
+  return !!t.threadPosts?.length
+}
+
+// The instruction handed to buildThreadMessages as structural guidance — a
+// plain, model-facing listing (NOT the user-facing "no artificial
+// numbering" copy convention from Recent Creations; this is internal prompt
+// text, never shown to the user). Aminta writes fresh wording in this
+// shape, never reuses these old posts verbatim (see the TEMPLATE STRUCTURE
+// framing in lib/prompts.ts's templateBlock).
+export function buildThreadTemplateInstruction(posts: string[]): string {
+  return posts.map((p, i) => `Post ${i + 1}: ${p}`).join("\n")
+}
 
 // ── CRUD ────────────────────────────────────────────────────────────────
 
@@ -22,6 +66,8 @@ export interface CreateTemplateInput {
   variables?: TemplateVariable[]
   favorite?: boolean
   tags?: string[]
+  category?: TemplateCategory
+  threadPosts?: string[]
 }
 
 export async function createTemplate(input: CreateTemplateInput): Promise<AmintaTemplate> {
@@ -34,6 +80,8 @@ export async function createTemplate(input: CreateTemplateInput): Promise<Aminta
     platform: "x",
     content: input.content,
     variables: input.variables ?? [],
+    category: input.category ?? "other",
+    threadPosts: input.threadPosts,
     favorite: input.favorite ?? false,
     tags: input.tags ?? [],
     usageCount: 0,

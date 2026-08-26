@@ -257,3 +257,53 @@ describe("sparse topics beyond the regression fixture — all get real premise d
     expect(system).toContain("Do NOT invent statistics, event details not provided, speaker names, dates, attendance numbers, announcements")
   })
 })
+
+// Templates v2: thread templates feed buildThreadMessages as structural
+// guidance only — current Voice/Instincts must still fully govern the
+// output, and the user's own postCount selection must always win over
+// however many posts the template itself shows.
+describe("buildThreadMessages + templateInstruction (thread templates)", () => {
+  const TEMPLATE_INSTRUCTION = "Post 1: spent the last [TIME] building [THING].\nPost 2: today [MILESTONE].\nPost 3: still [REALITY].\nPost 4: but [PAYOFF]."
+  const VOICE_WITH_RULES = { ...VOICE, customRules: "no hashtags\nuse lowercase only" }
+
+  it("includes the template structure as guidance, distinct from the topic/input", () => {
+    const messages = buildThreadMessages(VOICE, "launching my dashboard", null, "direct", "medium", 4, TEMPLATE_INSTRUCTION)
+    const system = messages.find((m) => m.role === "system")!.content as string
+    expect(system).toContain("TEMPLATE STRUCTURE")
+    expect(system).toContain(TEMPLATE_INSTRUCTION)
+  })
+
+  it("still receives current Voice (niche/tone/writing style block) alongside the template", () => {
+    const messages = buildThreadMessages(VOICE, "launching my dashboard", null, "direct", "medium", 4, TEMPLATE_INSTRUCTION)
+    const system = messages.find((m) => m.role === "system")!.content as string
+    expect(system).toContain(`NICHE: ${VOICE.niche}`)
+  })
+
+  it("still receives current Instincts (CUSTOM RULES) alongside the template", () => {
+    const messages = buildThreadMessages(VOICE_WITH_RULES, "launching my dashboard", null, "direct", "medium", 4, TEMPLATE_INSTRUCTION)
+    const system = messages.find((m) => m.role === "system")!.content as string
+    expect(system).toContain("no hashtags")
+    expect(system).toContain("use lowercase only")
+  })
+
+  it("Instincts remain the highest-priority style constraint — CUSTOM RULES is explicitly marked as overriding, template structure is not", () => {
+    const messages = buildThreadMessages(VOICE_WITH_RULES, "launching my dashboard", null, "direct", "medium", 4, TEMPLATE_INSTRUCTION)
+    const system = messages.find((m) => m.role === "system")!.content as string
+    expect(system).toContain("CUSTOM RULES (highest priority")
+    expect(system).toContain("these override WRITING STYLE or TONE below if they ever conflict")
+  })
+
+  it("the user's own postCount always wins — the prompt explicitly tells the model to ignore the template's own post count", () => {
+    // Template shows 4 posts, but the user picked 6+ for this generation.
+    const messages = buildThreadMessages(VOICE, "launching my dashboard", null, "direct", "medium", "6+", TEMPLATE_INSTRUCTION)
+    const system = messages.find((m) => m.role === "system")!.content as string
+    expect(system).toContain("POST COUNT above always wins, even if it differs from how many posts the template shows")
+    expect(system).toContain("choose a sensible number of posts between 6 and 8")
+  })
+
+  it("omitting templateInstruction changes nothing about the existing thread prompt", () => {
+    const withNone = buildThreadMessages(VOICE, "launching my dashboard", null, "direct", "medium", 4)
+    const system = withNone.find((m) => m.role === "system")!.content as string
+    expect(system).not.toContain("TEMPLATE STRUCTURE")
+  })
+})

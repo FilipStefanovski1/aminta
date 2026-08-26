@@ -12,13 +12,15 @@ interface Props {
   onReuse: (c: RecentCreation) => void
   /** Refresh the store after a delete so the list here stays in sync. */
   onUpdate: () => void
+  /** Opens the same Templates save flow OutputCard/ThreadResults use, prefilled from this creation. No AI call. */
+  onSaveAsTemplate: (c: RecentCreation) => void
 }
 
 function copyText(c: RecentCreation): string {
   return c.type === "thread" ? joinThreadForCopy(c.posts ?? []) : (c.text ?? "")
 }
 
-export default function RecentCreations({ creations, tint, onReuse, onUpdate }: Props) {
+export default function RecentCreations({ creations, tint, onReuse, onUpdate, onSaveAsTemplate }: Props) {
   const [showAll, setShowAll] = useState(false)
   const [detail, setDetail] = useState<RecentCreation | null>(null)
   const [copied, setCopied] = useState(false)
@@ -120,6 +122,12 @@ export default function RecentCreations({ creations, tint, onReuse, onUpdate }: 
                 Reuse
               </button>
             </div>
+            <button
+              onClick={() => { onSaveAsTemplate(detail); setDetail(null) }}
+              className="w-full rounded-lg py-2 text-[10px] font-medium"
+              style={{ border: `1px solid ${C.border}`, color: C.textFaint }}>
+              Save as template
+            </button>
             <button
               onClick={() => remove(detail.id)}
               className="w-full text-[10px] py-1"

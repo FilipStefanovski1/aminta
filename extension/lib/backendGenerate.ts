@@ -51,6 +51,10 @@ export interface ThreadGenerateArgs {
   // here purely so existing call sites/tests that don't care about it don't
   // need updating; runThreadGenerate always supplies a real value (default 4).
   postCount?: ThreadPostCount
+  // Thread template structural guidance (see lib/templates.ts's
+  // buildThreadTemplateInstruction) — the user's current postCount above
+  // always wins over however many posts the template itself shows.
+  templateInstruction?: string
 }
 
 // Onboarding's one-time "Make it sound like me" demo post — same shape and
@@ -200,14 +204,14 @@ export const THREAD_DEADLINE_MS = 30_000
  */
 export async function runThreadGenerate(
   store: AmintaStore,
-  args: { input: string; voice: VoiceProfile; styleProfile: StyleProfile | null; tone: Tone; length: OutputLength; postCount?: ThreadPostCount }
+  args: { input: string; voice: VoiceProfile; styleProfile: StyleProfile | null; tone: Tone; length: OutputLength; postCount?: ThreadPostCount; templateInstruction?: string }
 ): Promise<ThreadOption[]> {
   const postCount = args.postCount ?? 4
   if (shouldUseIncludedAi(store)) {
     const raw = await backendGenerate({ generationMode: "thread", ...args, postCount })
     return enforcePostCount(parseThreadResponse(raw), postCount)
   }
-  const messages = buildThreadMessages(args.voice, args.input, args.styleProfile, args.tone, args.length, postCount)
+  const messages = buildThreadMessages(args.voice, args.input, args.styleProfile, args.tone, args.length, postCount, args.templateInstruction)
   const raw = await runAI(effectiveApiKey(store), store.model, messages, {
     generationType: "thread",
     maxOutputTokens: THREAD_MAX_OUTPUT_TOKENS,

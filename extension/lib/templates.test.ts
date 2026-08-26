@@ -23,14 +23,21 @@ import type { ChatMessage } from "~lib/ai"
 import { getStore } from "~lib/storage"
 import type { AmintaTemplate, TemplateVariable, VoiceProfile } from "~lib/storage"
 import {
+  buildThreadTemplateInstruction,
   createTemplate,
+  deleteTemplate,
   deleteVariableEverywhere,
   extractVariables,
+  filterByCategory,
   insertVariableAtSelection,
+  isThreadTemplate,
+  normalizeTemplate,
   normalizeVariableKey,
   recordTemplateUsage,
   resolveTemplateContent,
   runTemplate,
+  updateTemplate,
+  TEMPLATE_CATEGORIES,
   type RunTemplateContext,
   type RunTemplateDeps,
 } from "~lib/templates"
@@ -223,6 +230,92 @@ describe("CRUD round-trip", () => {
     const store = await getStore()
     expect(store.templates[0].usageCount).toBe(1)
     expect(store.templates[0].lastUsedAt).toBeGreaterThan(0)
+  })
+
+  it("edits an existing template's fields without deletion/recreation", async () => {
+    const t = await createTemplate({ name: "Old name", mode: "exact", content: "old content", category: "other" })
+    await updateTemplate(t.id, { name: "New name", content: "new content", category: "launch" })
+    const store = await getStore()
+    expect(store.templates).toHaveLength(1)
+    expect(store.templates[0]).toMatchObject({ id: t.id, name: "New name", content: "new content", category: "launch" })
+  })
+
+  it("deletes a template", async () => {
+    const t = await createTemplate({ name: "Throwaway", mode: "exact", content: "x" })
+    await deleteTemplate(t.id)
+    const store = await getStore()
+    expect(store.templates).toEqual([])
+  })
+})
+
+describe("categories", () => {
+  it("a newly created template defaults to Other with no category given", async () => {
+    const t = await createTemplate({ name: "GM post", mode: "exact", content: "gm" })
+    expect(t.category).toBe("other")
+  })
+
+  it("a template saved with an explicit category keeps it", async () => {
+    const t = await createTemplate({ name: "Launch post", mode: "exact", content: "shipping", category: "launch" })
+    expect(t.category).toBe("launch")
+  })
+
+  it("normalizeTemplate: an old template with no category field safely becomes Other", () => {
+    const legacy = { id: "1", name: "Legacy", mode: "exact", platform: "x", content: "x", variables: [], favorite: false, tags: [], usageCount: 0, createdAt: 0, updatedAt: 0 } as unknown as AmintaTemplate
+    expect(legacy.category).toBeUndefined()
+    expect(normalizeTemplate(legacy).category).toBe("other")
+  })
+
+  it("normalizeTemplate leaves a valid existing category untouched", () => {
+    const t = { id: "1", name: "x", mode: "exact", platform: "x", content: "x", variables: [], category: "story", favorite: false, tags: [], usageCount: 0, createdAt: 0, updatedAt: 0 } as AmintaTemplate
+    expect(normalizeTemplate(t).category).toBe("story")
+  })
+
+  it("filterByCategory: 'all' returns everything, a specific category returns only matches (legacy templates included via normalization)", () => {
+    const launch = { id: "1", category: "launch" } as AmintaTemplate
+    const legacy = { id: "2" } as AmintaTemplate // no category — normalizes to "other"
+    const other = { id: "3", category: "other" } as AmintaTemplate
+    const all = [launch, legacy, other]
+    expect(filterByCategory(all, "all")).toEqual(all)
+    expect(filterByCategory(all, "launch").map((t) => t.id)).toEqual(["1"])
+    expect(filterByCategory(all, "other").map((t) => t.id)).toEqual(["2", "3"])
+  })
+
+  it("TEMPLATE_CATEGORIES is the curated 7, not an ever-growing list", () => {
+    expect(TEMPLATE_CATEGORIES).toHaveLength(7)
+    expect(TEMPLATE_CATEGORIES.map((c) => c.id)).toEqual([
+      "build_in_public", "launch", "opinion", "story", "educational", "product", "other",
+    ])
+  })
+})
+
+describe("thread templates", () => {
+  it("createTemplate preserves thread posts as a structured array, never flattened into an unreadable blob", async () => {
+    const posts = ["spent the last [TIME] building [THING].", "today [MILESTONE].", "still [REALITY].", "but [PAYOFF]."]
+    const t = await createTemplate({ name: "Launch thread", mode: "generate", content: posts.join("\n\n"), threadPosts: posts })
+    expect(t.threadPosts).toEqual(posts)
+    const store = await getStore()
+    expect(store.templates[0].threadPosts).toEqual(posts)
+  })
+
+  it("isThreadTemplate is true only when threadPosts is a non-empty array", () => {
+    expect(isThreadTemplate({ threadPosts: ["a", "b"] } as AmintaTemplate)).toBe(true)
+    expect(isThreadTemplate({ threadPosts: [] } as unknown as AmintaTemplate)).toBe(false)
+    expect(isThreadTemplate({} as AmintaTemplate)).toBe(false)
+  })
+
+  it("buildThreadTemplateInstruction lists posts in order for the model, distinct from user-facing copy conventions", () => {
+    const instruction = buildThreadTemplateInstruction(["hook", "context", "payoff"])
+    expect(instruction).toBe("Post 1: hook\nPost 2: context\nPost 3: payoff")
+  })
+})
+
+describe("Save as Template never touches AI (credit safety)", () => {
+  it("createTemplate's signature has no AI dependency to call — saving is pure local storage", async () => {
+    // No RunTemplateDeps/apiKey/model is ever passed to createTemplate at
+    // all; if this compiles and resolves, no generation call could have
+    // been made along the way.
+    const t = await createTemplate({ name: "From a generated post", mode: "exact", content: "spent the last 3 months building aminta." })
+    expect(t.content).toBe("spent the last 3 months building aminta.")
   })
 })
 

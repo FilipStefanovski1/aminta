@@ -78,6 +78,12 @@ export interface StyleCorpusEntry {
 // StyleProfile never determines template structure. See lib/templates.ts.
 
 export type TemplateMode = "exact" | "fill" | "generate"
+
+// Curated, deliberately small — see lib/templates.ts's TEMPLATE_CATEGORIES
+// for the id->label mapping. "other" is also the safe default for templates
+// saved before this field existed (see lib/templates.ts's normalizeTemplate).
+export type TemplateCategory =
+  | "build_in_public" | "launch" | "opinion" | "story" | "educational" | "product" | "other"
 // "any" is kept alongside "x" even though X is the only supported platform —
 // it's still the value written for templates saved before this field had any
 // UI, and dropping it would make that data fail to type-check on read.
@@ -102,6 +108,15 @@ export interface AmintaTemplate {
   platform: TemplatePlatform
   content: string // raw text (exact/fill) or instruction (generate)
   variables: TemplateVariable[]
+  // Missing on templates saved before this field existed — always read
+  // through lib/templates.ts's normalizeTemplate(), never this field raw.
+  category?: TemplateCategory
+  // Structured thread posts, preserved separately rather than flattened into
+  // `content` — present only for templates meant to guide Thread Creator
+  // (see lib/templates.ts's isThreadTemplate/buildThreadTemplateInstruction).
+  // `content` still holds a flattened join for display/back-compat, but
+  // generation-time structure always comes from this array.
+  threadPosts?: string[]
   favorite: boolean
   tags: string[]
   usageCount: number

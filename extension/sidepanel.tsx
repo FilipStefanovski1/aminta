@@ -838,6 +838,12 @@ function SidePanel() {
   // replay. Thread reuse just switches to Thread Creator (no text prefill —
   // the topic field there seeds a NEW thread, not an edit of the old one).
   const [createInitialTopic, setCreateInitialTopic] = useState<string | undefined>(undefined)
+  // Recent Creations "Save as template" — reuses GeneratorPanel's own
+  // Templates save flow (same one OutputCard/ThreadResults use), just
+  // opened straight into the editor from Home instead.
+  const [createInitialTemplatesPrefill, setCreateInitialTemplatesPrefill] = useState<
+    { content: string; mode: "exact"; threadPosts?: string[] } | undefined
+  >(undefined)
   const [levelUpData, setLevelUpData]       = useState<LevelUpData | null>(null)
   const [newlyUnlockedLevel, setNewlyUnlockedLevel] = useState<number | null>(null)
   const newlyUnlockedTimer = useRef<ReturnType<typeof setTimeout>>()
@@ -1008,7 +1014,10 @@ function SidePanel() {
 
   const switchTab = (next: Tab, createMode?: "tweet" | "reply" | "polish" | "thread") => {
     setCreateInitialMode(createMode)
-    if (next !== "create") setCreateInitialTopic(undefined)
+    if (next !== "create") {
+      setCreateInitialTopic(undefined)
+      setCreateInitialTemplatesPrefill(undefined)
+    }
     setTab(next)
     setTabKey(k => k + 1)
     if (next === "home") {
@@ -1022,6 +1031,17 @@ function SidePanel() {
   const handleReuse = (c: RecentCreation) => {
     setCreateInitialTopic(c.type === "thread" ? undefined : c.text)
     switchTab("create", c.type)
+  }
+
+  // Recent Creations "Save as template" — same flow OutputCard/ThreadResults
+  // use, just reached from Home. No AI call, no credit.
+  const handleSaveCreationAsTemplate = (c: RecentCreation) => {
+    setCreateInitialTemplatesPrefill(
+      c.type === "thread"
+        ? { content: (c.posts ?? []).join("\n\n"), mode: "exact", threadPosts: c.posts }
+        : { content: c.text ?? "", mode: "exact" }
+    )
+    switchTab("create", c.type === "thread" ? "thread" : c.type)
   }
 
   if (!authChecked || !store) {
@@ -1100,6 +1120,7 @@ function SidePanel() {
                 store={store}
                 onCreate={(mode) => switchTab("create", mode)}
                 onReuse={handleReuse}
+                onSaveCreationAsTemplate={handleSaveCreationAsTemplate}
                 onOpenCompanion={() => setCompanionOpen(true)}
                 onOpenSettings={() => setSettingsOpen(true)}
                 onOpenTrain={() => switchTab("train")}
@@ -1121,6 +1142,7 @@ function SidePanel() {
                 publishCooldownUntil={publishCooldownUntil}
                 initialMode={createInitialMode}
                 initialTopic={createInitialTopic}
+                initialTemplatesPrefill={createInitialTemplatesPrefill}
               />
             )}
 

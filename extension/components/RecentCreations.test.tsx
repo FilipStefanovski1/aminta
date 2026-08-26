@@ -16,6 +16,7 @@ let container: HTMLDivElement
 let root: Root
 let clipboardWrites: string[] = []
 let reuseCalls: RecentCreation[] = []
+let saveAsTemplateCalls: RecentCreation[] = []
 let updateCalls = 0
 
 const THREAD: RecentCreation = { id: "t1", type: "thread", posts: ["hook", "payoff"], createdAt: Date.now() }
@@ -29,6 +30,7 @@ function render(creations: RecentCreation[]) {
         tint="#74f7b5"
         onReuse={(c) => reuseCalls.push(c)}
         onUpdate={() => { updateCalls++ }}
+        onSaveAsTemplate={(c) => saveAsTemplateCalls.push(c)}
       />
     )
   })
@@ -50,6 +52,7 @@ async function click(text: string) {
 beforeEach(() => {
   clipboardWrites = []
   reuseCalls = []
+  saveAsTemplateCalls = []
   updateCalls = 0
   Object.assign(navigator, { clipboard: { writeText: (t: string) => { clipboardWrites.push(t); return Promise.resolve() } } })
   // deleteRecentCreation() (called by the Delete button) round-trips through
@@ -103,6 +106,15 @@ describe("Reuse — hands the creation back to the caller, never generates", () 
     await click(TWEET.text!)
     await click("Reuse")
     expect(reuseCalls).toEqual([TWEET])
+  })
+})
+
+describe("Save as template — hands the creation back to the caller, never generates", () => {
+  it("calls onSaveAsTemplate with the full creation and nothing else", async () => {
+    render([TWEET])
+    await click(TWEET.text!)
+    await click("Save as template")
+    expect(saveAsTemplateCalls).toEqual([TWEET])
   })
 })
 

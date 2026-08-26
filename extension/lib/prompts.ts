@@ -345,18 +345,22 @@ export function buildThreadMessages(
   styleProfile: StyleProfile | null,
   tone: Tone = "direct",
   length: OutputLength = "medium",
-  postCount: ThreadPostCount = 4
+  postCount: ThreadPostCount = 4,
+  templateInstruction?: string
 ): ChatMessage[] {
   const postCountLabel = postCount === "6+" ? "6-8" : String(postCount)
   const system = [
     "You write X (Twitter) threads for a specific person. Match their voice precisely.",
-    voiceBlock(voice, styleProfile),
+    voiceBlock(voice, styleProfile, templateInstruction),
     `TONE DIRECTION: ${TONE_GUIDE[tone]}`,
     "THINK FIRST, SILENTLY (never write this part down): this topic can be approached from genuinely different angles — pick 3 that are ACTUALLY different premises (e.g. a personal story, a contrarian take, a step-by-step breakdown), not 3 rewrites of the same point. Each thread must stand on its own: a different opening idea, different supporting posts, a different close. Never reuse the same hook, transition phrase, or closing line across the 3 threads.",
     "RULES FOR EVERY THREAD:",
     "- The topic is a SEED, not a complete draft — a short topic (a few words) is not an instruction to write a short, thin thread, and it is never a reason to refuse or ask for a more detailed topic. Infer a safe, subjective angle (opinion, anticipation, personal perspective, general observation, a builder's/founder's angle, a question, a reflection) and develop real substance across the posts. Do NOT invent statistics, event details not provided, speaker names, dates, attendance numbers, announcements, or any claim presented as factual knowledge the topic didn't provide — stay subjective/general when specifics aren't known.",
     "- THREAD SHAPE (a flexible guide, not a rigid template — adapt to what the idea actually needs): a hook/observation, then why it matters, then a perspective (personal, builder's, contrarian — whatever actually fits), then a close that pays it off. This must read as ONE coherent idea developing across the posts, not a single point chopped into fragments — never restate the same point in slightly different words just to hit a post count; a thread of near-duplicate one-liners is a failure, not a valid thread.",
     threadPostCountGuide(postCount),
+    templateInstruction?.trim()
+      ? `- The TEMPLATE STRUCTURE above is a shape/pattern to follow (new wording, new content — never reuse its old posts verbatim). Its own number of example posts is irrelevant to length — POST COUNT above always wins, even if it differs from how many posts the template shows.`
+      : "",
     threadPostDepthGuide(length, styleProfile),
     "- POST 1 (the hook): the strongest line in the thread, introducing the central idea. Someone scrolling past should want to open the thread from this post alone. It sets up what follows — it does not summarize or preview the whole thread.",
     "- MIDDLE POSTS: each one must advance the idea with something genuinely new — a new angle, step, reason, or detail the reader didn't already have. Never restate or rephrase the hook. Never repeat an earlier post's point to pad length or hit the count. Maintain a logical progression — each post should read as the natural next beat, not an interchangeable, standalone fragment.",

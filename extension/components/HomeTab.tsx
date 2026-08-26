@@ -27,6 +27,8 @@ interface Props {
   onCreate: (mode?: QuickCreateMode) => void
   /** Reuse from Recent Creations: opens Create in the matching mode, prefilled where the architecture cleanly supports it. */
   onReuse: (c: RecentCreation) => void
+  /** Opens the same Templates save flow OutputCard/ThreadResults use, prefilled from a Recent Creation. */
+  onSaveCreationAsTemplate: (c: RecentCreation) => void
   onOpenCompanion?: () => void
   onOpenSettings?: () => void
   onOpenTrain?: () => void
@@ -73,7 +75,7 @@ export function voiceStatus(store: AmintaStore, hasExamples: boolean): "Learning
   return "Learning"
 }
 
-export default function HomeTab({ store, onCreate, onReuse, onOpenCompanion, onOpenSettings, onOpenTrain, onUpdate, animClass, animKey, speech, onContext }: Props) {
+export default function HomeTab({ store, onCreate, onReuse, onSaveCreationAsTemplate, onOpenCompanion, onOpenSettings, onOpenTrain, onUpdate, animClass, animKey, speech, onContext }: Props) {
   const xp          = store.xp ?? 0
   const currentForm = getForm(xp)
   const level       = getLevel(xp)
@@ -367,6 +369,7 @@ export default function HomeTab({ store, onCreate, onReuse, onOpenCompanion, onO
         creations={store.recentCreations ?? []}
         tint={tint}
         onReuse={onReuse}
+        onSaveAsTemplate={onSaveCreationAsTemplate}
         onUpdate={() => onUpdate?.()}
       />
 

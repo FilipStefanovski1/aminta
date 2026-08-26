@@ -17,6 +17,8 @@ import { createLiveThreadBuilderHandlers } from "~lib/threadBuilderLive"
 interface Props {
   threads: ThreadOption[]
   tint: string
+  /** Opens the Templates save flow prefilled with the active thread's posts, preserved as structure (not flattened). No AI call, no navigation. */
+  onSaveAsTemplate?: (posts: string[]) => void
 }
 
 function progressLabel(state: ThreadBuildState): string {
@@ -41,7 +43,7 @@ const isRunning = (s: ThreadBuildState | null) =>
 // produces and fills it. Aminta never clicks "+" or X's Post/Post-all
 // button. The user reviews the whole draft inside X and publishes it
 // themselves.
-export default function ThreadResults({ threads, tint }: Props) {
+export default function ThreadResults({ threads, tint, onSaveAsTemplate }: Props) {
   const [selected, setSelected] = useState(0)
   const [posts, setPosts] = useState<string[][]>(() => threads.map((t) => [...t.posts]))
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null)
@@ -242,6 +244,15 @@ export default function ThreadResults({ threads, tint }: Props) {
       </button>
       {insertStatus && (
         <p className="text-[10px]" style={{ color: C.textDim }}>{insertStatus}</p>
+      )}
+
+      {onSaveAsTemplate && (
+        <button
+          onClick={() => onSaveAsTemplate(activePosts)}
+          className="w-full rounded py-2 text-[9px]"
+          style={{ border: `1px solid ${C.border}`, color: C.textDim }}>
+          + Save as template
+        </button>
       )}
     </div>
   )

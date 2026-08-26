@@ -6,11 +6,15 @@ import {
   deleteTemplate,
   deleteVariableEverywhere,
   extractVariables,
+  filterByCategory,
   insertVariableAtSelection,
+  isThreadTemplate,
+  normalizeTemplate,
   recordTemplateUsage,
   runTemplate,
   toggleFavorite,
   updateTemplate,
+  TEMPLATE_CATEGORIES,
   type RunTemplateContext,
   type RunTemplateDeps,
 } from "~lib/templates"
@@ -20,7 +24,7 @@ import { insertText } from "~lib/messaging"
 import { getStageTint } from "~lib/evolution"
 import { buildMessages, type Mode, type OutputLength, type Tone } from "~lib/prompts"
 import { cleanGenerationOutput } from "~lib/textCleanup"
-import type { AmintaStore, AmintaTemplate, StyleProfile, TemplateMode, TemplateVariable, VoiceProfile } from "~lib/storage"
+import type { AmintaStore, AmintaTemplate, StyleProfile, TemplateCategory, TemplateMode, TemplateVariable, VoiceProfile } from "~lib/storage"
 import { C } from "~lib/theme"
 
 import { Card, GhostButton, PrimaryButton, SectionLabel } from "~components/ui"
@@ -38,7 +42,12 @@ interface Props {
   onChanged?: () => void
   getRunContext: () => Promise<RunTemplateContext>
   initialView?: View
-  prefill?: { content: string; mode: TemplateMode }
+  prefill?: { content: string; mode: TemplateMode; threadPosts?: string[] }
+  // A thread-shaped template can't be inserted into a single X composer —
+  // "Use Template" for one hands it back to Thread Creator as structural
+  // guidance instead (see GeneratorPanel's useThreadTemplate). No AI call,
+  // no insertion happens here either way.
+  onUseThreadTemplate?: (t: AmintaTemplate) => void
 }
 
 const MODE_LABEL: Record<TemplateMode, string> = { exact: "Exact", fill: "Fill", generate: "AI" }
@@ -105,7 +114,7 @@ function badge(text: string, color: string) {
   )
 }
 
-export default function TemplatesModal({ store, onClose, onChanged, getRunContext, initialView = "list", prefill }: Props) {
+export default function TemplatesModal({ store, onClose, onChanged, getRunContext, initialView = "list", prefill, onUseThreadTemplate }: Props) {
   // Matches the rest of the app's evolution-tint theming (GeneratorPanel's
   // mode circles/tone card/Generate button, Settings' avatar/active
   // provider chip) instead of a hardcoded mint that ignores the user's
@@ -115,9 +124,10 @@ export default function TemplatesModal({ store, onClose, onChanged, getRunContex
   const [view, setView] = useState<View>(prefill ? "editor" : initialView)
   const [editing, setEditing] = useState<AmintaTemplate | null>(null)
   const [usingTemplate, setUsingTemplate] = useState<AmintaTemplate | null>(null)
-  const [templates, setTemplates] = useState<AmintaTemplate[]>(store.templates)
+  const [templates, setTemplates] = useState<AmintaTemplate[]>(store.templates.map(normalizeTemplate))
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState("")
+  const [categoryFilter, setCategoryFilter] = useState<TemplateCategory | "all">("all")
   // Which card's "Use Template" button is mid-insert — scoped per-template
   // (not a single global flag) so only that one button disables/shows
   // "Inserting…", and so a click on it can never fire twice concurrently.
@@ -126,12 +136,13 @@ export default function TemplatesModal({ store, onClose, onChanged, getRunContex
 
   const refresh = (next: AmintaTemplate[]) => setTemplates(next)
 
-  const favorites = useMemo(() => templates.filter((t) => t.favorite), [templates])
+  const filtered = useMemo(() => filterByCategory(templates, categoryFilter), [templates, categoryFilter])
+  const favorites = useMemo(() => filtered.filter((t) => t.favorite), [filtered])
   const recent = useMemo(
-    () => [...templates].filter((t) => t.lastUsedAt).sort((a, b) => (b.lastUsedAt ?? 0) - (a.lastUsedAt ?? 0)).slice(0, 5),
-    [templates]
+    () => [...filtered].filter((t) => t.lastUsedAt).sort((a, b) => (b.lastUsedAt ?? 0) - (a.lastUsedAt ?? 0)).slice(0, 5),
+    [filtered]
   )
-  const all = useMemo(() => [...templates].sort((a, b) => b.updatedAt - a.updatedAt), [templates])
+  const all = useMemo(() => [...filtered].sort((a, b) => b.updatedAt - a.updatedAt), [filtered])
 
   function openCreate() {
     setEditing(null)
@@ -182,6 +193,14 @@ export default function TemplatesModal({ store, onClose, onChanged, getRunContex
   // missing does it fall back to the variable-input screen.
   async function handleUseTemplate(t: AmintaTemplate) {
     if (insertingId) return // a click is already in flight — ignore
+    // Thread-shaped templates never insert into a single X composer — hand
+    // back to Thread Creator instead. No AI call, no insertion.
+    if (isThreadTemplate(t)) {
+      await recordTemplateUsage(t.id)
+      onChanged?.()
+      onUseThreadTemplate?.(t)
+      return
+    }
     setError("")
     setInsertingId(t.id)
     try {
@@ -332,9 +351,26 @@ export default function TemplatesModal({ store, onClose, onChanged, getRunContex
       <div className="space-y-5">
         <PrimaryButton onClick={onCreate} tint={tint}>+ New Template</PrimaryButton>
 
+        {templates.length > 0 && (
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value as TemplateCategory | "all")}
+            className="input-pixel w-full rounded-xl px-3 py-2 text-[11px]">
+            <option value="all">All categories</option>
+            {TEMPLATE_CATEGORIES.map((c) => (
+              <option key={c.id} value={c.id}>{c.label}</option>
+            ))}
+          </select>
+        )}
+
         {templates.length === 0 && (
           <p className="text-[11px] text-center py-6" style={{ color: C.textFaint }}>
             No templates yet. Save a draft as a template, or create one from scratch.
+          </p>
+        )}
+        {templates.length > 0 && favorites.length === 0 && recent.length === 0 && all.length === 0 && (
+          <p className="text-[11px] text-center py-6" style={{ color: C.textFaint }}>
+            No templates in this category.
           </p>
         )}
 
@@ -389,12 +425,19 @@ export default function TemplatesModal({ store, onClose, onChanged, getRunContex
     onToggleFavorite: () => void
     onDelete: () => void
   }) {
+    const isThread = isThreadTemplate(t)
+    const preview = isThread ? (t.threadPosts?.[0] ?? "") : t.content
+    const categoryLabel = TEMPLATE_CATEGORIES.find((c) => c.id === normalizeTemplate(t).category)?.label ?? "Other"
     return (
       <Card className="space-y-2" pad>
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
             <p className="text-[12px] font-semibold truncate" style={{ color: C.text }}>{t.name}</p>
+            <p className="text-[10px] mt-0.5" style={{ color: C.textFaint }}>
+              {categoryLabel}{isThread && ` · Thread · ${t.threadPosts?.length ?? 0} posts`}
+            </p>
             {t.description && <p className="text-[10px] mt-0.5" style={{ color: C.textFaint }}>{t.description}</p>}
+            {preview && <p className="text-[10px] mt-0.5 truncate" style={{ color: C.textGhost }}>{preview}</p>}
           </div>
           <button onClick={onToggleFavorite} className="text-[13px] shrink-0" style={{ color: t.favorite ? tint : C.textGhost }}>
             {t.favorite ? "★" : "☆"}
@@ -402,7 +445,7 @@ export default function TemplatesModal({ store, onClose, onChanged, getRunContex
         </div>
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <div className="flex gap-1.5 shrink-0">
-            {badge(MODE_LABEL[t.mode], tint)}
+            {badge(isThread ? "Thread" : MODE_LABEL[t.mode], tint)}
           </div>
           <div className="flex items-center gap-3 flex-wrap justify-end ml-auto">
             <button onClick={onEdit} className="text-[10px]" style={{ color: C.textFaint }}>Edit</button>
@@ -412,7 +455,7 @@ export default function TemplatesModal({ store, onClose, onChanged, getRunContex
               disabled={inserting}
               className="btn-pixel px-3 py-1.5 rounded-lg font-pixel text-[8px] text-black disabled:opacity-60 disabled:cursor-wait transition-opacity shrink-0"
               style={{ backgroundColor: tint }}>
-              {inserting ? "Inserting…" : "Use Template"}
+              {inserting ? "Inserting…" : isThread ? "Use in Thread Creator" : "Use Template"}
             </button>
           </div>
         </div>
@@ -432,7 +475,7 @@ function TemplateEditor({
 }: {
   tint: string
   initial: AmintaTemplate | null
-  prefill?: { content: string; mode: TemplateMode }
+  prefill?: { content: string; mode: TemplateMode; threadPosts?: string[] }
   onCancel: () => void
   onSaved: (t: AmintaTemplate) => void
 }) {
@@ -441,10 +484,27 @@ function TemplateEditor({
   const [mode, setMode] = useState<TemplateMode>(initial?.mode ?? prefill?.mode ?? "exact")
   const [content, setContent] = useState(initial?.content ?? prefill?.content ?? "")
   const [variables, setVariables] = useState<TemplateVariable[]>(initial?.variables ?? [])
+  const [category, setCategory] = useState<TemplateCategory>(normalizeTemplate(initial ?? ({} as AmintaTemplate)).category ?? "other")
+  // Thread-ness is fixed at creation source (from ThreadResults/Recent
+  // Creations) — a template is never converted between single-post and
+  // thread shape after the fact, so this never needs its own toggle.
+  const initialThreadPosts = initial?.threadPosts ?? prefill?.threadPosts
+  const isThread = !!initialThreadPosts?.length
+  const [threadPosts, setThreadPosts] = useState<string[]>(initialThreadPosts ?? [])
   const [error, setError] = useState("")
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  const supportsVariables = mode === "fill" || mode === "generate"
+  const supportsVariables = !isThread && (mode === "fill" || mode === "generate")
+
+  function updateThreadPost(i: number, text: string) {
+    setThreadPosts((prev) => prev.map((p, pi) => (pi === i ? text : p)))
+  }
+  function addThreadPost() {
+    setThreadPosts((prev) => [...prev, ""])
+  }
+  function removeThreadPost(i: number) {
+    setThreadPosts((prev) => prev.filter((_, pi) => pi !== i))
+  }
 
   function onContentChange(next: string) {
     setContent(next)
@@ -481,14 +541,28 @@ function TemplateEditor({
 
   async function save() {
     if (!name.trim()) { setError("Give this template a name."); return }
-    if (!content.trim()) { setError("Content can't be empty."); return }
+    const cleanedThreadPosts = isThread ? threadPosts.map((p) => p.trim()).filter(Boolean) : undefined
+    if (isThread) {
+      if (cleanedThreadPosts!.length < 2) { setError("A thread template needs at least 2 posts."); return }
+    } else if (!content.trim()) {
+      setError("Content can't be empty.")
+      return
+    }
     setError("")
 
+    // Thread templates don't use Exact/Fill/Generate distinction (see
+    // ThreadResults' handleUseTemplate) — "generate" is the truthful label
+    // (structural guidance for a fresh generation) but has no other effect
+    // for a thread template.
+    const effectiveMode: TemplateMode = isThread ? "generate" : mode
+    const effectiveContent = isThread ? cleanedThreadPosts!.join("\n\n") : content
+    const effectiveVariables = isThread ? [] : variables
+
     if (initial) {
-      await updateTemplate(initial.id, { name: name.trim(), description: description.trim() || undefined, mode, content, variables })
-      onSaved({ ...initial, name: name.trim(), description: description.trim() || undefined, mode, content, variables, updatedAt: Date.now() })
+      await updateTemplate(initial.id, { name: name.trim(), description: description.trim() || undefined, mode: effectiveMode, content: effectiveContent, variables: effectiveVariables, category, threadPosts: cleanedThreadPosts })
+      onSaved({ ...initial, name: name.trim(), description: description.trim() || undefined, mode: effectiveMode, content: effectiveContent, variables: effectiveVariables, category, threadPosts: cleanedThreadPosts, updatedAt: Date.now() })
     } else {
-      const t = await createTemplate({ name: name.trim(), description: description.trim() || undefined, mode, content, variables })
+      const t = await createTemplate({ name: name.trim(), description: description.trim() || undefined, mode: effectiveMode, content: effectiveContent, variables: effectiveVariables, category, threadPosts: cleanedThreadPosts })
       onSaved(t)
     }
   }
@@ -518,63 +592,114 @@ function TemplateEditor({
       </div>
 
       <div className="space-y-1.5">
-        <p className="text-[11px] font-medium" style={{ color: C.textFaint }}>Type</p>
-        <div className="grid grid-cols-3 gap-1.5">
-          {(["exact", "fill", "generate"] as TemplateMode[]).map((m) => {
-            const active = mode === m
+        <p className="text-[11px] font-medium" style={{ color: C.textFaint }}>Category</p>
+        <div className="grid grid-cols-2 gap-1.5">
+          {TEMPLATE_CATEGORIES.map((c) => {
+            const active = category === c.id
             return (
               <button
-                key={m}
-                onClick={() => setMode(m)}
-                className="rounded-xl py-2.5 text-[10px] font-semibold transition-all"
+                key={c.id}
+                onClick={() => setCategory(c.id)}
+                className="rounded-lg py-2 text-[10px] font-medium transition-all"
                 style={{
                   backgroundColor: active ? tint + "18" : C.card,
-                  border: `1.5px solid ${active ? tint : C.border}`,
+                  border: `1px solid ${active ? tint : C.border}`,
                   color: active ? tint : C.textDim,
                 }}>
-                {MODE_LABEL[m]}
+                {c.label}
               </button>
             )
           })}
         </div>
-        <p className="text-[9px]" style={{ color: C.textGhost }}>
-          {mode === "exact" && "Inserted exactly as written, no AI rewriting."}
-          {mode === "fill" && "Fill in {{variables}} to complete the post, no AI rewriting."}
-          {mode === "generate" && "An instruction. Aminta writes a fresh version using your Style Profile every time."}
-        </p>
       </div>
 
-      <div className="space-y-1.5">
-        <div className="flex items-center justify-between">
+      {isThread ? (
+        <div className="space-y-1.5">
           <p className="text-[11px] font-medium" style={{ color: C.textFaint }}>
-            {mode === "generate" ? "Instruction" : "Content"}
+            Thread structure <span style={{ color: C.textGhost, fontWeight: 400 }}>(edit into a reusable pattern, e.g. [HOOK], [PAYOFF])</span>
           </p>
-          {supportsVariables && (
-            <button onClick={convertSelection} className="text-[10px]" style={{ color: tint }}>
-              Convert selection to variable
-            </button>
-          )}
+          <div className="space-y-2">
+            {threadPosts.map((post, i) => (
+              <div key={i} className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <p className="text-[9px]" style={{ color: C.textGhost }}>Post {i + 1}</p>
+                  {threadPosts.length > 2 && (
+                    <button onClick={() => removeThreadPost(i)} className="text-[10px]" style={{ color: "#f87171" }}>Remove</button>
+                  )}
+                </div>
+                <textarea
+                  value={post}
+                  onChange={(e) => updateThreadPost(i, e.target.value)}
+                  rows={3}
+                  className="input-pixel w-full rounded-xl px-3 py-2.5 text-sm resize-none"
+                />
+              </div>
+            ))}
+          </div>
+          <button onClick={addThreadPost} className="text-[10px]" style={{ color: tint }}>+ Add post</button>
         </div>
-        <textarea
-          ref={textareaRef}
-          value={content}
-          onChange={(e) => onContentChange(e.target.value)}
-          rows={6}
-          placeholder={
-            mode === "exact"
-              ? "gm everyone ☀️"
-              : mode === "fill"
-                ? "Just shipped {{feature}}.\n\nIt helps {{audience}} do {{benefit}}.\n\nTry it here: {{link}}"
-                : "Write a launch post. Start with what shipped. Explain one concrete benefit. Finish with a casual CTA."
-          }
-          className="input-pixel w-full rounded-xl px-3 py-2.5 text-sm resize-none"
-        />
-        {supportsVariables && (
-          <p className="text-[9px]" style={{ color: C.textGhost }}>
-            Type <code>{"{{variable}}"}</code> directly, or highlight text above and convert it.
-          </p>
-        )}
-      </div>
+      ) : (
+        <>
+          <div className="space-y-1.5">
+            <p className="text-[11px] font-medium" style={{ color: C.textFaint }}>Type</p>
+            <div className="grid grid-cols-3 gap-1.5">
+              {(["exact", "fill", "generate"] as TemplateMode[]).map((m) => {
+                const active = mode === m
+                return (
+                  <button
+                    key={m}
+                    onClick={() => setMode(m)}
+                    className="rounded-xl py-2.5 text-[10px] font-semibold transition-all"
+                    style={{
+                      backgroundColor: active ? tint + "18" : C.card,
+                      border: `1.5px solid ${active ? tint : C.border}`,
+                      color: active ? tint : C.textDim,
+                    }}>
+                    {MODE_LABEL[m]}
+                  </button>
+                )
+              })}
+            </div>
+            <p className="text-[9px]" style={{ color: C.textGhost }}>
+              {mode === "exact" && "Inserted exactly as written, no AI rewriting."}
+              {mode === "fill" && "Fill in {{variables}} to complete the post, no AI rewriting."}
+              {mode === "generate" && "An instruction. Aminta writes a fresh version using your Style Profile every time."}
+            </p>
+          </div>
+
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] font-medium" style={{ color: C.textFaint }}>
+                {mode === "generate" ? "Instruction" : "Content"}
+              </p>
+              {supportsVariables && (
+                <button onClick={convertSelection} className="text-[10px]" style={{ color: tint }}>
+                  Convert selection to variable
+                </button>
+              )}
+            </div>
+            <textarea
+              ref={textareaRef}
+              value={content}
+              onChange={(e) => onContentChange(e.target.value)}
+              rows={6}
+              placeholder={
+                mode === "exact"
+                  ? "gm everyone ☀️"
+                  : mode === "fill"
+                    ? "Just shipped {{feature}}.\n\nIt helps {{audience}} do {{benefit}}.\n\nTry it here: {{link}}"
+                    : "Write a launch post. Start with what shipped. Explain one concrete benefit. Finish with a casual CTA."
+              }
+              className="input-pixel w-full rounded-xl px-3 py-2.5 text-sm resize-none"
+            />
+            {supportsVariables && (
+              <p className="text-[9px]" style={{ color: C.textGhost }}>
+                Type <code>{"{{variable}}"}</code> directly, or highlight text above and convert it.
+              </p>
+            )}
+          </div>
+        </>
+      )}
 
       {supportsVariables && variables.length > 0 && (
         <div className="space-y-1.5">

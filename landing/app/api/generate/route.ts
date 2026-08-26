@@ -278,7 +278,7 @@ export async function POST(request: NextRequest) {
     const messages = isStyleProfile
       ? buildStyleProfileMessages(body.corpus!)
       : isThread
-        ? buildThreadMessages(body.voice!, body.input!, body.styleProfile ?? null, body.tone ?? "direct", body.length ?? "medium", body.postCount ?? 4)
+        ? buildThreadMessages(body.voice!, body.input!, body.styleProfile ?? null, body.tone ?? "direct", body.length ?? "medium", body.postCount ?? 4, body.templateInstruction)
         : withImages(
             buildMessages(
               promptMode,

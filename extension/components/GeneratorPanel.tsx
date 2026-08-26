@@ -14,8 +14,8 @@ import type { Mode, OutputLength, Platform, ThreadOption, ThreadPostCount, Tone 
 import { saveRecentCreation } from "~lib/recentCreations"
 import { generateReply } from "~lib/replyGeneration"
 import { getOrBuildStyleProfile } from "~lib/styleProfile"
-import type { AmintaStore, TemplateMode } from "~lib/storage"
-import type { RunTemplateContext } from "~lib/templates"
+import type { AmintaStore, AmintaTemplate, TemplateMode } from "~lib/storage"
+import { buildThreadTemplateInstruction, type RunTemplateContext } from "~lib/templates"
 import { C } from "~lib/theme"
 import { PRICING_URL } from "~lib/webUrl"
 import { incrementGenerations } from "~lib/xp"
@@ -227,6 +227,8 @@ interface Props {
   initialMode?: UiMode
   /** Reuse from Recent Creations: prefills the topic field with the saved output text. Thread reuse only switches mode (see Home's Recent Creations — the original input topic was never saved, only the output). */
   initialTopic?: string
+  /** Save as Template from Recent Creations — reuses the same Templates save flow OutputCard/ThreadResults use, opened straight into the editor. */
+  initialTemplatesPrefill?: { content: string; mode: TemplateMode; threadPosts?: string[] }
 }
 
 // Resize image to max 1024px on longest side and return as JPEG data URL
@@ -252,7 +254,7 @@ async function resizeImage(file: File): Promise<string> {
   })
 }
 
-export default function GeneratorPanel({ store, onTeach, onOpenSettings, onContext, onTemplatesChanged, publishCooldownUntil, initialMode, initialTopic }: Props) {
+export default function GeneratorPanel({ store, onTeach, onOpenSettings, onContext, onTemplatesChanged, publishCooldownUntil, initialMode, initialTopic, initialTemplatesPrefill }: Props) {
   const [mode,     setMode]     = useState<UiMode>(initialMode ?? "tweet")
   const [threadOptions, setThreadOptions] = useState<ThreadOption[] | null>(null)
   const [threadError,   setThreadError]   = useState("")
@@ -288,8 +290,14 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
   // around describing a post that's no longer what's in the box.
   const [replyReason, setReplyReason] = useState("")
 
-  const [templatesOpen, setTemplatesOpen] = useState(false)
-  const [templatesPrefill, setTemplatesPrefill] = useState<{ content: string; mode: TemplateMode } | undefined>(undefined)
+  const [templatesOpen, setTemplatesOpen] = useState(!!initialTemplatesPrefill)
+  const [templatesPrefill, setTemplatesPrefill] = useState<{ content: string; mode: TemplateMode; threadPosts?: string[] } | undefined>(initialTemplatesPrefill)
+  // Thread Creator's staged template — structural guidance only (see
+  // lib/templates.ts's buildThreadTemplateInstruction). Persists across
+  // regenerations until the user clears it or switches away from Thread
+  // mode; never overrides the user's own selected postCount above.
+  const [threadTemplateInstruction, setThreadTemplateInstruction] = useState("")
+  const [threadTemplateName, setThreadTemplateName] = useState("")
 
   // ── Rotating topic-field placeholder (tweet mode only) ──────────────────
   // See the CSS comment on .topic-placeholder in style.css for the fade
@@ -471,6 +479,22 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
     setTemplatesOpen(true)
   }
 
+  const openSaveThreadAsTemplate = (posts: string[]) => {
+    setTemplatesPrefill({ content: posts.join("\n\n"), mode: "exact", threadPosts: posts })
+    setTemplatesOpen(true)
+  }
+
+  // Stages a saved thread template as structural guidance for the NEXT
+  // Thread Creator generation — never inserts anything, never calls
+  // generation itself (see TemplatesModal's handleUseTemplate, which routes
+  // thread templates here instead of its normal insert-into-X flow).
+  const useThreadTemplate = (t: AmintaTemplate) => {
+    setMode("thread")
+    setThreadTemplateInstruction(buildThreadTemplateInstruction(t.threadPosts ?? []))
+    setThreadTemplateName(t.name)
+    setTemplatesOpen(false)
+  }
+
   const generate = async () => {
     reset()
     if (!navigator.onLine) { setError("You're offline. Check your connection and try again."); return }
@@ -489,7 +513,7 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
     if (mode === "thread") {
       try {
         const styleProfile = await getOrBuildStyleProfile(store)
-        const threads = await runThreadGenerate(store, { input: combined, voice: store.voice, styleProfile, tone, length, postCount })
+        const threads = await runThreadGenerate(store, { input: combined, voice: store.voice, styleProfile, tone, length, postCount, templateInstruction: threadTemplateInstruction || undefined })
         if (threads.length === 0) {
           // Genuinely nothing usable came back — a provider hiccup or a
           // fully malformed/empty response, never "the topic was too
@@ -612,7 +636,7 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
           return (
             <button
               key={m.id}
-              onClick={() => { if (mode !== m.id) { setMode(m.id); reset(); setPostImageUrls([]); setReplyReason("") } }}
+              onClick={() => { if (mode !== m.id) { setMode(m.id); reset(); setPostImageUrls([]); setReplyReason(""); if (m.id !== "thread") { setThreadTemplateInstruction(""); setThreadTemplateName("") } } }}
               title={m.label}
               className="flex items-center justify-center rounded-full transition-all"
               style={{
@@ -849,6 +873,22 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
         </div>
       )}
 
+      {/* Staged thread template — structural guidance only for the NEXT
+          generation; the Posts selector above always wins on count. */}
+      {mode === "thread" && threadTemplateInstruction && (
+        <div className="flex items-center justify-between px-3 py-2 rounded-lg" style={{ border: `1px solid ${C.border}`, backgroundColor: C.card }}>
+          <span className="text-[10px] truncate" style={{ color: C.textFaint }}>
+            Using template: {threadTemplateName || "Untitled"}
+          </span>
+          <button
+            onClick={() => { setThreadTemplateInstruction(""); setThreadTemplateName("") }}
+            className="text-[10px] shrink-0 ml-2"
+            style={{ color: C.textGhost }}>
+            Clear
+          </button>
+        </div>
+      )}
+
       {/* ── Generate ── */}
       <button
         onClick={generate}
@@ -971,7 +1011,7 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
         </p>
       )}
       {threadOptions && (
-        <ThreadResults threads={threadOptions} tint={tint} />
+        <ThreadResults threads={threadOptions} tint={tint} onSaveAsTemplate={openSaveThreadAsTemplate} />
       )}
 
       {output && mode !== "thread" && (
@@ -996,6 +1036,7 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
           getRunContext={getTemplateRunContext}
           initialView={templatesPrefill ? "editor" : "list"}
           prefill={templatesPrefill}
+          onUseThreadTemplate={useThreadTemplate}
         />
       )}
 
