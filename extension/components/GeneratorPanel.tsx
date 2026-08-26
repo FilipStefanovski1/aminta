@@ -10,7 +10,8 @@ import { fetchImageAsDataUrl } from "~lib/images"
 import { parseCustomRules } from "~lib/instinctPresets"
 import { findNextReplyTarget, readActivePost } from "~lib/messaging"
 import { incrementMissionGenerates } from "~lib/missions"
-import type { Mode, OutputLength, Platform, ThreadOption, ThreadPostCount, Tone } from "~lib/prompts"
+import { QUICK_REWRITE_INSTRUCTIONS, type Mode, type OutputLength, type Platform, type QuickRewriteAction, type ThreadOption, type ThreadPostCount, type Tone } from "~lib/prompts"
+import { applyQuickRewriteFailure, applyQuickRewriteSuccess, applyUndo, canStartQuickRewrite, type QuickRewriteState } from "~lib/quickRewrite"
 import { saveRecentCreation } from "~lib/recentCreations"
 import { generateReply } from "~lib/replyGeneration"
 import { getOrBuildStyleProfile } from "~lib/styleProfile"
@@ -290,6 +291,13 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
   // around describing a post that's no longer what's in the box.
   const [replyReason, setReplyReason] = useState("")
 
+  // Quick Rewrite actions (OutputCard) — a real generation on top of the
+  // CURRENT output, not the original prompt. One-level undo only:
+  // `rewritePrevious` always holds exactly the version just replaced.
+  const [rewriteBusy, setRewriteBusy] = useState<QuickRewriteAction | null>(null)
+  const [rewriteError, setRewriteError] = useState("")
+  const [rewritePrevious, setRewritePrevious] = useState<string | null>(null)
+
   const [templatesOpen, setTemplatesOpen] = useState(!!initialTemplatesPrefill)
   const [templatesPrefill, setTemplatesPrefill] = useState<{ content: string; mode: TemplateMode; threadPosts?: string[] } | undefined>(initialTemplatesPrefill)
   // Thread Creator's staged template — structural guidance only (see
@@ -398,6 +406,7 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
   const reset = () => {
     setError(""); setOutput(""); setOutputImage(null); setRetrying(false)
     setThreadOptions(null); setThreadError("")
+    setRewriteBusy(null); setRewriteError(""); setRewritePrevious(null)
   }
 
   // Passed to dispatchGenerate()/generateReply() as onRetry — fires before
@@ -612,6 +621,53 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
       setLoading(false)
       setAnalyzingImage(false)
     }
+  }
+
+  // Quick Rewrite (OutputCard's Shorter/Sharper/More casual) — a real
+  // generation on the CURRENT output (never the original prompt), routed
+  // through polish mode's polishRevision so it uses the same credit cost as
+  // any other polish generation. Never fires a second request while one is
+  // already in flight (rewriteBusy guard).
+  const runQuickRewrite = async (action: QuickRewriteAction) => {
+    const state: QuickRewriteState = { output, previous: rewritePrevious, busy: rewriteBusy, error: rewriteError }
+    if (mode === "thread" || !canStartQuickRewrite(state)) return
+    if (!effectiveApiKey(store) && !shouldUseIncludedAi(store)) { setRewriteError("Add your AI key in Settings first."); return }
+    if (!store.voice) { setRewriteError("Teach Aminta your voice first. Go to Teach."); return }
+    if (creditsExhausted) { setRewriteError("You're out of credits."); return }
+    setRewriteBusy(action)
+    setRewriteError("")
+    try {
+      const styleProfile = await getOrBuildStyleProfile(store)
+      const rewritten = await dispatchGenerate(store, {
+        generationMode: "polish",
+        input: output,
+        voice: store.voice!,
+        styleProfile,
+        tone,
+        length,
+        polishRevision: QUICK_REWRITE_INSTRUCTIONS[action],
+      })
+      const next = applyQuickRewriteSuccess(state, rewritten)
+      setOutput(next.output)
+      setRewritePrevious(next.previous)
+      setRewriteBusy(next.busy)
+      setRewriteError(next.error)
+      await saveRecentCreation({ type: mode, text: rewritten })
+      await incrementGenerations()
+      await incrementMissionGenerates()
+    } catch (e) {
+      const next = applyQuickRewriteFailure(state, e instanceof Error ? e.message : "Couldn't rewrite that. Try again.")
+      setRewriteBusy(next.busy)
+      setRewriteError(next.error)
+    }
+  }
+
+  // Local, instant, 0 credits — restores exactly the version just replaced.
+  const undoRewrite = () => {
+    const next = applyUndo({ output, previous: rewritePrevious, busy: rewriteBusy, error: rewriteError })
+    setOutput(next.output)
+    setRewritePrevious(next.previous)
+    setRewriteError(next.error)
   }
 
   const canGenerate = (!!effectiveApiKey(store) || shouldUseIncludedAi(store)) && !!store.voice && (!!topic.trim() || !!imageDataUrl || postImageUrls.length > 0) && !creditsExhausted
@@ -1025,6 +1081,11 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
           onSaveAsTemplate={openSaveAsTemplate}
           publishCooldownUntil={publishCooldownUntil}
           instinctCount={parseCustomRules(store.voice?.customRules).length}
+          onQuickRewrite={runQuickRewrite}
+          quickRewriteBusy={rewriteBusy}
+          quickRewriteError={rewriteError}
+          canUndoRewrite={rewritePrevious !== null}
+          onUndoRewrite={undoRewrite}
         />
       )}
 

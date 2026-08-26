@@ -1,12 +1,18 @@
 import { useEffect, useState } from "react"
 
 import { insertImage, insertText } from "~lib/messaging"
-import type { Mode, Platform } from "~lib/prompts"
+import type { Mode, Platform, QuickRewriteAction } from "~lib/prompts"
 import { cooldownSecondsRemaining } from "~lib/publishCooldown"
 import { C } from "~lib/theme"
 import { hashText, queuePendingXP, XP_PER_MODE } from "~lib/xp"
 
 const X_CHAR_LIMIT = 280
+
+const QUICK_REWRITE_CONFIG: { id: QuickRewriteAction; label: string }[] = [
+  { id: "shorter", label: "Shorter" },
+  { id: "sharper", label: "Sharper" },
+  { id: "casual",  label: "More casual" },
+]
 
 interface Props {
   text: string
@@ -24,9 +30,21 @@ interface Props {
    * nothing.
    */
   instinctCount?: number
+  // Quick Rewrite actions — Shorter/Sharper/More casual. A real generation
+  // (costs a credit), owned by the caller (GeneratorPanel has the
+  // store/voice/styleProfile context this needs) — OutputCard only renders
+  // the compact UI and reports which action was pressed. Omitted entirely
+  // means these don't render at all (history/template previews never pass
+  // this prop, so nothing extra is needed to keep them off those surfaces).
+  onQuickRewrite?: (action: QuickRewriteAction) => void
+  /** Which action is currently in flight, if any — disables the row and shows a compact loading state on just that one. */
+  quickRewriteBusy?: QuickRewriteAction | null
+  quickRewriteError?: string
+  canUndoRewrite?: boolean
+  onUndoRewrite?: () => void
 }
 
-export default function OutputCard({ text, mode, platform, imageDataUrl, onRegenerate, onSaveAsTemplate, publishCooldownUntil, instinctCount }: Props) {
+export default function OutputCard({ text, mode, platform, imageDataUrl, onRegenerate, onSaveAsTemplate, publishCooldownUntil, instinctCount, onQuickRewrite, quickRewriteBusy, quickRewriteError, canUndoRewrite, onUndoRewrite }: Props) {
   const [copied, setCopied] = useState(false)
   const [insertStatus, setInsertStatus] = useState("")
 
@@ -154,6 +172,33 @@ export default function OutputCard({ text, mode, platform, imageDataUrl, onRegen
           </button>
         )}
       </div>
+
+      {onQuickRewrite && (
+        <div className="flex items-center justify-between gap-2 pt-0.5">
+          <div className="flex items-center gap-2 flex-wrap">
+            {QUICK_REWRITE_CONFIG.map((a, i) => (
+              <span key={a.id} className="flex items-center gap-2">
+                {i > 0 && <span style={{ color: C.textGhost }}>·</span>}
+                <button
+                  onClick={() => onQuickRewrite(a.id)}
+                  disabled={!!quickRewriteBusy}
+                  className="text-[10px] disabled:opacity-50 disabled:cursor-wait"
+                  style={{ color: quickRewriteBusy === a.id ? C.text : C.textFaint }}>
+                  {quickRewriteBusy === a.id ? "…" : a.label}
+                </button>
+              </span>
+            ))}
+          </div>
+          {canUndoRewrite && onUndoRewrite && (
+            <button onClick={onUndoRewrite} className="text-[10px]" style={{ color: C.textFaint }}>
+              Undo
+            </button>
+          )}
+        </div>
+      )}
+      {quickRewriteError && (
+        <p className="text-[11px] text-red-400 animate-fade-in">{quickRewriteError}</p>
+      )}
 
       <div className="space-y-0.5">
         {insertStatus && (

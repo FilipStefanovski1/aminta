@@ -44,6 +44,8 @@ interface GenerateBody {
   // Thread Creator only — how many posts, independent from `length`.
   postCount?: ThreadPostCount
   templateInstruction?: string
+  // Quick Rewrite actions (extension's OutputCard) — polish mode only.
+  polishRevision?: string
   corpus?: StyleCorpusEntry[]
 }
 
@@ -176,6 +178,11 @@ export async function POST(request: NextRequest) {
         return errorResponse("Invalid template instruction.", "INVALID_REQUEST", 400)
       }
     }
+    if (body.polishRevision !== undefined) {
+      if (typeof body.polishRevision !== "string" || body.polishRevision.length > MAX_TEMPLATE_INSTRUCTION_CHARS) {
+        return errorResponse("Invalid revision instruction.", "INVALID_REQUEST", 400)
+      }
+    }
   }
 
   // Never trust the client's own image cap/type/size — re-validate
@@ -288,7 +295,8 @@ export async function POST(request: NextRequest) {
               body.tone ?? "direct",
               body.length ?? "medium",
               body.templateInstruction,
-              !!body.hasImages
+              !!body.hasImages,
+              body.polishRevision
             ),
             images
           )

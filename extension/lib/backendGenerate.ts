@@ -28,6 +28,9 @@ export interface TextGenerateArgs {
   tone: Tone
   length: OutputLength
   templateInstruction?: string
+  // Quick Rewrite actions (OutputCard) — polish mode only. See
+  // lib/prompts.ts's buildMessages for what this changes.
+  polishRevision?: string
   images?: string[]
   hasImages?: boolean
 }
@@ -247,7 +250,8 @@ export async function dispatchGenerate(
     args.tone,
     args.length,
     args.templateInstruction,
-    args.hasImages
+    args.hasImages,
+    args.polishRevision
   )
   // Structured `{ text }` output for Gemini keys — args.generationMode is
   // always tweet/reply/polish here (TextGenerateArgs excludes style_profile),

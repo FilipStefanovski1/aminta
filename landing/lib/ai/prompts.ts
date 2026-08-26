@@ -437,7 +437,11 @@ export function buildMessages(
   tone: Tone = "direct",
   length: OutputLength = "medium",
   templateInstruction?: string,
-  hasImages?: boolean
+  hasImages?: boolean,
+  // Polish mode only — Quick Rewrite actions (extension's OutputCard
+  // Shorter/Sharper/More casual). See extension/lib/prompts.ts's matching
+  // buildMessages for the full comment; kept identical here.
+  polishRevision?: string
 ): ChatMessage[] {
   const premiseNote = mode === "tweet" ? `\n${PREMISE_DEVELOPMENT_RULE}` : ""
   const toneNote = `\nTONE DIRECTION: ${TONE_GUIDE[tone]}${premiseNote}\n${resolveLengthGuide(mode, length, styleProfile)}`
@@ -451,6 +455,8 @@ export function buildMessages(
     user = hasImages
       ? `Someone posted this on X, with one or more images attached below and this caption:\n"""${trimmed || "(no caption text)"}"""\nLook at the images and caption together — the image may carry more of the meaning than the caption does (a meme, a chart, a screenshot, a flex post). Write ONE reply in my voice that responds to the combined meaning. If the image adds nothing beyond the caption, just reply to the caption instead of forcing a visual observation. Never invent specific text, people, brands, numbers, or events you can't actually make out. Return only the reply text.`
       : `Someone posted this on X:\n"""${trimmed}"""\nWrite ONE reply in my voice — respond to something specific in their post, not the post as a whole, not a generic reaction to it. Return only the reply text.`
+  } else if (polishRevision?.trim()) {
+    user = `CURRENT OUTPUT:\n"""${trimmed}"""\nREQUESTED REVISION: ${polishRevision.trim()}\nApply ONLY this revision. PRESERVE my meaning, voice, personality, and every specific detail this revision doesn't ask you to change — this is a targeted edit of the text above, not a rewrite from scratch and not a generic summary.`
   } else {
     user = `Here is my rough draft for an X post:\n"""${trimmed}"""\nFix grammar, punctuation, awkward phrasing, and spacing. Leave anything that's clearly intentional style alone. PRESERVE my meaning, personality, formality, and language exactly — no new ideas, claims, or facts, and don't let it drift into corporate or LinkedIn tone.`
   }

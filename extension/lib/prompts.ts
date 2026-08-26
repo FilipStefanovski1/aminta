@@ -3,6 +3,20 @@ import type { StyleProfile, VoiceProfile } from "~lib/storage"
 
 export type Platform     = "x"
 export type Mode         = "tweet" | "reply" | "polish"
+
+// ── Quick Rewrite actions (OutputCard) ──────────────────────────────────
+// Routed through polish mode's polishRevision param (see buildMessages) —
+// a targeted edit of the CURRENT output, never a from-scratch rewrite.
+export type QuickRewriteAction = "shorter" | "sharper" | "casual"
+
+export const QUICK_REWRITE_INSTRUCTIONS: Record<QuickRewriteAction, string> = {
+  shorter:
+    "Make this meaningfully shorter. Cut unnecessary words, repetition, filler, and overexplaining — do not just delete the last sentence, and do not summarize it into generic language. Preserve the main point, the useful specifics, and the intended meaning.",
+  sharper:
+    "Make this sharper: stronger opening, clearer sentences, more specific language, better pacing. Remove weak or filler language. Do NOT make it aggressive, clickbait, corporate, fake-controversial, or add an excessive hook — this is a clarity and precision pass, not a tone change.",
+  casual:
+    "Make this feel more natural and conversational, like the user is actually talking, not writing a polished statement. Do not force lowercase, add slang, add \"lol\", add emojis, add profanity, or introduce spelling mistakes unless the WRITING STYLE/CUSTOM RULES above already show this person's own writing does that.",
+}
 export type Tone         = "direct" | "witty" | "analytical" | "inspiring"
 export type OutputLength = "short" | "medium" | "long"
 // Thread Creator only — how many posts, independent from OutputLength
@@ -519,7 +533,13 @@ export function buildMessages(
   // (sent alongside this call as vision parts — see lib/ai.ts's
   // generateFromImage) and the prompt below is written for that combined
   // input instead of assuming `input` is the whole post.
-  hasImages?: boolean
+  hasImages?: boolean,
+  // Polish mode only — Quick Rewrite actions (OutputCard's Shorter/Sharper/
+  // More casual). When present, `input` is the CURRENT generated output
+  // (not a user-written rough draft), and this replaces polish's default
+  // "fix grammar" framing with the specific requested revision. Absent for
+  // every other polish call — normal Polish mode is completely unchanged.
+  polishRevision?: string
 ): ChatMessage[] {
   const premiseNote = mode === "tweet" ? `\n${PREMISE_DEVELOPMENT_RULE}` : ""
   const toneNote = `\nTONE DIRECTION: ${TONE_GUIDE[tone]}${premiseNote}\n${resolveLengthGuide(mode, length, styleProfile)}`
@@ -533,6 +553,8 @@ export function buildMessages(
     user = hasImages
       ? `Someone posted this on X, with one or more images attached below and this caption:\n"""${trimmed || "(no caption text)"}"""\nLook at the images and caption together — the image may carry more of the meaning than the caption does (a meme, a chart, a screenshot, a flex post). Write ONE reply in my voice that responds to the combined meaning. If the image adds nothing beyond the caption, just reply to the caption instead of forcing a visual observation. Never invent specific text, people, brands, numbers, or events you can't actually make out. Return only the reply text.`
       : `Someone posted this on X:\n"""${trimmed}"""\nWrite ONE reply in my voice — respond to something specific in their post, not the post as a whole, not a generic reaction to it. Return only the reply text.`
+  } else if (polishRevision?.trim()) {
+    user = `CURRENT OUTPUT:\n"""${trimmed}"""\nREQUESTED REVISION: ${polishRevision.trim()}\nApply ONLY this revision. PRESERVE my meaning, voice, personality, and every specific detail this revision doesn't ask you to change — this is a targeted edit of the text above, not a rewrite from scratch and not a generic summary.`
   } else {
     user = `Here is my rough draft for an X post:\n"""${trimmed}"""\nFix grammar, punctuation, awkward phrasing, and spacing. Leave anything that's clearly intentional style alone. PRESERVE my meaning, personality, formality, and language exactly — no new ideas, claims, or facts, and don't let it drift into corporate or LinkedIn tone.`
   }

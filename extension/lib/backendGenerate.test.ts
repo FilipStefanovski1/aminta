@@ -267,6 +267,126 @@ describe("dispatchGenerate", () => {
     expect(fetch).not.toHaveBeenCalled()
   })
 
+  // Quick Rewrite actions (OutputCard's Shorter/Sharper/More casual) —
+  // routed through polish mode's polishRevision param, never a new AI-call
+  // shape. Reusing polish means the existing credit cost applies unchanged.
+  describe("polishRevision (Quick Rewrite actions)", () => {
+    const VOICE_WITH_RULES = { niche: "general", tone: "casual", examples: "", voiceStyle: "", voiceInspiration: "nobody", customRules: "no hashtags\nuse lowercase only" } as any
+
+    it("Shorter sends the CURRENT output (not the original prompt) and the shorter instruction", async () => {
+      const store = { ...baseStore, apiKey: "AIzaSomeKey", plan: "pro", subscriptionStatus: "active", aiIncluded: false } as AmintaStore
+      await dispatchGenerate(store, {
+        generationMode: "polish",
+        input: "spent the last 3 months building aminta.",
+        voice: VOICE_WITH_RULES,
+        styleProfile: null,
+        tone: "direct",
+        length: "medium",
+        polishRevision: "Make this meaningfully shorter.",
+      })
+      const messages = mockRunAI.mock.calls[0][2] as { role: string; content: string }[]
+      const user = messages.find((m) => m.role === "user")!.content
+      expect(user).toContain("spent the last 3 months building aminta.")
+      expect(user).toContain("REQUESTED REVISION: Make this meaningfully shorter.")
+    })
+
+    it("Sharper sends the current output and the sharper instruction", async () => {
+      const store = { ...baseStore, apiKey: "AIzaSomeKey", plan: "pro", subscriptionStatus: "active", aiIncluded: false } as AmintaStore
+      await dispatchGenerate(store, {
+        generationMode: "polish", input: "current draft text", voice: VOICE_WITH_RULES, styleProfile: null,
+        tone: "direct", length: "medium", polishRevision: "Make this sharper.",
+      })
+      const messages = mockRunAI.mock.calls[0][2] as { role: string; content: string }[]
+      const user = messages.find((m) => m.role === "user")!.content
+      expect(user).toContain("current draft text")
+      expect(user).toContain("REQUESTED REVISION: Make this sharper.")
+    })
+
+    it("More casual sends the current output and the casual instruction", async () => {
+      const store = { ...baseStore, apiKey: "AIzaSomeKey", plan: "pro", subscriptionStatus: "active", aiIncluded: false } as AmintaStore
+      await dispatchGenerate(store, {
+        generationMode: "polish", input: "current draft text", voice: VOICE_WITH_RULES, styleProfile: null,
+        tone: "direct", length: "medium", polishRevision: "Make this feel more casual.",
+      })
+      const messages = mockRunAI.mock.calls[0][2] as { role: string; content: string }[]
+      const user = messages.find((m) => m.role === "user")!.content
+      expect(user).toContain("current draft text")
+      expect(user).toContain("REQUESTED REVISION: Make this feel more casual.")
+    })
+
+    it("includes current Voice in the system prompt", async () => {
+      const store = { ...baseStore, apiKey: "AIzaSomeKey", plan: "pro", subscriptionStatus: "active", aiIncluded: false } as AmintaStore
+      await dispatchGenerate(store, {
+        generationMode: "polish", input: "current draft text", voice: VOICE_WITH_RULES, styleProfile: null,
+        tone: "direct", length: "medium", polishRevision: "Make this sharper.",
+      })
+      const messages = mockRunAI.mock.calls[0][2] as { role: string; content: string }[]
+      const system = messages.find((m) => m.role === "system")!.content
+      expect(system).toContain("NICHE: general")
+    })
+
+    it("includes current Instincts (CUSTOM RULES) in the system prompt", async () => {
+      const store = { ...baseStore, apiKey: "AIzaSomeKey", plan: "pro", subscriptionStatus: "active", aiIncluded: false } as AmintaStore
+      await dispatchGenerate(store, {
+        generationMode: "polish", input: "current draft text", voice: VOICE_WITH_RULES, styleProfile: null,
+        tone: "direct", length: "medium", polishRevision: "Make this sharper.",
+      })
+      const messages = mockRunAI.mock.calls[0][2] as { role: string; content: string }[]
+      const system = messages.find((m) => m.role === "system")!.content
+      expect(system).toContain("no hashtags")
+      expect(system).toContain("use lowercase only")
+      expect(system).toContain("CUSTOM RULES (highest priority")
+    })
+
+    it("Included AI (Pro/Founder) routes through the backend with normal credit handling — polishRevision reaches the request body", async () => {
+      mockGetAuthSession.mockResolvedValue(SESSION)
+      const fetchMock = vi.mocked(fetch)
+      fetchMock.mockResolvedValue(jsonResponse(200, { text: "rewritten" }))
+
+      const store = { ...baseStore, apiKey: "", plan: "pro", subscriptionStatus: "active", aiIncluded: true } as AmintaStore
+      const text = await dispatchGenerate(store, {
+        generationMode: "polish", input: "current draft text", voice: VOICE_WITH_RULES, styleProfile: null,
+        tone: "direct", length: "medium", polishRevision: "Make this sharper.",
+      })
+
+      expect(text).toBe("rewritten")
+      expect(mockRunAI).not.toHaveBeenCalled()
+      const body = JSON.parse(fetchMock.mock.calls[0][1]?.body as string)
+      expect(body.generationMode).toBe("polish")
+      expect(body.polishRevision).toBe("Make this sharper.")
+    })
+
+    it("BYOK follows existing entitlement behavior — a Free user's stale key still never reaches generate()", async () => {
+      const store = { ...baseStore, apiKey: "AIzaStaleKey", plan: "free", subscriptionStatus: null, aiIncluded: false } as AmintaStore
+      await dispatchGenerate(store, {
+        generationMode: "polish", input: "current draft text", voice: VOICE_WITH_RULES, styleProfile: null,
+        tone: "direct", length: "medium", polishRevision: "Make this sharper.",
+      })
+      expect(mockRunAI).toHaveBeenCalledWith("", "gemini-3.5-flash", expect.any(Array), { structuredText: true, generationType: "polish" })
+    })
+
+    it("one click = one model request — no extra candidate/score/cleanup calls", async () => {
+      const store = { ...baseStore, apiKey: "AIzaSomeKey", plan: "pro", subscriptionStatus: "active", aiIncluded: false } as AmintaStore
+      await dispatchGenerate(store, {
+        generationMode: "polish", input: "current draft text", voice: VOICE_WITH_RULES, styleProfile: null,
+        tone: "direct", length: "medium", polishRevision: "Make this sharper.",
+      })
+      expect(mockRunAI).toHaveBeenCalledTimes(1)
+      expect(mockGenerateFromImage).not.toHaveBeenCalled()
+    })
+
+    it("omitting polishRevision keeps normal Polish mode's default grammar-fix framing", async () => {
+      const store = { ...baseStore, apiKey: "AIzaSomeKey", plan: "pro", subscriptionStatus: "active", aiIncluded: false } as AmintaStore
+      await dispatchGenerate(store, {
+        generationMode: "polish", input: "a rough draft", voice: VOICE_WITH_RULES, styleProfile: null, tone: "direct", length: "medium",
+      })
+      const messages = mockRunAI.mock.calls[0][2] as { role: string; content: string }[]
+      const user = messages.find((m) => m.role === "user")!.content
+      expect(user).toContain("Fix grammar, punctuation, awkward phrasing, and spacing.")
+      expect(user).not.toContain("REQUESTED REVISION")
+    })
+  })
+
   it("routes non-included users with images through generateFromImage", async () => {
     const store = { ...baseStore, apiKey: "AIzaSomeKey", plan: "pro", subscriptionStatus: "active", aiIncluded: false } as AmintaStore
     const text = await dispatchGenerate(store, {
