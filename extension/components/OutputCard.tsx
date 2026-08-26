@@ -154,38 +154,40 @@ export default function OutputCard({ text, mode, platform, imageDataUrl, onRegen
         </button>
       </div>
 
-      <div className="flex gap-2">
-        {onRegenerate && (
-          <button
-            onClick={onRegenerate}
-            className="flex-1 border border-[#1e2028] rounded py-1.5 text-[10px] hover:border-[#333] transition-colors"
-            style={{ color: C.textFaint }}>
-            ↻ Try again
-          </button>
-        )}
-        {onSaveAsTemplate && (
-          <button
-            onClick={() => onSaveAsTemplate(text)}
-            className="flex-1 border border-[#1e2028] rounded py-1.5 text-[10px] hover:border-[#333] transition-colors"
-            style={{ color: C.textFaint }}>
-            + Save as template
-          </button>
-        )}
-      </div>
-
-      {onQuickRewrite && (
-        <div className="flex items-center justify-between gap-2 pt-0.5">
+      {/* ── Secondary actions — one consistent row of compact text links,
+          never competing visually with Copy/Insert above. Try again, Shorter/
+          Sharper/More casual, and Save as template are all the same weight;
+          Undo sits opposite since it only appears once a rewrite has run. ── */}
+      {(onRegenerate || onQuickRewrite || onSaveAsTemplate) && (
+        <div className="flex items-center justify-between gap-2 flex-wrap pt-0.5">
           <div className="flex items-center gap-2 flex-wrap">
-            {QUICK_REWRITE_CONFIG.map((a, i) => (
-              <span key={a.id} className="flex items-center gap-2">
-                {i > 0 && <span style={{ color: C.textGhost }}>·</span>}
-                <button
-                  onClick={() => onQuickRewrite(a.id)}
-                  disabled={!!quickRewriteBusy}
-                  className="text-[10px] disabled:opacity-50 disabled:cursor-wait"
-                  style={{ color: quickRewriteBusy === a.id ? C.text : C.textFaint }}>
-                  {quickRewriteBusy === a.id ? "…" : a.label}
+            {[
+              ...(onRegenerate ? [{ key: "regenerate", node: (
+                <button onClick={onRegenerate} className="text-[10px]" style={{ color: C.textFaint }}>
+                  Try again
                 </button>
+              ) }] : []),
+              ...(onQuickRewrite ? QUICK_REWRITE_CONFIG.map((a) => ({
+                key: a.id,
+                node: (
+                  <button
+                    onClick={() => onQuickRewrite(a.id)}
+                    disabled={!!quickRewriteBusy}
+                    className="text-[10px] disabled:opacity-50 disabled:cursor-wait"
+                    style={{ color: quickRewriteBusy === a.id ? C.text : C.textFaint }}>
+                    {quickRewriteBusy === a.id ? "…" : a.label}
+                  </button>
+                ),
+              })) : []),
+              ...(onSaveAsTemplate ? [{ key: "save-template", node: (
+                <button onClick={() => onSaveAsTemplate(text)} className="text-[10px]" style={{ color: C.textFaint }}>
+                  Save as template
+                </button>
+              ) }] : []),
+            ].map((item, i) => (
+              <span key={item.key} className="flex items-center gap-2">
+                {i > 0 && <span style={{ color: C.textGhost }}>·</span>}
+                {item.node}
               </span>
             ))}
           </div>

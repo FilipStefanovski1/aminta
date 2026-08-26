@@ -223,11 +223,12 @@ export default function ThreadResults({ threads, tint, onSaveAsTemplate }: Props
 
       {buildError && <p className="text-[10px]" style={{ color: "#f87171" }}>{buildError}</p>}
 
-      {/* ── Primary action: build the full thread draft in X ── */}
+      {/* ── Primary action: build the full thread draft in X — same height
+          as OutputCard's Insert button, its single-post equivalent. ── */}
       <button
         onClick={buildThread}
         disabled={running || validation.ok === false}
-        className="btn-pixel w-full bg-mint text-black rounded py-2.5 font-pixel text-[8px] active:scale-[0.97] disabled:opacity-40">
+        className="btn-pixel w-full bg-mint text-black rounded py-2 font-pixel text-[8px] active:scale-[0.97] disabled:opacity-40">
         Build thread in X
       </button>
       {validation.ok === false && !running && (
@@ -251,7 +252,7 @@ export default function ThreadResults({ threads, tint, onSaveAsTemplate }: Props
           onClick={() => onSaveAsTemplate(activePosts)}
           className="w-full rounded py-2 text-[9px]"
           style={{ border: `1px solid ${C.border}`, color: C.textDim }}>
-          + Save as template
+          Save as template
         </button>
       )}
     </div>

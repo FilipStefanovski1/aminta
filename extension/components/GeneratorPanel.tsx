@@ -85,63 +85,15 @@ const MODE_CONFIG: { id: UiMode; label: string; sub: string; icon: React.ReactNo
 const PLATFORM: Platform = "x"
 
 // ─── Tone config ──────────────────────────────────────────────────────────────
+// Same shape as LENGTH_CONFIG/POST_COUNT_CONFIG below — Tone, Length, and
+// Posts render as the same segmented-control family (see the shared markup
+// in the render below) instead of three different control styles.
 
-const TONE_CONFIG: { id: Tone; label: string; desc: string; icon: React.ReactNode }[] = [
-  {
-    id: "direct",
-    label: "Direct",
-    desc: "Short. Clear.",
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-        <circle cx="12" cy="12" r="9" />
-        <circle cx="12" cy="12" r="3" />
-        <line x1="12" y1="2" x2="12" y2="6" />
-        <line x1="12" y1="18" x2="12" y2="22" />
-        <line x1="2" y1="12" x2="6" y2="12" />
-        <line x1="18" y1="12" x2="22" y2="12" />
-      </svg>
-    ),
-  },
-  {
-    id: "witty",
-    label: "Witty",
-    desc: "Clever. Playful.",
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-        <circle cx="12" cy="12" r="9" />
-        <circle cx="9" cy="10.5" r="1" fill="currentColor" stroke="none" />
-        <circle cx="15" cy="10.5" r="1" fill="currentColor" stroke="none" />
-        <path d="M8.5 15 Q12 17.5 15.5 15" strokeLinejoin="round" />
-      </svg>
-    ),
-  },
-  {
-    id: "analytical",
-    label: "Analytical",
-    desc: "Logical. Data.",
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M5 20V14" />
-        <path d="M10 20V8" />
-        <path d="M15 20V11" />
-        <path d="M20 20V4" />
-        <path d="M2 20h20" />
-      </svg>
-    ),
-  },
-  {
-    id: "inspiring",
-    label: "Inspiring",
-    desc: "Bold. Vision.",
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-        <path d="M12 2l2.2 5.6 5.8 1.9-4.3 4 1 5.9L12 16.5l-4.7 2.9 1-5.9-4.3-4 5.8-1.9L12 2z"
-          stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
-        <circle cx="4.5" cy="19.5" r="1.1" fill="currentColor" opacity="0.45" />
-        <circle cx="19.5" cy="5" r="0.9" fill="currentColor" opacity="0.45" />
-      </svg>
-    ),
-  },
+const TONE_CONFIG: { id: Tone; label: string; desc: string }[] = [
+  { id: "direct",     label: "Direct",     desc: "Short. Clear." },
+  { id: "witty",      label: "Witty",      desc: "Clever. Playful." },
+  { id: "analytical", label: "Analytical", desc: "Logical. Data." },
+  { id: "inspiring",  label: "Inspiring",  desc: "Bold. Vision." },
 ]
 
 // ─── Length config ────────────────────────────────────────────────────────────
@@ -265,7 +217,6 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
   // length is per-post DEPTH. No stored preference (matches `length`'s own
   // per-session default), so 4 is simply the initial value.
   const [postCount, setPostCount] = useState<ThreadPostCount>(4)
-  const [hoveredTone, setHoveredTone] = useState<Tone | null>(null)
   const [topic,    setTopic]    = useState(initialTopic ?? "")
   const [context,  setContext]  = useState("")
   const [output,   setOutput]   = useState("")
@@ -831,38 +782,24 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
         </div>
       </div>
 
-      {/* ── Tone ── */}
+      {/* ── Tone — same segmented-control family as Length/Posts below. ── */}
       <div className="space-y-1.5">
         <p className="text-[11px] font-medium" style={{ color: C.textFaint }}>Tone</p>
-        <div className="grid grid-cols-4 gap-1.5">
-          {TONE_CONFIG.map((t) => {
-            const active  = tone === t.id
-            const hovered = hoveredTone === t.id && !active
+        <div className="flex rounded-xl overflow-hidden" style={{ border: `1.5px solid ${C.border}` }}>
+          {TONE_CONFIG.map((t, i) => {
+            const active = tone === t.id
             return (
               <button
                 key={t.id}
                 onClick={() => setTone(t.id)}
-                onMouseEnter={() => setHoveredTone(t.id)}
-                onMouseLeave={() => setHoveredTone(null)}
                 title={t.desc}
-                className="flex flex-col items-center gap-1.5 py-3 px-1 rounded-xl"
+                className="flex-1 flex items-center justify-center py-2.5 transition-all"
                 style={{
-                  backgroundColor: active ? tint + "14" : C.card,
-                  border: `1.5px solid ${active ? tint : hovered ? tint + "55" : C.border}`,
-                  transform: active ? "translateY(-2px)" : hovered ? "scale(1.02)" : "none",
-                  boxShadow: active ? `0 4px 18px ${tint}22, 0 2px 6px rgba(0,0,0,0.35)` : "none",
-                  transition: "transform 0.13s ease, box-shadow 0.13s ease, border-color 0.13s ease, background-color 0.13s ease",
+                  backgroundColor: active ? tint + "18" : "transparent",
+                  borderRight: i < TONE_CONFIG.length - 1 ? `1px solid ${C.border}` : undefined,
+                  color: active ? tint : C.textGhost,
                 }}>
-                <span style={{
-                  color: active ? "#fff" : hovered ? tint + "cc" : C.textDim,
-                  transition: "color 0.13s ease",
-                  lineHeight: 1,
-                }}>
-                  {t.icon}
-                </span>
-                <span
-                  className="font-semibold text-[10px] leading-none"
-                  style={{ color: active ? tint : hovered ? C.text : C.textDim }}>
+                <span className="text-[10px] font-semibold" style={{ color: active ? tint : C.textDim }}>
                   {t.label}
                 </span>
               </button>
