@@ -1,5 +1,5 @@
 import { getAuthSession, refreshAuthSession, type AuthSession } from "./auth"
-import { getStore, setStore, type AmintaStore, type AmintaTemplate } from "./storage"
+import { capEarnedHashes, getStore, setStore, type AmintaStore, type AmintaTemplate } from "./storage"
 
 const API_URL = "https://amintaapp.com/api/sync"
 
@@ -209,9 +209,12 @@ export async function pullFromCloud(): Promise<{ cloudXp: number } | void> {
   const localXpWasHigher = local.xp > (data.xp ?? 0)
 
   // Merge: never go backwards on XP; union earned hashes so two devices with
-  // different histories can't re-earn each other's XP.
-  const mergedHashes = Array.from(
-    new Set([...(local.earnedHashes ?? []), ...(data.earned_hashes ?? [])])
+  // different histories can't re-earn each other's XP. Capped so the union
+  // can't reintroduce unbounded growth that lib/xp.ts's own cap prevents on
+  // the append path (see MAX_EARNED_HASHES) — and so an oversized array
+  // written by an older build normalizes on the next pull.
+  const mergedHashes = capEarnedHashes(
+    Array.from(new Set([...(local.earnedHashes ?? []), ...(data.earned_hashes ?? [])]))
   )
 
   const patch: Partial<AmintaStore> = {

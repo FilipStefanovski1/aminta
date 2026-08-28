@@ -18,8 +18,16 @@ const DAY = 24 * 60 * 60 * 1000
 describe("retention windows", () => {
   it("keeps generated content far shorter than the usage record", () => {
     expect(CONTENT_TTL_MS).toBe(15 * MINUTE)
-    expect(USAGE_LOG_RETENTION_DAYS).toBe(90)
+    expect(USAGE_LOG_RETENTION_DAYS).toBe(30)
     expect(CONTENT_TTL_MS).toBeLessThan(USAGE_LOG_RETENTION_DAYS * DAY)
+  })
+
+  // The two windows are deliberately independent: shortening operational
+  // metadata retention must never drag the content TTL along with it (or
+  // vice versa), since they exist for entirely different reasons.
+  it("content TTL is unaffected by the metadata retention change", () => {
+    expect(CONTENT_TTL_MS).toBe(15 * MINUTE)
+    expect(contentCutoff(NOW).toISOString()).toBe(ago(15 * MINUTE))
   })
 
   it("covers the concurrency-lease window a duplicate request could arrive in", () => {

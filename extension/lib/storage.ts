@@ -340,3 +340,41 @@ export async function clearAccountScopedState(): Promise<void> {
   }
   await setStore(patch)
 }
+
+// Everything above PLUS the personal device-scoped fields — the user's BYOK
+// key and their uploaded avatar. Used ONLY after a confirmed successful
+// account deletion, never on sign-out: signing out is reversible and keeping
+// a provider key you'd otherwise have to re-paste is a deliberate
+// convenience, but a deleted account must not leave its owner's API key or
+// content sitting on the device.
+//
+// `model` and `providerMode` are intentionally preserved — they're inert
+// preferences (a model name, an enum), carry nothing personal, and clearing
+// them would just degrade the next account's setup for no privacy gain.
+export async function clearAllLocalUserData(): Promise<void> {
+  const patch: Partial<AmintaStore> = {}
+  for (const key of ACCOUNT_SCOPED_KEYS) {
+    ;(patch as Record<string, unknown>)[key] = DEFAULTS[key]
+  }
+  patch.apiKey = DEFAULTS.apiKey
+  patch.avatarDataUrl = DEFAULTS.avatarDataUrl
+  await setStore(patch)
+}
+
+// ─── earned_hashes bound ────────────────────────────────────────────────
+// earnedHashes prevents the same generated text from being awarded XP twice
+// (see lib/xp.ts). It only ever needs to cover the window in which a user
+// could plausibly re-insert the same draft — but it was unbounded, so it
+// grew by one entry per awarded post forever and synced both ways.
+//
+// 1000 is sized off the real ceiling: DAILY_CAP is 500 XP/day and the
+// cheapest award is 15 XP (polish), so at most ~33 awards land per day.
+// 1000 entries is therefore ~30 days of continuous maximum-rate use — far
+// beyond any realistic "did I already post this?" window, while keeping the
+// array small and bounded. Newest wins: appends go on the end, so the cap
+// drops the oldest.
+export const MAX_EARNED_HASHES = 1000
+
+export function capEarnedHashes(hashes: string[]): string[] {
+  return hashes.length > MAX_EARNED_HASHES ? hashes.slice(-MAX_EARNED_HASHES) : hashes
+}

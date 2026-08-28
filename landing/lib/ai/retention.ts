@@ -28,9 +28,17 @@
 // result_text, so no feature depends on it living longer.
 export const CONTENT_TTL_MS = 15 * 60 * 1000
 
-// Full-row retention for the non-content operational record. Unchanged —
-// quota/spend/abuse auditing still needs the metadata columns.
-export const USAGE_LOG_RETENTION_DAYS = 90
+// Full-row retention for the non-content operational record (mode, model,
+// input_chars COUNT, token counts, latency, cost, hashed IP, device id —
+// never prompts, and never output beyond CONTENT_TTL_MS above).
+//
+// 30, not 90: nothing in the codebase reads these rows outside the request
+// that writes them — there is no usage dashboard or aggregation endpoint —
+// so the window exists purely for manual spend/abuse investigation. A month
+// comfortably covers a full billing cycle plus the lag on noticing an
+// anomaly, and holding operational metadata 3x longer than that bought
+// nothing we actually use.
+export const USAGE_LOG_RETENTION_DAYS = 30
 
 export function contentCutoff(now: number = Date.now()): Date {
   return new Date(now - CONTENT_TTL_MS)

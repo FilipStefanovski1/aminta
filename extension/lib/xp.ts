@@ -1,6 +1,6 @@
 import { getForm, getLevel } from "~lib/evolution"
 import { todayLocal } from "~lib/dates"
-import { getStore, setStore, type PendingXPRecord } from "~lib/storage"
+import { capEarnedHashes, getStore, setStore, type PendingXPRecord } from "~lib/storage"
 import type { Mode } from "~lib/prompts"
 
 export const XP_PER_MODE: Record<Mode, number> = { tweet: 50, reply: 25, polish: 15 }
@@ -44,7 +44,7 @@ export async function tryAwardXP(hash: string, amount: number): Promise<XPResult
 
   await setStore({
     xp: newXP,
-    earnedHashes: [...earnedHashes, hash],
+    earnedHashes: capEarnedHashes([...earnedHashes, hash]),
     xpToday: xpToday + actualAmount,
     xpTodayDate: today,
   })
@@ -65,7 +65,7 @@ export async function tryAwardBountyXP(bountyId: string, amount: number): Promis
 
   await setStore({
     xp: newXP,
-    earnedHashes: [...earnedHashes, key],
+    earnedHashes: capEarnedHashes([...earnedHashes, key]),
   })
 
   return { awarded: amount, total: newXP }

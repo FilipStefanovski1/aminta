@@ -11,6 +11,7 @@ import HomeTab from "~components/HomeTab"
 import LoginScreen from "~components/LoginScreen"
 import SetupGate from "~components/SetupGate"
 import VoiceProfileForm from "~components/VoiceProfileForm"
+import DeleteLearnedDataCard from "~components/DeleteLearnedDataCard"
 import FaqPage from "~components/FaqPage"
 import { GhostButton, PrimaryButton } from "~components/ui"
 import { FORMS, getStageTint } from "~lib/evolution"
@@ -18,7 +19,7 @@ import { CREDIT_RESET_LABEL, canUseByok, planLabel as computePlanLabel, provider
 import { isGoogleKey, isGroqKey, GEMINI_DEFAULT, GROQ_DEFAULT, SUPPORTED_GEMINI_MODELS, SUPPORTED_GROQ_MODELS } from "~lib/ai"
 import { PROVIDERS, detectProvider } from "~lib/providers"
 import { C } from "~lib/theme"
-import { getStore, setStore, type AmintaStore, type RecentCreation } from "~lib/storage"
+import { clearAllLocalUserData, getStore, setStore, type AmintaStore, type RecentCreation } from "~lib/storage"
 import { getAuthSession, clearAuthSession, signOutEverywhere, type AuthSession } from "~lib/auth"
 import { pullFromCloud, pushToCloud } from "~lib/sync"
 import { handleAuthUserChanged } from "~lib/accountScope"
@@ -200,8 +201,15 @@ function DangerZone({ onSignOut }: { onSignOut: () => void }) {
     setError("")
     try {
       await deleteAccount()
-      // Server-side deletion succeeded — the account (and its session) no
-      // longer exists. Clear local session state the same way sign-out does.
+      // ONLY after the server confirms deletion. A failed delete throws
+      // above and lands in catch, so local data is never wiped for an
+      // account that still exists.
+      //
+      // Unlike sign-out (reversible, keeps the device-scoped BYOK key on
+      // purpose), an explicit account deletion must not leave the deleted
+      // user's key, avatar, voice profile, Tweet DNA, templates, Recent
+      // Creations, or drafts sitting on the device.
+      await clearAllLocalUserData()
       onSignOut()
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong.")
@@ -1147,13 +1155,20 @@ function SidePanel() {
             )}
 
             {tab === "train" && (
-              <VoiceProfileForm
-                store={store}
-                initial={store.voice}
-                onSave={(voice) => update({ voice })}
-                dnaCount={store.tweetDNA?.length ?? 0}
-                onRefreshed={refresh}
-              />
+              <div className="space-y-4">
+                <VoiceProfileForm
+                  store={store}
+                  initial={store.voice}
+                  onSave={(voice) => update({ voice })}
+                  dnaCount={store.tweetDNA?.length ?? 0}
+                  onRefreshed={refresh}
+                />
+                {/* Privacy control — sits with the data it deletes. See
+                    lib/learnedData.ts for exactly what it does and doesn't
+                    remove (Instincts, templates, and Recent Creations all
+                    survive; the X connection is untouched). */}
+                <DeleteLearnedDataCard store={store} onCleared={refresh} />
+              </div>
             )}
 
           </div>

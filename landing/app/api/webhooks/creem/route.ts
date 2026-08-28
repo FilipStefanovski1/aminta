@@ -15,6 +15,22 @@ function verifySignature(payload: string, signature: string, secret: string): bo
   return a.length === b.length && crypto.timingSafeEqual(a, b)
 }
 
+/**
+ * The analytics identity for a webhook event — ALWAYS the Supabase user
+ * UUID, never an email. Exported (and lookup-injected) so the "email can
+ * never become a distinctId" guarantee is directly testable.
+ *
+ * Returns null when the UUID can't be resolved; callers must then skip the
+ * analytics event rather than substituting anything else.
+ */
+export async function resolveAnalyticsId(
+  userMatch: { column: string; value: string },
+  lookupId: (column: string, value: string) => Promise<string | null>
+): Promise<string | null> {
+  if (userMatch.column === "id") return userMatch.value
+  return await lookupId(userMatch.column, userMatch.value)
+}
+
 export async function POST(request: NextRequest) {
   const secret = process.env.CREEM_WEBHOOK_SECRET
   if (!secret || secret === "we_will_add_this_later") {
@@ -44,6 +60,30 @@ export async function POST(request: NextRequest) {
   const userMatch = userId ? { column: "id", value: userId } : email ? { column: "email", value: email } : null
 
   if (!userMatch) return NextResponse.json({ ok: true })
+
+  // Analytics identity is ALWAYS the Supabase user UUID — never the email,
+  // the X handle, or any other personal identifier. When the webhook matched
+  // by email we look the UUID up rather than falling back to sending the
+  // email to PostHog.
+  //
+  // If it can't be resolved, the user-specific analytics events are simply
+  // skipped: billing must never fail because telemetry couldn't identify
+  // someone. Every database write below is keyed on userMatch, not on this.
+  const analyticsId = await resolveAnalyticsId(userMatch, async (column, value) => {
+    const { data } = await supabase.from("users").select("id").eq(column, value).maybeSingle()
+    return data?.id ?? null
+  })
+
+  const captureForUser = (
+    event: string,
+    properties?: Record<string, unknown>,
+    identifyProperties?: Record<string, unknown>
+  ) => {
+    if (!analyticsId) return
+    const posthog = getPostHogClient()
+    posthog.capture({ distinctId: analyticsId, event, ...(properties ? { properties } : {}) })
+    if (identifyProperties) posthog.identify({ distinctId: analyticsId, properties: identifyProperties })
+  }
 
   // Creem's subscription object carries the authoritative billing window.
   // Field names verified against docs.creem.io/code/webhooks:
@@ -76,13 +116,7 @@ export async function POST(request: NextRequest) {
       })
       .eq(userMatch.column, userMatch.value)
 
-    const posthog = getPostHogClient()
-    posthog.capture({
-      distinctId: email ?? userMatch.value,
-      event: "subscription_activated",
-      properties: { plan, event_type: eventType },
-    })
-    posthog.identify({ distinctId: email ?? userMatch.value, properties: { plan } })
+    captureForUser("subscription_activated", { plan, event_type: eventType }, { plan })
   }
 
   // subscription.paid — a recurring payment was collected, i.e. a NEW billing
@@ -125,10 +159,7 @@ export async function POST(request: NextRequest) {
       .update({ subscription_status: "canceled" })
       .eq(userMatch.column, userMatch.value)
 
-    getPostHogClient().capture({
-      distinctId: email ?? userMatch.value,
-      event: "subscription_canceled",
-    })
+    captureForUser("subscription_canceled")
   }
 
   if (eventType === "subscription.expired") {
@@ -141,10 +172,7 @@ export async function POST(request: NextRequest) {
       .eq(userMatch.column, userMatch.value)
       .neq("plan", "lifetime") // never downgrade lifetime purchases
 
-    getPostHogClient().capture({
-      distinctId: email ?? userMatch.value,
-      event: "subscription_expired",
-    })
+    captureForUser("subscription_expired")
   }
 
   if (eventType === "subscription.past_due") {
