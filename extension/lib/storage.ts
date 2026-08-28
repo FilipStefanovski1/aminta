@@ -250,6 +250,14 @@ export interface AmintaStore {
   pendingXP: PendingXPRecord[]
 
   recentCreations: RecentCreation[]
+
+  // Unfinished Create input, per mode — deliberately NOT typed to
+  // lib/createDrafts.ts's CreateDrafts here, because a persisted value can
+  // predate the current shape (or be hand-edited). Every read goes through
+  // normalizeCreateDrafts(), which validates it back into that type.
+  // Completely separate from recentCreations above: that's generated
+  // history, this is what the user was still writing.
+  createDrafts: unknown
 }
 
 export const DEFAULT_MODEL = "google/gemini-flash-1.5"
@@ -298,6 +306,7 @@ const DEFAULTS: AmintaStore = {
   lastVoiceRefreshAt: "",
   pendingXP: [],
   recentCreations: [],
+  createDrafts: {},
 }
 
 export async function getStore(): Promise<AmintaStore> {

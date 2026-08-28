@@ -5,6 +5,18 @@ import { backendGenerate, dispatchGenerate, runThreadGenerate } from "~lib/backe
 import type { CompanionEvent } from "~lib/companion"
 import { todayLocal } from "~lib/dates"
 import { getStageTint } from "~lib/evolution"
+import {
+  DRAFT_SAVE_DEBOUNCE_MS,
+  clearDraft,
+  getDraft,
+  isEmptyDraft,
+  loadCreateDrafts,
+  saveCreateDrafts,
+  setDraft,
+  type CreateDraft,
+  type CreateDrafts,
+  type DraftMode,
+} from "~lib/createDrafts"
 import { canUseByok, effectiveApiKey, shouldUseIncludedAi } from "~lib/entitlements"
 import { fetchImageAsDataUrl } from "~lib/images"
 import { parseCustomRules } from "~lib/instinctPresets"
@@ -257,6 +269,21 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
   // mode; never overrides the user's own selected postCount above.
   const [threadTemplateInstruction, setThreadTemplateInstruction] = useState("")
   const [threadTemplateName, setThreadTemplateName] = useState("")
+  // Only the template's id is persisted in the draft — name/instruction are
+  // re-derived from store.templates on restore, so a deleted template just
+  // restores nothing instead of resurrecting a stale copy of its posts.
+  const [threadTemplateId, setThreadTemplateId] = useState("")
+
+  // ── Local draft persistence (lib/createDrafts.ts) ────────────────────────
+  // In-memory mirror of every mode's stored draft. Held in a ref rather than
+  // state because only the ACTIVE mode's values live in React state — the
+  // other three modes' drafts just need to survive a mode switch without
+  // triggering renders.
+  const draftsRef = useRef<CreateDrafts>({})
+  // Guards the auto-save effect until the stored drafts have actually been
+  // read. Without it, the effect would fire on mount with empty default
+  // state and overwrite the user's real stored draft before restore ran.
+  const hydratedRef = useRef(false)
 
   // ── Rotating topic-field placeholder (tweet mode only) ──────────────────
   // See the CSS comment on .topic-placeholder in style.css for the fade
@@ -360,6 +387,94 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
     setRewriteBusy(null); setRewriteError(""); setRewritePrevious(null)
   }
 
+  // ── Draft persistence ───────────────────────────────────────────────────
+  // Only what the user is actively writing/choosing. Generated output is
+  // never a draft — it goes to Recent Creations (see saveRecentCreation) and
+  // is deliberately not mirrored here. A locally uploaded photo
+  // (imageDataUrl) is also excluded on purpose: it's a multi-hundred-KB
+  // base64 string, far too heavy for chrome.storage.local, so it stays
+  // transient across a full reload rather than justifying an image store.
+  const collectDraft = (): CreateDraft => ({
+    topic,
+    context,
+    tone,
+    length,
+    postCount,
+    ...(threadTemplateId ? { templateId: threadTemplateId } : {}),
+    ...(postImageUrls.length > 0 ? { postImageUrls } : {}),
+    ...(replyReason ? { replyReason } : {}),
+  })
+
+  const applyDraft = (draft: CreateDraft, { skipTopic = false } = {}) => {
+    if (!skipTopic) setTopic(draft.topic)
+    setContext(draft.context)
+    setTone(draft.tone)
+    setLength(draft.length)
+    setPostCount(draft.postCount)
+    setPostImageUrls(draft.postImageUrls ?? [])
+    setReplyReason(draft.replyReason ?? "")
+
+    // Template: resolve the id against the CURRENT template list. A template
+    // deleted since the draft was saved simply restores nothing — no error,
+    // no stale copy of its posts.
+    const template = draft.templateId ? store.templates?.find((t) => t.id === draft.templateId) : undefined
+    if (template?.threadPosts?.length) {
+      setThreadTemplateId(template.id)
+      setThreadTemplateName(template.name)
+      setThreadTemplateInstruction(buildThreadTemplateInstruction(template.threadPosts))
+    } else {
+      setThreadTemplateId("")
+      setThreadTemplateName("")
+      setThreadTemplateInstruction("")
+    }
+  }
+
+  // Restore once, on mount, for whichever mode Create opened in. Silent by
+  // design — no toast, no badge; the draft is simply already there.
+  useEffect(() => {
+    let cancelled = false
+    loadCreateDrafts().then((drafts) => {
+      if (cancelled) return
+      draftsRef.current = drafts
+      // initialTopic (Recent Creations "Reuse") is an explicit user action
+      // taken just now — it always wins over whatever was stored earlier.
+      applyDraft(getDraft(drafts, mode as DraftMode), { skipTopic: !!initialTopic })
+      hydratedRef.current = true
+    })
+    return () => { cancelled = true }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Debounced auto-save of the active mode's draft. Never runs before
+  // hydration (see hydratedRef above).
+  useEffect(() => {
+    if (!hydratedRef.current) return
+    const timer = setTimeout(() => {
+      const draft = collectDraft()
+      // An emptied-out mode drops its row entirely rather than persisting a
+      // blank one — clearing the field IS the clear-draft affordance here.
+      draftsRef.current = isEmptyDraft(draft)
+        ? clearDraft(draftsRef.current, mode as DraftMode)
+        : setDraft(draftsRef.current, mode as DraftMode, draft)
+      void saveCreateDrafts(draftsRef.current)
+    }, DRAFT_SAVE_DEBOUNCE_MS)
+    return () => clearTimeout(timer)
+  }, [mode, topic, context, tone, length, postCount, threadTemplateId, postImageUrls, replyReason])
+
+  // Mode switch: stash the mode being left, then restore the one being
+  // entered. This is what keeps each mode's draft genuinely independent —
+  // Post's topic can never leak into Reply.
+  const switchMode = (next: UiMode) => {
+    if (mode === next) return
+    const current = collectDraft()
+    draftsRef.current = isEmptyDraft(current)
+      ? clearDraft(draftsRef.current, mode as DraftMode)
+      : setDraft(draftsRef.current, mode as DraftMode, current)
+    if (hydratedRef.current) void saveCreateDrafts(draftsRef.current)
+    setMode(next)
+    reset()
+    applyDraft(getDraft(draftsRef.current, next as DraftMode))
+  }
+
   // Passed to dispatchGenerate()/generateReply() as onRetry — fires before
   // each automatic retry of a transient Gemini error (429/500/502/503/504).
   const handleGeminiRetry = () => setRetrying(true)
@@ -449,7 +564,10 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
   // generation itself (see TemplatesModal's handleUseTemplate, which routes
   // thread templates here instead of its normal insert-into-X flow).
   const useThreadTemplate = (t: AmintaTemplate) => {
+    // Deliberately not switchMode(): that would restore Thread's stored
+    // draft and immediately overwrite the template just selected.
     setMode("thread")
+    setThreadTemplateId(t.id)
     setThreadTemplateInstruction(buildThreadTemplateInstruction(t.threadPosts ?? []))
     setThreadTemplateName(t.name)
     setTemplatesOpen(false)
@@ -643,7 +761,7 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
           return (
             <button
               key={m.id}
-              onClick={() => { if (mode !== m.id) { setMode(m.id); reset(); setPostImageUrls([]); setReplyReason(""); if (m.id !== "thread") { setThreadTemplateInstruction(""); setThreadTemplateName("") } } }}
+              onClick={() => switchMode(m.id)}
               title={m.label}
               className="flex items-center justify-center rounded-full transition-all"
               style={{
@@ -874,7 +992,7 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
             Using template: {threadTemplateName || "Untitled"}
           </span>
           <button
-            onClick={() => { setThreadTemplateInstruction(""); setThreadTemplateName("") }}
+            onClick={() => { setThreadTemplateInstruction(""); setThreadTemplateName(""); setThreadTemplateId("") }}
             className="text-[10px] shrink-0 ml-2"
             style={{ color: C.textGhost }}>
             Clear
