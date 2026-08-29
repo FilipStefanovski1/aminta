@@ -1,6 +1,13 @@
 import type { PlasmoCSConfig } from "plasmo"
 
 import { dispatchGenerate } from "~lib/backendGenerate"
+import {
+  DEFAULT_COMPOSER_LENGTH,
+  buildActionStrip,
+  presetInstruction,
+  type ComposerPresetId,
+  type ComposerStripState,
+} from "~lib/composerPresets"
 import { resolveAmintaInsertion, type ManagedRegion } from "~lib/composerRegion"
 import { effectiveApiKey, shouldUseIncludedAi } from "~lib/entitlements"
 import { pickNextReplyTarget, type ReplyPostData } from "~lib/replyTargets"
@@ -472,6 +479,14 @@ function setBarStatus(bar: HTMLElement, msg: string, isError = false) {
   }
 }
 
+// Per-composer strip state. Keyed on the bar element so two open composers
+// (e.g. the main box and a reply) keep independent selections.
+const stripState = new WeakMap<HTMLElement, ComposerStripState>()
+
+function getStripState(bar: HTMLElement): ComposerStripState {
+  return stripState.get(bar) ?? { preset: null, length: DEFAULT_COMPOSER_LENGTH }
+}
+
 async function runGenerate(bar: HTMLElement, mode: "tweet" | "polish", prefill?: string) {
   const store = await getStore()
   if (!effectiveApiKey(store) && !shouldUseIncludedAi(store)) { setBarStatus(bar, "No API key. Open Aminta Settings", true); return }
@@ -498,6 +513,8 @@ async function runGenerate(bar: HTMLElement, mode: "tweet" | "polish", prefill?:
     input = prefill ?? composerText
   }
 
+  const state = getStripState(bar)
+
   setBarStatus(bar, "Thinking…")
   bar.querySelectorAll<HTMLButtonElement>("button").forEach(b => { b.disabled = true })
 
@@ -509,7 +526,11 @@ async function runGenerate(bar: HTMLElement, mode: "tweet" | "polish", prefill?:
       voice: store.voice,
       styleProfile,
       tone: "direct",
-      length: "medium",
+      length: state.length,
+      // Preset intent (News/Product/You) rides the existing
+      // templateInstruction seam — shape only; Voice/Instincts still win.
+      // Polish keeps its own framing, so no preset is applied there.
+      templateInstruction: mode === "polish" ? undefined : presetInstruction(state.preset),
     })
 
     const inserted = insertAmintaText(text, bar)
@@ -583,39 +604,16 @@ function buildBar(): HTMLElement {
     "background:#1f1f1f",
     "border:1px solid #343438",
     "border-radius:10px",
-    "font-family:'Press Start 2P',monospace",
-    "font-size:7px",
+    // The action strip is normal UI text, not the retro pixel treatment —
+    // keyword chips below still set the pixel font explicitly for themselves.
+    "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif",
+    "font-size:11px",
     "line-height:1",
     "z-index:999",
     "overflow:hidden",
+    "flex-wrap:nowrap",
+    "min-width:0",
   ].join(";")
-
-  const makeBtn = (label: string, onClick: () => void, accent = true) => {
-    const btn = document.createElement("button")
-    btn.textContent = label
-    btn.style.cssText = [
-      accent ? "background:#74f7b5" : "background:#1a1f2e",
-      accent ? "color:#000"        : "color:#74f7b5",
-      "border:2px solid #000",
-      "box-shadow:2px 2px 0 #000",
-      "border-radius:6px",
-      "padding:4px 10px",
-      "font-family:'Press Start 2P',monospace",
-      "font-size:7px",
-      "line-height:1",
-      "height:24px",
-      "cursor:pointer",
-      "transition:transform 0.08s,box-shadow 0.08s",
-      "white-space:nowrap",
-      "flex-shrink:0",
-      "display:inline-flex",
-      "align-items:center",
-    ].join(";")
-    btn.onmousedown = () => { btn.style.transform = "translate(1px,1px)"; btn.style.boxShadow = "1px 1px 0 #000" }
-    btn.onmouseup   = () => { btn.style.transform = ""; btn.style.boxShadow = "2px 2px 0 #000" }
-    btn.onclick = onClick
-    return btn
-  }
 
   // Divider between action buttons and keyword chips
   const divider = document.createElement("div")
@@ -628,7 +626,8 @@ function buildBar(): HTMLElement {
     "display:flex",
     "align-items:center",
     "gap:5px",
-    "flex:1",
+    "flex-shrink:0",
+    "max-width:38%",
     "overflow-x:auto",
     "scrollbar-width:none",
     "-ms-overflow-style:none",
@@ -637,7 +636,8 @@ function buildBar(): HTMLElement {
   const status = document.createElement("span")
   status.className = "aminta-status"
   status.style.cssText = [
-    "color:#444",
+    "color:#8e919a",
+    "font-size:10px",
     "margin-left:auto",
     "overflow:hidden",
     "text-overflow:ellipsis",
@@ -646,10 +646,30 @@ function buildBar(): HTMLElement {
   ].join(";")
   status.textContent = "Aminta"
 
-  const generateBtn = makeBtn("⚄ Generate", () => runGenerate(bar, "tweet"))
-  const polishBtn   = makeBtn("+ Polish",   () => runGenerate(bar, "polish"), false)
+  // Action strip (Generate / Polish / News / Product / You / Length). Fully
+  // re-rendered on each state change so active pills stay in sync; selecting
+  // a preset or cycling length never triggers a generation, so this costs
+  // nothing.
+  const renderStrip = () => {
+    const current = bar.querySelector(".aminta-actions")
+    const next = buildActionStrip(getStripState(bar), {
+      onGenerate: () => runGenerate(bar, "tweet"),
+      onPolish: () => runGenerate(bar, "polish"),
+      onPreset: (preset: ComposerPresetId | null) => {
+        stripState.set(bar, { ...getStripState(bar), preset })
+        renderStrip()
+      },
+      onLength: (length) => {
+        stripState.set(bar, { ...getStripState(bar), length })
+        renderStrip()
+      },
+    })
+    if (current) current.replaceWith(next)
+    else bar.insertBefore(next, bar.firstChild)
+  }
+  renderStrip()
 
-  bar.append(generateBtn, polishBtn, divider, keywords, status)
+  bar.append(divider, keywords, status)
 
   // Load keywords async after bar is built
   renderKeywords(bar)
