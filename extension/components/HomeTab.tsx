@@ -15,6 +15,7 @@ import { parseCustomRules } from "~lib/instinctPresets"
 import { getMissionProgress, tryCompleteDailyMissions } from "~lib/missions"
 import type { AmintaStore, RecentCreation } from "~lib/storage"
 import { C } from "~lib/theme"
+import { countExamples as countExamplesCanonical } from "~lib/trainingExamples"
 import { DISCORD_INVITE_URL } from "~lib/webUrl"
 import { openXComposer } from "~lib/xTab"
 import { Card, Sprite, SpeechBubble, XPBar } from "~components/ui"
@@ -48,14 +49,11 @@ const QUICK_CREATE_MODES: { id: QuickCreateMode; label: string }[] = [
 ]
 
 // voice.examples round-trips as a JSON-stringified string[] (see
-// VoiceProfileForm.tsx's save()) — same parsing rule reused read-only here,
-// never re-implemented or re-derived.
+// lib/trainingExamples.ts) — thin re-export so existing call sites/tests in
+// this file don't need to change their import, but the actual parsing rule
+// lives in exactly one place.
 export function countExamples(raw: string | undefined): number {
-  if (!raw) return 0
-  if (raw.trim().startsWith("[")) {
-    try { return (JSON.parse(raw) as string[]).length } catch { /* fall through */ }
-  }
-  return raw.split("\n").map((s) => s.trim()).filter(Boolean).length
+  return countExamplesCanonical(raw)
 }
 
 export function countInstincts(raw: string | undefined): number {

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import {
   COMPOSER_BAR_ATTR,
   COMPOSER_BAR_VERSION,
@@ -335,5 +335,94 @@ describe("composer focus is preserved", () => {
     const ev = new MouseEvent("mousedown", { bubbles: true, cancelable: true })
     button(strip, "Generate").dispatchEvent(ev)
     expect(ev.defaultPrevented).toBe(true)
+  })
+})
+
+describe("composer tooltips", () => {
+  beforeEach(() => vi.useFakeTimers())
+  afterEach(() => {
+    vi.useRealTimers()
+    document.querySelectorAll('[role="tooltip"]').forEach((el) => el.remove())
+  })
+
+  it("every actionable pill (main composer) has a real tooltip — no bare icon, no native title", () => {
+    const strip = buildActionStrip(IDLE, handlers())
+    container.appendChild(strip)
+    for (const label of ["Generate", "Polish", "News", "Product", "You", "Auto"]) {
+      const el = button(strip, label)
+      expect(el.title).toBe("") // never the native browser tooltip
+      el.dispatchEvent(new Event("focus"))
+    }
+  })
+
+  it("a hover tooltip appears only after a short delay, not instantly", () => {
+    const strip = buildActionStrip(IDLE, handlers())
+    container.appendChild(strip)
+    const generate = button(strip, "Generate")
+    generate.dispatchEvent(new MouseEvent("mouseenter"))
+    expect(document.querySelector('[role="tooltip"]')).toBeNull()
+    vi.advanceTimersByTime(299)
+    expect(document.querySelector('[role="tooltip"]')).toBeNull()
+    vi.advanceTimersByTime(1)
+    expect(document.querySelector('[role="tooltip"]')?.textContent).toBe("Write a post from your idea")
+  })
+
+  it("mouseleave before the delay elapses cancels the tooltip entirely", () => {
+    const strip = buildActionStrip(IDLE, handlers())
+    container.appendChild(strip)
+    const generate = button(strip, "Generate")
+    generate.dispatchEvent(new MouseEvent("mouseenter"))
+    generate.dispatchEvent(new MouseEvent("mouseleave"))
+    vi.advanceTimersByTime(1000)
+    expect(document.querySelector('[role="tooltip"]')).toBeNull()
+  })
+
+  it("mouseleave after the tooltip is showing hides it", () => {
+    const strip = buildActionStrip(IDLE, handlers())
+    container.appendChild(strip)
+    const generate = button(strip, "Generate")
+    generate.dispatchEvent(new MouseEvent("mouseenter"))
+    vi.advanceTimersByTime(300)
+    expect(document.querySelector('[role="tooltip"]')).not.toBeNull()
+    generate.dispatchEvent(new MouseEvent("mouseleave"))
+    expect(document.querySelector('[role="tooltip"]')).toBeNull()
+  })
+
+  it("keyboard focus shows the tooltip immediately — never hover-only", () => {
+    const strip = buildActionStrip(IDLE, handlers())
+    container.appendChild(strip)
+    const you = button(strip, "You")
+    you.dispatchEvent(new Event("focus"))
+    expect(document.querySelector('[role="tooltip"]')?.textContent).toBe("Choose how Aminta should sound")
+  })
+
+  it("blur hides the focus-triggered tooltip", () => {
+    const strip = buildActionStrip(IDLE, handlers())
+    container.appendChild(strip)
+    const you = button(strip, "You")
+    you.dispatchEvent(new Event("focus"))
+    expect(document.querySelector('[role="tooltip"]')).not.toBeNull()
+    you.dispatchEvent(new Event("blur"))
+    expect(document.querySelector('[role="tooltip"]')).toBeNull()
+  })
+
+  it("Length's tooltip describes choosing response length", () => {
+    const strip = buildActionStrip(IDLE, handlers())
+    container.appendChild(strip)
+    button(strip, "Auto").dispatchEvent(new Event("focus"))
+    expect(document.querySelector('[role="tooltip"]')?.textContent).toBe("Choose how long the post should be")
+  })
+
+  it("Meme's tooltip only exists in a reply composer, matching where the pill itself appears", () => {
+    const strip = buildActionStrip(IDLE, handlers({ onOpenMeme: vi.fn() }))
+    container.appendChild(strip)
+    button(strip, "Meme").dispatchEvent(new Event("focus"))
+    expect(document.querySelector('[role="tooltip"]')?.textContent).toBe("Reply with a meme")
+  })
+
+  it("the Meme pill is still locatable via a stable data attribute, decoupled from tooltip copy", () => {
+    const strip = buildActionStrip(IDLE, handlers({ onOpenMeme: vi.fn() }))
+    container.appendChild(strip)
+    expect(strip.querySelector('[data-aminta-action="meme"]')).not.toBeNull()
   })
 })

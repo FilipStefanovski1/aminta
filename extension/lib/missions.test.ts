@@ -18,11 +18,14 @@ vi.stubGlobal("chrome", {
 })
 
 import { getStore } from "~lib/storage"
+import type { AmintaStore } from "~lib/storage"
 import {
   getMissionProgress,
   incrementMissionPublished,
+  sampleCount,
   tryCompleteDailyMissions,
 } from "~lib/missions"
+import { serializeExamples } from "~lib/trainingExamples"
 import { todayLocal, yesterdayLocal } from "~lib/dates"
 
 beforeEach(() => {
@@ -118,5 +121,31 @@ describe("daily +150 XP requires all three goals, not training", () => {
     expect(store.tweetDNA).toEqual([])
     const ok = await tryCompleteDailyMissions(store)
     expect(ok).toBe(true)
+  })
+})
+
+describe("sampleCount — voice examples + DNA", () => {
+  it("counts real examples correctly, not the fixed 1 a raw newline-split used to always produce", () => {
+    // voice.examples is JSON-encoded (lib/trainingExamples.ts) and never
+    // contains a literal newline, so the old `.split("\n")` implementation
+    // always saw exactly one "line" no matter how many examples existed —
+    // silently capping this at 1 for every account with real training data.
+    const store = { voice: { examples: serializeExamples(["a", "b", "c"]) }, tweetDNA: [] } as unknown as AmintaStore
+    expect(sampleCount(store)).toBe(3)
+  })
+
+  it("a single multi-paragraph example still counts as exactly 1 sample", () => {
+    const store = { voice: { examples: serializeExamples(["one\n\ntwo\n\nthree"]) }, tweetDNA: [] } as unknown as AmintaStore
+    expect(sampleCount(store)).toBe(1)
+  })
+
+  it("adds tweetDNA on top of manual examples", () => {
+    const store = { voice: { examples: serializeExamples(["a", "b"]) }, tweetDNA: ["dna1", "dna2", "dna3"] } as unknown as AmintaStore
+    expect(sampleCount(store)).toBe(5)
+  })
+
+  it("no voice profile, no DNA: 0", () => {
+    const store = { voice: null, tweetDNA: [] } as unknown as AmintaStore
+    expect(sampleCount(store)).toBe(0)
   })
 })

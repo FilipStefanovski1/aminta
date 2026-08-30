@@ -13,6 +13,7 @@ import type { ChatMessage } from "~lib/ai"
 import { backendGenerate } from "~lib/backendGenerate"
 import { effectiveApiKey, shouldUseIncludedAi } from "~lib/entitlements"
 import { getStore, setStore } from "~lib/storage"
+import { parseExamples } from "~lib/trainingExamples"
 import type {
   AmintaStore,
   Capitalization,
@@ -305,7 +306,7 @@ export async function getOrBuildStyleProfile(store: AmintaStore): Promise<StyleP
     return store.styleProfile
   }
 
-  const corpus = buildCorpus(store.voice?.examples ? parseExamplesForCorpus(store.voice.examples) : [], store.tweetDNA ?? [])
+  const corpus = buildCorpus(store.voice?.examples ? parseExamples(store.voice.examples) : [], store.tweetDNA ?? [])
   if ((!effectiveApiKey(store) && !shouldUseIncludedAi(store)) || corpus.length === 0) return null
 
   const hash = hashInputs(corpus)
@@ -333,17 +334,3 @@ export async function getOrBuildStyleProfile(store: AmintaStore): Promise<StyleP
   return inFlight
 }
 
-// voice.examples is stored as a JSON-stringified string[] (see
-// VoiceProfileForm.tsx's save()) — this mirrors prompts.ts's parseExamples
-// without importing prompts.ts (avoids a circular import).
-function parseExamplesForCorpus(raw: string): string[] {
-  if (!raw) return []
-  if (raw.trim().startsWith("[")) {
-    try {
-      return JSON.parse(raw) as string[]
-    } catch {
-      // fall through
-    }
-  }
-  return raw.split("\n").map((s) => s.trim()).filter(Boolean)
-}

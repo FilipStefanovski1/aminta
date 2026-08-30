@@ -1,4 +1,5 @@
 // Direct call to Google AI Studio (Gemini) — free tier, no OpenRouter needed.
+import { CONNECTIVITY_ERROR_MESSAGE } from "~lib/generationErrors"
 import type { ChatMessage, ContentPart } from "~lib/openrouter"
 
 function toGeminiParts(content: string | ContentPart[]): object[] {
@@ -253,7 +254,7 @@ async function attemptOnce(
     if (e instanceof DOMException && e.name === "TimeoutError") {
       throw new Error("Gemini took too long to respond. Try again in a moment.")
     }
-    throw new Error("Network error. Check your internet connection.")
+    throw new Error(CONNECTIVITY_ERROR_MESSAGE)
   }
   const apiMs = Date.now() - apiStartedAt
 

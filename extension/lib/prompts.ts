@@ -278,6 +278,13 @@ const FINAL_OUTPUT_INSTRUCTION =
 // the source post/draft itself, not the user's typical post length.
 // Falls back to the fixed LENGTH_GUIDE when there's no baseline yet (never
 // refreshed, or too few posts) — generation must never break either way.
+// Medium's floor, below which a "personalized" target stops meaning
+// anything — matched to the fixed LENGTH_GUIDE.tweet.medium range (150-260)
+// this branch replaces, so a thin/degenerate corpus degrades toward the
+// same sane default instead of past it.
+const MEDIUM_TARGET_MIN_LO = 120
+const MEDIUM_TARGET_MIN_SPAN = 80
+
 export function resolveLengthGuide(mode: Mode, length: OutputLength, styleProfile: StyleProfile | null): string {
   const lp = mode === "tweet" ? styleProfile?.lengthProfile : null
   if (!lp) return LENGTH_GUIDE[mode][length]
@@ -293,8 +300,16 @@ export function resolveLengthGuide(mode: Mode, length: OutputLength, styleProfil
     const hi = Math.max(lo + 100, Math.round(p75 * 1.6))
     return `LENGTH TARGET: roughly ${lo}-${hi} characters — longer and more developed than this person's normal post (their usual range centers around ${median} characters). Real substance, not padding.`
   }
-  const lo = Math.min(p25, median - 10)
-  const hi = Math.max(p75, median + 10)
+  // Unlike short/long above, this branch used to have no floor at all: a
+  // thin or corpus-polluted lengthProfile (e.g. many tiny training
+  // fragments — see lib/trainingExamples.ts) could drag p25/median down
+  // near zero, handing the model a target like "5-30 characters" for
+  // Medium — which it then correctly, faithfully satisfied with a few-word
+  // output. MEDIUM_TARGET_MIN_LO/SPAN below is the same kind of safety net
+  // short/long already had, so Medium can personalize toward a genuinely
+  // concise writer without ever collapsing into a degenerate target.
+  const lo = Math.max(MEDIUM_TARGET_MIN_LO, Math.min(p25, median - 10))
+  const hi = Math.max(lo + MEDIUM_TARGET_MIN_SPAN, p75, median + 10)
   return `LENGTH TARGET: roughly ${lo}-${hi} characters — this is close to how this person normally writes (their usual length centers around ${median} characters). Don't force it longer or shorter than the idea needs.`
 }
 

@@ -1,12 +1,18 @@
 import { todayLocal, yesterdayLocal } from "~lib/dates"
 import { getStore, setStore, type AmintaStore } from "~lib/storage"
+import { countExamples } from "~lib/trainingExamples"
 import { tryAwardBountyXP } from "~lib/xp"
 import type { Mode } from "~lib/prompts"
 
-// Count of writing samples Aminta has learned from — voice examples + liked DNA.
+// Count of writing samples Aminta has learned from — voice examples + liked
+// DNA. voice.examples is a JSON-encoded string[] (see
+// lib/trainingExamples.ts) — a raw `.split("\n")` here used to always
+// collapse to 1 regardless of how many real examples existed, since
+// JSON.stringify never emits literal newlines, silently undercounting every
+// account's progress toward the "3 voice samples" daily mission and the
+// Voice Match score below.
 export function sampleCount(store: AmintaStore): number {
-  const examples = (store.voice?.examples ?? "").split("\n").filter(l => l.trim()).length
-  return examples + (store.tweetDNA?.length ?? 0)
+  return countExamples(store.voice?.examples) + (store.tweetDNA?.length ?? 0)
 }
 
 // Voice Match: 0–100 heuristic from how much Aminta has learned about the user.

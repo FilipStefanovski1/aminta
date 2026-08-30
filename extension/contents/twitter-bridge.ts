@@ -773,7 +773,7 @@ const ACCENT_MEME = "#fb923c"
 
 function openMemePopover(bar: HTMLElement) {
   closeMemePopovers()
-  const anchor = bar.querySelector<HTMLElement>('[title="Reply with a meme"]')
+  const anchor = bar.querySelector<HTMLElement>('[data-aminta-action="meme"]')
   const rect = (anchor ?? bar).getBoundingClientRect()
   const panel = memePanelBase(rect)
 

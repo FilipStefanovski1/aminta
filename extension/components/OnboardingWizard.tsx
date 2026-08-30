@@ -1,15 +1,18 @@
 import { useEffect, useState } from "react"
 
+import { getStore } from "~lib/storage"
 import type { AmintaStore, VoiceProfile } from "~lib/storage"
 import { C } from "~lib/theme"
 import { isGoogleKey, isGroqKey } from "~lib/ai"
 import { backendGenerate, dispatchGenerate } from "~lib/backendGenerate"
 import { canUseByok, shouldUseIncludedAi } from "~lib/entitlements"
 import { FORMS } from "~lib/evolution"
+import { parseExamples, serializeExamples } from "~lib/trainingExamples"
 import { focusOrCreateXTab } from "~lib/xTab"
 import AiKeyInput from "~components/AiKeyInput"
 import DemonMascot from "~components/DemonMascot"
 import { Card, PrimaryButton, SectionLabel, Sprite, SpeechBubble } from "~components/ui"
+import VoiceRefreshCard from "~components/VoiceRefreshCard"
 
 // The companion's final evolved form — used only as an aspirational teaser
 // on the last onboarding screen ("this is what you're building toward"),
@@ -202,10 +205,17 @@ export default function OnboardingWizard({ store, onDone }: Props) {
     parseTones(store.voice?.voiceStyle || store.voice?.tone || "")
   )
 
-  const [examples, setExamples] = useState<string[]>(() => {
-    const raw = store.voice?.examples ?? ""
-    return raw ? raw.split("\n").filter(s => s.trim()) : []
-  })
+  const [examples, setExamples] = useState<string[]>(() => parseExamples(store.voice?.examples))
+
+  // Local, refetchable copy of the store for VoiceRefreshCard (step 7) —
+  // startXConnect()/runVoiceRefresh() write straight to chrome.storage.local
+  // via lib/voiceRefresh.ts's own setStore() calls, entirely outside this
+  // wizard's onDone()/onSave() flow (that only fires once, at the very end,
+  // with the topics/tone/examples patch). Re-fetching into local state on
+  // VoiceRefreshCard's onRefreshed is what makes "Connect X" / "Refresh my
+  // voice" reflect immediately without waiting for onboarding to finish.
+  const [voiceStore, setVoiceStore] = useState<AmintaStore>(store)
+  const refetchVoiceStore = async () => setVoiceStore(await getStore())
 
   // First name only — reads more natural than the full display name in a
   // one-line greeting. Skips the generic "Aminta user" fallback (ensureProfile's
@@ -400,7 +410,7 @@ export default function OnboardingWizard({ store, onDone }: Props) {
       niche: topics.join(", "),
       tone: tones.join(", "),
       voiceStyle: tones.join(", "),
-      examples: examples.join("\n"),
+      examples: serializeExamples(examples),
       voiceInspiration: store.voice?.voiceInspiration || "",
       customRules: store.voice?.customRules || "",
     }
@@ -772,15 +782,30 @@ export default function OnboardingWizard({ store, onDone }: Props) {
           </div>
         )}
 
-        {/* ── 7 · Examples ── */}
+        {/* ── 7 · Examples ──
+            Two paths, both leading to the same StyleProfile: teach Aminta
+            by pasting posts yourself (below), or let it learn from recent X
+            posts via the existing Voice Refresh card (same component, same
+            entitlement/eligibility logic Train already uses — see
+            components/VoiceRefreshCard.tsx). Free users see its own inline
+            upsell there, never a block on finishing onboarding. */}
         {step === 7 && (
           <div className="animate-slide-up space-y-5">
             <div>
               <h2 className="font-pixel text-[11px] leading-relaxed" style={{ color: C.text }}>
-                What&apos;s one post that<br />sounds exactly like you?
+                How should I learn<br />how you write?
               </h2>
-              <p className="text-[12px] mt-3" style={{ color: C.textDim }}>One is enough to start. This is how I learn you — add more anytime.</p>
+              <p className="text-[12px] mt-3" style={{ color: C.textDim }}>Two ways — use either, or both. Add more anytime after onboarding.</p>
             </div>
+
+            <VoiceRefreshCard store={voiceStore} onRefreshed={refetchVoiceStore} />
+
+            <div className="flex items-center gap-3">
+              <div className="flex-1 h-px" style={{ backgroundColor: C.border }} />
+              <span className="text-[9px] uppercase tracking-widest" style={{ color: C.textDim }}>Or add it yourself</span>
+              <div className="flex-1 h-px" style={{ backgroundColor: C.border }} />
+            </div>
+
             <Card>
               <div className="flex items-center justify-between mb-2">
                 <SectionLabel>Your posts</SectionLabel>
@@ -898,7 +923,11 @@ export default function OnboardingWizard({ store, onDone }: Props) {
         {step === 6 && <PrimaryButton onClick={next} disabled={tones.length === 0}>Continue</PrimaryButton>}
         {step === 7 && (
           <>
-            <PrimaryButton onClick={next} disabled={examples.length < 1}>Continue</PrimaryButton>
+            {/* Either path satisfies this step — a completed Voice Refresh
+                (voiceStore.styleProfile) counts exactly the same as a
+                manually added example, so a Pro/Founder user who used the
+                card above never has to also paste a post just to proceed. */}
+            <PrimaryButton onClick={next} disabled={examples.length < 1 && !voiceStore.styleProfile}>Continue</PrimaryButton>
             <button onClick={next} className="w-full text-center text-[11px] py-1 transition-colors"
               style={{ color: C.textDim }}>Skip for now</button>
           </>

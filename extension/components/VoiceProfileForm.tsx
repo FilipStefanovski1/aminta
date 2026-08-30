@@ -15,6 +15,8 @@ import {
 import { getStore } from "~lib/storage"
 import type { AmintaStore, VoiceProfile } from "~lib/storage"
 import { getOrBuildStyleProfile } from "~lib/styleProfile"
+import { summarizeStyleProfile } from "~lib/styleProfileSummary"
+import { parseExamples, serializeExamples } from "~lib/trainingExamples"
 import { C } from "~lib/theme"
 import { Card, Sprite } from "~components/ui"
 import VoiceRefreshCard from "~components/VoiceRefreshCard"
@@ -114,23 +116,6 @@ function Divider() {
   return <div style={{ height: 1, backgroundColor: C.borderSoft, margin: "0 -16px" }} />
 }
 
-function PixelStep({ done, label, tint }: { done: boolean; label: string; tint: string }) {
-  return (
-    <div className="flex items-center gap-2">
-      <svg width="6" height="6" viewBox="0 0 6 6" style={{ flexShrink: 0, imageRendering: "pixelated" }}>
-        {done
-          ? <rect x="0" y="0" width="6" height="6" fill={tint} />
-          : <rect x="0" y="0" width="6" height="6" fill="none" stroke={C.border} strokeWidth="1" />
-        }
-      </svg>
-      <span className="text-[10px] leading-none transition-colors duration-300"
-        style={{ color: done ? C.text : C.textDim }}>
-        {label}
-      </span>
-    </div>
-  )
-}
-
 export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0, onRefreshed }: Props) {
   const tint = getStageTint(store.xp ?? 0)
 
@@ -146,15 +131,7 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
   const [voiceInspiration] = useState<string[]>(() =>
     (initial?.voiceInspiration ?? "").split(",").map(s => s.trim()).filter(Boolean)
   )
-  const [examples,         setExamples]         = useState<string[]>(() => {
-    const raw = initial?.examples ?? ""
-    if (!raw) return []
-    if (raw.startsWith("[")) {
-      try { return JSON.parse(raw) as string[] } catch {}
-    }
-    const byDouble = raw.split(/\n{2,}/).map(s => s.trim()).filter(Boolean)
-    return byDouble.length > 1 ? byDouble : raw.split("\n").map(s => s.trim()).filter(Boolean)
-  })
+  const [examples,         setExamples]         = useState<string[]>(() => parseExamples(initial?.examples))
   const [newPost,  setNewPost]  = useState("")
   const [adding,   setAdding]   = useState(false)
   const [rules,    setRules]    = useState<string[]>(() => parseCustomRules(initial?.customRules))
@@ -210,26 +187,27 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
   ]
   const learnedCount = STEPS.filter(s => s.done).length
 
-  // Human-readable state from real data — no fabricated "voice confidence %".
-  // Voice Refresh eligibility (cooldown) is the freshest, most concrete
-  // signal when it applies; otherwise fall back to whether anything has
-  // been taught manually at all.
+  // Human-readable state from real data — no fabricated "voice confidence %"
+  // and no permanent checklist. One honest sentence answering "how does
+  // Aminta learn how I write right now" — X Voice Refresh (if it's ever
+  // run) is the most concrete signal; manual training is the fallback; an
+  // empty profile is the honest "still learning" state, not a 0% badge.
   const hasAnyTraining = topics.length > 0 || !!voiceStyle || examples.length > 0 || !!store.styleProfile
-  const trainedStateMessage =
-    !hasAnyTraining
-      ? "Aminta is still learning your voice."
-      : store.lastVoiceRefreshAt && !store.voiceRefreshEligible
-        ? "Your voice was refreshed recently."
-        : "Your voice is trained."
+  const dnaStatusLine =
+    store.lastVoiceRefreshAt
+      ? "Your voice was refreshed recently."
+      : hasAnyTraining
+        ? "Your voice is trained from your writing examples."
+        : "Aminta is still learning your voice."
 
-  const baseMessage =
-    learnedCount === 0 ? "Teach me your voice." :
-    learnedCount === 1 ? "I'm starting to understand you." :
-    learnedCount === 2 ? "I'm learning how you write." :
-    learnedCount === 3 ? "I know your tone. I still need more examples." :
-    "I recognize your writing habits now."
+  // What Aminta actually learned, in plain language — reused from the same
+  // summary Voice Refresh already computed (lib/styleProfileSummary.ts),
+  // now surfaced here regardless of whether the profile came from X or
+  // manual training, since both populate the same StyleProfile.
+  const learned = summarizeStyleProfile(store.styleProfile)
+  const [showLearned, setShowLearned] = useState(false)
 
-  const displayMessage = speech ?? baseMessage
+  const displayMessage = speech ?? dnaStatusLine
 
   // One example at a time — each save persists immediately (same
   // onSave()/getOrBuildStyleProfile() pipeline every other training path
@@ -253,7 +231,7 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
         tone:             voiceStyle,
         voiceStyle,
         voiceInspiration: voiceInspiration.join(", "),
-        examples:         JSON.stringify(next),
+        examples:         serializeExamples(next),
         customRules:      rules.join("\n"),
       })
       baselineRef.current = snapshot(topics, voiceStyle, voiceInspiration, next, rules)
@@ -360,7 +338,7 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
       tone:             voiceStyle,
       voiceStyle,
       voiceInspiration: voiceInspiration.join(", "),
-      examples:         JSON.stringify(examples),
+      examples:         serializeExamples(examples),
       customRules:      rules.join("\n"),
     })
     baselineRef.current = snapshot(topics, voiceStyle, voiceInspiration, examples, rules)
@@ -372,34 +350,51 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
   return (
     <div className="space-y-4 pb-4">
 
-      {/* ── Hero — real-data state, no fabricated percentage ── */}
+      {/* ── Aminta DNA status — one honest sentence, no checklist, no fake
+          confidence score. Answers "how does Aminta learn how I write." ── */}
       <Card glow={tint} className="animate-card-in">
         <p className="font-pixel text-[10px] uppercase tracking-widest mb-3" style={{ color: C.text }}>Voice status</p>
         <div className="flex items-center gap-4">
           <Sprite xp={store.xp ?? 0} size={56} animClass={animCls} />
 
           <div className="flex-1 min-w-0">
-            <p className="text-[13px] font-medium leading-snug mb-1" style={{ color: C.text }}>
-              {trainedStateMessage}
-            </p>
-
-            {/* Live speech / status — transitions between reaction and base */}
             <p
               key={displayMessage}
-              className="text-[11px] leading-snug mb-3 animate-fade-in"
-              style={{ color: speech ? tint : C.textDim }}>
+              className="text-[13px] font-medium leading-snug animate-fade-in"
+              style={{ color: speech ? tint : C.text }}>
               {displayMessage}
             </p>
 
-            {/* Pixel step checklist — 2-col. Real per-field completion, not
-                an aggregated fake score. */}
-            <div className="grid grid-cols-2 gap-x-3 gap-y-[7px]">
-              {STEPS.map(({ label, done }) => (
-                <PixelStep key={label} done={done} label={label} tint={tint} />
+            {learned.length > 0 && (
+              <button
+                onClick={() => setShowLearned(v => !v)}
+                className="text-[11px] mt-1.5 leading-none block"
+                style={{ color: tint }}>
+                {showLearned ? "Hide details" : "View what Aminta learned"}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {showLearned && learned.length > 0 && (
+          <div className="mt-3 pt-3" style={{ borderTop: `1px solid ${C.borderSoft}` }}>
+            <div className="space-y-2.5">
+              {learned.map((s) => (
+                <div key={s.title}>
+                  <p className="text-[10px] leading-none mb-1" style={{ color: C.textFaint }}>{s.title}</p>
+                  {s.inline && (
+                    <p className="text-[10px] leading-snug" style={{ color: C.textDim }}>{s.inline}</p>
+                  )}
+                  {s.lines.map((line) => (
+                    <p key={line} className="text-[10px] leading-snug" style={{ color: C.textDim }}>
+                      {s.lines.length > 1 ? `• ${line}` : line}
+                    </p>
+                  ))}
+                </div>
               ))}
             </div>
           </div>
-        </div>
+        )}
       </Card>
 
       {/* ── Voice Refresh — Pro/Founder only, stays at the top: it's their

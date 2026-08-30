@@ -217,6 +217,72 @@ function closeCurrentMenu() {
   closeOpenMenu = null
 }
 
+// ─── Tooltip ────────────────────────────────────────────────────────────
+// One shared primitive for every composer action pill — dark Aminta
+// styling (matches buildMenu's panel), shows on hover AND on keyboard
+// focus (never hover-only), a short delay on hover so it doesn't flash
+// while the pointer just passes over, `position:fixed` + appended to
+// document.body so X's own overflow:hidden composer chrome can never clip
+// it (same technique the Meme popovers already use), and flips below the
+// pill instead of above when there isn't room above.
+const TOOLTIP_SHOW_DELAY_MS = 300
+
+function attachTooltip(trigger: HTMLElement, text: string): void {
+  let tipEl: HTMLDivElement | null = null
+  let showTimer: ReturnType<typeof setTimeout> | null = null
+
+  const hide = () => {
+    if (showTimer) { clearTimeout(showTimer); showTimer = null }
+    tipEl?.remove()
+    tipEl = null
+  }
+
+  const show = () => {
+    if (tipEl) return
+    const tip = document.createElement("div")
+    tip.setAttribute("role", "tooltip")
+    tip.textContent = text
+    tip.style.cssText = [
+      "position:fixed",
+      "z-index:2147483000",
+      "background:#17171a",
+      "border:1px solid #2b2b30",
+      "border-radius:6px",
+      "padding:4px 8px",
+      "font-family:inherit",
+      "font-size:10.5px",
+      "line-height:1.3",
+      "color:#e5e5ea",
+      "white-space:nowrap",
+      "pointer-events:none",
+      "box-shadow:0 4px 16px rgba(0,0,0,0.35)",
+    ].join(";")
+    document.body.appendChild(tip)
+    tipEl = tip
+
+    const rect = trigger.getBoundingClientRect()
+    const tipRect = tip.getBoundingClientRect()
+    const MARGIN = 6
+    let top = rect.top - tipRect.height - MARGIN
+    if (top < 4) top = rect.bottom + MARGIN // no room above — flip below
+    let left = rect.left + rect.width / 2 - tipRect.width / 2
+    left = Math.max(4, Math.min(left, window.innerWidth - tipRect.width - 4))
+    tip.style.top = `${top}px`
+    tip.style.left = `${left}px`
+  }
+
+  const scheduleShow = () => {
+    if (showTimer || tipEl) return
+    showTimer = setTimeout(show, TOOLTIP_SHOW_DELAY_MS)
+  }
+
+  trigger.addEventListener("mouseenter", scheduleShow)
+  trigger.addEventListener("mouseleave", hide)
+  // Keyboard focus shows immediately — never rely on hover alone.
+  trigger.addEventListener("focus", show)
+  trigger.addEventListener("blur", hide)
+}
+
 function pill(opts: {
   label: string
   iconPaths?: string
@@ -224,14 +290,21 @@ function pill(opts: {
   primary?: boolean
   active?: boolean
   dropdown?: boolean
+  /** Tooltip text AND accessible name — shown via attachTooltip below, never the native `title` attribute (no hover-only, no double tooltip). */
   title?: string
   ariaHaspopup?: boolean
+  /** Stable `data-aminta-action` hook for content-script lookups (e.g. twitter-bridge.ts anchoring the Meme popover) — decoupled from label/tooltip text so copy can change freely. */
+  action?: string
 }): HTMLButtonElement {
   const btn = document.createElement("button")
   btn.type = "button"
   const primary = !!opts.primary
   const active = !!opts.active
-  if (opts.title) btn.title = opts.title
+  // No aria-label override here: the visible label ("Generate", "News", …)
+  // stays the accessible name so it matches what's on screen (WCAG 2.5.3) —
+  // the tooltip is a supplementary description, not a replacement name.
+  if (opts.title) attachTooltip(btn, opts.title)
+  if (opts.action) btn.setAttribute("data-aminta-action", opts.action)
   if (opts.ariaHaspopup) {
     btn.setAttribute("aria-haspopup", "menu")
     btn.setAttribute("aria-expanded", "false")
@@ -375,6 +448,7 @@ function buildDropdownPill<T extends string>(opts: {
   accent: string
   active: boolean
   title: string
+  action?: string
   items: MenuItem<T>[]
   selectedId: T | null
   onSelect: (id: T) => void
@@ -389,6 +463,7 @@ function buildDropdownPill<T extends string>(opts: {
     active: opts.active,
     dropdown: true,
     title: opts.title,
+    action: opts.action,
     ariaHaspopup: true,
   })
 
@@ -453,17 +528,17 @@ export function buildActionStrip(state: ComposerStripState, handlers: ComposerSt
     "flex:1",
   ].join(";")
 
-  const generate = pill({ label: "Generate", iconPaths: ICONS.generate, accent: ACCENT.generate, primary: true, title: "Write a post with Aminta" })
+  const generate = pill({ label: "Generate", iconPaths: ICONS.generate, accent: ACCENT.generate, primary: true, title: "Write a post from your idea", action: "generate" })
   generate.onclick = handlers.onGenerate
 
-  const polish = pill({ label: "Polish", iconPaths: ICONS.polish, accent: ACCENT.polish, title: "Improve the draft in this composer" })
+  const polish = pill({ label: "Polish", iconPaths: ICONS.polish, accent: ACCENT.polish, title: "Improve what's already written", action: "polish" })
   polish.onclick = handlers.onPolish
 
   strip.append(generate, polish)
 
   for (const preset of COMPOSER_PRESETS) {
     const active = state.preset === preset.id
-    const btn = pill({ label: preset.label, iconPaths: preset.icon, accent: preset.accent, active, title: preset.title })
+    const btn = pill({ label: preset.label, iconPaths: preset.icon, accent: preset.accent, active, title: preset.title, action: preset.id })
     // Selecting only sets intent — the generation happens on Generate.
     btn.onclick = () => handlers.onPreset(active ? null : preset.id)
     strip.append(btn)
@@ -476,7 +551,8 @@ export function buildActionStrip(state: ComposerStripState, handlers: ComposerSt
       iconPaths: ICONS.you,
       accent: ACCENT.you,
       active: state.tone !== "you",
-      title: "Adjust how this sounds",
+      title: "Choose how Aminta should sound",
+      action: "tone",
       items: TONE_MENU,
       selectedId: state.tone,
       onSelect: handlers.onTone,
@@ -490,7 +566,8 @@ export function buildActionStrip(state: ComposerStripState, handlers: ComposerSt
       iconPaths: ICONS.length,
       accent: ACCENT.length,
       active: state.length !== "auto",
-      title: "Choose response length",
+      title: "Choose how long the post should be",
+      action: "length",
       items: LENGTH_MENU.map(({ id, label, description }) => ({ id, label, description })),
       selectedId: state.length,
       onSelect: handlers.onLength,
@@ -498,7 +575,7 @@ export function buildActionStrip(state: ComposerStripState, handlers: ComposerSt
   )
 
   if (handlers.onOpenMeme) {
-    const meme = pill({ label: "Meme", iconPaths: ICONS.meme, accent: ACCENT.meme, title: "Reply with a meme" })
+    const meme = pill({ label: "Meme", iconPaths: ICONS.meme, accent: ACCENT.meme, title: "Reply with a meme", action: "meme" })
     meme.onclick = handlers.onOpenMeme
     strip.append(meme)
   }

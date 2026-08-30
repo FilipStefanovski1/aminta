@@ -140,14 +140,36 @@ describe("backendGenerate", () => {
     ).rejects.toThrow("Rate limited, try again shortly.")
   })
 
-  it("throws on a network failure", async () => {
+  it("throws a connectivity error on a genuine fetch failure", async () => {
     mockGetAuthSession.mockResolvedValue(SESSION)
     const fetchMock = vi.mocked(fetch)
     fetchMock.mockRejectedValue(new Error("offline"))
 
     await expect(
       backendGenerate({ generationMode: "tweet", input: "hi", voice: {} as any, styleProfile: null, tone: "direct", length: "medium" })
-    ).rejects.toThrow("Network error. Check your internet connection.")
+    ).rejects.toThrow("Couldn't connect. Check your connection and try again.")
+  })
+
+  it("classifies a deadline abort as a timeout, not a connectivity failure", async () => {
+    mockGetAuthSession.mockResolvedValue(SESSION)
+    const fetchMock = vi.mocked(fetch)
+    const abortError = new DOMException("aborted", "AbortError")
+    fetchMock.mockRejectedValue(abortError)
+
+    await expect(
+      backendGenerate({ generationMode: "tweet", input: "hi", voice: {} as any, styleProfile: null, tone: "direct", length: "medium" })
+    ).rejects.toThrow("Aminta took too long to respond. Try again.")
+  })
+
+  it("passes an AbortSignal to fetch so a stalled request is actually cut off", async () => {
+    mockGetAuthSession.mockResolvedValue(SESSION)
+    const fetchMock = vi.mocked(fetch)
+    fetchMock.mockResolvedValue(jsonResponse(200, { text: "ok" }))
+
+    await backendGenerate({ generationMode: "tweet", input: "hi", voice: {} as any, styleProfile: null, tone: "direct", length: "medium" })
+
+    const [, init] = fetchMock.mock.calls[0]
+    expect(init?.signal).toBeInstanceOf(AbortSignal)
   })
 })
 
@@ -403,6 +425,91 @@ describe("dispatchGenerate", () => {
       "AIzaSomeKey", "gemini-3.5-flash", expect.any(Array), ["data:image/jpeg;base64,abc"],
       { structuredText: true, generationType: "reply" }
     )
+  })
+
+  describe("pathological-length corrective retry (BYOK only)", () => {
+    const byokStore = { ...baseStore, apiKey: "AIzaSomeKey", plan: "pro", subscriptionStatus: "active", aiIncluded: false } as AmintaStore
+    const includedStore = { ...baseStore, apiKey: "", plan: "pro", subscriptionStatus: "active", aiIncluded: true } as AmintaStore
+
+    it("a pathologically short Medium tweet triggers exactly one corrective retry, and the corrected text wins", async () => {
+      mockRunAI.mockReset()
+        .mockResolvedValueOnce("yeah this is wild")
+        .mockResolvedValueOnce("a real, fully developed take on the topic that actually reaches the requested medium length")
+
+      const text = await dispatchGenerate(byokStore, {
+        generationMode: "tweet", input: "topic", voice: {} as any, styleProfile: null, tone: "direct", length: "medium",
+      })
+
+      expect(mockRunAI).toHaveBeenCalledTimes(2)
+      expect(text).toBe("a real, fully developed take on the topic that actually reaches the requested medium length")
+    })
+
+    it("the retry's prompt carries the corrective instruction, appended to any existing templateInstruction", async () => {
+      mockRunAI.mockReset()
+        .mockResolvedValueOnce("too short")
+        .mockResolvedValueOnce("a properly developed medium-length post about the topic at hand")
+
+      await dispatchGenerate(byokStore, {
+        generationMode: "tweet", input: "topic", voice: {} as any, styleProfile: null, tone: "direct", length: "medium",
+        templateInstruction: "Write it as a product post.",
+      })
+
+      const retryMessages = mockRunAI.mock.calls[1][2] as { role: string; content: string }[]
+      const system = retryMessages.find((m) => m.role === "system")!.content
+      expect(system).toContain("Write it as a product post.")
+      expect(system).toContain("substantially shorter than the requested Medium length")
+    })
+
+    it("if the corrective retry is STILL pathologically short, the original result is kept rather than looping again", async () => {
+      mockRunAI.mockReset()
+        .mockResolvedValueOnce("too short")
+        .mockResolvedValueOnce("still short")
+
+      const text = await dispatchGenerate(byokStore, {
+        generationMode: "tweet", input: "topic", voice: {} as any, styleProfile: null, tone: "direct", length: "medium",
+      })
+
+      expect(mockRunAI).toHaveBeenCalledTimes(2) // never a third attempt
+      expect(text).toBe("too short")
+    })
+
+    it("never retries for length 'short' — a tiny output there is the whole point", async () => {
+      mockRunAI.mockReset().mockResolvedValue("tiny")
+      await dispatchGenerate(byokStore, {
+        generationMode: "tweet", input: "topic", voice: {} as any, styleProfile: null, tone: "direct", length: "short",
+      })
+      expect(mockRunAI).toHaveBeenCalledTimes(1)
+    })
+
+    it("never retries polish — LENGTH_GUIDE explicitly preserves the draft's own length, there is no target to violate", async () => {
+      mockRunAI.mockReset().mockResolvedValue("ok")
+      await dispatchGenerate(byokStore, {
+        generationMode: "polish", input: "current draft", voice: {} as any, styleProfile: null, tone: "direct", length: "medium",
+      })
+      expect(mockRunAI).toHaveBeenCalledTimes(1)
+    })
+
+    it("never retries for a long-enough Medium result", async () => {
+      mockRunAI.mockReset().mockResolvedValue("a perfectly reasonable medium-length post with real content in it")
+      await dispatchGenerate(byokStore, {
+        generationMode: "tweet", input: "topic", voice: {} as any, styleProfile: null, tone: "direct", length: "medium",
+      })
+      expect(mockRunAI).toHaveBeenCalledTimes(1)
+    })
+
+    it("Included AI never triggers a corrective retry — a second call would be a second billed generation", async () => {
+      mockGetAuthSession.mockResolvedValue(SESSION)
+      const fetchMock = vi.mocked(fetch)
+      fetchMock.mockResolvedValue(jsonResponse(200, { text: "yeah this is wild" }))
+
+      const text = await dispatchGenerate(includedStore, {
+        generationMode: "tweet", input: "topic", voice: {} as any, styleProfile: null, tone: "direct", length: "medium",
+      })
+
+      expect(text).toBe("yeah this is wild")
+      expect(fetchMock).toHaveBeenCalledTimes(1) // not 2 — no silent second charge
+      expect(mockRunAI).not.toHaveBeenCalled()
+    })
   })
 })
 

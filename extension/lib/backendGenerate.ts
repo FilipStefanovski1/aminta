@@ -9,11 +9,22 @@ import { getAuthSession, refreshAuthSession } from "~lib/auth"
 import { getDeviceId } from "~lib/deviceId"
 import { effectiveApiKey, shouldUseIncludedAi } from "~lib/entitlements"
 import { generate as runAI, generateFromImage, type GenerateOptions } from "~lib/ai"
+import { classifyFetchError } from "~lib/generationErrors"
+import { isPathologicallyShort, withLengthCorrection } from "~lib/lengthGuard"
 import { buildMessages, buildThreadMessages, enforcePostCount, parseThreadResponse, type Mode, type OutputLength, type ThreadPostCount, type Tone, type ThreadOption } from "~lib/prompts"
 import { cleanGenerationOutput } from "~lib/textCleanup"
 import { setStore, type AmintaStore, type StyleProfile, type VoiceProfile } from "~lib/storage"
 
 const API_URL = "https://amintaapp.com/api/generate"
+
+// Interactive single-post deadline — mirrors lib/gemini.ts's own
+// TOTAL_DEADLINE_MS for BYOK, so Included AI fails at the same point rather
+// than hanging indefinitely (previously unbounded: a stalled request could
+// only ever resolve via whatever the browser's own network stack eventually
+// decided, which surfaced as a generic fetch rejection misreported as "check
+// your internet" — see classifyFetchError). Thread generation reuses the
+// existing, longer THREAD_DEADLINE_MS below instead.
+const GENERATE_DEADLINE_MS = 15_000
 
 export interface StyleCorpusEntry {
   text: string
@@ -99,9 +110,12 @@ async function postGenerate(body: BackendGenerateArgs & { requestId: string }): 
   const session = await getAuthSession()
   if (!session) throw new Error("Sign in required.")
   const deviceId = await getDeviceId()
+  const deadlineMs = body.generationMode === "thread" ? THREAD_DEADLINE_MS : GENERATE_DEADLINE_MS
 
-  const doFetch = (accessToken: string) =>
-    fetch(API_URL, {
+  const doFetch = (accessToken: string) => {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), deadlineMs)
+    return fetch(API_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -109,13 +123,15 @@ async function postGenerate(body: BackendGenerateArgs & { requestId: string }): 
         "X-Aminta-Device-Id": deviceId,
       },
       body: JSON.stringify(body),
-    })
+      signal: controller.signal,
+    }).finally(() => clearTimeout(timer))
+  }
 
   let res: Response
   try {
     res = await doFetch(session.accessToken)
-  } catch {
-    throw new Error("Network error. Check your internet connection.")
+  } catch (e) {
+    throw classifyFetchError(e)
   }
 
   if (res.status === 401) {
@@ -123,8 +139,8 @@ async function postGenerate(body: BackendGenerateArgs & { requestId: string }): 
     if (!refreshed) throw new Error("Session expired. Please sign in again.")
     try {
       res = await doFetch(refreshed.accessToken)
-    } catch {
-      throw new Error("Network error. Check your internet connection.")
+    } catch (e) {
+      throw classifyFetchError(e)
     }
   }
 
@@ -223,24 +239,11 @@ export async function runThreadGenerate(
   return enforcePostCount(parseThreadResponse(raw), postCount)
 }
 
-// Dispatcher for the direct call sites in GeneratorPanel.tsx (tweet/polish,
-// and reply mode when not going through the image-aware
-// lib/replyGeneration.ts orchestrator). Included-AI users route to the new
-// backend; everyone else runs the exact same buildMessages()+generate()/
-// generateFromImage() path that existed before this file did — no behavior
-// change for BYOK.
-export async function dispatchGenerate(
+async function runByokGenerate(
   store: AmintaStore,
   args: TextGenerateArgs,
-  // Fired before each automatic retry of a transient Gemini error (BYOK
-  // only — Included AI retries silently server-side, nothing to notify the
-  // UI about mid-request). Lets GeneratorPanel.tsx show "Retrying
-  // automatically…" instead of a raw provider error flashing on screen.
   onRetry?: GenerateOptions["onRetry"]
 ): Promise<string> {
-  if (shouldUseIncludedAi(store)) {
-    return backendGenerate(args)
-  }
   const messages = buildMessages(
     "x",
     args.generationMode,
@@ -261,4 +264,51 @@ export async function dispatchGenerate(
     ? await generateFromImage(effectiveApiKey(store), store.model, messages, args.images, geminiOptions)
     : await runAI(effectiveApiKey(store), store.model, messages, geminiOptions)
   return cleanGenerationOutput(raw)
+}
+
+// Dispatcher for the direct call sites in GeneratorPanel.tsx (tweet/polish,
+// and reply mode when not going through the image-aware
+// lib/replyGeneration.ts orchestrator). Included-AI users route to the new
+// backend; everyone else runs the exact same buildMessages()+generate()/
+// generateFromImage() path that existed before this file did — no behavior
+// change for BYOK beyond the one bounded corrective retry below.
+export async function dispatchGenerate(
+  store: AmintaStore,
+  args: TextGenerateArgs,
+  // Fired before each automatic retry of a transient Gemini error (BYOK
+  // only — Included AI retries silently server-side, nothing to notify the
+  // UI about mid-request). Lets GeneratorPanel.tsx show "Retrying
+  // automatically…" instead of a raw provider error flashing on screen.
+  onRetry?: GenerateOptions["onRetry"]
+): Promise<string> {
+  if (shouldUseIncludedAi(store)) {
+    // No corrective retry here: reserveCredits() is idempotent per
+    // requestId (a retried *identical* request is free), but a corrective
+    // retry is a genuinely different, freshly-worded request — the server
+    // has no free "correction" mode for that, so a second call here would
+    // be a second, separately billed generation. Silently spending a
+    // second credit to fix Aminta's own output would be exactly the
+    // "unexpectedly double-charge" outcome this feature must never cause,
+    // so Included AI relies on resolveLengthGuide's floor fix (see
+    // lib/prompts.ts) to prevent the pathological case up front instead.
+    return backendGenerate(args)
+  }
+
+  const text = await runByokGenerate(store, args, onRetry)
+
+  // BYOK has no credit concept to protect — Aminta charges nothing for a
+  // user's own key either way, so one bounded corrective retry is free to
+  // attempt here. Never retried more than once, and the ORIGINAL result is
+  // kept if the correction attempt is somehow still pathological, rather
+  // than looping.
+  if (args.generationMode !== "polish" && isPathologicallyShort(text, args.generationMode, args.length)) {
+    const corrected = await runByokGenerate(
+      store,
+      { ...args, templateInstruction: withLengthCorrection(args.templateInstruction, args.length) },
+      onRetry
+    )
+    if (!isPathologicallyShort(corrected, args.generationMode, args.length)) return corrected
+  }
+
+  return text
 }

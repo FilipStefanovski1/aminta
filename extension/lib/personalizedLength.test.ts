@@ -80,4 +80,38 @@ describe("resolveLengthGuide — personalized vs fallback", () => {
   it("a null styleProfile never breaks generation", () => {
     expect(() => resolveLengthGuide("tweet", "medium", null)).not.toThrow()
   })
+
+  // Root cause of the "Medium sometimes generates only a few words" bug:
+  // this branch used to have no floor, so a thin/polluted lengthProfile
+  // (e.g. a training corpus with many tiny fragments — see
+  // lib/trainingExamples.ts) could hand the model a near-zero Medium target
+  // like "5-30 characters", which it then correctly, faithfully satisfied.
+  it("medium never collapses toward zero when the baseline itself is tiny (degenerate/polluted corpus)", () => {
+    const tinyProfile = { ...baseProfile, lengthProfile: { p25: 8, median: 15, p75: 22 } }
+    const guide = resolveLengthGuide("tweet", "medium", tinyProfile)
+    const [, lo, hi] = guide.match(/roughly (\d+)-(\d+) characters/)!
+    expect(Number(lo)).toBeGreaterThanOrEqual(120)
+    expect(Number(hi)).toBeGreaterThanOrEqual(Number(lo) + 80)
+  })
+
+  it("medium still personalizes downward for a genuinely concise (but not degenerate) writer", () => {
+    const conciseProfile = { ...baseProfile, lengthProfile: { p25: 130, median: 160, p75: 190 } }
+    const guide = resolveLengthGuide("tweet", "medium", conciseProfile)
+    const [, lo, hi] = guide.match(/roughly (\d+)-(\d+) characters/)!
+    // Personalizes (doesn't just fall back to the fixed 150-260 default)...
+    expect(guide).not.toMatch(/150-260 characters/)
+    // ...but the floor still applies since it's well above the minimum anyway.
+    expect(Number(lo)).toBeGreaterThanOrEqual(120)
+    expect(Number(hi)).toBeGreaterThan(Number(lo))
+  })
+
+  it("short and long already had floors and remain unaffected by the medium fix", () => {
+    const tinyProfile = { ...baseProfile, lengthProfile: { p25: 8, median: 15, p75: 22 } }
+    const shortGuide = resolveLengthGuide("tweet", "short", tinyProfile)
+    const longGuide = resolveLengthGuide("tweet", "long", tinyProfile)
+    const [, shortLo] = shortGuide.match(/roughly (\d+)-(\d+) characters/)!
+    const [, longLo] = longGuide.match(/roughly (\d+)-(\d+) characters/)!
+    expect(Number(shortLo)).toBeGreaterThanOrEqual(20)
+    expect(Number(longLo)).toBeGreaterThan(Number(shortLo))
+  })
 })

@@ -12,8 +12,13 @@ describe("countExamples", () => {
     expect(countExamples("")).toBe(0)
   })
 
-  it("falls back to newline-splitting for the legacy plain-text format", () => {
-    expect(countExamples("first example\nsecond example")).toBe(2)
+  it("treats legacy plain-text as ONE example, never splits on newlines", () => {
+    // A blank/newline-separated legacy blob is ambiguous — it could be
+    // several bulk-pasted posts, or one real post with its own paragraph
+    // breaks. Splitting guessed wrong often enough to pollute training data
+    // with fake fragments (see lib/trainingExamples.ts), so the only safe
+    // reading is one example.
+    expect(countExamples("first example\nsecond example")).toBe(1)
   })
 })
 

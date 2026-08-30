@@ -1,4 +1,5 @@
 // Generic OpenAI-compatible chat call. Used by OpenRouter and Groq.
+import { CONNECTIVITY_ERROR_MESSAGE } from "~lib/generationErrors"
 
 export type ContentPart =
   | { type: "text"; text: string }
@@ -50,7 +51,7 @@ export async function callOpenAICompat(
     if (e instanceof DOMException && e.name === "TimeoutError") {
       throw new Error(`${label} took too long to respond. Try again, or pick a faster model in Settings.`)
     }
-    throw new Error("Network error. Check your internet connection.")
+    throw new Error(CONNECTIVITY_ERROR_MESSAGE)
   }
 
   if (!res.ok) {
