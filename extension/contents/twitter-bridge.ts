@@ -5,15 +5,19 @@ import {
   COMPOSER_BAR_ATTR,
   COMPOSER_BAR_VERSION,
   DEFAULT_COMPOSER_LENGTH,
+  DEFAULT_COMPOSER_TONE,
   buildActionStrip,
   isAmintaBar,
   isCurrentBar,
   presetInstruction,
+  resolveComposerLength,
+  resolveComposerTone,
   type ComposerPresetId,
   type ComposerStripState,
 } from "~lib/composerPresets"
 import { resolveAmintaInsertion, type ManagedRegion } from "~lib/composerRegion"
 import { effectiveApiKey, shouldUseIncludedAi } from "~lib/entitlements"
+import { addMeme, deleteMeme, listMemes, rankMemesByTags, type MemeRecord } from "~lib/memeLibrary"
 import { pickNextReplyTarget, type ReplyPostData } from "~lib/replyTargets"
 import { getStore } from "~lib/storage"
 import { getOrBuildStyleProfile } from "~lib/styleProfile"
@@ -77,6 +81,14 @@ function getActiveTweet(): string {
 
 function getReplyTargetText(bar: HTMLElement): string {
   return findActiveTweetTextNode(bar, true)?.innerText.trim() ?? ""
+}
+
+// Same detection Generate's own reply-auto-detect already relies on (a
+// preceding tweetText node in strict mode) — reused here purely to decide
+// whether THIS bar should show the Meme pill at all. Never used to change
+// what Generate/Polish do.
+function isReplyComposer(bar: HTMLElement): boolean {
+  return !!findActiveTweetTextNode(bar, true)
 }
 
 // Images attached to the same tweet as the matched tweetText node — scoped
@@ -488,7 +500,7 @@ function setBarStatus(bar: HTMLElement, msg: string, isError = false) {
 const stripState = new WeakMap<HTMLElement, ComposerStripState>()
 
 function getStripState(bar: HTMLElement): ComposerStripState {
-  return stripState.get(bar) ?? { preset: null, length: DEFAULT_COMPOSER_LENGTH }
+  return stripState.get(bar) ?? { preset: null, length: DEFAULT_COMPOSER_LENGTH, tone: DEFAULT_COMPOSER_TONE }
 }
 
 async function runGenerate(bar: HTMLElement, mode: "tweet" | "polish", prefill?: string) {
@@ -529,11 +541,11 @@ async function runGenerate(bar: HTMLElement, mode: "tweet" | "polish", prefill?:
       input: input || "Write a compelling tweet about my niche",
       voice: store.voice,
       styleProfile,
-      tone: "direct",
-      length: state.length,
-      // Preset intent (News/Product/You) rides the existing
-      // templateInstruction seam — shape only; Voice/Instincts still win.
-      // Polish keeps its own framing, so no preset is applied there.
+      tone: resolveComposerTone(state.tone),
+      length: resolveComposerLength(state.length),
+      // Preset intent (News/Product) rides the existing templateInstruction
+      // seam — shape only; Voice/Instincts still win. Polish keeps its own
+      // framing, so no preset is applied there.
       templateInstruction: mode === "polish" ? undefined : presetInstruction(state.preset),
     })
 
@@ -597,6 +609,255 @@ async function renderKeywords(bar: HTMLElement) {
   })
 }
 
+// ─── Meme Reply ─────────────────────────────────────────────────────────
+// Personal, local meme library (lib/memeLibrary.ts, IndexedDB) + a caption
+// step that reuses the exact same generation pipeline as every other
+// composer action. Opening the popover, browsing, uploading, and deleting
+// are all pure local operations — 0 credits, no AI call. Only picking a
+// meme to generate a caption for is a real generation (generationMode
+// "reply", the existing reply cost — see runMemeCaption below).
+//
+// Popovers are appended to document.body with position:fixed rather than
+// nested inside the bar, so they can never be clipped by any overflow:
+// hidden ancestor in X's own composer chrome.
+
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = () => reject(reader.error ?? new Error("Couldn't read image."))
+    reader.readAsDataURL(blob)
+  })
+}
+
+// Never posts anything itself — returns the caption text for the caller to
+// preview and the user to explicitly confirm inserting.
+async function runMemeCaption(bar: HTMLElement, meme: MemeRecord): Promise<string> {
+  const store = await getStore()
+  if (!effectiveApiKey(store) && !shouldUseIncludedAi(store)) throw new Error("No API key. Open Aminta Settings")
+  if (!store.voice) throw new Error("Train Aminta first")
+
+  const replyTarget = getReplyTargetText(bar)
+  const state = getStripState(bar)
+  const styleProfile = await getOrBuildStyleProfile(store)
+
+  const captionInstruction = [
+    "Write a short caption to accompany a meme reply. The meme image itself carries most of the joke, so this caption should be brief and complementary — not an explanation of the meme, not a restatement of it.",
+    meme.name ? `The meme is: "${meme.name}".` : "",
+    meme.tags.length ? `Its vibe/tags: ${meme.tags.join(", ")}.` : "",
+  ].filter(Boolean).join(" ")
+
+  // Same pipeline, same cost as a normal reply generation — reusing
+  // generationMode "reply" rather than inventing a new mode/price.
+  return dispatchGenerate(store, {
+    generationMode: "reply",
+    input: replyTarget || "Write a short, funny reply caption.",
+    voice: store.voice,
+    styleProfile,
+    tone: resolveComposerTone(state.tone),
+    length: "short",
+    templateInstruction: captionInstruction,
+  })
+}
+
+let closeMemeUI: (() => void) | null = null
+function closeMemePopovers() {
+  closeMemeUI?.()
+  closeMemeUI = null
+}
+
+function memePanelBase(rect: DOMRect): HTMLDivElement {
+  const panel = document.createElement("div")
+  panel.style.cssText = [
+    "position:fixed",
+    `top:${rect.bottom + 6}px`,
+    `left:${rect.left}px`,
+    "width:264px",
+    "background:#17171a",
+    "border:1px solid #2b2b30",
+    "border-radius:10px",
+    "padding:8px",
+    "z-index:2147483000",
+    "box-shadow:0 4px 16px rgba(0,0,0,0.4)",
+    "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif",
+    "color:#e5e5ea",
+  ].join(";")
+  return panel
+}
+
+function memeSmallBtn(label: string, accent = "#8e919a"): HTMLButtonElement {
+  const btn = document.createElement("button")
+  btn.type = "button"
+  btn.textContent = label
+  btn.style.cssText = `font-size:10.5px;font-weight:600;color:${accent};background:transparent;border:1px solid #2b2b30;border-radius:6px;padding:5px 9px;cursor:pointer`
+  btn.addEventListener("mousedown", (e) => e.preventDefault())
+  return btn
+}
+
+/** Preview step: shows the meme + generated caption, lets the user insert, regenerate, or cancel. Insert is the ONLY thing that ever touches the composer. */
+function openMemeCaptionPreview(bar: HTMLElement, anchorRect: DOMRect, meme: MemeRecord) {
+  closeMemePopovers()
+  const panel = memePanelBase(anchorRect)
+
+  const img = document.createElement("img")
+  img.style.cssText = "width:100%;max-height:140px;object-fit:cover;border-radius:7px;display:block;margin-bottom:8px"
+  img.src = URL.createObjectURL(meme.blob)
+  panel.appendChild(img)
+
+  const status = document.createElement("p")
+  status.style.cssText = "font-size:11px;color:#8e919a;margin:0 0 8px"
+  status.textContent = "Writing a caption…"
+  panel.appendChild(status)
+
+  const caption = document.createElement("textarea")
+  caption.rows = 3
+  caption.style.cssText = "width:100%;box-sizing:border-box;background:#111;border:1px solid #2b2b30;border-radius:7px;color:#e5e5ea;font-size:12px;padding:6px;resize:none;display:none;margin-bottom:8px"
+  panel.appendChild(caption)
+
+  const actions = document.createElement("div")
+  actions.style.cssText = "display:flex;gap:6px;justify-content:flex-end"
+  const cancelBtn = memeSmallBtn("Cancel")
+  const regenBtn = memeSmallBtn("Regenerate")
+  const insertBtn = memeSmallBtn("Insert", ACCENT_MEME)
+  regenBtn.style.display = "none"
+  insertBtn.style.display = "none"
+  actions.append(cancelBtn, regenBtn, insertBtn)
+  panel.appendChild(actions)
+
+  const close = () => {
+    panel.remove()
+    document.removeEventListener("mousedown", onOutside, true)
+    document.removeEventListener("keydown", onKey, true)
+    closeMemeUI = null
+  }
+  const onOutside = (e: MouseEvent) => { if (!panel.contains(e.target as Node)) close() }
+  const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") close() }
+  document.addEventListener("mousedown", onOutside, true)
+  document.addEventListener("keydown", onKey, true)
+  closeMemeUI = close
+
+  cancelBtn.onclick = close
+
+  async function generate() {
+    status.textContent = "Writing a caption…"
+    status.style.display = "block"
+    caption.style.display = "none"
+    regenBtn.style.display = "none"
+    insertBtn.style.display = "none"
+    try {
+      const text = await runMemeCaption(bar, meme)
+      caption.value = text
+      status.style.display = "none"
+      caption.style.display = "block"
+      regenBtn.style.display = ""
+      insertBtn.style.display = ""
+    } catch (e) {
+      status.textContent = e instanceof Error ? e.message : "Couldn't write a caption."
+    }
+  }
+  regenBtn.onclick = generate
+  document.body.appendChild(panel)
+  generate()
+
+  // The one action that actually touches the composer — user-confirmed,
+  // never automatic. Never clicks X's own Post/Reply button.
+  insertBtn.onclick = async () => {
+    const dataUrl = await blobToDataUrl(meme.blob)
+    await insertImageIntoComposer(dataUrl)
+    if (caption.value.trim()) insertAmintaText(caption.value.trim(), bar)
+    close()
+  }
+}
+
+const ACCENT_MEME = "#fb923c"
+
+function openMemePopover(bar: HTMLElement) {
+  closeMemePopovers()
+  const anchor = bar.querySelector<HTMLElement>('[title="Reply with a meme"]')
+  const rect = (anchor ?? bar).getBoundingClientRect()
+  const panel = memePanelBase(rect)
+
+  const header = document.createElement("div")
+  header.style.cssText = "display:flex;align-items:center;justify-content:space-between;margin-bottom:7px"
+  const title = document.createElement("span")
+  title.textContent = "Meme library"
+  title.style.cssText = "font-size:11.5px;font-weight:600"
+  const uploadBtn = memeSmallBtn("+ Upload", ACCENT_MEME)
+  header.append(title, uploadBtn)
+  panel.appendChild(header)
+
+  const fileInput = document.createElement("input")
+  fileInput.type = "file"
+  fileInput.accept = "image/*"
+  fileInput.style.display = "none"
+  panel.appendChild(fileInput)
+  uploadBtn.onclick = () => fileInput.click()
+  fileInput.onchange = async () => {
+    const file = fileInput.files?.[0]
+    if (!file) return
+    await addMeme({ blob: file })
+    fileInput.value = ""
+    renderGrid()
+  }
+
+  const grid = document.createElement("div")
+  grid.style.cssText = "display:grid;grid-template-columns:repeat(3,1fr);gap:6px;max-height:260px;overflow-y:auto"
+  panel.appendChild(grid)
+
+  const empty = document.createElement("p")
+  empty.textContent = "No memes saved yet — upload one to get started."
+  empty.style.cssText = "font-size:10.5px;color:#8e919a;margin:4px 0 0"
+
+  async function renderGrid() {
+    grid.innerHTML = ""
+    empty.remove()
+    const memes = await listMemes()
+    if (!memes.length) { panel.appendChild(empty); return }
+
+    // Zero-AI local prefilter: best matches (by tag overlap with the post
+    // being replied to) sort first — browsing this order still costs 0.
+    const ranked = rankMemesByTags(memes, getReplyTargetText(bar))
+    for (const meme of ranked) {
+      const cell = document.createElement("div")
+      cell.style.cssText = "position:relative;aspect-ratio:1;border-radius:6px;overflow:hidden;cursor:pointer;background:#111;border:1px solid #2b2b30"
+      cell.title = meme.name || meme.tags.join(", ") || "Use this meme"
+
+      const img = document.createElement("img")
+      img.src = URL.createObjectURL(meme.blob)
+      img.style.cssText = "width:100%;height:100%;object-fit:cover;display:block"
+      cell.appendChild(img)
+
+      const del = document.createElement("button")
+      del.type = "button"
+      del.textContent = "✕"
+      del.title = "Delete meme"
+      del.style.cssText = "position:absolute;top:2px;right:2px;width:16px;height:16px;line-height:1;font-size:9px;border-radius:4px;background:rgba(0,0,0,0.65);color:#f87171;border:none;cursor:pointer"
+      del.addEventListener("mousedown", (e) => e.stopPropagation())
+      del.onclick = async (e) => { e.stopPropagation(); await deleteMeme(meme.id); renderGrid() }
+      cell.appendChild(del)
+
+      cell.addEventListener("mousedown", (e) => e.preventDefault())
+      cell.onclick = () => { closeMemePopovers(); openMemeCaptionPreview(bar, rect, meme) }
+      grid.appendChild(cell)
+    }
+  }
+  renderGrid()
+
+  document.body.appendChild(panel)
+
+  const close = () => {
+    panel.remove()
+    document.removeEventListener("mousedown", onOutside, true)
+    document.removeEventListener("keydown", onKey, true)
+    closeMemeUI = null
+  }
+  const onOutside = (e: MouseEvent) => { if (!panel.contains(e.target as Node) && e.target !== anchor) close() }
+  const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") close() }
+  document.addEventListener("mousedown", onOutside, true)
+  document.addEventListener("keydown", onKey, true)
+  closeMemeUI = close
+}
+
 function buildBar(): HTMLElement {
   const bar = document.createElement("div")
   bar.style.cssText = [
@@ -650,10 +911,12 @@ function buildBar(): HTMLElement {
   ].join(";")
   status.textContent = "Aminta"
 
-  // Action strip (Generate / Polish / News / Product / You / Length). Fully
-  // re-rendered on each state change so active pills stay in sync; selecting
-  // a preset or cycling length never triggers a generation, so this costs
-  // nothing.
+  // Action strip (Generate / Polish / News / Product / You / Length, +Meme
+  // in reply composers). Fully re-rendered on each state change so active
+  // pills stay in sync; selecting a preset, tone, or length never triggers
+  // a generation, so this costs nothing. Meme is only offered at all when
+  // this bar is a reply composer (see isReplyComposer) — never on a
+  // top-level post.
   const renderStrip = () => {
     const current = bar.querySelector(".aminta-actions")
     const next = buildActionStrip(getStripState(bar), {
@@ -667,6 +930,11 @@ function buildBar(): HTMLElement {
         stripState.set(bar, { ...getStripState(bar), length })
         renderStrip()
       },
+      onTone: (tone) => {
+        stripState.set(bar, { ...getStripState(bar), tone })
+        renderStrip()
+      },
+      ...(isReplyComposer(bar) ? { onOpenMeme: () => openMemePopover(bar) } : {}),
     })
     if (current) current.replaceWith(next)
     else bar.insertBefore(next, bar.firstChild)
