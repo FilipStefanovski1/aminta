@@ -2,8 +2,12 @@ import type { PlasmoCSConfig } from "plasmo"
 
 import { dispatchGenerate } from "~lib/backendGenerate"
 import {
+  COMPOSER_BAR_ATTR,
+  COMPOSER_BAR_VERSION,
   DEFAULT_COMPOSER_LENGTH,
   buildActionStrip,
+  isAmintaBar,
+  isCurrentBar,
   presetInstruction,
   type ComposerPresetId,
   type ComposerStripState,
@@ -459,7 +463,7 @@ async function saveKeyword(raw: string): Promise<void> {
 
 // ─── Compose bar injection ────────────────────────────────────────────────────
 
-const BAR_ATTR = "data-aminta-bar"
+const BAR_ATTR = COMPOSER_BAR_ATTR
 
 function getComposerText(bar?: HTMLElement): string {
   const box = getComposerBox(bar)
@@ -678,11 +682,19 @@ function buildBar(): HTMLElement {
 }
 
 function injectBar(toolbar: Element) {
-  // Check if this specific toolbar already has our bar injected right after it
   const next = toolbar.nextElementSibling as HTMLElement | null
-  if (next?.hasAttribute(BAR_ATTR)) return
+
+  // Already carrying THIS build's bar — nothing to do.
+  if (isCurrentBar(next)) return
+
+  // A bar from a previous build (extension reloaded without refreshing the
+  // tab). It must be removed rather than treated as "already injected",
+  // otherwise the old markup wins permanently and this build's bar can never
+  // mount. See COMPOSER_BAR_VERSION.
+  if (isAmintaBar(next)) next?.remove()
+
   const bar = buildBar()
-  bar.setAttribute(BAR_ATTR, "1")
+  bar.setAttribute(BAR_ATTR, COMPOSER_BAR_VERSION)
   toolbar.parentElement?.insertBefore(bar, toolbar.nextSibling)
 }
 

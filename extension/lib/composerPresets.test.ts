@@ -5,7 +5,11 @@ import {
   DEFAULT_COMPOSER_LENGTH,
   LENGTH_CYCLE,
   LENGTH_LABEL,
+  COMPOSER_BAR_ATTR,
+  COMPOSER_BAR_VERSION,
   buildActionStrip,
+  isAmintaBar,
+  isCurrentBar,
   nextLength,
   presetInstruction,
   type ComposerStripState,
@@ -181,5 +185,63 @@ describe("composer focus is preserved", () => {
     const ev = new MouseEvent("mousedown", { bubbles: true, cancelable: true })
     button(strip, "Generate").dispatchEvent(ev)
     expect(ev.defaultPrevented).toBe(true)
+  })
+})
+
+// Regression: the expanded strip shipped in code (f99f448) but X kept
+// rendering the old two-button bar. Cause was the injection guard — the bar
+// was marked with a version-less data-aminta-bar="1", so after an extension
+// reload without a tab refresh the previous build's bar was treated as
+// "already injected" and the new one never mounted.
+describe("stale bars from a previous build are replaced, not respected", () => {
+  function barWith(version: string | null): HTMLElement {
+    const el = document.createElement("div")
+    if (version !== null) el.setAttribute(COMPOSER_BAR_ATTR, version)
+    return el
+  }
+
+  it("a bar from THIS build is current — no re-injection", () => {
+    expect(isCurrentBar(barWith(COMPOSER_BAR_VERSION))).toBe(true)
+  })
+
+  it('the old version-less marker ("1") is NOT current — this is the exact bug', () => {
+    expect(isCurrentBar(barWith("1"))).toBe(false)
+    // ...but it IS ours, so injectBar removes it rather than leaving it.
+    expect(isAmintaBar(barWith("1"))).toBe(true)
+  })
+
+  it("any future version mismatch is also treated as stale", () => {
+    expect(isCurrentBar(barWith("99"))).toBe(false)
+    expect(isAmintaBar(barWith("99"))).toBe(true)
+  })
+
+  it("unrelated elements are neither current nor ours", () => {
+    expect(isCurrentBar(barWith(null))).toBe(false)
+    expect(isAmintaBar(barWith(null))).toBe(false)
+    expect(isCurrentBar(null)).toBe(false)
+    expect(isAmintaBar(undefined)).toBe(false)
+  })
+
+  it("the version is past the original, so already-injected old bars are superseded", () => {
+    expect(COMPOSER_BAR_VERSION).not.toBe("1")
+  })
+})
+
+// Guards the "one canonical renderer" rule: every action the composer offers
+// comes from buildActionStrip, so a legacy two-button path can't reappear.
+describe("buildActionStrip is the single source of composer actions", () => {
+  it("renders all six actions and nothing has to be added elsewhere", () => {
+    const strip = buildActionStrip(IDLE, handlers())
+    const found = labels(strip)
+    for (const required of ["Generate", "Polish", "News", "Product", "You"]) {
+      expect(found).toContain(required)
+    }
+    expect(found.some((l) => ["Short", "Medium", "Long"].includes(l))).toBe(true)
+    expect(found).toHaveLength(6)
+  })
+
+  it("no action carries the retired pixel-button glyphs", () => {
+    const strip = buildActionStrip(IDLE, handlers())
+    expect(labels(strip).join(" ")).not.toMatch(/⚄|\+ Polish/)
   })
 })

@@ -186,3 +186,29 @@ export function buildActionStrip(state: ComposerStripState, handlers: ComposerSt
 
   return strip
 }
+
+// ─── Bar identity / staleness ───────────────────────────────────────────
+// The injected bar is marked so the observer doesn't insert duplicates. That
+// marker MUST carry a version.
+//
+// Reloading the extension without hard-refreshing the X tab leaves the
+// previous build's bar in the DOM. With a version-less marker
+// (data-aminta-bar="1") the freshly injected content script saw "a bar is
+// already here", returned early, and the OLD bar survived forever — the new
+// one could never mount. That is exactly how the expanded action strip
+// shipped in code but never appeared on X.
+//
+// Bump COMPOSER_BAR_VERSION whenever the injected bar's markup changes, so a
+// stale bar is recognized and replaced instead of blocking its replacement.
+export const COMPOSER_BAR_ATTR = "data-aminta-bar"
+export const COMPOSER_BAR_VERSION = "2"
+
+/** True only for a bar rendered by THIS build — a previous build's bar is stale. */
+export function isCurrentBar(el: Element | null | undefined): boolean {
+  return !!el && el.getAttribute(COMPOSER_BAR_ATTR) === COMPOSER_BAR_VERSION
+}
+
+/** Any Aminta bar, current or stale — used to clear them all when composers close. */
+export function isAmintaBar(el: Element | null | undefined): boolean {
+  return !!el && el.hasAttribute(COMPOSER_BAR_ATTR)
+}
