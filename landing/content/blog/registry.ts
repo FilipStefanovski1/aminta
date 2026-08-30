@@ -7,12 +7,16 @@
 import * as edition001 from "./editions/why-ai-posts-are-starting-to-sound-the-same"
 import * as edition002 from "./editions/why-replies-matter-on-x"
 import * as edition003 from "./editions/what-is-working-on-x-right-now"
+import * as edition004 from "./editions/x-published-its-ranking-weights"
+import * as edition005 from "./editions/what-the-x-algorithm-code-doesnt-tell-you"
 import type { EditionMeta, EditionModule } from "./types"
 
 const ALL_EDITIONS: EditionModule[] = [
   { meta: edition001.meta, Content: edition001.default },
   { meta: edition002.meta, Content: edition002.default },
   { meta: edition003.meta, Content: edition003.default },
+  { meta: edition004.meta, Content: edition004.default },
+  { meta: edition005.meta, Content: edition005.default },
 ]
 
 function byEditionDesc(a: EditionModule, b: EditionModule): number {
