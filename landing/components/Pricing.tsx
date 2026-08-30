@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import posthog from "posthog-js";
 import Reveal from "./Reveal";
 import { createClient } from "@/lib/supabase/client";
-import { CREEM_FOUNDER_URL, CREEM_PRO_URL, EXTENSION_URL } from "@/lib/links";
+import { EXTENSION_URL } from "@/lib/links";
 import { hasProAccess, type UserSubscriptionState } from "@/lib/entitlements";
 
 const FREE_PLAN = {
@@ -41,7 +41,9 @@ const PRO_PLAN = {
     "Voice Refresh — weekly Aminta DNA update from your X history",
   ],
   cta: "Get Aminta Pro",
-  ctaHref: CREEM_PRO_URL,
+  // Not a real destination — checkout is always started via POST
+  // /api/billing/checkout (see startCheckout below), never a static link.
+  ctaHref: "#",
   badge: "PRO",
   highlight: true,
   disabled: false,
@@ -59,7 +61,7 @@ const FOUNDER_PLAN = {
     "Founder badge",
   ],
   cta: "Get Founder Access",
-  ctaHref: CREEM_FOUNDER_URL,
+  ctaHref: "#", // see PRO_PLAN.ctaHref comment — checkout always starts server-side
   badge: "FOUNDING 50",
   // Pro is the one recommended plan (lower commitment, default upgrade
   // path) — Founder stays premium via its own FOUNDING 50 badge, not by
@@ -109,7 +111,7 @@ interface CardProps {
   badge: string | null;
   highlight: boolean;
   disabled: boolean;
-  onCtaClick?: () => void;
+  onCtaClick?: (e: React.MouseEvent<HTMLAnchorElement>) => void;
 }
 
 // One CTA shape for every card, regardless of login/ownership state — only
@@ -275,28 +277,58 @@ export default function Pricing() {
       .catch(() => {});
   }, []);
 
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [checkoutBusy, setCheckoutBusy] = useState(false);
+
   const entitled = hasProAccess(profile ?? {});
   const currentPlan = profile?.plan ?? "free";
   const ownsPro = entitled && (currentPlan === "pro" || currentPlan === "lifetime");
   const ownsFounder = entitled && currentPlan === "lifetime";
 
-  const checkoutHrefFor = (plan: typeof PRO_PLAN | typeof FOUNDER_PLAN) =>
-    userId
-      ? `${plan.ctaHref}${plan.ctaHref.includes("?") ? "&" : "?"}metadata[user_id]=${encodeURIComponent(userId)}`
-      : plan.ctaHref;
+  // The ONE place checkout is initiated. Not signed in -> existing login
+  // flow (checkout can never bind to an anonymous click). Signed in ->
+  // POST the canonical server endpoint, which resolves the AgentaOS
+  // payment link and userId itself; this component never talks to
+  // AgentaOS directly and never sees a linkId.
+  async function startCheckout(plan: "pro" | "founder") {
+    if (checkoutBusy) return;
+    if (!userId) {
+      window.location.href = "/login";
+      return;
+    }
+    setCheckoutError(null);
+    setCheckoutBusy(true);
+    try {
+      const res = await fetch("/api/billing/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.checkoutUrl) {
+        setCheckoutError(data.error ?? "Couldn't start checkout. Please try again.");
+        setCheckoutBusy(false);
+        return;
+      }
+      window.location.href = data.checkoutUrl;
+    } catch {
+      setCheckoutError("Couldn't start checkout. Please try again.");
+      setCheckoutBusy(false);
+    }
+  }
 
   // Same CTA slot, different label/destination — owning the plan routes to
   // the existing dashboard account-management flow instead of checkout;
   // it never swaps in a separate alert-style treatment.
   const proCta = ownsPro ? "Manage Pro" : "Get Aminta Pro";
-  const proCtaHref = ownsPro ? "/dashboard" : checkoutHrefFor(PRO_PLAN);
+  const proCtaHref = ownsPro ? "/dashboard" : "#";
 
   // Sold out only ever affects someone who doesn't already own Founder —
   // an existing Founder always keeps "Manage Account", retaining their
   // lifetime access regardless of the current seat count.
   const founderLocked = founderSoldOut && !ownsFounder;
   const founderCta = ownsFounder ? "Manage Account" : founderLocked ? "Sold Out" : "Get Founder Access";
-  const founderCtaHref = ownsFounder ? "/dashboard" : checkoutHrefFor(FOUNDER_PLAN);
+  const founderCtaHref = ownsFounder ? "/dashboard" : "#";
 
   return (
     <section
@@ -330,22 +362,36 @@ export default function Pricing() {
           <Reveal delay={80}>
             <PricingCard
               {...PRO_PLAN}
-              cta={proCta}
+              cta={checkoutBusy ? "Redirecting…" : proCta}
               ctaHref={proCtaHref}
-              onCtaClick={() => posthog.capture("pricing_cta_clicked", { plan: "Pro", owns_plan: ownsPro })}
+              onCtaClick={(e) => {
+                posthog.capture("pricing_cta_clicked", { plan: "Pro", owns_plan: ownsPro });
+                if (ownsPro) return; // real /dashboard link — let it navigate
+                e.preventDefault();
+                startCheckout("pro");
+              }}
             />
           </Reveal>
           <Reveal delay={160}>
             <PricingCard
               {...FOUNDER_PLAN}
-              cta={founderCta}
+              cta={checkoutBusy ? "Redirecting…" : founderCta}
               ctaHref={founderCtaHref}
               badge={founderLocked ? "SOLD OUT" : FOUNDER_PLAN.badge}
               disabled={founderLocked}
-              onCtaClick={() => posthog.capture("pricing_cta_clicked", { plan: "Founder", owns_plan: ownsFounder, sold_out: founderLocked })}
+              onCtaClick={(e) => {
+                posthog.capture("pricing_cta_clicked", { plan: "Founder", owns_plan: ownsFounder, sold_out: founderLocked });
+                if (ownsFounder) return; // real /dashboard link — let it navigate
+                e.preventDefault();
+                startCheckout("founder");
+              }}
             />
           </Reveal>
         </div>
+
+        {checkoutError && (
+          <p className="mt-4 text-center text-sm text-red-400">{checkoutError}</p>
+        )}
 
         <Reveal className="mt-10 text-center">
           <p className="text-xs text-muted">
