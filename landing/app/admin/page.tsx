@@ -3,6 +3,7 @@ import { isAdminEmail } from "@/lib/auth/isAdmin"
 import { redirect } from "next/navigation"
 import Navbar from "@/components/Navbar"
 import Footer from "@/components/Footer"
+import AdminTable from "./AdminTable"
 
 export const dynamic = "force-dynamic"
 
@@ -31,10 +32,11 @@ function latest(...isos: (string | null | undefined)[]): string | null {
   return new Date(Math.max(...times)).toISOString()
 }
 
-interface Row {
+export interface Row {
   id: string
   email: string
   plan: string
+  subscriptionStatus: string | null
   createdAt: string
   lastSignInAt: string | null
   lastSyncedAt: string | null
@@ -43,6 +45,8 @@ interface Row {
   lastAiActivityAt: string | null
   aiCalls7d: number
   lastActivity: string | null
+  bannedUntil: string | null
+  giftActive: boolean
 }
 
 async function loadOverview(): Promise<Row[]> {
@@ -53,14 +57,14 @@ async function loadOverview(): Promise<Row[]> {
   // tool for a small user base, not a paginated admin product yet.
   const [{ data: users }, { data: authList }, { data: states }] = await Promise.all([
     service.from("users")
-      .select("id, email, plan, created_at")
+      .select("id, email, plan, subscription_status, created_at, ai_included_override, gift_expires_at")
       .order("created_at", { ascending: false })
       .limit(500),
     service.auth.admin.listUsers({ perPage: 500 }),
     service.from("aminta_state").select("user_id, updated_at, xp, streak"),
   ])
 
-  const lastSignInById = new Map((authList?.users ?? []).map((u) => [u.id, u.last_sign_in_at ?? null]))
+  const authById = new Map((authList?.users ?? []).map((u) => [u.id, u]))
   const stateById = new Map((states ?? []).map((s) => [s.user_id, s]))
 
   const ids = (users ?? []).map((u) => u.id)
@@ -83,11 +87,16 @@ async function loadOverview(): Promise<Row[]> {
   const rows: Row[] = (users ?? []).map((u) => {
     const state = stateById.get(u.id)
     const ai = aiById.get(u.id)
-    const lastSignInAt = lastSignInById.get(u.id) ?? null
+    const authUser = authById.get(u.id)
+    const lastSignInAt = authUser?.last_sign_in_at ?? null
+    // Mirrors lib/ai/credits.ts's isGiftActive(): no expiry set counts as
+    // active, a future expiry counts as active, a past one doesn't.
+    const giftActive = !!u.ai_included_override && (!u.gift_expires_at || Date.parse(u.gift_expires_at) > Date.now())
     return {
       id: u.id,
       email: u.email ?? "(no email)",
       plan: u.plan,
+      subscriptionStatus: u.subscription_status,
       createdAt: u.created_at,
       lastSignInAt,
       lastSyncedAt: state?.updated_at ?? null,
@@ -96,6 +105,8 @@ async function loadOverview(): Promise<Row[]> {
       lastAiActivityAt: ai?.last ?? null,
       aiCalls7d: ai?.count ?? 0,
       lastActivity: latest(lastSignInAt, state?.updated_at, ai?.last),
+      bannedUntil: authUser?.banned_until && authUser.banned_until !== "none" ? authUser.banned_until : null,
+      giftActive,
     }
   })
 
@@ -205,38 +216,7 @@ export default async function AdminPage({
             </div>
           )}
 
-          <div style={card} className="p-6">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-muted text-xs">
-                    <th className="pb-2 font-normal">Email</th>
-                    <th className="pb-2 font-normal">Plan</th>
-                    <th className="pb-2 font-normal">Last sign-in</th>
-                    <th className="pb-2 font-normal">Last synced</th>
-                    <th className="pb-2 font-normal">AI calls (7d)</th>
-                    <th className="pb-2 font-normal">XP</th>
-                    <th className="pb-2 font-normal">Joined</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((r) => (
-                    <tr key={r.id} style={{ borderTop: "1px solid #2a2a2a" }}>
-                      <td className="py-2">
-                        <a href={`/admin?user=${r.id}`} className="text-white hover:underline">{r.email}</a>
-                      </td>
-                      <td className="py-2 text-muted">{r.plan}</td>
-                      <td className="py-2 text-muted">{relativeTime(r.lastSignInAt)}</td>
-                      <td className="py-2 text-muted">{relativeTime(r.lastSyncedAt)}</td>
-                      <td className="py-2 text-muted">{r.aiCalls7d}</td>
-                      <td className="py-2 text-muted">{r.xp}</td>
-                      <td className="py-2 text-muted">{relativeTime(r.createdAt)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <AdminTable rows={rows} adminId={user.id} />
         </div>
       </main>
       <Footer />
