@@ -197,12 +197,32 @@ const SPEECH_BUBBLE_SIZE = {
   compact: "px-5 py-2 min-w-[220px] max-w-[300px]",
 } as const
 
-export function SpeechBubble({ text, variant = "default" }: { text: string; variant?: keyof typeof SPEECH_BUBBLE_SIZE }) {
+export function SpeechBubble({
+  text, variant = "default", clampLines,
+}: {
+  text: string
+  variant?: keyof typeof SPEECH_BUBBLE_SIZE
+  /** Caps the message to this many lines (ellipsis on overflow) instead of
+   * letting the bubble — and everything laid out below it — grow with an
+   * arbitrarily long message. Home passes 2 so the companion card's mascot/
+   * XP position never depends on message length; onboarding's short, fixed
+   * lines never need it. */
+  clampLines?: number
+}) {
   return (
     <div className="bubble-pop flex justify-center">
       <div className="relative w-fit">
         <div className={`rounded-sm ${SPEECH_BUBBLE_SIZE[variant]}`} style={{ background: "#fff", border: "2px solid #000", boxShadow: "2px 2px 0 #000" }}>
-          <p className="font-pixel text-[8px] leading-relaxed text-black text-center">{text}</p>
+          <p
+            className="font-pixel text-[8px] leading-relaxed text-black text-center"
+            style={clampLines ? {
+              display: "-webkit-box",
+              WebkitLineClamp: clampLines,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+            } : undefined}>
+            {text}
+          </p>
         </div>
         <svg width="12" height="8" viewBox="0 0 12 8"
           style={{ position: "absolute", bottom: -8, left: "50%", transform: "translateX(-50%)", imageRendering: "pixelated" }}>

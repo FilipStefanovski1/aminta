@@ -221,16 +221,20 @@ export default function HomeTab({ store, onCreate, onReuse, onSaveCreationAsTemp
               </span>
             )}
           </div>
-          {/* Mascot — bubble sits in normal document flow, above the mascot
-              and below the header row, instead of being absolutely anchored
-              with a fixed marginTop guessing at the bubble's height. A fixed
-              offset only ever protects the header for however tall the
-              bubble happened to be when that number was picked; normal flow
-              means the header can never be overlapped regardless of how
-              many lines the current message wraps to. */}
+          {/* Mascot — the speech region above it is a FIXED-height reserved
+              slot (not normal flow sized to content), so the mascot and the
+              Level/XP row below never move regardless of message length.
+              Compact bubble text is text-[8px] leading-relaxed (2 lines ≈
+              26px) plus py-2 (16px) plus its 2px border (4px) ≈ 46px; 64px
+              gives that comfortable room with the message vertically
+              centered inside, and stays overflow-visible so the bubble's
+              absolutely-positioned pointer tail (which extends 8px below
+              the bubble box) is never clipped. Longer messages clamp to 2
+              lines with an ellipsis (SpeechBubble's clampLines) instead of
+              growing this region. */}
           <div className="flex flex-col items-center mb-6">
-            <div className="mb-2">
-              <SpeechBubble key={bubbleKey} text={speech} variant="compact" />
+            <div className="flex items-center justify-center mb-2" style={{ height: 64 }}>
+              <SpeechBubble key={bubbleKey} text={speech} variant="compact" clampLines={2} />
             </div>
             <div style={{ position: "relative" }}>
               <button onClick={onOpenCompanion} className="cursor-pointer" style={{ background: "none", border: "none", padding: 0 }}>
