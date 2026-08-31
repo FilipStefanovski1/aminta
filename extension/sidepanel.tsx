@@ -330,10 +330,13 @@ function SettingsOverlay({
     setSignOutError("")
     const result = await signOutEverywhere()
     if (!result.ok) {
-      // Local state is deliberately left alone here — see
-      // signOutEverywhere()'s doc comment. Half-logging-out would be worse
-      // than staying logged in with a visible error to retry.
-      setSignOutError(result.error ?? "Sign out failed. Try again.")
+      // signOutEverywhere() now clears local session state unconditionally
+      // — a remote revoke that doesn't confirm (expired token, network
+      // down) is no longer treated as a reason to keep the user signed in.
+      // The only way this branch is reached is the one thing it can't work
+      // around: clearing local storage itself failed, so the account is
+      // genuinely still active on this device and worth a real retry.
+      setSignOutError(result.error ?? "Couldn't sign out on this device. Try again.")
       setSigningOut(false)
       return
     }

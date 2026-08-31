@@ -31,6 +31,10 @@ export async function clearAuthSession(): Promise<void> {
   await chrome.storage.local.remove(AUTH_KEYS as unknown as string[])
 }
 
+const isDev = (() => {
+  try { return !("update_url" in chrome.runtime.getManifest()) } catch { return false }
+})()
+
 const LOGOUT_URL = "https://amintaapp.com/api/auth/logout"
 
 // Not a discriminated union on purpose — see lib/xAccountGuard.ts's
@@ -43,40 +47,60 @@ export interface SignOutResult {
 }
 
 /**
- * Signs out everywhere, not just this device. Clearing local storage alone
- * (the old behavior) left the underlying Supabase session — and its
- * refresh token — valid server-side, so a still-open web tab, or the
- * extension's own refresh flow, could silently keep the "signed out"
- * session alive. This revokes it server-side first (POST /api/auth/logout,
- * scope "global" — see that route), then clears the local copy.
+ * Signs out everywhere, not just this device: revokes the underlying
+ * Supabase session server-side first (POST /api/auth/logout, scope
+ * "global" — see that route), then always clears the local copy.
  *
- * On failure, local state is deliberately left untouched: clearing it
- * anyway would show the UI as logged out while the session is still live
- * server-side — an ambiguous half-logged-out state, not a real sign-out.
+ * The local clear is UNCONDITIONAL now, not gated on the remote call
+ * succeeding. It used to leave local state untouched on any non-2xx
+ * response ("clearing anyway would show a half-logged-out state") — but
+ * that reasoning only holds if the remote session is actually still alive,
+ * and the single most common way this call fails is the opposite: the
+ * access token was already expired/invalid, so there was never a live
+ * server-side session left to half-clear. The server route already treats
+ * that specific case (401/403 — see isTolerableLogoutError there) as a
+ * successful sign-out and returns 200; this was still only reachable if
+ * that route response never arrived (network down) or came back with a
+ * genuinely different failure the extension had no way to distinguish from
+ * "your account is stuck" — which is exactly the "Sign out failed. Try
+ * again." bug: the user's ONLY signal was to press the same button again,
+ * against the same already-broken remote call, forever.
+ *
+ * The local credential is what actually lets THIS device act as the user —
+ * once it's cleared, this device can no longer use it regardless of
+ * whatever state the token is in server-side, so there is no meaningful
+ * security cost to always clearing it. The only thing that can genuinely
+ * fail here is clearAuthSession() itself throwing (a broken storage write),
+ * which is the one real "can't safely complete" case still surfaced as an
+ * error — see the catch below.
  */
 export async function signOutEverywhere(): Promise<SignOutResult> {
   const session = await getAuthSession()
-  if (!session?.accessToken) {
-    // Nothing to revoke server-side.
-    await clearAuthSession()
-    return { ok: true }
+  if (session?.accessToken) {
+    try {
+      const res = await fetch(LOGOUT_URL, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session.accessToken}` },
+      })
+      if (isDev && !res.ok) {
+        console.warn("[Aminta auth] remote sign-out did not confirm (status", res.status, ") — clearing local session anyway")
+      }
+    } catch (e) {
+      // Network unreachable — the remote revoke simply never happened.
+      // Still not a reason to trap the user on this device; sync/refresh
+      // will surface connectivity problems on their own the next time
+      // something actually needs the network.
+      if (isDev) console.warn("[Aminta auth] remote sign-out request failed (network) — clearing local session anyway:", e)
+    }
   }
 
-  let res: Response
   try {
-    res = await fetch(LOGOUT_URL, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${session.accessToken}` },
-    })
-  } catch {
-    return { ok: false, error: "Couldn't reach Aminta to sign out. Check your connection and try again." }
+    await clearAuthSession()
+  } catch (e) {
+    if (isDev) console.error("[Aminta auth] local sign-out failed:", e)
+    return { ok: false, error: "Couldn't sign out on this device. Try again." }
   }
 
-  if (!res.ok) {
-    return { ok: false, error: "Sign out failed. Try again." }
-  }
-
-  await clearAuthSession()
   return { ok: true }
 }
 
