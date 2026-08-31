@@ -65,7 +65,7 @@ export default function AdminTable({ rows, adminId }: { rows: Row[]; adminId: st
   const filtered = useMemo(() => {
     const q = emailQuery.trim().toLowerCase()
     return rows.filter((r) => {
-      if (q && !r.email.toLowerCase().includes(q)) return false
+      if (q && !r.email.toLowerCase().includes(q) && !r.name.toLowerCase().includes(q)) return false
       if (planFilter !== "all" && r.plan !== planFilter) return false
       if (giftFilter === "active" && !r.giftActive) return false
       if (giftFilter === "none" && r.giftActive) return false
@@ -162,7 +162,7 @@ export default function AdminTable({ rows, adminId }: { rows: Row[]; adminId: st
         <input
           value={emailQuery}
           onChange={(e) => setEmailQuery(e.target.value)}
-          placeholder="Search email…"
+          placeholder="Search name or email…"
           className="bg-transparent border rounded px-2 py-1 text-xs text-white placeholder:text-[#666]"
           style={{ borderColor: "#2a2a2a", minWidth: 160 }}
         />
@@ -222,7 +222,9 @@ export default function AdminTable({ rows, adminId }: { rows: Row[]; adminId: st
               return (
                 <tr key={r.id} style={{ borderTop: "1px solid #2a2a2a" }}>
                   <td className="py-2">
-                    <a href={`/admin?user=${r.id}`} className="text-white hover:underline">{r.email}</a>
+                    <a href={`/admin?user=${r.id}`} className="text-white hover:underline">
+                      {r.name ? `${r.name} (${r.email})` : r.email}
+                    </a>
                   </td>
                   <td className="py-2 text-muted">
                     {r.plan}{r.giftActive && <span className="ml-1" style={{ color: "#74f7b5" }}>+gift</span>}

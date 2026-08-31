@@ -35,6 +35,10 @@ function latest(...isos: (string | null | undefined)[]): string | null {
 export interface Row {
   id: string
   email: string
+  // Display name only — never a substitute for email as the identity key.
+  // Same fallback chain as dashboard/page.tsx: full_name -> name ->
+  // X handle. Empty when none of those are set (e.g. bare email signup).
+  name: string
   plan: string
   subscriptionStatus: string | null
   createdAt: string
@@ -92,9 +96,12 @@ async function loadOverview(): Promise<Row[]> {
     // Mirrors lib/ai/credits.ts's isGiftActive(): no expiry set counts as
     // active, a future expiry counts as active, a past one doesn't.
     const giftActive = !!u.ai_included_override && (!u.gift_expires_at || Date.parse(u.gift_expires_at) > Date.now())
+    const meta = authUser?.user_metadata as Record<string, unknown> | undefined
+    const name = String(meta?.full_name ?? meta?.name ?? meta?.preferred_username ?? meta?.user_name ?? "")
     return {
       id: u.id,
       email: u.email ?? "(no email)",
+      name,
       plan: u.plan,
       subscriptionStatus: u.subscription_status,
       createdAt: u.created_at,
@@ -168,7 +175,9 @@ export default async function AdminPage({
             <div style={card} className="p-6 mb-6">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <p className="text-white font-semibold">{selected.email}</p>
+                  <p className="text-white font-semibold">
+                    {selected.name ? `${selected.name} (${selected.email})` : selected.email}
+                  </p>
                   <p className="text-xs text-muted mt-0.5">{selected.id}</p>
                 </div>
                 <a href="/admin" className="text-xs text-muted hover:text-white">← back to all accounts</a>
