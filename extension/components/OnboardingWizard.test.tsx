@@ -20,6 +20,7 @@ vi.mock("~lib/voiceRefresh", () => ({
   startXConnect: vi.fn().mockResolvedValue(undefined),
   runVoiceRefresh: vi.fn().mockResolvedValue({ postsAnalyzed: 12, nextEligibleAt: "" }),
   disconnectX: vi.fn().mockResolvedValue(undefined),
+  fetchRecentXPosts: vi.fn().mockResolvedValue([]),
 }))
 vi.mock("~lib/backendGenerate", () => ({
   backendGenerate: vi.fn().mockResolvedValue("a demo post"),
@@ -117,10 +118,12 @@ describe("step 7 — Voice Refresh discoverability", () => {
   it("Free user: sees the manual path and Voice Refresh's own inline upsell — never a block on continuing", async () => {
     await goToExamplesStep(baseStore({ plan: "free", aiIncluded: true, aiIncludedPaid: false }))
     expect(textShown("Learn from your X")).toBe(true)
-    expect(textShown("Unlock Voice Refresh")).toBe(true)
-    // No "Connect X" or "Refresh my voice" CTA — that's Pro/Founder only.
-    expect(textShown("Connect X")).toBe(false)
-    expect(textShown("Refresh my voice")).toBe(false)
+    expect(textShown("Unlock with Pro")).toBe(true)
+    // "Learn from my X" (the Voice Refresh action CTA) is Pro/Founder only —
+    // but "Connect X" IS shown to a not-yet-connected Free user too, since
+    // connecting still unlocks the separate recent-posts picker below.
+    expect(textShown("Connect X")).toBe(true)
+    expect(textShown("Learn from my X")).toBe(false)
   })
 
   it("Free user completes onboarding via manual examples alone, with no Voice Refresh interaction", async () => {
@@ -141,15 +144,15 @@ describe("step 7 — Voice Refresh discoverability", () => {
   it("Pro/Founder, X not connected: Voice Refresh is discoverable via a Connect X action, not blocking", async () => {
     await goToExamplesStep(baseStore({ plan: "pro", subscriptionStatus: "active", aiIncludedPaid: true, xConnected: false }))
     expect(textShown("Connect X")).toBe(true)
-    expect(textShown("Unlock Voice Refresh")).toBe(false) // that's the Free-only upsell
+    expect(textShown("Unlock with Pro")).toBe(false) // that's the Free-only upsell
   })
 
-  it("Pro/Founder, X connected and eligible: the real Refresh action is reachable from onboarding", async () => {
+  it("Pro/Founder, X connected and eligible: the real Learn-from-X action is reachable from onboarding", async () => {
     await goToExamplesStep(baseStore({
       plan: "pro", subscriptionStatus: "active", aiIncludedPaid: true,
       xConnected: true, xUsername: "someuser", voiceRefreshEligible: true,
     }))
-    expect(textShown("Refresh my voice")).toBe(true)
+    expect(textShown("Learn from my X")).toBe(true)
   })
 
   it("running Voice Refresh unblocks Continue even with zero manually added examples", async () => {
@@ -166,7 +169,7 @@ describe("step 7 — Voice Refresh discoverability", () => {
       baseStore({ plan: "pro", subscriptionStatus: "active", aiIncludedPaid: true, xConnected: true, styleProfile: { confidenceScore: 0.5 } as never })
     )
     await act(async () => {
-      click("Refresh my voice")
+      click("Learn from my X")
       await Promise.resolve()
       await Promise.resolve()
     })
@@ -177,7 +180,7 @@ describe("step 7 — Voice Refresh discoverability", () => {
     await goToExamplesStep(baseStore({ plan: "free", aiIncluded: true, aiIncludedPaid: false }))
     click("Skip for now") // step 7 -> 8 (learning transition)
     await act(async () => { await new Promise((r) => setTimeout(r, 2300)) }) // step 8's real 2.2s auto-advance -> 9
-    click("Enter Aminta")
+    click("Open X")
     await act(async () => { await Promise.resolve() })
     expect(onDoneCalls).toHaveLength(1)
     const patch = onDoneCalls[0]
@@ -185,5 +188,116 @@ describe("step 7 — Voice Refresh discoverability", () => {
     expect(patch).not.toHaveProperty("aiIncludedPaid")
     expect(patch).not.toHaveProperty("subscriptionStatus")
     expect(patch.onboardingDone).toBe(true)
+  })
+})
+
+describe("step 0 — welcome bubble", () => {
+  it("uses fixed copy, never a raw store.displayName value", async () => {
+    render(baseStore({ displayName: "Aminta 0" })) // a plausible bad upstream value
+    expect(textShown("hey, I'm Aminta.")).toBe(true)
+    expect(textShown("Aminta 0")).toBe(false)
+  })
+
+  it("never leaks an internal level/evolution identifier into the greeting", async () => {
+    render(baseStore({ xp: 2175 })) // Level 4 territory — must never surface here
+    expect(textShown("Level")).toBe(false)
+    expect(textShown("LV")).toBe(false)
+  })
+})
+
+describe("step 7 — Recent X posts picker (manual training, not Voice Refresh)", () => {
+  it("Free + X connected: shows up to 3 recent posts, and clicking Add creates exactly one canonical example", async () => {
+    const { fetchRecentXPosts, runVoiceRefresh } = await import("~lib/voiceRefresh")
+    vi.mocked(fetchRecentXPosts).mockResolvedValue([
+      { id: "1", text: "shipped this at 2am because apparently sleep is optional" },
+      { id: "2", text: "another real post from my timeline" },
+      { id: "3", text: "a third one" },
+    ])
+
+    await goToExamplesStep(baseStore({ plan: "free", aiIncluded: true, aiIncludedPaid: false, xConnected: true, xUsername: "someuser" }))
+    await act(async () => { await Promise.resolve() })
+
+    expect(textShown("Recent posts from your X")).toBe(true)
+    expect(textShown("shipped this at 2am because apparently sleep is optional")).toBe(true)
+
+    click("+ Add")
+    expect(textShown("Added ✓")).toBe(true)
+    expect(textShown("1 added")).toBe(true) // "Your posts" count reflects the one addition
+
+    // Manual add, not Voice Refresh — no analysis was ever triggered.
+    expect(runVoiceRefresh).not.toHaveBeenCalled()
+  })
+
+  it("a multiline X post remains ONE canonical example, formatting intact", async () => {
+    const { fetchRecentXPosts } = await import("~lib/voiceRefresh")
+    const multiline = "building this today.\n\nthe first version was terrible.\n\nshipped it anyway."
+    vi.mocked(fetchRecentXPosts).mockResolvedValue([{ id: "1", text: multiline }])
+
+    await goToExamplesStep(baseStore({ plan: "free", aiIncluded: true, aiIncludedPaid: false, xConnected: true, xUsername: "someuser" }))
+    await act(async () => { await Promise.resolve() })
+    click("+ Add")
+
+    expect(textShown("1 added")).toBe(true) // one example, not three
+  })
+
+  it("clicking Add a second time is a no-op — duplicate prevented", async () => {
+    const { fetchRecentXPosts } = await import("~lib/voiceRefresh")
+    vi.mocked(fetchRecentXPosts).mockResolvedValue([{ id: "1", text: "a real post worth showing in the picker" }])
+
+    await goToExamplesStep(baseStore({ plan: "free", aiIncluded: true, aiIncludedPaid: false, xConnected: true, xUsername: "someuser" }))
+    await act(async () => { await Promise.resolve() })
+
+    click("+ Add")
+    expect(textShown("1 added")).toBe(true)
+    // The card now shows "Added ✓", not "+ Add" — nothing left to click again for this post.
+    expect(container.querySelectorAll("button").length).toBeGreaterThan(0)
+    const addedBtn = Array.from(container.querySelectorAll("button")).find((b) => b.textContent === "Added ✓") as HTMLButtonElement
+    expect(addedBtn.hasAttribute("disabled")).toBe(true)
+  })
+
+  it("Free + X disconnected: no recent-posts section, manual paste still works, onboarding is not dead-ended", async () => {
+    await goToExamplesStep(baseStore({ plan: "free", aiIncluded: true, aiIncludedPaid: false, xConnected: false }))
+    expect(textShown("Recent posts from your X")).toBe(false)
+    expect(textShown("Connect X")).toBe(true) // the existing appropriate connect action
+    // Manual paste remains fully available.
+    expect(container.querySelector("textarea")).not.toBeNull()
+    expect(textShown("Skip for now")).toBe(true) // never a dead end
+  })
+
+  it("Pro/Founder, X not yet connected: Voice Refresh copy truthfully says 'up to' 20 posts", async () => {
+    await goToExamplesStep(baseStore({
+      plan: "pro", subscriptionStatus: "active", aiIncludedPaid: true, xConnected: false,
+    }))
+    expect(textShown("Learn your style from up to your last 20 X posts.")).toBe(true)
+  })
+})
+
+describe("final onboarding screen", () => {
+  async function goToFinalStep(store: AmintaStore) {
+    await goToExamplesStep(store)
+    click("Skip for now")
+    await act(async () => { await new Promise((r) => setTimeout(r, 2300)) }) // step 8's 2.2s auto-advance -> 9
+  }
+
+  it("the old Generate/Polish bullet box is gone", async () => {
+    await goToFinalStep(baseStore())
+    expect(textShown("Generate appears under the composer")).toBe(false)
+    expect(textShown("Polish improves your draft")).toBe(false)
+  })
+
+  it("'Enter Aminta' and the redundant 'Or open x.com' secondary are both gone — one CTA only", async () => {
+    await goToFinalStep(baseStore())
+    expect(textShown("Enter Aminta")).toBe(false)
+    expect(textShown("Or open x.com")).toBe(false)
+    const ctaButtons = Array.from(container.querySelectorAll("button")).filter((b) => b.textContent?.includes("Open X"))
+    expect(ctaButtons).toHaveLength(1)
+  })
+
+  it("the one CTA opens x.com via the existing safe tab-focus/create behavior", async () => {
+    const { focusOrCreateXTab } = await import("~lib/xTab")
+    await goToFinalStep(baseStore())
+    click("Open X")
+    await act(async () => { await Promise.resolve() })
+    expect(focusOrCreateXTab).toHaveBeenCalled()
   })
 })

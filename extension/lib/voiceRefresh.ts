@@ -180,3 +180,25 @@ export async function runVoiceRefresh(): Promise<RefreshResult> {
     nextEligibleAt: json.nextEligibleAt,
   }
 }
+
+export interface RecentXPost {
+  id: string
+  text: string
+}
+
+/**
+ * Up to 3 of the user's own recent, eligible X posts — for the manual
+ * training picker (onboarding and Train), NOT Voice Refresh. No plan gate,
+ * no allowance, no cooldown, no Gemini call: this only ever fetches and
+ * returns raw post text for the user to look at and optionally add
+ * themselves (see lib/trainingExamples.ts) — nothing here writes to
+ * voice.examples on its own. Available to Free and paid accounts alike, as
+ * long as X is connected; throws the same X-connection errors
+ * runVoiceRefresh does so callers can reuse one error-handling path.
+ */
+export async function fetchRecentXPosts(): Promise<RecentXPost[]> {
+  const res = await authedFetch("/recent-posts")
+  if (!res.ok) throw await errorFrom(res)
+  const json = (await res.json()) as { posts?: RecentXPost[] }
+  return json.posts ?? []
+}

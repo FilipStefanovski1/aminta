@@ -169,9 +169,9 @@ export function SpriteMark({ tint, size = 36 }: { tint: string; size?: number })
 export function SpeechBubble({ text }: { text: string }) {
   return (
     <div className="bubble-pop flex justify-center">
-      <div className="relative">
-        <div className="px-3 py-2" style={{ background: "#fff", border: "2px solid #000", boxShadow: "2px 2px 0 #000" }}>
-          <p className="font-pixel text-[7px] text-black">{text}</p>
+      <div className="relative max-w-[240px]">
+        <div className="px-4 py-2.5 rounded-sm" style={{ background: "#fff", border: "2px solid #000", boxShadow: "2px 2px 0 #000" }}>
+          <p className="font-pixel text-[8px] leading-relaxed text-black text-center">{text}</p>
         </div>
         <svg width="12" height="8" viewBox="0 0 12 8"
           style={{ position: "absolute", bottom: -8, left: "50%", transform: "translateX(-50%)", imageRendering: "pixelated" }}>

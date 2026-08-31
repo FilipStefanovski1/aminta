@@ -20,6 +20,26 @@ interface Props {
   store: AmintaStore
   /** Re-read the store so a new profile/eligibility shows immediately. */
   onRefreshed: () => void
+  /**
+   * Copy-only variant — entitlement/action logic is identical either way.
+   * "onboarding" frames the eligible CTA as a first-time action ("Learn
+   * from my X") instead of Train's "Refresh my voice", which reads oddly
+   * before a user has ever run one. Defaults to "train" (existing wording).
+   */
+  variant?: "train" | "onboarding"
+}
+
+// Restrained, text-only — no icon, no color beyond the existing palette.
+// Exists purely so a user never has to guess Voice Refresh is a paid
+// feature; shown next to the card title regardless of context.
+function ProBadge() {
+  return (
+    <span
+      className="font-pixel text-[6px] uppercase tracking-widest px-1.5 py-[3px] rounded"
+      style={{ color: "#0a0a0a", backgroundColor: "#c4b5fd" }}>
+      Pro
+    </span>
+  )
 }
 
 function formatDate(iso: string): string {
@@ -58,7 +78,7 @@ function CardButton({
   )
 }
 
-export default function VoiceRefreshCard({ store, onRefreshed }: Props) {
+export default function VoiceRefreshCard({ store, onRefreshed, variant = "train" }: Props) {
   const tint = getStageTint(store.xp ?? 0)
   const [busy, setBusy] = useState<"connect" | "refresh" | "disconnect" | null>(null)
   const [error, setError] = useState("")
@@ -157,23 +177,33 @@ export default function VoiceRefreshCard({ store, onRefreshed }: Props) {
   return (
     <div className="rounded-xl overflow-hidden" style={{ backgroundColor: "#262628", border: "1px solid #404048" }}>
       <div className="px-4 py-4">
-        <p className="font-pixel text-[10px] uppercase tracking-widest" style={{ color: C.text }}>Learn from your X</p>
+        <div className="flex items-center gap-2">
+          <p className="font-pixel text-[10px] uppercase tracking-widest" style={{ color: C.text }}>Learn from your X</p>
+          <ProBadge />
+        </div>
 
         {/* ── Free: optional Pro convenience, never a gate. Manual training
             (writing examples) already fully builds a Free user's Aminta
-            DNA — this only offers automatic, X-sourced upkeep on top. */}
+            DNA — this only offers automatic, X-sourced upkeep on top.
+            "up to" is load-bearing: TARGET_CORPUS caps the analyzed corpus
+            at 20 (landing/lib/x/filter.ts), but eligibility filtering
+            (replies/retweets/too-short/quote-dominant posts excluded) means
+            fewer than 20 may actually be used. */}
         {!entitled && (
           <>
-            <p className="text-[10px] leading-snug mt-2" style={{ color: C.textFaint }}>
-              Voice Refresh learns from your recent X posts.
+            <p className="text-[11px] leading-snug mt-2 font-medium" style={{ color: C.text }}>
+              Learn your style from up to your last 20 X posts.
+            </p>
+            <p className="text-[10px] leading-snug mt-1" style={{ color: C.textFaint }}>
+              Voice Refresh analyzes your recent posts and updates how Aminta writes like you.
             </p>
             <a
               href={PRICING_URL}
               target="_blank"
               rel="noreferrer"
-              className="inline-block mt-3 text-[10px]"
+              className="inline-block mt-3 text-[10px] font-medium"
               style={{ color: tint }}>
-              Unlock Voice Refresh →
+              Unlock with Pro →
             </a>
           </>
         )}
@@ -181,8 +211,11 @@ export default function VoiceRefreshCard({ store, onRefreshed }: Props) {
         {/* ── Pro, not connected ── */}
         {entitled && !store.xConnected && (
           <>
-            <p className="text-[10px] leading-snug mt-2 mb-3" style={{ color: C.textFaint }}>
-              Voice Refresh learns from your recent X posts.
+            <p className="text-[11px] leading-snug mt-2 font-medium" style={{ color: C.text }}>
+              Learn your style from up to your last 20 X posts.
+            </p>
+            <p className="text-[10px] leading-snug mt-1 mb-3" style={{ color: C.textFaint }}>
+              Voice Refresh analyzes your recent posts and updates how Aminta writes like you.
             </p>
             <CardButton
               onClick={busy ? undefined : () => act("connect", startXConnect)}
@@ -233,7 +266,7 @@ export default function VoiceRefreshCard({ store, onRefreshed }: Props) {
                 })}
                 tint={tint}
                 disabled={needsReconnect}>
-                Refresh my voice
+                {variant === "onboarding" ? "Learn from my X" : "Refresh my voice"}
               </CardButton>
             ) : (
               // ── LOCKED ──

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 import { getStore } from "~lib/storage"
 import type { AmintaStore, VoiceProfile } from "~lib/storage"
@@ -8,6 +8,7 @@ import { backendGenerate, dispatchGenerate } from "~lib/backendGenerate"
 import { canUseByok, shouldUseIncludedAi } from "~lib/entitlements"
 import { FORMS } from "~lib/evolution"
 import { parseExamples, serializeExamples } from "~lib/trainingExamples"
+import { fetchRecentXPosts, startXConnect, type RecentXPost } from "~lib/voiceRefresh"
 import { focusOrCreateXTab } from "~lib/xTab"
 import AiKeyInput from "~components/AiKeyInput"
 import DemonMascot from "~components/DemonMascot"
@@ -217,15 +218,41 @@ export default function OnboardingWizard({ store, onDone }: Props) {
   const [voiceStore, setVoiceStore] = useState<AmintaStore>(store)
   const refetchVoiceStore = async () => setVoiceStore(await getStore())
 
-  // First name only — reads more natural than the full display name in a
-  // one-line greeting. Skips the generic "Aminta user" fallback (ensureProfile's
-  // neutral default for an account with no usable name) rather than greeting
-  // someone by that literal string.
-  const greetName = (() => {
-    const dn = store.displayName?.trim()
-    if (!dn || dn === "Aminta user") return ""
-    return dn.split(/\s+/)[0]
-  })()
+  // ── Recent X posts (manual-training picker, step 7) ──
+  // Deliberately NOT Voice Refresh: fetchRecentXPosts() has no plan gate, no
+  // Gemini call, no allowance/cooldown, no credit cost — see
+  // lib/voiceRefresh.ts's own doc comment and landing/app/api/x/recent-
+  // posts/route.ts. Fetched once when X is connected; nothing here writes
+  // to voice.examples until the user explicitly clicks "+ Add" on a card.
+  const [recentXPosts, setRecentXPosts] = useState<RecentXPost[]>([])
+  const [recentXLoading, setRecentXLoading] = useState(false)
+  const [recentXError, setRecentXError] = useState("")
+  const recentXFetchedFor = useRef<string | null>(null)
+
+  useEffect(() => {
+    if (step !== 7 || !voiceStore.xConnected) return
+    if (recentXFetchedFor.current === voiceStore.xUsername) return // already fetched for this connection
+    recentXFetchedFor.current = voiceStore.xUsername
+    setRecentXLoading(true)
+    setRecentXError("")
+    fetchRecentXPosts()
+      .then(setRecentXPosts)
+      .catch((e) => setRecentXError(e instanceof Error ? e.message : "Couldn't load your recent posts."))
+      .finally(() => setRecentXLoading(false))
+  }, [step, voiceStore.xConnected, voiceStore.xUsername])
+
+  const addRecentPost = (post: RecentXPost) => {
+    if (examples.includes(post.text)) return // already added — no duplicates
+    const next = [...examples, post.text]
+    setExamples(next)
+  }
+
+  // Connecting X benefits a Free account too (the recent-posts picker
+  // above), even though Voice Refresh itself stays Pro-only — VoiceRefreshCard's
+  // own Free branch is a Pro upsell only and deliberately has no Connect
+  // action, so Free + not-connected otherwise has no way to connect at all.
+  const [connectingX, setConnectingX] = useState(false)
+
   const [draft, setDraft] = useState("")
   const [apiKey, setApiKey] = useState(store.apiKey || "")
   const [finishing, setFinishing] = useState(false)
@@ -441,16 +468,18 @@ export default function OnboardingWizard({ store, onDone }: Props) {
       <div className="flex-1 overflow-y-auto">
 
         {/* ── 0 · Welcome ──
-            store.displayName is already populated by this point via the
-            existing pullFromCloud() sync — set at signup by ensureProfile()
-            from the X profile's name (see supabase-migration-x-first-
-            profiles.sql). No new auth plumbing, no new API call: this is
-            data the login already produced, just read for the first time
-            here. Falls back to the generic greeting if it hasn't landed yet
-            or resolved to the neutral "Aminta user" default. */}
+            Fixed, non-personalized copy — this used to greet by first name
+            from store.displayName, which is sourced from whatever the X/
+            Google OAuth metadata happened to contain (see ensureProfile()
+            in landing/lib/auth/profileDefaults.ts) and isn't guaranteed to
+            be a real human name. A raw, unvalidated value in a one-line
+            greeting is exactly how something that reads as internal/broken
+            (a handle, an id-like string) can end up in front of the user
+            on their very first screen — simplest fix is not depending on
+            it here at all. */}
         {step === 0 && (
           <div className="animate-slide-up flex flex-col items-center text-center pt-6">
-            <SpeechBubble text={greetName ? `welcome, ${greetName} 👋` : "hi. i'm aminta."} />
+            <SpeechBubble text="hey, I'm Aminta." />
             <div className="mt-4">
               <Sprite xp={0} size={96} />
             </div>
@@ -798,13 +827,73 @@ export default function OnboardingWizard({ store, onDone }: Props) {
               <p className="text-[12px] mt-3" style={{ color: C.textDim }}>Two ways — use either, or both. Add more anytime after onboarding.</p>
             </div>
 
-            <VoiceRefreshCard store={voiceStore} onRefreshed={refetchVoiceStore} />
+            <VoiceRefreshCard store={voiceStore} onRefreshed={refetchVoiceStore} variant="onboarding" />
 
             <div className="flex items-center gap-3">
               <div className="flex-1 h-px" style={{ backgroundColor: C.border }} />
               <span className="text-[9px] uppercase tracking-widest" style={{ color: C.textDim }}>Or add it yourself</span>
               <div className="flex-1 h-px" style={{ backgroundColor: C.border }} />
             </div>
+
+            {/* Free + not connected: VoiceRefreshCard's own Free branch is a
+                Pro upsell only (no Connect action), but connecting X still
+                helps a Free account here — it unlocks the recent-posts
+                picker below, independent of Voice Refresh's own paid gate. */}
+            {!voiceStore.xConnected && !voiceStore.aiIncludedPaid && (
+              <Card>
+                <p className="text-[11px] leading-snug" style={{ color: C.text }}>
+                  Connect X to quickly add a few of your own recent posts.
+                </p>
+                <button
+                  onClick={connectingX ? undefined : () => {
+                    setConnectingX(true)
+                    startXConnect().finally(() => setConnectingX(false))
+                  }}
+                  disabled={connectingX}
+                  className="w-full rounded-lg py-2.5 mt-3 text-[11px] font-semibold text-black transition-opacity disabled:opacity-40"
+                  style={{ backgroundColor: C.mint }}>
+                  {connectingX ? "Opening X…" : "Connect X"}
+                </button>
+              </Card>
+            )}
+
+            {/* Recent X posts — manual-training picker, not Voice Refresh.
+                Only shown when X is actually connected (never fake/sample
+                posts) and only while there's something worth showing.
+                Fetching costs 0 Aminta credits; nothing here is saved as a
+                training example until the user clicks + Add. */}
+            {voiceStore.xConnected && (recentXLoading || recentXPosts.length > 0 || recentXError) && (
+              <Card>
+                <SectionLabel>Recent posts from your X</SectionLabel>
+                {recentXLoading && (
+                  <p className="text-[10px] mt-2" style={{ color: C.textDim }}>Loading your recent posts…</p>
+                )}
+                {!recentXLoading && recentXError && (
+                  <p className="text-[10px] mt-2" style={{ color: C.textDim }}>{recentXError}</p>
+                )}
+                {!recentXLoading && recentXPosts.length > 0 && (
+                  <div className="space-y-2 mt-2">
+                    {recentXPosts.map((post) => {
+                      const added = examples.includes(post.text)
+                      return (
+                        <div key={post.id} className="flex items-start gap-2.5 rounded-xl p-2.5" style={{ backgroundColor: C.cardInner, border: `1px solid ${C.border}` }}>
+                          <p className="flex-1 text-[11px] leading-relaxed break-words min-w-0 whitespace-pre-line" style={{ color: C.text }}>
+                            {post.text}
+                          </p>
+                          <button
+                            onClick={() => addRecentPost(post)}
+                            disabled={added}
+                            className="shrink-0 text-[10px] font-semibold disabled:opacity-60"
+                            style={{ color: added ? C.textDim : C.mint }}>
+                            {added ? "Added ✓" : "+ Add"}
+                          </button>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </Card>
+            )}
 
             <Card>
               <div className="flex items-center justify-between mb-2">
@@ -842,21 +931,17 @@ export default function OnboardingWizard({ store, onDone }: Props) {
           </div>
         )}
 
-        {/* ── 9 · Payoff — confirms progress, no XP/progression framing.
-            "Feed Aminta" and XP are in-product mechanics users discover
-            naturally once they're actually posting, not concepts to explain
-            during onboarding. */}
+        {/* ── 9 · Payoff — orients toward the one next action (open X), no
+            XP/progression framing and no feature checklist. The old bullet
+            box ("Generate appears under the composer" / "Polish improves
+            your draft") looked unfinished and explained nothing visually —
+            removed rather than replaced with a different list. */}
         {step === 9 && (
-          <div className="animate-slide-up flex flex-col items-center text-center pt-6">
+          <div className="animate-slide-up flex flex-col items-center justify-center text-center min-h-full">
 
             <h2 className="font-pixel text-[11px] leading-relaxed" style={{ color: C.text }}>
               Nice.
             </h2>
-
-            <p className="text-[12px] mt-2 leading-relaxed" style={{ color: C.textDim }}>
-              Aminta already knows a little about you.<br />
-              You&apos;ll be able to teach it even more over time.
-            </p>
 
             {/* Mascot, final evolved form, with ambient particles */}
             <div className="relative flex items-center justify-center mt-5" style={{ width: 132, height: 132 }}>
@@ -877,22 +962,13 @@ export default function OnboardingWizard({ store, onDone }: Props) {
               <DemonMascot skin={FINAL_FORM.skin} size={112} className="sprite-float aminta-glow" />
             </div>
 
-            {/* Visual instruction card — functional info only, no XP mentions */}
-            <Card className="w-full text-left mt-5" style={{ padding: 12 }}>
-              <div className="space-y-1.5">
-                {[
-                  "Generate appears under the composer",
-                  "Polish improves your draft",
-                ].map((row) => (
-                  <div key={row} className="flex items-center gap-2">
-                    <svg width="6" height="6" viewBox="0 0 6 6" className="shrink-0" style={{ imageRendering: "pixelated" }}>
-                      <rect x="0" y="0" width="6" height="6" fill={C.mint} />
-                    </svg>
-                    <span className="text-[11px] leading-snug" style={{ color: C.text }}>{row}</span>
-                  </div>
-                ))}
-              </div>
-            </Card>
+            <h3 className="font-pixel text-[10px] mt-6 leading-relaxed" style={{ color: C.text }}>
+              You&apos;re ready.
+            </h3>
+
+            <p className="text-[12px] mt-3 leading-relaxed max-w-[260px]" style={{ color: C.textDim }}>
+              Open X and start writing. Aminta will appear right inside the composer.
+            </p>
           </div>
         )}
 
@@ -934,13 +1010,17 @@ export default function OnboardingWizard({ store, onDone }: Props) {
         )}
         {step === 9 && (
           <>
-            <PrimaryButton onClick={() => finish(false)} disabled={finishing}
+            {/* One clear primary action — finish(true) both completes
+                onboarding AND opens X (focusOrCreateXTab, the existing
+                safe focus-or-create-tab behavior); there is no longer a
+                separate "Enter Aminta" that does something different. */}
+            <PrimaryButton onClick={() => finish(true)} disabled={finishing}
               className="hover:shadow-[0_0_24px_rgba(116,247,181,0.45)]">
-              {finishing ? "Saving…" : "Enter Aminta"}
+              {finishing ? "Saving…" : "Open X"}
             </PrimaryButton>
-            <button onClick={() => finish(true)} disabled={finishing}
-              className="w-full text-center text-[11px] py-1.5 font-medium transition-colors disabled:opacity-50"
-              style={{ color: C.textDim }}>Or open x.com</button>
+            <p className="text-[11px] text-center py-1.5" style={{ color: C.textGhost }}>
+              You can keep teaching Aminta from Train anytime.
+            </p>
           </>
         )}
       </div>
