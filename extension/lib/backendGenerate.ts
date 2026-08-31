@@ -15,7 +15,11 @@ import { buildMessages, buildThreadMessages, enforcePostCount, parseThreadRespon
 import { cleanGenerationOutput } from "~lib/textCleanup"
 import { setStore, type AmintaStore, type StyleProfile, type VoiceProfile } from "~lib/storage"
 
-const API_URL = "https://amintaapp.com/api/generate"
+// www, not the bare apex — see lib/sync.ts's API_URL comment: amintaapp.com
+// 308-redirects every request to www.amintaapp.com, and that extra
+// cross-origin redirect hop on a POST is exactly the kind of thing that can
+// surface as a raw connectivity failure instead of a clean response.
+const API_URL = "https://www.amintaapp.com/api/generate"
 
 // Interactive single-post deadline — mirrors lib/gemini.ts's own
 // TOTAL_DEADLINE_MS for BYOK, so Included AI fails at the same point rather

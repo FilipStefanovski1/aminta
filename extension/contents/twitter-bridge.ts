@@ -908,6 +908,14 @@ function buildBar(): HTMLElement {
     "text-overflow:ellipsis",
     "white-space:nowrap",
     "flex-shrink:0",
+    // Without a cap, a long message (e.g. the connectivity-error string)
+    // has no width to ellipsize against — flex-shrink:0 alone just lets it
+    // claim however much space its full text needs, squeezing the action
+    // strip's own flex:1 box down to a sliver and making Generate/Polish/
+    // News look like they've been shoved out of view or overlapped. Capping
+    // the width here is what makes the existing text-overflow:ellipsis
+    // above actually do anything.
+    "max-width:140px",
   ].join(";")
   status.textContent = "Aminta"
 

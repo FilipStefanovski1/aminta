@@ -35,7 +35,10 @@ const isDev = (() => {
   try { return !("update_url" in chrome.runtime.getManifest()) } catch { return false }
 })()
 
-const LOGOUT_URL = "https://amintaapp.com/api/auth/logout"
+// www, not the bare apex — see lib/sync.ts's API_URL comment: amintaapp.com
+// 308-redirects every API request to www.amintaapp.com, an extra
+// cross-origin hop worth avoiding on every fetch call.
+const LOGOUT_URL = "https://www.amintaapp.com/api/auth/logout"
 // A background (unfocused) tab at this page signs the WEBSITE itself out —
 // see app/logout-complete/page.tsx. The extension has no access to
 // amintaapp.com's own browser-side Supabase session (createBrowserClient
@@ -126,7 +129,10 @@ export async function signOutEverywhere(): Promise<SignOutResult> {
   return { ok: true }
 }
 
-const REFRESH_URL = "https://amintaapp.com/api/auth/refresh"
+// www, not the bare apex — see lib/sync.ts's API_URL comment. This one
+// matters most of all: it's on the retry path of every authed fetch in the
+// extension, so a flaky redirect here can look like everything is broken.
+const REFRESH_URL = "https://www.amintaapp.com/api/auth/refresh"
 
 // Exchange the stored refresh token for a fresh access token via the website
 // (which holds the Supabase project config). Supabase access tokens expire in

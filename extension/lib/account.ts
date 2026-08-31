@@ -2,7 +2,8 @@
 // for the server-side cascade/billing-safety behavior.
 import { getAuthSession, refreshAuthSession } from "~lib/auth"
 
-const BASE = "https://amintaapp.com/api"
+// www, not the bare apex — see lib/sync.ts's API_URL comment.
+const BASE = "https://www.amintaapp.com/api"
 
 export async function deleteAccount(): Promise<void> {
   const session = await getAuthSession()

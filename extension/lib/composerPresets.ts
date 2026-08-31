@@ -111,7 +111,7 @@ export function presetInstruction(id: ComposerPresetId | null): string | undefin
 // contents/twitter-bridge.ts's injectBar. Bump this whenever the injected
 // bar's markup changes.
 export const COMPOSER_BAR_ATTR = "data-aminta-bar"
-export const COMPOSER_BAR_VERSION = "3"
+export const COMPOSER_BAR_VERSION = "4"
 
 /** True only for a bar rendered by THIS build — a previous build's bar is stale. */
 export function isCurrentBar(el: Element | null | undefined): boolean {

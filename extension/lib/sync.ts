@@ -2,7 +2,12 @@ import { getAuthSession, refreshAuthSession, type AuthSession } from "./auth"
 import { getLevel } from "./evolution"
 import { capEarnedHashes, getStore, setStore, type AmintaStore, type AmintaTemplate } from "./storage"
 
-const API_URL = "https://amintaapp.com/api/sync"
+// www, not the bare apex — amintaapp.com 308-redirects every request to
+// www.amintaapp.com, and a cross-origin redirect on a POST with an
+// Authorization header is exactly the kind of hop that unpredictably
+// surfaces as a raw "failed to fetch" in different browsers/extension
+// contexts. Hitting the canonical host directly removes that hop entirely.
+const API_URL = "https://www.amintaapp.com/api/sync"
 
 const isDev = (() => {
   try { return !("update_url" in chrome.runtime.getManifest()) } catch { return false }

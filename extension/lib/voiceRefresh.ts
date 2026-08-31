@@ -12,7 +12,8 @@ import { parseStyleProfile, computeConfidenceScore, X_HISTORY_SOURCE_PREFIX } fr
 import { getStore, setStore } from "~lib/storage"
 import type { StyleCorpusEntry, StyleProfile } from "~lib/storage"
 
-const BASE = "https://amintaapp.com/api/x"
+// www, not the bare apex — see lib/sync.ts's API_URL comment.
+const BASE = "https://www.amintaapp.com/api/x"
 
 async function authedFetch(path: string, init: RequestInit = {}): Promise<Response> {
   const session = await getAuthSession()

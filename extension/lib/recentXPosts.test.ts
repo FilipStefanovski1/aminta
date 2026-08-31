@@ -29,7 +29,7 @@ describe("fetchRecentXPosts — manual-training picker, not Voice Refresh", () =
 
     expect(posts).toEqual([{ id: "1", text: "shipped this at 2am" }, { id: "2", text: "another real post" }])
     const [url] = vi.mocked(fetch).mock.calls[0]
-    expect(url).toBe("https://amintaapp.com/api/x/recent-posts")
+    expect(url).toBe("https://www.amintaapp.com/api/x/recent-posts")
   })
 
   it("returns an empty array when the server sends no posts field", async () => {

@@ -60,7 +60,7 @@ describe("signOutEverywhere", () => {
 
     expect(result.ok).toBe(true)
     expect(global.fetch).toHaveBeenCalledWith(
-      "https://amintaapp.com/api/auth/logout",
+      "https://www.amintaapp.com/api/auth/logout",
       expect.objectContaining({ method: "POST", headers: { Authorization: "Bearer at" } })
     )
     expect(await getAuthSession()).toBeNull()
@@ -107,7 +107,7 @@ describe("signOutEverywhere", () => {
     await signOutEverywhere()
 
     const urls = vi.mocked(global.fetch).mock.calls.map((c) => String(c[0]))
-    expect(urls).toEqual(["https://amintaapp.com/api/auth/logout"])
+    expect(urls).toEqual(["https://www.amintaapp.com/api/auth/logout"])
   })
 
   // Regression coverage for "Sign out failed. Try again." trapping the

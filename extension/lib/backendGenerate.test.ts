@@ -79,7 +79,7 @@ describe("backendGenerate", () => {
     expect(result).toBe("generated text")
     expect(fetchMock).toHaveBeenCalledTimes(1)
     const [url, init] = fetchMock.mock.calls[0]
-    expect(url).toBe("https://amintaapp.com/api/generate")
+    expect(url).toBe("https://www.amintaapp.com/api/generate")
     expect(init?.method).toBe("POST")
     expect((init?.headers as Record<string, string>).Authorization).toBe("Bearer token-1")
     expect((init?.headers as Record<string, string>)["X-Aminta-Device-Id"]).toBe("device-123")
