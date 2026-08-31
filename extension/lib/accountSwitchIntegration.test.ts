@@ -155,4 +155,32 @@ describe("the exact reported reproduction: Account A Level 4 -> switch to Accoun
 
     expect((await getStore()).xp).toBe(0) // cleared defaults, not A's 2175
   })
+
+  // The exact reported reproduction, with the exact numbers from the bug
+  // report: Account A at Level 4 (2175 XP => 775/900 into the level, per
+  // lib/evolution.ts's thresholds), 1-day streak — switching to a genuinely
+  // barely-used Free account B must show B's real base state, not A's.
+  it("Account A at Level 4 (2175 XP, 1-day streak) -> Account B (Free, barely used): B renders its own real base state, never A's", async () => {
+    mockGetAuthSession.mockResolvedValue({ accessToken: "tok-a", refreshToken: "r", userId: "uuid-a", email: "a@x.com" })
+    vi.mocked(fetch).mockResolvedValue(cloudResponse({
+      xp: 2175, streak: 1, streak_date: "2026-08-31", plan: "pro", ai_included_paid: true,
+    }))
+    await handleAuthUserChanged(null, "uuid-a")
+    const afterA = await getStore()
+    expect(afterA.xp).toBe(2175) // Level 4 territory (1400-2300)
+    expect(afterA.streak).toBe(1)
+    expect(afterA.plan).toBe("pro")
+
+    mockGetAuthSession.mockResolvedValue({ accessToken: "tok-b", refreshToken: "r", userId: "uuid-b", email: "b@x.com" })
+    vi.mocked(fetch).mockResolvedValue(cloudResponse({
+      xp: 0, streak: 0, streak_date: "", plan: "free", ai_included_paid: false,
+    }))
+    await handleAuthUserChanged("uuid-a", "uuid-b")
+
+    const b = await getStore()
+    expect(b.xp).toBe(0) // NOT 2175 — B is genuinely barely used
+    expect(b.streak).toBe(0) // NOT A's 1-day streak
+    expect(b.plan).toBe("free") // Free stays Free — no leaked Pro entitlement
+    expect(b.aiIncludedPaid).toBe(false)
+  })
 })
