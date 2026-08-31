@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 
 import type { CompanionEvent } from "~lib/companion"
-import { deriveMood } from "~lib/companion"
 import {
   getForm,
   getLevelSpan,
@@ -108,9 +107,6 @@ export default function HomeTab({ store, onCreate, onReuse, onSaveCreationAsTemp
     }
   }, [speech])
 
-  // Mood from the engine — used for mood-aware card styling
-  const mood = deriveMood(store)
-
   // Mission toast — shown once when all tasks complete this session
   const [showToast, setShowToast] = useState(false)
   const toastTimer = useRef<ReturnType<typeof setTimeout>>()
@@ -183,8 +179,16 @@ export default function HomeTab({ store, onCreate, onReuse, onSaveCreationAsTemp
         </div>
       )}
 
-      {/* ── COMPANION CARD ── */}
-      <Card pad={false} glow={mood === "hungry" ? "#f97316" : tint}
+      {/* ── COMPANION CARD ──
+          Deliberately no `glow` here: Card's glow prop borders/haloes the
+          whole card in whatever color it's given, and this used to pass
+          either an orange "hungry" mood color or the evolution tint — an
+          outer-card halo tied to mood/level that read as an error/warning
+          state and fought the mascot's own mint glow for attention. The
+          outer card stays neutral (Card's own default border/no shadow)
+          for every mood and every evolution level; only the mascot itself
+          keeps its glow (aminta-glow, applied via Sprite below). ── */}
+      <Card pad={false}
         style={{
           backgroundImage: "radial-gradient(circle, #1c2030 1px, transparent 1px)",
           backgroundSize: "8px 8px",
