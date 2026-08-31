@@ -222,8 +222,10 @@ export default function AdminTable({ rows, adminId }: { rows: Row[]; adminId: st
               return (
                 <tr key={r.id} style={{ borderTop: "1px solid #2a2a2a" }}>
                   <td className="py-2">
-                    <a href={`/admin?user=${r.id}`} className="text-white hover:underline">
-                      {r.name ? `${r.name} (${r.email})` : r.email}
+                    <a href={`/admin?user=${r.id}`} className="hover:underline">
+                      {r.name
+                        ? <><span style={{ color: "#74f7b5" }}>{r.name}</span><span className="text-white"> ({r.email})</span></>
+                        : <span className="text-white">{r.email}</span>}
                     </a>
                   </td>
                   <td className="py-2 text-muted">

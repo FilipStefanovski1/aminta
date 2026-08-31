@@ -175,8 +175,10 @@ export default async function AdminPage({
             <div style={card} className="p-6 mb-6">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <p className="text-white font-semibold">
-                    {selected.name ? `${selected.name} (${selected.email})` : selected.email}
+                  <p className="font-semibold">
+                    {selected.name
+                      ? <><span style={{ color: "#74f7b5" }}>{selected.name}</span><span className="text-white"> ({selected.email})</span></>
+                      : <span className="text-white">{selected.email}</span>}
                   </p>
                   <p className="text-xs text-muted mt-0.5">{selected.id}</p>
                 </div>
