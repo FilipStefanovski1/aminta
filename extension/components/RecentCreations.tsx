@@ -4,6 +4,7 @@ import { createPortal } from "react-dom"
 import { creationPreview, creationTypeLabel, deleteRecentCreation, joinThreadForCopy, relativeTimeLabel } from "~lib/recentCreations"
 import type { RecentCreation } from "~lib/storage"
 import { C } from "~lib/theme"
+import { SectionTitle } from "~components/ui"
 
 interface Props {
   creations: RecentCreation[]
@@ -28,7 +29,7 @@ export default function RecentCreations({ creations, tint, onReuse, onUpdate, on
   if (creations.length === 0) {
     return (
       <div className="px-1 animate-card-in" style={{ animationDelay: "170ms" }}>
-        <p className="font-pixel text-[7px] mb-1" style={{ color: C.text }}>Recent creations</p>
+        <div className="mb-1"><SectionTitle>Recent creations</SectionTitle></div>
         <p className="text-[11px]" style={{ color: C.textFaint }}>Your generated posts will appear here.</p>
       </div>
     )
@@ -56,7 +57,7 @@ export default function RecentCreations({ creations, tint, onReuse, onUpdate, on
         className="rounded-2xl overflow-hidden animate-card-in"
         style={{ animationDelay: "170ms", backgroundColor: C.card, border: `1px solid ${C.border}` }}>
         <div className="flex items-center justify-between px-4 py-2.5" style={{ borderBottom: `1px solid ${C.border}` }}>
-          <p className="font-pixel text-[7px]" style={{ color: C.text }}>Recent creations</p>
+          <SectionTitle>Recent creations</SectionTitle>
           {creations.length > 3 && (
             <button onClick={() => setShowAll((v) => !v)} className="text-[10px]" style={{ color: tint }}>
               {showAll ? "Show less" : "View all"}

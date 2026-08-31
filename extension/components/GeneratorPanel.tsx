@@ -49,7 +49,7 @@ type UiMode = Mode | "thread"
 const MODE_CONFIG: { id: UiMode; label: string; sub: string; icon: React.ReactNode }[] = [
   {
     id: "tweet",
-    label: "Post",
+    label: "Write",
     sub: "Create a new post",
     icon: (
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -80,7 +80,7 @@ const MODE_CONFIG: { id: UiMode; label: string; sub: string; icon: React.ReactNo
   {
     id: "thread",
     label: "Thread",
-    sub: "3 thread options",
+    sub: "Create a multi-post thread",
     icon: (
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="6" cy="6" r="2.2" /><circle cx="6" cy="18" r="2.2" /><circle cx="18" cy="12" r="2.2" />
@@ -89,6 +89,40 @@ const MODE_CONFIG: { id: UiMode; label: string; sub: string; icon: React.ReactNo
     ),
   },
 ]
+
+const TEMPLATES_ICON = (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="3" width="7" height="7" rx="1" />
+    <rect x="14" y="3" width="7" height="7" rx="1" />
+    <rect x="3" y="14" width="7" height="7" rx="1" />
+    <rect x="14" y="14" width="7" height="7" rx="1" />
+  </svg>
+)
+
+// Icon + always-visible label — the five primary creation modes (Write,
+// Reply, Polish, Thread, Templates) used to be unlabeled circles the user
+// had to click (or hover, on desktop only) to identify. One shared pill so
+// active/inactive treatment can never drift between the four modes and the
+// Templates button next to them.
+function ModeButton({
+  active, icon, label, title, onClick,
+}: { active: boolean; icon: React.ReactNode; label: string; title: string; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      aria-pressed={active}
+      className="flex flex-col items-center justify-center gap-1 rounded-xl py-2.5 transition-all"
+      style={{
+        backgroundColor: active ? "var(--mint)" : C.card,
+        border: `1.5px solid ${active ? "var(--mint)" : C.border}`,
+        color: active ? "#000" : C.textFaint,
+      }}>
+      {icon}
+      <span className="text-[10.5px] font-medium leading-none">{label}</span>
+    </button>
+  )
+}
 
 // X is the only supported platform — kept as an explicit constant (rather
 // than React state) purely so call sites that still expect a `Platform`
@@ -754,39 +788,26 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
     // Templates keep the real mint default.
     <div className="space-y-4 pt-1 pb-4" style={{ "--mint": tint } as React.CSSProperties}>
 
-      {/* ── Mode + Templates, icon-only circular buttons in a row ── */}
-      <div className="flex items-center justify-between px-2">
-        {MODE_CONFIG.map((m) => {
-          const active = mode === m.id
-          return (
-            <button
-              key={m.id}
-              onClick={() => switchMode(m.id)}
-              title={m.label}
-              className="flex items-center justify-center rounded-full transition-all"
-              style={{
-                width: 48,
-                height: 48,
-                backgroundColor: active ? tint : C.card,
-                border: `1.5px solid ${active ? tint : C.border}`,
-                color: active ? "#000" : C.textFaint,
-              }}>
-              {m.icon}
-            </button>
-          )
-        })}
-        <button
-          onClick={() => { setTemplatesPrefill(undefined); setTemplatesOpen(true) }}
-          title="Templates"
-          className="flex items-center justify-center rounded-full transition-colors"
-          style={{ width: 48, height: 48, backgroundColor: C.card, border: `1.5px solid ${C.border}`, color: C.textFaint }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="3" width="7" height="7" rx="1" />
-            <rect x="14" y="3" width="7" height="7" rx="1" />
-            <rect x="3" y="14" width="7" height="7" rx="1" />
-            <rect x="14" y="14" width="7" height="7" rx="1" />
-          </svg>
-        </button>
+      {/* ── Mode + Templates — icon + always-visible label, 3+2 so five
+          readable pills never overflow or shrink the sidepanel. ── */}
+      <div className="px-2 space-y-2">
+        <div className="grid grid-cols-3 gap-2">
+          {MODE_CONFIG.slice(0, 3).map((m) => (
+            <ModeButton key={m.id} active={mode === m.id} icon={m.icon} label={m.label} title={m.sub} onClick={() => switchMode(m.id)} />
+          ))}
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          {MODE_CONFIG.slice(3).map((m) => (
+            <ModeButton key={m.id} active={mode === m.id} icon={m.icon} label={m.label} title={m.sub} onClick={() => switchMode(m.id)} />
+          ))}
+          <ModeButton
+            active={false}
+            icon={TEMPLATES_ICON}
+            label="Templates"
+            title="Create from your saved templates"
+            onClick={() => { setTemplatesPrefill(undefined); setTemplatesOpen(true) }}
+          />
+        </div>
       </div>
 
       {/* ── Image upload ── (hidden for Groq keys — Groq has no vision support) */}

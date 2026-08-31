@@ -18,7 +18,7 @@ import { C } from "~lib/theme"
 import { countExamples as countExamplesCanonical } from "~lib/trainingExamples"
 import { DISCORD_INVITE_URL } from "~lib/webUrl"
 import { openXComposer } from "~lib/xTab"
-import { Card, Sprite, SpeechBubble, XPBar } from "~components/ui"
+import { Card, SectionTitle, Sprite, SpeechBubble, XPBar } from "~components/ui"
 import RecentCreations from "~components/RecentCreations"
 
 type QuickCreateMode = "tweet" | "reply" | "polish" | "thread"
@@ -256,7 +256,7 @@ export default function HomeTab({ store, onCreate, onReuse, onSaveCreationAsTemp
       {/* ── TODAY'S MISSIONS ── */}
       <Card pad={false} className="overflow-hidden animate-card-in" style={{ animationDelay: "30ms" }}>
         <div className="flex items-center justify-between px-4 py-2.5" style={{ borderBottom: `1px solid ${C.border}` }}>
-          <p className="font-pixel text-[7px]" style={{ color: C.text }}>Today</p>
+          <SectionTitle>Today</SectionTitle>
           {allDone
             ? <span className="font-pixel text-[6px]" style={{ color: tint }}>All done ✓</span>
             : <span className="text-[10px]" style={{ color: "#8a8a96" }}>{tasks.filter(t => t.done).length}/{tasks.length}</span>}
@@ -306,7 +306,7 @@ export default function HomeTab({ store, onCreate, onReuse, onSaveCreationAsTemp
           mode; no generation logic lives here. ── */}
       <Card pad={false} className="overflow-hidden animate-card-in" style={{ animationDelay: "90ms" }}>
         <div className="px-4 py-2.5" style={{ borderBottom: `1px solid ${C.border}` }}>
-          <p className="font-pixel text-[7px]" style={{ color: C.text }}>Quick create</p>
+          <SectionTitle>Quick create</SectionTitle>
         </div>
         <div className="grid grid-cols-2 gap-2 p-3">
           {QUICK_CREATE_MODES.map((m) => (
@@ -339,7 +339,7 @@ export default function HomeTab({ store, onCreate, onReuse, onSaveCreationAsTemp
       {/* ── YOUR VOICE — entry point into Train, no duplicated controls. ── */}
       <Card pad={false} className="overflow-hidden animate-card-in" style={{ animationDelay: "130ms" }}>
         <div className="px-4 py-2.5" style={{ borderBottom: `1px solid ${C.border}` }}>
-          <p className="font-pixel text-[7px]" style={{ color: C.text }}>Your voice</p>
+          <SectionTitle>Your voice</SectionTitle>
         </div>
         <div className="px-4 py-3">
           <p className="text-[12px]" style={{ color: C.text }}>
@@ -373,7 +373,7 @@ export default function HomeTab({ store, onCreate, onReuse, onSaveCreationAsTemp
 
       {/* ── COMMUNITY ── */}
       <div className="rounded-xl p-3 animate-card-in" style={{ animationDelay: "150ms", backgroundColor: C.card, border: `1px solid ${C.border}` }}>
-        <p className="font-pixel text-[7px] mb-1.5" style={{ color: C.text }}>Aminta community</p>
+        <div className="mb-1.5"><SectionTitle>Aminta community</SectionTitle></div>
         <p className="text-[11px] leading-relaxed mb-2.5" style={{ color: C.textFaint }}>
           Share your posts, get feedback, and meet other people building on X.
         </p>

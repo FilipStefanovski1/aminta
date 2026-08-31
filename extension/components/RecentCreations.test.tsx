@@ -7,10 +7,24 @@
 import { act } from "react-dom/test-utils"
 import { createRoot, type Root } from "react-dom/client"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import RecentCreations from "~components/RecentCreations"
 import type { RecentCreation } from "~lib/storage"
 
 ;(globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
+
+// ~components/ui (SectionTitle) transitively imports lib/evolution.ts, which
+// pulls in `url:~/assets/*.gif` (Parcel-style) imports Vitest's plain Vite
+// transform can't resolve outside Plasmo's real build — same fix as
+// OnboardingWizard.test.tsx. Nothing here actually renders Sprite/DemonMascot.
+vi.mock("~lib/evolution", () => ({
+  FORMS: [],
+  getForm: () => ({ skin: {} }),
+  getLevel: () => 1,
+  getStageTint: () => "#74f7b5",
+  getXpInLevel: () => 0,
+  getXpProgress: () => 0,
+}))
+
+import RecentCreations from "~components/RecentCreations"
 
 let container: HTMLDivElement
 let root: Root

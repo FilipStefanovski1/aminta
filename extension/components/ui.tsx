@@ -44,6 +44,23 @@ export function SectionLabel({ children }: { children: React.ReactNode }) {
   )
 }
 
+// ─── Section title (page-level module headings, e.g. Home's "Today",
+// "Quick create", "Your voice", "Recent creations", "Aminta community") ──
+// Distinct from SectionLabel above, which is a small uppercase eyebrow for
+// form-field groups (onboarding/Train) — this is the actual heading role.
+// Deliberately not font-pixel: that face reads fine as a small accent/eyebrow
+// or in a full sentence at ~11px, but a pixel typeface's blocky metrics look
+// oversized and harder to scan at heading sizes, and its usual wide,
+// uppercase tracking works against "normal readable letter spacing." Plain
+// semibold high-contrast text reads as an immediate, scannable title instead.
+export function SectionTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="text-[14px] font-semibold" style={{ color: C.text }}>
+      {children}
+    </p>
+  )
+}
+
 // ─── Primary button ────────────────────────────────────────────────────────
 
 export function PrimaryButton({
