@@ -217,33 +217,39 @@ export default function HomeTab({ store, onCreate, onReuse, onSaveCreationAsTemp
               </span>
             )}
           </div>
-          {/* Mascot — bubble absolutely anchored above head, not in flow.
-              marginTop leaves room for a two-line bubble above the header
-              row rather than colliding with the stage name/plan badge. */}
-          <div className="flex justify-center mb-6" style={{ position: "relative", marginTop: 64 }}>
-            <div style={{ position: "absolute", bottom: "100%", left: "50%", transform: "translateX(-50%)", marginBottom: 8, zIndex: 2 }}>
-              <SpeechBubble key={bubbleKey} text={speech} />
+          {/* Mascot — bubble sits in normal document flow, above the mascot
+              and below the header row, instead of being absolutely anchored
+              with a fixed marginTop guessing at the bubble's height. A fixed
+              offset only ever protects the header for however tall the
+              bubble happened to be when that number was picked; normal flow
+              means the header can never be overlapped regardless of how
+              many lines the current message wraps to. */}
+          <div className="flex flex-col items-center mb-6">
+            <div className="mb-2">
+              <SpeechBubble key={bubbleKey} text={speech} variant="compact" />
             </div>
-            <button onClick={onOpenCompanion} className="cursor-pointer" style={{ background: "none", border: "none", padding: 0 }}>
-              <Sprite key={animKey} xp={xp} size={112} animClass={animClass} />
-            </button>
-            {xpFloat && (
-              <div
-                key={xpFloat.id}
-                className="xp-rise font-pixel text-[11px] pointer-events-none"
-                style={{
-                  position: "absolute",
-                  top: "20%",
-                  left: "50%",
-                  color: tint,
-                  whiteSpace: "nowrap",
-                  zIndex: 10,
-                }}
-                onAnimationEnd={() => setXpFloat(null)}
-              >
-                +{xpFloat.delta} XP
-              </div>
-            )}
+            <div style={{ position: "relative" }}>
+              <button onClick={onOpenCompanion} className="cursor-pointer" style={{ background: "none", border: "none", padding: 0 }}>
+                <Sprite key={animKey} xp={xp} size={112} animClass={animClass} />
+              </button>
+              {xpFloat && (
+                <div
+                  key={xpFloat.id}
+                  className="xp-rise font-pixel text-[11px] pointer-events-none"
+                  style={{
+                    position: "absolute",
+                    top: "20%",
+                    left: "50%",
+                    color: tint,
+                    whiteSpace: "nowrap",
+                    zIndex: 10,
+                  }}
+                  onAnimationEnd={() => setXpFloat(null)}
+                >
+                  +{xpFloat.delta} XP
+                </div>
+              )}
+            </div>
           </div>
           <div className="flex items-baseline justify-between mb-1.5">
             <span className="font-pixel text-[7px]" style={{ color: "#8a8a96" }}>Level {level}</span>

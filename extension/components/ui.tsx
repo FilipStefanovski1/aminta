@@ -182,12 +182,26 @@ export function SpriteMark({ tint, size = 36 }: { tint: string; size?: number })
 }
 
 // ─── Speech bubble (white pixel bubble, downward tail) ──────────────────────
+// "default" is the onboarding sizing (short 1-3 word mascot lines, e.g. "hey,
+// I'm Aminta.", "not bad, right?"). "compact" is for Home's companion card,
+// where messages run longer ("i missed you. post something.") and the bubble
+// sits in a card with real vertical constraints above it (stage title, PRO
+// badge, settings gear) — it needs to stay WIDE (so 2 lines is realistic
+// instead of 3-4) and SHORT per line, rather than default's narrower/taller
+// shape. One shared component, two tuned sizes — see HomeTab.tsx for how
+// "compact" is placed in normal document flow instead of a fixed-offset
+// absolute position, which is what actually protects the header above it;
+// this variant only controls the bubble's own dimensions.
+const SPEECH_BUBBLE_SIZE = {
+  default: "px-4 py-2.5 max-w-[240px]",
+  compact: "px-5 py-2 min-w-[220px] max-w-[300px]",
+} as const
 
-export function SpeechBubble({ text }: { text: string }) {
+export function SpeechBubble({ text, variant = "default" }: { text: string; variant?: keyof typeof SPEECH_BUBBLE_SIZE }) {
   return (
     <div className="bubble-pop flex justify-center">
-      <div className="relative max-w-[240px]">
-        <div className="px-4 py-2.5 rounded-sm" style={{ background: "#fff", border: "2px solid #000", boxShadow: "2px 2px 0 #000" }}>
+      <div className="relative w-fit">
+        <div className={`rounded-sm ${SPEECH_BUBBLE_SIZE[variant]}`} style={{ background: "#fff", border: "2px solid #000", boxShadow: "2px 2px 0 #000" }}>
           <p className="font-pixel text-[8px] leading-relaxed text-black text-center">{text}</p>
         </div>
         <svg width="12" height="8" viewBox="0 0 12 8"
