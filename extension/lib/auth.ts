@@ -36,6 +36,15 @@ const isDev = (() => {
 })()
 
 const LOGOUT_URL = "https://amintaapp.com/api/auth/logout"
+// A background (unfocused) tab at this page signs the WEBSITE itself out —
+// see app/logout-complete/page.tsx. The extension has no access to
+// amintaapp.com's own browser-side Supabase session (createBrowserClient
+// stores it in that origin's own cookies), so without this, "Sign out" in
+// the extension left the website still fully signed in — which is exactly
+// what let a later "Connect with X" silently hand back that same stale
+// account (see shouldSkipPassiveSessionRestore in landing's AuthShell.tsx
+// for the other half of that fix). Never touches x.com.
+const LOGOUT_COMPLETE_URL = "https://amintaapp.com/logout-complete"
 
 // Not a discriminated union on purpose — see lib/xAccountGuard.ts's
 // GuardResult for why: this project builds with `strict: false`, under
@@ -99,6 +108,19 @@ export async function signOutEverywhere(): Promise<SignOutResult> {
   } catch (e) {
     if (isDev) console.error("[Aminta auth] local sign-out failed:", e)
     return { ok: false, error: "Couldn't sign out on this device. Try again." }
+  }
+
+  // Best-effort, fire-and-forget: the extension's own sign-out is already
+  // complete at this point (local state cleared above) and must not wait on
+  // or be blocked by this — a background tab failing to open, the page
+  // failing to load, or the bridge message never arriving all leave the
+  // extension correctly signed out regardless. This only ever ADDS "the
+  // website is also signed out" on top of that, opened unfocused so it
+  // never interrupts whatever the user is doing.
+  try {
+    await chrome.tabs.create({ url: LOGOUT_COMPLETE_URL, active: false })
+  } catch (e) {
+    if (isDev) console.warn("[Aminta auth] couldn't open logout-complete tab:", e)
   }
 
   return { ok: true }

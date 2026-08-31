@@ -198,6 +198,29 @@ export function OAuthButtons({
 
 const isDev = process.env.NODE_ENV !== "production"
 
+// /login's passive "already signed in, skip the form" convenience exists for
+// someone typing amintaapp.com/login into their own browser while a session
+// happens to already be live — showing a blank form there would just invite
+// them to type a *different* account's credentials over a session that's
+// already correctly theirs.
+//
+// That reasoning does NOT hold for the extension's own "Connect with X" —
+// ?ext_id is present ONLY when this page was opened by the extension
+// specifically to authenticate itself, and the extension only ever opens it
+// when IT has no session of its own. Silently handing over whatever
+// Supabase session happens to already be sitting in this browser (e.g. a
+// *different* Aminta account someone was using on the website) is exactly
+// the wrong-account bug this guards against: the browser might be signed
+// into account B on amintaapp.com while x.com itself is authenticated as a
+// completely different account A, and the user explicitly clicked "Connect
+// with X" wanting A. ext_id being present means: always show the real
+// form and let X's own OAuth flow (and whichever X identity is actually
+// authorized there) decide the outcome — never shortcut straight to
+// whatever this browser's existing Supabase session already contains.
+export function shouldSkipPassiveSessionRestore(search: string): boolean {
+  return new URLSearchParams(search).has("ext_id")
+}
+
 // Shared ext_id plumbing: the extension opens auth pages with ?ext_id=…; we
 // persist it so that after ANY auth method completes, the session is handed
 // to the extension via /extension-auth. Do not break this.

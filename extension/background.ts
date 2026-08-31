@@ -58,6 +58,17 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   return true // keep port open for async sendResponse
 })
 
+// Relayed from aminta-auth-bridge.ts once /logout-complete has signed the
+// website itself out (see lib/auth.ts's signOutEverywhere(), which opens
+// that page in a background tab). Just closes the now-finished tab — the
+// page itself already did the actual sign-out.
+chrome.runtime.onMessage.addListener((msg, sender, _sendResponse) => {
+  if (msg?.type !== "AMINTA_LOGOUT_COMPLETE_FROM_BRIDGE") return false
+  console.log("[Aminta bg] received AMINTA_LOGOUT_COMPLETE_FROM_BRIDGE")
+  if (sender.tab?.id) chrome.tabs.remove(sender.tab.id).catch(() => {})
+  return false
+})
+
 // Relayed from aminta-auth-bridge.ts when /login loads with ?error=... —
 // Supabase couldn't complete the X OAuth flow (e.g. "Unable to exchange
 // external code", a provider/credential-level failure on Supabase's side).

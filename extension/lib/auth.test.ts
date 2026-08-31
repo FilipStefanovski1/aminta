@@ -2,8 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 // In-memory chrome.storage.local stand-in — same pattern as missions.test.ts.
 let memoryStore: Record<string, unknown> = {}
+let tabsCreateCalls: { url: string; active?: boolean }[] = []
 function installWorkingChromeStub() {
   vi.stubGlobal("chrome", {
+    runtime: { getManifest: () => ({}) },
     storage: {
       local: {
         get: (keys: string[] | Record<string, unknown>) => {
@@ -24,6 +26,12 @@ function installWorkingChromeStub() {
         },
       },
     },
+    tabs: {
+      create: (opts: { url: string; active?: boolean }) => {
+        tabsCreateCalls.push(opts)
+        return Promise.resolve({ id: 1 })
+      },
+    },
   })
 }
 installWorkingChromeStub()
@@ -32,6 +40,7 @@ import { getAuthSession, refreshAuthSession, setAuthSession, signOutEverywhere }
 
 beforeEach(() => {
   memoryStore = {}
+  tabsCreateCalls = []
   global.fetch = vi.fn()
 })
 
@@ -57,6 +66,50 @@ describe("signOutEverywhere", () => {
     expect(await getAuthSession()).toBeNull()
   })
 
+  // The other half of the wrong-account bug: revoking the token server-side
+  // and clearing the extension's own chrome.storage.local never touched
+  // amintaapp.com's own browser-side Supabase session (its own cookies),
+  // which is exactly what let a later "Connect with X" silently hand back
+  // that same still-logged-in account. See app/logout-complete/page.tsx.
+  it("also opens the website's own logout-completion page, unfocused, to invalidate its browser session", async () => {
+    await setAuthSession(SESSION)
+    vi.mocked(global.fetch).mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }))
+
+    await signOutEverywhere()
+
+    expect(tabsCreateCalls).toEqual([{ url: "https://amintaapp.com/logout-complete", active: false }])
+  })
+
+  it("never calls the X data-connection disconnect endpoint or anything under /x/ — sign-out is not the same as disconnecting X", async () => {
+    await setAuthSession(SESSION)
+    vi.mocked(global.fetch).mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }))
+
+    await signOutEverywhere()
+
+    const urls = vi.mocked(global.fetch).mock.calls.map((c) => String(c[0]))
+    expect(urls.some((u) => u.includes("/x/"))).toBe(false)
+    expect(tabsCreateCalls.some((t) => t.url.includes("/x/") || t.url.includes("x.com"))).toBe(false)
+  })
+
+  it("never opens or navigates x.com — signing out of Aminta must not touch the X session", async () => {
+    await setAuthSession(SESSION)
+    vi.mocked(global.fetch).mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }))
+
+    await signOutEverywhere()
+
+    expect(tabsCreateCalls.every((t) => !t.url.includes("x.com") && !t.url.includes("twitter.com"))).toBe(true)
+  })
+
+  it("never calls any account-deletion endpoint — sign-out only ever hits /api/auth/logout", async () => {
+    await setAuthSession(SESSION)
+    vi.mocked(global.fetch).mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }))
+
+    await signOutEverywhere()
+
+    const urls = vi.mocked(global.fetch).mock.calls.map((c) => String(c[0]))
+    expect(urls).toEqual(["https://amintaapp.com/api/auth/logout"])
+  })
+
   // Regression coverage for "Sign out failed. Try again." trapping the
   // user indefinitely: a remote revoke that can't be confirmed (expired
   // token, invalid/missing refresh token, or the server unreachable) must
@@ -71,6 +124,7 @@ describe("signOutEverywhere", () => {
 
     expect(result.ok).toBe(true)
     expect(await getAuthSession()).toBeNull()
+    expect(tabsCreateCalls).toHaveLength(1) // website logout still attempted
   })
 
   it("a genuine server failure (502) still clears local session instead of trapping the user behind a retry loop", async () => {
@@ -81,6 +135,7 @@ describe("signOutEverywhere", () => {
 
     expect(result.ok).toBe(true)
     expect(await getAuthSession()).toBeNull()
+    expect(tabsCreateCalls).toHaveLength(1)
   })
 
   it("a network error reaching the logout endpoint still clears local session", async () => {
@@ -91,6 +146,7 @@ describe("signOutEverywhere", () => {
 
     expect(result.ok).toBe(true)
     expect(await getAuthSession()).toBeNull()
+    expect(tabsCreateCalls).toHaveLength(1)
   })
 
   it("just clears local state when there was never a session to revoke", async () => {
@@ -120,6 +176,7 @@ describe("signOutEverywhere", () => {
     expect(result.ok).toBe(false)
     expect(result.error).toBeTruthy()
     expect(result.error).not.toMatch(/at|rt/) // never leaks the raw token into the message
+    expect(tabsCreateCalls).toHaveLength(0) // never reached — local clear failed first
   })
 })
 

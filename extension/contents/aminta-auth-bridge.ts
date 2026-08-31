@@ -37,6 +37,18 @@ window.addEventListener("message", (event) => {
   chrome.runtime.sendMessage({ type: "AMINTA_AUTH_ERROR_FROM_BRIDGE", error: event.data.error }).catch(() => {})
 })
 
+// /logout-complete posts this once it has signed the website itself out —
+// see extension/lib/auth.ts's signOutEverywhere(), which opens that page in
+// a background tab specifically to trigger this. Relayed to background.ts
+// so it can close that tab, same pattern as the auth-success relay below.
+window.addEventListener("message", (event) => {
+  if (!ALLOWED_ORIGINS.includes(event.origin)) return
+  if (!event.data || event.data.type !== "AMINTA_LOGOUT_COMPLETE") return
+
+  console.log("[Aminta bridge] received AMINTA_LOGOUT_COMPLETE from", event.origin)
+  chrome.runtime.sendMessage({ type: "AMINTA_LOGOUT_COMPLETE_FROM_BRIDGE" }).catch(() => {})
+})
+
 window.addEventListener("message", async (event) => {
   // Only accept messages from our own origin.
   if (!ALLOWED_ORIGINS.includes(event.origin)) return

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import {
   AuthShell, CARD_STYLE, Field, OAuthButtons, OrDivider, SubmitButton,
-  ensureProfile, oauthCallbackUrl, persistExtId, postAuthDestination,
+  ensureProfile, oauthCallbackUrl, persistExtId, postAuthDestination, shouldSkipPassiveSessionRestore,
 } from "@/components/auth/AuthShell"
 import type { AuthProvidersConfig } from "@/lib/authProviders"
 import posthog from "posthog-js"
@@ -78,6 +78,17 @@ export function LoginForm({ providers }: { providers: AuthProvidersConfig }) {
       if (extId) {
         window.postMessage({ type: "AMINTA_AUTH_ERROR", error: "auth_failed" }, window.location.origin)
       }
+    }
+
+    // ?ext_id means the extension opened this page specifically to
+    // authenticate itself — always show the real form and let X's own OAuth
+    // flow decide the outcome. See shouldSkipPassiveSessionRestore's own
+    // comment for why the passive-session shortcut below must never apply
+    // here: it's exactly how "Connect with X" ends up silently restoring a
+    // different account than the one active on x.com.
+    if (shouldSkipPassiveSessionRestore(window.location.search)) {
+      setCheckingSession(false)
+      return
     }
 
     // If this browser already has a live Supabase session, don't show a
