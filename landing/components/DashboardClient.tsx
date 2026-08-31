@@ -5,8 +5,7 @@ import posthog from "posthog-js"
 import { createClient } from "@/lib/supabase/client"
 import { EXTENSION_URL } from "@/lib/links"
 import { communityUnlocked, hasProAccess, planLabel } from "@/lib/entitlements"
-
-const THRESHOLDS = [0, 300, 750, 1400, 2300, 3500, 5200, 7500, 10500, 14500]
+import { LEVEL_THRESHOLDS as THRESHOLDS, getLevel } from "@/lib/evolution"
 
 const FORMS = [
   { level: 1, name: "Dormant",     color: "#74f7b5", body: "#1a5e48", horn: "#0f3d30", eye: "#74f7b5" },
@@ -60,12 +59,6 @@ function Sprite({ body, horn, eye, blink, size = 96 }: {
       )}
     </svg>
   )
-}
-
-function getLevel(xp: number) {
-  let level = 1
-  for (let i = 1; i < THRESHOLDS.length && xp >= THRESHOLDS[i]; i++) level = i + 1
-  return Math.min(level, 9)
 }
 
 function todayLocal(): string {
@@ -155,7 +148,11 @@ export default function DashboardClient({
   const blinkTimeout = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   const level = getLevel(xp)
-  const form  = FORMS[level - 1]
+  // FORMS art only covers levels 1-9 (a pre-existing gap, unrelated to this
+  // fix) — clamp for display purposes only; `level` itself stays the real,
+  // canonical value everywhere else (progress/threshold math below already
+  // treats level>=9 as terminal on its own).
+  const form  = FORMS[Math.min(level, FORMS.length) - 1]
   const next  = level < 9 ? FORMS[level] : null
 
   const lo       = THRESHOLDS[level - 1]

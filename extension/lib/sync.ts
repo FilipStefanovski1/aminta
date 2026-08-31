@@ -1,9 +1,12 @@
 import { getAuthSession, refreshAuthSession, type AuthSession } from "./auth"
+import { getLevel } from "./evolution"
 import { capEarnedHashes, getStore, setStore, type AmintaStore, type AmintaTemplate } from "./storage"
 
 const API_URL = "https://amintaapp.com/api/sync"
 
-const isDev = !("update_url" in chrome.runtime.getManifest())
+const isDev = (() => {
+  try { return !("update_url" in chrome.runtime.getManifest()) } catch { return false }
+})()
 
 // Bumped by lib/accountScope.ts's handleAuthUserChanged() every time the
 // signed-in user changes in this JS context (sidepanel page or background
@@ -42,14 +45,11 @@ async function setSyncStatus(status: SyncStatus, error?: string): Promise<void> 
   })
 }
 
-function xpToLevel(xp: number): number {
-  const thresholds = [0, 300, 750, 1400, 2300, 3500, 5200, 7500, 10500, 14500]
-  let level = 1
-  for (let i = 1; i < thresholds.length; i++) {
-    if (xp >= thresholds[i]) level = i + 1
-  }
-  return level
-}
+// Was a hand-copied second implementation of the level thresholds (dev-log
+// display only, never sent anywhere) — reuses the one canonical
+// lib/evolution.ts → getLevel() so there's no risk of it silently drifting
+// from the actual progression model.
+const xpToLevel = getLevel
 
 // Perform an authenticated request. On 401, refresh the access token once and
 // retry. Returns null when the request could not be made (no session / offline

@@ -21,7 +21,7 @@ import { PROVIDERS, detectProvider } from "~lib/providers"
 import { C } from "~lib/theme"
 import { clearAllLocalUserData, getStore, setStore, type AmintaStore, type RecentCreation } from "~lib/storage"
 import { getAuthSession, clearAuthSession, signOutEverywhere, type AuthSession } from "~lib/auth"
-import { pullFromCloud, pushToCloud } from "~lib/sync"
+import { pushToCloud } from "~lib/sync"
 import { handleAuthUserChanged } from "~lib/accountScope"
 import { deleteAccount } from "~lib/account"
 import { PUBLISH_COOLDOWN_MS } from "~lib/publishCooldown"
@@ -871,12 +871,30 @@ function SidePanel() {
   // below (whose closure is fixed at mount) can detect an account switch
   // even though `session` state itself is stale inside that closure.
   const prevUserIdRef = useRef<string | null>(null)
+  // False while `store` is not yet verified to belong to the currently
+  // authenticated user — see lib/accountScope.ts's storeIsOwnedBy(). Gates
+  // the loading screen so a switch/cold-start can never render a stale
+  // `store` snapshot (still holding a previous account's XP/level/etc.)
+  // while ownership is still being resolved. True immediately when logged
+  // out — there's no owner to verify against in that state.
+  const [ownershipVerified, setOwnershipVerified] = useState(false)
 
   const refresh = async () => setLocalStore(await getStore())
 
   const { speech, animClass, animKey, dispatch } = useCompanion(store)
 
-  // Check auth + pull from cloud on startup.
+  // Check auth + verify/pull from cloud on startup.
+  // Routes through handleAuthUserChanged() rather than a raw pullFromCloud()
+  // — a cold start (fresh mount, or the MV3 service worker having restarted)
+  // has no in-memory history of whichever account this device last showed,
+  // so prevUserIdRef.current is always null here. handleAuthUserChanged
+  // itself falls back to the PERSISTED owner marker in that case (see
+  // lib/accountScope.ts's storeIsOwnedBy/STATE_OWNER_KEY), so a switch that
+  // happened before this JS context even existed is still caught — the gap
+  // a raw pullFromCloud() call here used to leave open. ownershipVerified
+  // stays false (blocking the render below) until this — including the
+  // refresh() that re-reads the now-correct local store — completes, so a
+  // stale cached `store` can never be the first thing rendered.
   // The pull is raced against a timeout so a slow/unreachable network can
   // never trap the user on the splash screen — sync retries after the next
   // XP award anyway.
@@ -885,12 +903,14 @@ function SidePanel() {
       if (s) {
         setIsLoggedIn(true)
         setSession(s)
-        prevUserIdRef.current = s.userId
         await Promise.race([
-          pullFromCloud(),
+          handleAuthUserChanged(prevUserIdRef.current, s.userId),
           new Promise((r) => setTimeout(r, 4_000)),
         ])
+        prevUserIdRef.current = s.userId
+        await refresh()
       }
+      setOwnershipVerified(true)
       setAuthChecked(true)
     })
   }, [])
@@ -910,6 +930,15 @@ function SidePanel() {
           setSession(s)
           setIsLoggedIn(true)
           setAuthChecked(true)
+          // Block rendering account-dependent UI (Home/Create/Train, etc.)
+          // for the duration of this switch — without this, the already-
+          // mounted tree kept showing the PREVIOUS account's `store` (XP,
+          // level, evolution sprite, all of it) for as long as the clear+
+          // pull below took, since `store` itself doesn't change until
+          // refresh() below actually runs. This is what let account B
+          // briefly (or, on a slow/failed pull, not-so-briefly) render
+          // account A's Level 4.
+          setOwnershipVerified(false)
           // Route through the canonical handler instead of a raw pullFromCloud():
           // if this uid differs from the last one we saw on this device, it
           // clears account-scoped local state (xp/streak/voice/etc.) BEFORE
@@ -922,6 +951,7 @@ function SidePanel() {
           prevUserIdRef.current = s.userId
           console.log("[Aminta sidepanel] account state resolved, refreshing store")
           await refresh()
+          setOwnershipVerified(true)
         })
       }
       if ("auth_access_token" in changes && !changes.auth_access_token.newValue) {
@@ -932,6 +962,7 @@ function SidePanel() {
         prevUserIdRef.current = null
         setSession(null)
         setIsLoggedIn(false)
+        setOwnershipVerified(false)
       }
     }
     chrome.storage.local.onChanged.addListener(listener)
@@ -1052,7 +1083,13 @@ function SidePanel() {
     switchTab("create", c.type === "thread" ? "thread" : c.type)
   }
 
-  if (!authChecked || !store) {
+  // isLoggedIn && !ownershipVerified: an account switch/cold-start hydration
+  // is in progress — `store` may still hold the PREVIOUS account's cached
+  // XP/level/etc. at this instant (it only updates once refresh() actually
+  // runs). Never render Home/Create/Train from it until ownership of the
+  // local cache is verified — show this neutral loading state instead. See
+  // lib/accountScope.ts's storeIsOwnedBy() and the two useEffects above.
+  if (!authChecked || !store || (isLoggedIn && !ownershipVerified)) {
     return (
       <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-[#1f1f1f]">
         <div className="sprite-jump" style={{ filter: "drop-shadow(0 0 12px #74f7b566)" }}>
@@ -1065,9 +1102,21 @@ function SidePanel() {
   if (!isLoggedIn) {
     return (
       <LoginScreen onSignedIn={async () => {
-        await pullFromCloud()
+        // Same reasoning as the mount effect above: route through
+        // handleAuthUserChanged (not a raw pullFromCloud) so a switch this
+        // JS context never directly observed — e.g. signing in as a
+        // different account without an explicit sign-out first — still
+        // clears any stale local cache before this session's data loads,
+        // and so the persisted owner marker gets updated either way.
+        const s = await getAuthSession()
+        if (s) {
+          await handleAuthUserChanged(prevUserIdRef.current, s.userId)
+          prevUserIdRef.current = s.userId
+          setSession(s)
+        }
         setIsLoggedIn(true)
         await refresh()
+        setOwnershipVerified(true)
       }} />
     )
   }
