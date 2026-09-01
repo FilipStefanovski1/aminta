@@ -858,7 +858,42 @@ function openMemePopover(bar: HTMLElement) {
   closeMemeUI = close
 }
 
-function buildBar(): HTMLElement {
+// ─── DEV-ONLY composer lifecycle diagnostics ──────────────────────────────
+// jsdom unit tests (lib/composerPresets.test.ts) prove the action strip's
+// own click/dropdown wiring works in isolation, but they can't prove X's
+// own DOM churn doesn't tear our bar out from under it — e.g. if X
+// re-renders the toolbar's parent and our inserted bar gets removed along
+// with it, injectBar mints a brand-new `bar` element, which is a brand-new
+// WeakMap key for stripState, silently resetting News/Product/tone/length
+// selections. This block traces that real lifecycle on x.com; every line
+// is gated on isDev (true only for an unpacked/dev build — see isDev
+// above), so it is completely inert in the packaged production build.
+let barDebugSeq = 0
+const trackedBars: Map<string, HTMLElement> | null = isDev ? new Map() : null
+
+function nextBarDebugId(): string {
+  return `b${++barDebugSeq}`
+}
+
+function logComposer(...args: unknown[]) {
+  if (isDev) console.log("[Aminta composer]", ...args)
+}
+
+// Called at the top of every observer pass — catches a bar that was torn
+// out of the DOM by X's own re-render (not by removeBar/injectBar
+// themselves), which is exactly the "state silently reset" failure mode
+// under investigation.
+function checkForDisconnectedBars() {
+  if (!trackedBars) return
+  for (const [id, el] of trackedBars) {
+    if (!el.isConnected) {
+      logComposer(`bar disconnected (removed from DOM by something other than Aminta) ${id}`)
+      trackedBars.delete(id)
+    }
+  }
+}
+
+function buildBar(debugId: string): HTMLElement {
   const bar = document.createElement("div")
   bar.style.cssText = [
     "display:flex",
@@ -926,23 +961,28 @@ function buildBar(): HTMLElement {
   // this bar is a reply composer (see isReplyComposer) — never on a
   // top-level post.
   const renderStrip = () => {
+    const state = getStripState(bar)
+    logComposer(`render strip ${debugId}`, state)
     const current = bar.querySelector(".aminta-actions")
-    const next = buildActionStrip(getStripState(bar), {
-      onGenerate: () => runGenerate(bar, "tweet"),
-      onPolish: () => runGenerate(bar, "polish"),
+    const next = buildActionStrip(state, {
+      onGenerate: () => { logComposer(`click Generate ${debugId}`); runGenerate(bar, "tweet") },
+      onPolish: () => { logComposer(`click Polish ${debugId}`); runGenerate(bar, "polish") },
       onPreset: (preset: ComposerPresetId | null) => {
+        logComposer(`click preset=${preset} ${debugId}`)
         stripState.set(bar, { ...getStripState(bar), preset })
         renderStrip()
       },
       onLength: (length) => {
+        logComposer(`click length=${length} ${debugId}`)
         stripState.set(bar, { ...getStripState(bar), length })
         renderStrip()
       },
       onTone: (tone) => {
+        logComposer(`click tone=${tone} ${debugId}`)
         stripState.set(bar, { ...getStripState(bar), tone })
         renderStrip()
       },
-      ...(isReplyComposer(bar) ? { onOpenMeme: () => openMemePopover(bar) } : {}),
+      ...(isReplyComposer(bar) ? { onOpenMeme: () => { logComposer(`click Meme ${debugId}`); openMemePopover(bar) } } : {}),
     })
     if (current) current.replaceWith(next)
     else bar.insertBefore(next, bar.firstChild)
@@ -961,21 +1001,40 @@ function injectBar(toolbar: Element) {
   const next = toolbar.nextElementSibling as HTMLElement | null
 
   // Already carrying THIS build's bar — nothing to do.
-  if (isCurrentBar(next)) return
+  if (isCurrentBar(next)) {
+    if (isDev) logComposer(`toolbar seen -> already current bar ${next?.dataset.aminataDebugId ?? "(no id)"}`)
+    return
+  }
 
   // A bar from a previous build (extension reloaded without refreshing the
   // tab). It must be removed rather than treated as "already injected",
   // otherwise the old markup wins permanently and this build's bar can never
   // mount. See COMPOSER_BAR_VERSION.
+  const replacedId = isDev ? next?.dataset.aminataDebugId : undefined
   if (isAmintaBar(next)) next?.remove()
+  if (isDev && replacedId && trackedBars) trackedBars.delete(replacedId)
 
-  const bar = buildBar()
+  const debugId = isDev ? nextBarDebugId() : ""
+  const bar = buildBar(debugId)
   bar.setAttribute(BAR_ATTR, COMPOSER_BAR_VERSION)
+  if (isDev) {
+    bar.dataset.aminataDebugId = debugId
+    trackedBars?.set(debugId, bar)
+    logComposer(replacedId
+      ? `toolbar seen -> replaced stale/torn-out bar ${replacedId} with new bar ${debugId}`
+      : `toolbar seen -> injected new bar ${debugId}`)
+  }
   toolbar.parentElement?.insertBefore(bar, toolbar.nextSibling)
 }
 
 function removeBar() {
-  document.querySelectorAll(`[${BAR_ATTR}]`).forEach(el => el.remove())
+  document.querySelectorAll(`[${BAR_ATTR}]`).forEach(el => {
+    if (isDev) {
+      const id = (el as HTMLElement).dataset.aminataDebugId
+      if (id) { logComposer(`bar removed (no toolbar present anymore) ${id}`); trackedBars?.delete(id) }
+    }
+    el.remove()
+  })
 }
 
 let observerActive = false
@@ -985,6 +1044,7 @@ function startObserver() {
   observerActive = true
 
   const obs = new MutationObserver(() => {
+    if (isDev) checkForDisconnectedBars()
     const toolbars = document.querySelectorAll('[data-testid="toolBar"]')
     if (toolbars.length) toolbars.forEach(injectBar)
     else removeBar()
