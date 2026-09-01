@@ -336,6 +336,41 @@ describe("composer focus is preserved", () => {
     button(strip, "Generate").dispatchEvent(ev)
     expect(ev.defaultPrevented).toBe(true)
   })
+
+  // The mousedown-preventDefault above only blocks the browser's own
+  // default action (focus/selection) — per spec it must NOT cancel the
+  // click that follows on mouseup. A real user click always fires
+  // mousedown -> mouseup -> click, in that order, on the same element; the
+  // existing "X click -> handler fires" tests elsewhere in this file only
+  // ever call element.click() directly, which synthesizes a bare click
+  // event and never actually exercises that mousedown handler at all. This
+  // reproduces the REAL sequence explicitly for one action of each kind
+  // (immediate action, toggle preset, dropdown trigger) so a regression
+  // where preventDefault somehow swallowed the click would be caught here
+  // even though it's invisible to every .click()-only test.
+  it("a real mousedown-then-click sequence still reaches the click handler for every kind of pill", () => {
+    const h = handlers()
+    const strip = buildActionStrip(IDLE, h)
+    container.appendChild(strip)
+
+    function realClick(el: HTMLElement) {
+      const down = new MouseEvent("mousedown", { bubbles: true, cancelable: true })
+      el.dispatchEvent(down)
+      el.dispatchEvent(new MouseEvent("mouseup", { bubbles: true, cancelable: true }))
+      el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }))
+      return down
+    }
+
+    const generateMousedown = realClick(button(strip, "Generate"))
+    expect(generateMousedown.defaultPrevented).toBe(true) // confirms this exercised the real guarded path
+    expect(h.onGenerate).toHaveBeenCalledTimes(1)
+
+    realClick(button(strip, "News"))
+    expect(h.onPreset).toHaveBeenCalledWith("news")
+
+    realClick(button(strip, "You"))
+    expect(button(strip, "You").getAttribute("aria-expanded")).toBe("true") // dropdown actually opened
+  })
 })
 
 describe("composer tooltips", () => {
