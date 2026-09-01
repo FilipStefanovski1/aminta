@@ -4,16 +4,9 @@ import { dispatchGenerate } from "~lib/backendGenerate"
 import {
   COMPOSER_BAR_ATTR,
   COMPOSER_BAR_VERSION,
-  DEFAULT_COMPOSER_LENGTH,
-  DEFAULT_COMPOSER_TONE,
   buildActionStrip,
   isAmintaBar,
   isCurrentBar,
-  presetInstruction,
-  resolveComposerLength,
-  resolveComposerTone,
-  type ComposerPresetId,
-  type ComposerStripState,
 } from "~lib/composerPresets"
 import { resolveAmintaInsertion, type ManagedRegion } from "~lib/composerRegion"
 import { effectiveApiKey, shouldUseIncludedAi } from "~lib/entitlements"
@@ -495,14 +488,6 @@ function setBarStatus(bar: HTMLElement, msg: string, isError = false) {
   }
 }
 
-// Per-composer strip state. Keyed on the bar element so two open composers
-// (e.g. the main box and a reply) keep independent selections.
-const stripState = new WeakMap<HTMLElement, ComposerStripState>()
-
-function getStripState(bar: HTMLElement): ComposerStripState {
-  return stripState.get(bar) ?? { preset: null, length: DEFAULT_COMPOSER_LENGTH, tone: DEFAULT_COMPOSER_TONE }
-}
-
 async function runGenerate(bar: HTMLElement, mode: "tweet" | "polish", prefill?: string) {
   const store = await getStore()
   if (!effectiveApiKey(store) && !shouldUseIncludedAi(store)) { setBarStatus(bar, "No API key. Open Aminta Settings", true); return }
@@ -529,8 +514,6 @@ async function runGenerate(bar: HTMLElement, mode: "tweet" | "polish", prefill?:
     input = prefill ?? composerText
   }
 
-  const state = getStripState(bar)
-
   setBarStatus(bar, "Thinking…")
   bar.querySelectorAll<HTMLButtonElement>("button").forEach(b => { b.disabled = true })
 
@@ -541,12 +524,14 @@ async function runGenerate(bar: HTMLElement, mode: "tweet" | "polish", prefill?:
       input: input || "Write a compelling tweet about my niche",
       voice: store.voice,
       styleProfile,
-      tone: resolveComposerTone(state.tone),
-      length: resolveComposerLength(state.length),
-      // Preset intent (News/Product) rides the existing templateInstruction
-      // seam — shape only; Voice/Instincts still win. Polish keeps its own
-      // framing, so no preset is applied there.
-      templateInstruction: mode === "polish" ? undefined : presetInstruction(state.preset),
+      // The composer bar no longer exposes You/Length pickers (removed —
+      // too many controls in a small injected strip). "direct"/"medium"
+      // are exactly what those pickers' own defaults ("you"/"auto") always
+      // resolved to, so this is unchanged behavior, not a new default.
+      // Tone/length ARE still real, adjustable Aminta features — just from
+      // the extension's own Create tab (GeneratorPanel.tsx) now, not here.
+      tone: "direct",
+      length: "medium",
     })
 
     const inserted = insertAmintaText(text, bar)
@@ -638,7 +623,6 @@ async function runMemeCaption(bar: HTMLElement, meme: MemeRecord): Promise<strin
   if (!store.voice) throw new Error("Train Aminta first")
 
   const replyTarget = getReplyTargetText(bar)
-  const state = getStripState(bar)
   const styleProfile = await getOrBuildStyleProfile(store)
 
   const captionInstruction = [
@@ -654,7 +638,10 @@ async function runMemeCaption(bar: HTMLElement, meme: MemeRecord): Promise<strin
     input: replyTarget || "Write a short, funny reply caption.",
     voice: store.voice,
     styleProfile,
-    tone: resolveComposerTone(state.tone),
+    // Same reasoning as runGenerate above — the composer bar no longer has
+    // a tone picker; "direct" is what its removed default ("you") always
+    // resolved to.
+    tone: "direct",
     length: "short",
     templateInstruction: captionInstruction,
   })
@@ -858,42 +845,7 @@ function openMemePopover(bar: HTMLElement) {
   closeMemeUI = close
 }
 
-// ─── DEV-ONLY composer lifecycle diagnostics ──────────────────────────────
-// jsdom unit tests (lib/composerPresets.test.ts) prove the action strip's
-// own click/dropdown wiring works in isolation, but they can't prove X's
-// own DOM churn doesn't tear our bar out from under it — e.g. if X
-// re-renders the toolbar's parent and our inserted bar gets removed along
-// with it, injectBar mints a brand-new `bar` element, which is a brand-new
-// WeakMap key for stripState, silently resetting News/Product/tone/length
-// selections. This block traces that real lifecycle on x.com; every line
-// is gated on isDev (true only for an unpacked/dev build — see isDev
-// above), so it is completely inert in the packaged production build.
-let barDebugSeq = 0
-const trackedBars: Map<string, HTMLElement> | null = isDev ? new Map() : null
-
-function nextBarDebugId(): string {
-  return `b${++barDebugSeq}`
-}
-
-function logComposer(...args: unknown[]) {
-  if (isDev) console.log("[Aminta composer]", ...args)
-}
-
-// Called at the top of every observer pass — catches a bar that was torn
-// out of the DOM by X's own re-render (not by removeBar/injectBar
-// themselves), which is exactly the "state silently reset" failure mode
-// under investigation.
-function checkForDisconnectedBars() {
-  if (!trackedBars) return
-  for (const [id, el] of trackedBars) {
-    if (!el.isConnected) {
-      logComposer(`bar disconnected (removed from DOM by something other than Aminta) ${id}`)
-      trackedBars.delete(id)
-    }
-  }
-}
-
-function buildBar(debugId: string): HTMLElement {
+function buildBar(): HTMLElement {
   const bar = document.createElement("div")
   bar.style.cssText = [
     "display:flex",
@@ -946,48 +898,23 @@ function buildBar(debugId: string): HTMLElement {
     // Without a cap, a long message (e.g. the connectivity-error string)
     // has no width to ellipsize against — flex-shrink:0 alone just lets it
     // claim however much space its full text needs, squeezing the action
-    // strip's own flex:1 box down to a sliver and making Generate/Polish/
-    // News look like they've been shoved out of view or overlapped. Capping
-    // the width here is what makes the existing text-overflow:ellipsis
-    // above actually do anything.
+    // strip's own flex:1 box down to a sliver and making Generate/Polish
+    // look like they've been shoved out of view. Capping the width here is
+    // what makes the existing text-overflow:ellipsis above actually do
+    // anything.
     "max-width:140px",
   ].join(";")
   status.textContent = "Aminta"
 
-  // Action strip (Generate / Polish / News / Product / You / Length, +Meme
-  // in reply composers). Fully re-rendered on each state change so active
-  // pills stay in sync; selecting a preset, tone, or length never triggers
-  // a generation, so this costs nothing. Meme is only offered at all when
-  // this bar is a reply composer (see isReplyComposer) — never on a
-  // top-level post.
-  const renderStrip = () => {
-    const state = getStripState(bar)
-    logComposer(`render strip ${debugId}`, state)
-    const current = bar.querySelector(".aminta-actions")
-    const next = buildActionStrip(state, {
-      onGenerate: () => { logComposer(`click Generate ${debugId}`); runGenerate(bar, "tweet") },
-      onPolish: () => { logComposer(`click Polish ${debugId}`); runGenerate(bar, "polish") },
-      onPreset: (preset: ComposerPresetId | null) => {
-        logComposer(`click preset=${preset} ${debugId}`)
-        stripState.set(bar, { ...getStripState(bar), preset })
-        renderStrip()
-      },
-      onLength: (length) => {
-        logComposer(`click length=${length} ${debugId}`)
-        stripState.set(bar, { ...getStripState(bar), length })
-        renderStrip()
-      },
-      onTone: (tone) => {
-        logComposer(`click tone=${tone} ${debugId}`)
-        stripState.set(bar, { ...getStripState(bar), tone })
-        renderStrip()
-      },
-      ...(isReplyComposer(bar) ? { onOpenMeme: () => { logComposer(`click Meme ${debugId}`); openMemePopover(bar) } } : {}),
-    })
-    if (current) current.replaceWith(next)
-    else bar.insertBefore(next, bar.firstChild)
-  }
-  renderStrip()
+  // Action strip: Generate, Polish, and Meme on reply composers only (see
+  // isReplyComposer) — built once, no re-render needed since none of these
+  // three carry any selectable/toggleable state.
+  const strip = buildActionStrip({
+    onGenerate: () => runGenerate(bar, "tweet"),
+    onPolish: () => runGenerate(bar, "polish"),
+    ...(isReplyComposer(bar) ? { onOpenMeme: () => openMemePopover(bar) } : {}),
+  })
+  bar.insertBefore(strip, bar.firstChild)
 
   bar.append(divider, keywords, status)
 
@@ -1001,40 +928,21 @@ function injectBar(toolbar: Element) {
   const next = toolbar.nextElementSibling as HTMLElement | null
 
   // Already carrying THIS build's bar — nothing to do.
-  if (isCurrentBar(next)) {
-    if (isDev) logComposer(`toolbar seen -> already current bar ${next?.dataset.aminataDebugId ?? "(no id)"}`)
-    return
-  }
+  if (isCurrentBar(next)) return
 
   // A bar from a previous build (extension reloaded without refreshing the
   // tab). It must be removed rather than treated as "already injected",
   // otherwise the old markup wins permanently and this build's bar can never
   // mount. See COMPOSER_BAR_VERSION.
-  const replacedId = isDev ? next?.dataset.aminataDebugId : undefined
   if (isAmintaBar(next)) next?.remove()
-  if (isDev && replacedId && trackedBars) trackedBars.delete(replacedId)
 
-  const debugId = isDev ? nextBarDebugId() : ""
-  const bar = buildBar(debugId)
+  const bar = buildBar()
   bar.setAttribute(BAR_ATTR, COMPOSER_BAR_VERSION)
-  if (isDev) {
-    bar.dataset.aminataDebugId = debugId
-    trackedBars?.set(debugId, bar)
-    logComposer(replacedId
-      ? `toolbar seen -> replaced stale/torn-out bar ${replacedId} with new bar ${debugId}`
-      : `toolbar seen -> injected new bar ${debugId}`)
-  }
   toolbar.parentElement?.insertBefore(bar, toolbar.nextSibling)
 }
 
 function removeBar() {
-  document.querySelectorAll(`[${BAR_ATTR}]`).forEach(el => {
-    if (isDev) {
-      const id = (el as HTMLElement).dataset.aminataDebugId
-      if (id) { logComposer(`bar removed (no toolbar present anymore) ${id}`); trackedBars?.delete(id) }
-    }
-    el.remove()
-  })
+  document.querySelectorAll(`[${BAR_ATTR}]`).forEach(el => el.remove())
 }
 
 let observerActive = false
@@ -1044,7 +952,6 @@ function startObserver() {
   observerActive = true
 
   const obs = new MutationObserver(() => {
-    if (isDev) checkForDisconnectedBars()
     const toolbars = document.querySelectorAll('[data-testid="toolBar"]')
     if (toolbars.length) toolbars.forEach(injectBar)
     else removeBar()

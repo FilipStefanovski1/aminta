@@ -1,12 +1,9 @@
 // @vitest-environment jsdom
 //
-// Everything in lib/composerPresets.test.ts proves the action strip's own
-// click/dropdown wiring works — but only ever calls buildActionStrip()
-// directly. It can never catch a bug where X's OWN DOM churn tears our
-// injected bar (and therefore its WeakMap-keyed composer state) out of the
-// document — a brand-new `bar` element from the next injectBar() pass would
-// be a brand-new WeakMap key, silently resetting News/Product/tone/length
-// selections while looking, to the user, like "the button did nothing."
+// lib/composerPresets.test.ts proves the action strip's own click wiring
+// works — but only ever calls buildActionStrip() directly. It can never
+// catch a bug where X's OWN DOM churn tears our injected bar out of the
+// document, leaving an orphaned/inert bar or duplicate bars behind.
 //
 // This drives the REAL injectBar()/buildBar()/removeBar()/startObserver()
 // from contents/twitter-bridge.ts against a synthetic X-shaped DOM — no
@@ -16,7 +13,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 vi.stubGlobal("chrome", {
   runtime: {
-    getManifest: () => ({}), // no update_url -> isDev === true, enabling the diagnostics under test
+    getManifest: () => ({}),
     onMessage: { addListener: () => {} },
     sendMessage: () => Promise.resolve(),
   },
@@ -40,11 +37,15 @@ function amintaBar(container: ParentNode): HTMLElement | null {
   return container.querySelector("[data-aminta-bar]")
 }
 
-function newsButton(bar: HTMLElement): HTMLButtonElement {
+function generateButton(bar: HTMLElement): HTMLButtonElement {
   const all = Array.from(bar.querySelectorAll("button"))
-  const btn = all.find((b) => b.textContent?.trim() === "News")
-  if (!btn) throw new Error("No News button in bar")
+  const btn = all.find((b) => b.textContent?.trim() === "Generate")
+  if (!btn) throw new Error("No Generate button in bar")
   return btn
+}
+
+function statusText(bar: HTMLElement): string {
+  return bar.querySelector(".aminta-status")?.textContent ?? ""
 }
 
 describe("real injected composer lifecycle on a synthetic X DOM", () => {
@@ -72,21 +73,21 @@ describe("real injected composer lifecycle on a synthetic X DOM", () => {
     expect(root.querySelectorAll("[data-aminta-bar]")).toHaveLength(1)
   })
 
-  it("B. clicking News toggles it active without X's DOM churning at all", () => {
+  it("B. only Generate and Polish are present — no News/Product/You/Length", () => {
     const bar = amintaBar(root)!
-    const news = newsButton(bar)
-    expect(news.getAttribute("style")).not.toContain(`color:#60a5fa`) // not yet active (accent applied only when active)
-    news.click()
-    const barAfter = amintaBar(root)! // strip re-renders in place; bar itself is unchanged
-    const newsAfter = newsButton(barAfter)
-    expect(newsAfter.style.color).toBe("rgb(96, 165, 250)") // ACCENT.news, now active
+    const labels = Array.from(bar.querySelectorAll(".aminta-actions button")).map((b) => b.textContent?.trim())
+    expect(labels).toEqual(["Generate", "Polish"])
   })
 
-  it("C. X replacing the toolbar's OWN element (a real re-render) still leaves exactly one functional Aminta bar after the next observer pass", async () => {
-    // Toggle News BEFORE the churn, so a state-reset regression is visible.
-    newsButton(amintaBar(root)!).click()
-    expect(newsButton(amintaBar(root)!).style.color).toBe("rgb(96, 165, 250)")
+  it("C. clicking Generate reaches the real generation path (status text changes) without X's DOM churning at all", async () => {
+    const bar = amintaBar(root)!
+    expect(statusText(bar)).toBe("Aminta")
+    generateButton(bar).click()
+    await flush()
+    expect(statusText(bar)).not.toBe("Aminta") // moved off the idle label — the click reached runGenerate
+  })
 
+  it("D. X replacing the toolbar's OWN element (a real re-render) still leaves exactly one functional Aminta bar after the next observer pass", async () => {
     const oldBar = amintaBar(root)!
     const oldBarId = oldBar.getAttribute("data-aminta-bar")
 
@@ -104,30 +105,18 @@ describe("real injected composer lifecycle on a synthetic X DOM", () => {
     expect(root.querySelectorAll("[data-aminta-bar]")).toHaveLength(1) // exactly one — no duplicates
     expect(rebuiltBar!.getAttribute("data-aminta-bar")).toBe(oldBarId) // same COMPOSER_BAR_VERSION, i.e. still "current"
 
-    // The important behavioral question: is the REBUILT bar's News button
-    // still clickable, and does its own fresh state track correctly? A
-    // fresh bar after a real X re-render is expected to start from a fresh
-    // (not carried-over) selection — the invariant under test is that it's
-    // still FUNCTIONAL, not stuck inert.
-    const news = newsButton(rebuiltBar!)
-    news.click()
-    expect(newsButton(amintaBar(root)!).style.color).toBe("rgb(96, 165, 250)")
+    // The rebuilt bar must still be genuinely functional, not a stale/inert
+    // clone — clicking Generate on it must still reach the real handler.
+    expect(statusText(rebuiltBar!)).toBe("Aminta")
+    generateButton(rebuiltBar!).click()
+    await flush()
+    expect(statusText(rebuiltBar!)).not.toBe("Aminta")
   })
 
-  it("D. removing the toolbar entirely removes the Aminta bar (no orphaned inert bar left behind)", async () => {
+  it("E. removing the toolbar entirely removes the Aminta bar (no orphaned inert bar left behind)", async () => {
     expect(amintaBar(root)).not.toBeNull()
     root.replaceChildren() // toolbar gone, nothing to attach to
     await flush()
     expect(amintaBar(document)).toBeNull()
-  })
-
-  it("E. the You dropdown stays open after the triggering click's event finishes propagating (outside-click doesn't self-close it)", () => {
-    const bar = amintaBar(root)!
-    const you = Array.from(bar.querySelectorAll("button")).find((b) => b.textContent?.includes("You"))!
-    // A real click bubbles to document (capture-phase outside-click
-    // listeners are attached with `true`) — dispatching with bubbles:true
-    // reproduces that instead of the isolated .click() jsdom shortcut.
-    you.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }))
-    expect(you.getAttribute("aria-expanded")).toBe("true")
   })
 })
