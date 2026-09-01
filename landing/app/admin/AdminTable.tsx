@@ -33,6 +33,26 @@ function withinRange(iso: string | null, range: RangeFilter): boolean {
 const rangeSelectClass = "bg-transparent border rounded px-1.5 py-1 text-xs text-muted"
 const rangeSelectStyle = { borderColor: "#2a2a2a" } as const
 
+// th/td both get this — the extra horizontal room is what separates the
+// columns; py-2 alone left everything crammed edge-to-edge.
+const CELL = "py-2 px-3"
+
+const PLAN_COLOR: Record<string, string> = {
+  pro: "#fbbf24",      // amber
+  lifetime: "#a78bfa", // violet
+  free: "#8e919a",     // neutral gray — not a "bad" state, just the default
+}
+
+function Badge({ label, color }: { label: string; color: string }) {
+  return (
+    <span
+      className="inline-block rounded px-2 py-0.5 text-[11px] font-medium"
+      style={{ background: `${color}1f`, color, border: `1px solid ${color}55` }}>
+      {label}
+    </span>
+  )
+}
+
 function RangeSelect({ value, onChange }: { value: RangeFilter; onChange: (v: RangeFilter) => void }) {
   return (
     <select value={value} onChange={(e) => onChange(e.target.value as RangeFilter)} className={rangeSelectClass} style={rangeSelectStyle}>
@@ -144,7 +164,7 @@ export default function AdminTable({ rows, adminId }: { rows: Row[]; adminId: st
   }
 
   const th = (key: SortKey, label: string) => (
-    <th className="pb-2 font-normal cursor-pointer select-none hover:text-white" onClick={() => toggleSort(key)}>
+    <th className={`${CELL} font-normal cursor-pointer select-none hover:text-white whitespace-nowrap`} onClick={() => toggleSort(key)}>
       {label}{sortArrow(key)}
     </th>
   )
@@ -206,13 +226,13 @@ export default function AdminTable({ rows, adminId }: { rows: Row[]; adminId: st
             <tr className="text-left text-muted text-xs">
               {th("email", "Email")}
               {th("plan", "Plan")}
-              <th className="pb-2 font-normal">Status</th>
+              <th className={`${CELL} font-normal whitespace-nowrap`}>Status</th>
               {th("lastSignInAt", "Last sign-in")}
               {th("lastSyncedAt", "Last synced")}
               {th("aiCalls7d", "AI calls (7d)")}
               {th("xp", "XP")}
               {th("createdAt", "Joined")}
-              <th className="pb-2 font-normal">Actions</th>
+              <th className={`${CELL} font-normal whitespace-nowrap`}>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -221,27 +241,26 @@ export default function AdminTable({ rows, adminId }: { rows: Row[]; adminId: st
               const busy = busyId === r.id
               return (
                 <tr key={r.id} style={{ borderTop: "1px solid #2a2a2a" }}>
-                  <td className="py-2">
+                  <td className={CELL}>
                     <a href={`/admin?user=${r.id}`} className="hover:underline">
                       {r.name
                         ? <><span style={{ color: "#74f7b5" }}>{r.name}</span><span className="text-white"> ({r.email})</span></>
                         : <span className="text-white">{r.email}</span>}
                     </a>
                   </td>
-                  <td className="py-2 text-muted">
-                    {r.plan}{r.giftActive && <span className="ml-1" style={{ color: "#74f7b5" }}>+gift</span>}
+                  <td className={CELL}>
+                    <Badge label={r.plan} color={PLAN_COLOR[r.plan] ?? "#8e919a"} />
+                    {r.giftActive && <span className="ml-1.5" style={{ color: "#74f7b5" }}>+gift</span>}
                   </td>
-                  <td className="py-2">
-                    {r.bannedUntil
-                      ? <span style={{ color: "#ff6a4d" }}>banned</span>
-                      : <span className="text-muted">active</span>}
+                  <td className={CELL}>
+                    <Badge label={r.bannedUntil ? "banned" : "active"} color={r.bannedUntil ? "#ff6a4d" : "#60a5fa"} />
                   </td>
-                  <td className="py-2 text-muted">{relativeTime(r.lastSignInAt)}</td>
-                  <td className="py-2 text-muted">{relativeTime(r.lastSyncedAt)}</td>
-                  <td className="py-2 text-muted">{r.aiCalls7d}</td>
-                  <td className="py-2 text-muted">{r.xp}</td>
-                  <td className="py-2 text-muted">{relativeTime(r.createdAt)}</td>
-                  <td className="py-2">
+                  <td className={`${CELL} text-muted whitespace-nowrap`}>{relativeTime(r.lastSignInAt)}</td>
+                  <td className={`${CELL} text-muted whitespace-nowrap`}>{relativeTime(r.lastSyncedAt)}</td>
+                  <td className={CELL} style={{ color: r.aiCalls7d > 0 ? "#60a5fa" : "#8e919a" }}>{r.aiCalls7d}</td>
+                  <td className={CELL} style={{ color: r.xp > 0 ? "#74f7b5" : "#8e919a" }}>{r.xp}</td>
+                  <td className={`${CELL} text-muted whitespace-nowrap`}>{relativeTime(r.createdAt)}</td>
+                  <td className={CELL}>
                     <div className="flex flex-wrap gap-1.5">
                       {r.plan !== "free" && (
                         <button disabled={busy} onClick={() => callAction(r.id, { action: "downgrade_to_free" })}
