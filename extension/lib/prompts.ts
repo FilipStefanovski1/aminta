@@ -1,5 +1,6 @@
 import type { ChatMessage } from "~lib/openrouter"
 import type { StyleProfile, VoiceProfile } from "~lib/storage"
+import { classifyDraftIntent, preservationLevelFor, type PreservationLevel } from "~lib/draftIntent"
 
 export type Platform     = "x"
 export type Mode         = "tweet" | "reply" | "polish"
@@ -238,35 +239,58 @@ function systemX(mode: Mode, voice: VoiceProfile, styleProfile: StyleProfile | n
     "RULES:",
     "- Write like a real person posting on X, not marketing copy — no corporate tone, no forced enthusiasm, no hedge-everything disclaimers.",
     "- Avoid worn-out openers (\"hot take\", \"unpopular opinion\", \"here's the thing\", \"let that sink in\", \"this changes everything\") and worn-out closers (\"thoughts?\", \"agree?\", generic motivational lines) — use them only if they'd genuinely fit, which is rare.",
+    "- Not every post needs a hook + lesson + call-to-action. Many good posts just make a point and stop. Only add a closing 'lesson'/takeaway line if WRITING STYLE clearly shows this person naturally writes that way — otherwise let the post end when the thought is finished.",
     "- Follow the PUNCTUATION and LINE BREAKS & SPACING instructions in WRITING STYLE above exactly. Never run two separate thoughts together with no separator, and never collapse into a compressed lowercase fragment style unless WRITING STYLE clearly says this person's own posts actually look like that — don't infer that from brevity or tone alone.",
     "- Don't default to em dashes — only if WRITING STYLE's punctuation notes show the user's own writing actually uses them.",
     "- No hashtags unless WRITING STYLE's Hashtag usage line clearly shows this person uses them; no emojis unless WRITING STYLE's Emoji usage line shows the same. Never invent either from the topic alone.",
     '- Never say "as an AI". Sound human.',
+    NEVER_INVENT_PERSONAL_EXPERIENCE,
     "- Return ONLY the finished text — never your thinking, notes, or process. No surrounding quotes, no labels like \"Tweet:\" or \"Reply:\" or \"Here's a polished version:\", no preamble, no explanation.",
   ]
     .filter(Boolean)
     .join("\n")
 }
 
-// Deliberately the LAST thing the model reads before generating — LLMs
-// weight end-of-prompt instructions more heavily than mid-prompt ones, and
-// this used to sit buried inside the RULES list (still is, for belt-and-
-// suspenders), with TONE DIRECTION/LENGTH TARGET appended after it. That
-// meant the model's actual last read was tone/length guidance, not the
-// anti-leakage instruction — one contributing factor (alongside no
-// thinking-level cap and no structured output) in style-profile prose
-// occasionally surfacing as the "generated post" instead of real output.
-// A sparse topic ("solana summit serbia") was collapsing into a near-
-// verbatim paraphrase instead of a developed post — the model was letting
-// the INPUT's brevity dictate the OUTPUT's length/depth, overriding the
-// LENGTH TARGET below it. This is the active countermeasure: the topic is
-// explicitly reframed as a premise to develop, not a sentence to rewrite,
-// with an explicit boundary against inventing facts (the failure mode the
-// opposite instruction — "add more" — would otherwise invite). Tweet mode
-// only: replies/polish already have real source content to work from, not
-// a bare topic that needs developing.
-const PREMISE_DEVELOPMENT_RULE =
-  "The topic above is a SEED, not a complete draft — a short topic (a few words) is not an instruction to write a short post, and it is never a reason to refuse or ask for more detail. Infer a safe, subjective angle: opinion, anticipation, personal perspective, general observation, a builder's/founder's angle, a question, or a reflection. Develop that angle into a complete, substantive thought that actually reaches the LENGTH TARGET below — while still following the WRITING STYLE punctuation/formatting/cadence instructions above, not generic AI paragraph structure. Do NOT invent statistics, event details not provided, speaker names, dates, attendance numbers, announcements, or any claim presented as factual knowledge the topic didn't provide. If factual specificity isn't known, stay subjective/general — that is a feature of a good response here, not a limitation."
+// Universal, level-independent — a hard rule, not a preservation-level
+// tendency, so it's in RULES at every level. SOURCE OF TRUTH — mirrored at
+// landing/lib/ai/prompts.ts identically.
+const NEVER_INVENT_PERSONAL_EXPERIENCE =
+  "Never invent personal experience: who the user met, how they felt, what conversations they had, what surprised them, what they personally learned or enjoyed. Personal experience can ONLY come from the user's own input above."
+
+// Draft-preservation levels — how much freedom Aminta has to construct the
+// post vs. how much it must preserve the user's own words/order/claims,
+// scaled to how much the user actually wrote (see lib/draftIntent.ts).
+// SOURCE OF TRUTH — mirrored at landing/lib/ai/prompts.ts identically
+// (that copy also mentions VERIFIED CONTEXT in its "low" branch — Included
+// AI's server-side research; BYOK generation here has no such context, so
+// that sentence is simply absent from this copy's "low" branch instead of
+// always being irrelevant dead text).
+//
+// Replaces the old single fixed PREMISE_DEVELOPMENT_RULE, which treated a
+// bare topic and an already-substantial draft identically — deliberately
+// the LAST thing the model reads before generating (LLMs weight
+// end-of-prompt instructions more heavily), which is why a sparse topic
+// ("solana summit serbia") used to collapse into a near-verbatim paraphrase
+// instead of a developed post: the model let the INPUT's brevity dictate
+// the OUTPUT's length/depth, overriding the LENGTH TARGET below it. That
+// original fix (the topic reframed as a premise to develop, with an
+// explicit boundary against inventing facts) is preserved verbatim in the
+// "low" branch below. Tweet mode only: replies/polish already have real
+// source content to work from, not a bare topic that needs developing.
+const PRESERVATION_INSTRUCTIONS: Record<PreservationLevel, string> = {
+  low:
+    "The topic above is a SEED, not a complete draft — a short topic (a few words) is not an instruction to write a short post, and it is never a reason to refuse or ask for more detail. Infer a safe, subjective angle: opinion, anticipation, personal perspective, general observation, a builder's/founder's angle, a question, or a reflection. Develop that angle into a complete, substantive thought that actually reaches the LENGTH TARGET below — while still following the WRITING STYLE punctuation/formatting/cadence instructions above, not generic AI paragraph structure. Do NOT invent statistics, event details not provided, speaker names, dates, attendance numbers, announcements, or any claim presented as factual knowledge the topic didn't provide. If factual specificity isn't known, stay subjective/general — that is a feature of a good response here, not a limitation.",
+  medium:
+    "The user gave a rough, short thought, not a finished draft — but it already contains their real opinion, claim, example, or emotional direction. PRESERVE that content: their stated reaction, the specific thing they mentioned, their point of view. Your job is to improve structure and expression around it, not replace it with a different, more polished idea. Do not invent new opinions, claims, or experiences beyond what they gave you.",
+  high:
+    "The user already wrote a real, multi-sentence draft. Retain most of their ideas and their order — this is a selective rewrite, not a from-scratch composition. Improve clarity, structure, and voice-fit where it genuinely helps; leave sections that already work alone. Do not introduce new claims, opinions, or experiences the user didn't write, and do not restructure the post into a different shape than what they gave you unless it's clearly broken.",
+  max:
+    "The user's draft already reads like a finished or near-finished post. Make minimal intervention — fix what's genuinely broken (grammar, an awkward phrase, unclear wording), and leave everything else, including their personality and any rough edges that are clearly part of their voice, untouched. Do not replace their voice with polished, generic phrasing. This is closer to a light copyedit than a rewrite.",
+}
+
+function preservationInstruction(level: PreservationLevel): string {
+  return PRESERVATION_INSTRUCTIONS[level]
+}
 
 const FINAL_OUTPUT_INSTRUCTION =
   "\n\nFINAL INSTRUCTION — this overrides everything above if there's ever a conflict: return only the finished post. Do not return writing instructions, tone descriptions, analysis, labels, quotation marks, markdown, or commentary."
@@ -556,7 +580,7 @@ export function buildMessages(
   // every other polish call — normal Polish mode is completely unchanged.
   polishRevision?: string
 ): ChatMessage[] {
-  const premiseNote = mode === "tweet" ? `\n${PREMISE_DEVELOPMENT_RULE}` : ""
+  const premiseNote = mode === "tweet" ? `\n${preservationInstruction(preservationLevelFor(classifyDraftIntent(input)))}` : ""
   const toneNote = `\nTONE DIRECTION: ${TONE_GUIDE[tone]}${premiseNote}\n${resolveLengthGuide(mode, length, styleProfile)}`
   const trimmed = input.trim()
 

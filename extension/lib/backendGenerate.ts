@@ -9,6 +9,7 @@ import { getAuthSession, refreshAuthSession } from "~lib/auth"
 import { getDeviceId } from "~lib/deviceId"
 import { effectiveApiKey, shouldUseIncludedAi } from "~lib/entitlements"
 import { generate as runAI, generateFromImage, type GenerateOptions } from "~lib/ai"
+import { detectSlop, withAntiSlopCorrection } from "~lib/antiSlop"
 import { classifyFetchError } from "~lib/generationErrors"
 import { isPathologicallyShort, withLengthCorrection } from "~lib/lengthGuard"
 import { buildMessages, buildThreadMessages, enforcePostCount, parseThreadResponse, type Mode, type OutputLength, type ThreadPostCount, type Tone, type ThreadOption } from "~lib/prompts"
@@ -305,14 +306,32 @@ export async function dispatchGenerate(
   // attempt here. Never retried more than once, and the ORIGINAL result is
   // kept if the correction attempt is somehow still pathological, rather
   // than looping.
+  let result = text
   if (args.generationMode !== "polish" && isPathologicallyShort(text, args.generationMode, args.length)) {
     const corrected = await runByokGenerate(
       store,
       { ...args, templateInstruction: withLengthCorrection(args.templateInstruction, args.length) },
       onRetry
     )
-    if (!isPathologicallyShort(corrected, args.generationMode, args.length)) return corrected
+    if (!isPathologicallyShort(corrected, args.generationMode, args.length)) result = corrected
   }
 
-  return text
+  // Anti-slop — tweet mode only, mirroring Included AI's scope in
+  // app/api/generate/route.ts (see lib/antiSlop.ts). Same "free to attempt,
+  // never loops" reasoning as the length correction above: at most one more
+  // call, and the best-available text is kept either way (never blocks on
+  // the corrected attempt still being flagged).
+  if (args.generationMode === "tweet") {
+    const slopCheck = detectSlop(result, args.styleProfile)
+    if (slopCheck.flagged) {
+      const corrected = await runByokGenerate(
+        store,
+        { ...args, templateInstruction: withAntiSlopCorrection(args.templateInstruction, slopCheck.reasons) },
+        onRetry
+      )
+      if (!detectSlop(corrected, args.styleProfile).flagged) result = corrected
+    }
+  }
+
+  return result
 }

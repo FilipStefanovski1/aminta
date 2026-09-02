@@ -511,6 +511,85 @@ describe("dispatchGenerate", () => {
       expect(mockRunAI).not.toHaveBeenCalled()
     })
   })
+
+  describe("H/I. anti-slop corrective retry (BYOK only, tweet mode only)", () => {
+    const byokStore = { ...baseStore, apiKey: "AIzaSomeKey", plan: "pro", subscriptionStatus: "active", aiIncluded: false } as AmintaStore
+
+    it("H. generic-slop text triggers exactly one corrective retry, and clean corrected text wins", async () => {
+      mockRunAI.mockReset()
+        .mockResolvedValueOnce("The energy was unmatched at this event and honestly the future is bright for builders here.")
+        .mockResolvedValueOnce("met a few sharp builders at the event, one of them is doing something genuinely interesting with rollups")
+
+      const text = await dispatchGenerate(byokStore, {
+        generationMode: "tweet", input: "the event", voice: {} as any, styleProfile: null, tone: "direct", length: "medium",
+      })
+
+      expect(mockRunAI).toHaveBeenCalledTimes(2)
+      expect(text).toBe("met a few sharp builders at the event, one of them is doing something genuinely interesting with rollups")
+    })
+
+    it("the retry's prompt carries the flagged reasons, appended to any existing templateInstruction", async () => {
+      mockRunAI.mockReset()
+        .mockResolvedValueOnce("The energy was unmatched at this event and honestly the future is bright for builders here.")
+        .mockResolvedValueOnce("a clean, specific take on the event with real detail in it")
+
+      await dispatchGenerate(byokStore, {
+        generationMode: "tweet", input: "the event", voice: {} as any, styleProfile: null, tone: "direct", length: "medium",
+        templateInstruction: "Write it as a product post.",
+      })
+
+      const retryMessages = mockRunAI.mock.calls[1][2] as { role: string; content: string }[]
+      const system = retryMessages.find((m) => m.role === "system")!.content
+      expect(system).toContain("Write it as a product post.")
+      expect(system).toContain("generic event-energy praise")
+    })
+
+    it("I. clean, human-like text never triggers a retry at all", async () => {
+      mockRunAI.mockReset().mockResolvedValue("met a few sharp builders at the event, one of them is doing something genuinely interesting with rollups")
+      await dispatchGenerate(byokStore, {
+        generationMode: "tweet", input: "the event", voice: {} as any, styleProfile: null, tone: "direct", length: "medium",
+      })
+      expect(mockRunAI).toHaveBeenCalledTimes(1)
+    })
+
+    it("if the corrective retry is STILL flagged, the original result is kept rather than looping again", async () => {
+      mockRunAI.mockReset()
+        .mockResolvedValueOnce("The energy was unmatched at this event and honestly the future is bright for builders here.")
+        .mockResolvedValueOnce("still incredible experience honestly, the future is bright for this whole space and community.")
+
+      const text = await dispatchGenerate(byokStore, {
+        generationMode: "tweet", input: "the event", voice: {} as any, styleProfile: null, tone: "direct", length: "medium",
+      })
+
+      expect(mockRunAI).toHaveBeenCalledTimes(2) // never a third attempt
+      expect(text).toBe("The energy was unmatched at this event and honestly the future is bright for builders here.")
+    })
+
+    it("never applies to reply or polish modes", async () => {
+      mockRunAI.mockReset().mockResolvedValue("The energy was unmatched, honestly the future is bright.")
+      await dispatchGenerate(byokStore, {
+        generationMode: "reply", input: "someone's post", voice: {} as any, styleProfile: null, tone: "direct", length: "medium",
+      })
+      await dispatchGenerate(byokStore, {
+        generationMode: "polish", input: "a draft", voice: {} as any, styleProfile: null, tone: "direct", length: "medium",
+      })
+      expect(mockRunAI).toHaveBeenCalledTimes(2) // one call each, no anti-slop retry for either
+    })
+
+    it("Included AI never triggers a client-side anti-slop retry — that pass runs server-side instead", async () => {
+      const includedStore = { ...baseStore, apiKey: "", plan: "pro", subscriptionStatus: "active", aiIncluded: true } as AmintaStore
+      mockGetAuthSession.mockResolvedValue(SESSION)
+      const fetchMock = vi.mocked(fetch)
+      fetchMock.mockResolvedValue(jsonResponse(200, { text: "The energy was unmatched, honestly the future is bright." }))
+
+      await dispatchGenerate(includedStore, {
+        generationMode: "tweet", input: "the event", voice: {} as any, styleProfile: null, tone: "direct", length: "medium",
+      })
+
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      expect(mockRunAI).not.toHaveBeenCalled()
+    })
+  })
 })
 
 // Regression coverage for the live-QA failure: "Couldn't generate distinct

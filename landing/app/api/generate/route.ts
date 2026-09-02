@@ -12,7 +12,9 @@ import { NextResponse, type NextRequest } from "next/server"
 import { aiIncluded } from "@/lib/entitlements"
 import { isIncludedAiAvailable } from "@/lib/ai/config"
 import { callGemini } from "@/lib/ai/gemini"
-import { buildMessages, buildStyleProfileMessages, buildThreadMessages, withImages, type Mode, type OutputLength, type ThreadPostCount, type Tone, type VoiceProfile, type StyleProfile, type StyleCorpusEntry } from "@/lib/ai/prompts"
+import { buildAntiSlopRewriteMessages, buildMessages, buildStyleProfileMessages, buildThreadMessages, withImages, type Mode, type OutputLength, type ThreadPostCount, type Tone, type VoiceProfile, type StyleProfile, type StyleCorpusEntry } from "@/lib/ai/prompts"
+import { detectSlop } from "@/lib/ai/antiSlop"
+import { maybeGetEntityContext } from "@/lib/ai/contextEnrichment"
 import { checkAndIncrementRateLimits, claimConcurrencySlot, clearInflight } from "@/lib/ai/rateLimit"
 import { loadUserEntitlement, resolveLimits, claimRequestId, completeUsageLog } from "@/lib/ai/quota"
 import { reserveCredits, refundCredits } from "@/lib/ai/creditService"
@@ -279,8 +281,18 @@ export async function POST(request: NextRequest) {
   // 9. PROVIDER CALL — model/provider chosen entirely server-side
   // (lib/ai/config.ts's GEMINI_INCLUDED_MODEL); the client never supplies
   // or influences which model runs here.
+  //
+  // Context enrichment scoped to genuine user-initiated "tweet" generations
+  // only (never onboarding_demo, reply, polish, thread, style_profile) —
+  // see lib/ai/contextEnrichment.ts's header and prompts.ts's PRESERVATION_
+  // INSTRUCTIONS. maybeGetEntityContext() never throws: gated behind
+  // CONTEXT_RESEARCH_ENABLED and a lightweight entity heuristic, and any
+  // failure (network, timeout, malformed response) degrades to null so a
+  // research problem can never make Generate itself fail.
   const startedAt = Date.now()
   try {
+    const entityContext = generationMode === "tweet" ? await maybeGetEntityContext(body.input!) : null
+
     const prepStartedAt = Date.now()
     const messages = isStyleProfile
       ? buildStyleProfileMessages(body.corpus!)
@@ -296,7 +308,8 @@ export async function POST(request: NextRequest) {
               body.length ?? "medium",
               body.templateInstruction,
               !!body.hasImages,
-              body.polishRevision
+              body.polishRevision,
+              entityContext
             ),
             images
           )
@@ -325,19 +338,51 @@ export async function POST(request: NextRequest) {
     // style_profile/thread return raw JSON for client-side parsing —
     // cleanup (label/quote stripping, punctuation normalization) is only
     // valid for actual post/reply/polish/template text.
-    const outputText = (isStyleProfile || isThread) ? result.text : cleanGenerationOutput(result.text)
-    const outputChars = outputText.length
+    let outputText = (isStyleProfile || isThread) ? result.text : cleanGenerationOutput(result.text)
     const inputChars = isStyleProfile ? 200 : (body.input?.length ?? 0)
     // Model-aware provider cost (lib/ai/pricing.ts). This is internal dollar
     // accounting for the spend caps and the audit log ONLY — it never
     // influences how many credits the user was charged.
-    const { costUsd: cost } = computeProviderCostUsd({
+    let cost = computeProviderCostUsd({
       model: result.model,
       inputTokens: result.inputTokens,
       outputTokens: result.outputTokens,
       inputChars,
-      outputChars,
-    })
+      outputChars: outputText.length,
+    }).costUsd
+    let rewriteApplied = false
+
+    // Anti-slop pass — ONE bounded corrective rewrite, tweet mode only (see
+    // lib/ai/antiSlop.ts's file header for what it looks for). Reuses the
+    // SAME already-reserved credit/requestId from step 8 above — this is
+    // the second of at most two provider calls for one user action, never a
+    // second charge (see section 16 of the spec this implements). A
+    // rewrite-call failure never fails the whole request: the original
+    // (unflagged-as-fatal) first draft is kept.
+    if (generationMode === "tweet") {
+      const slopCheck = detectSlop(outputText, body.styleProfile ?? null)
+      if (slopCheck.flagged) {
+        try {
+          const rewriteMessages = buildAntiSlopRewriteMessages(messages, outputText, slopCheck.reasons)
+          const rewriteResult = await callGemini(rewriteMessages, { structuredText: true, generationType: generationMode })
+          outputText = cleanGenerationOutput(rewriteResult.text)
+          cost += computeProviderCostUsd({
+            model: rewriteResult.model,
+            inputTokens: rewriteResult.inputTokens,
+            outputTokens: rewriteResult.outputTokens,
+            inputChars: outputText.length,
+            outputChars: outputText.length,
+          }).costUsd
+          rewriteApplied = true
+          console.log("[Included AI] anti-slop rewrite applied", { reasons: slopCheck.reasons })
+        } catch (e) {
+          console.warn("[Included AI] anti-slop rewrite failed — keeping the original draft", {
+            reason: e instanceof Error ? e.message : String(e),
+          })
+        }
+      }
+    }
+    const outputChars = outputText.length
 
     // Latency instrumentation — timing/model/mode only, never the prompt,
     // the response text, or any credential.
@@ -348,6 +393,8 @@ export async function POST(request: NextRequest) {
       apiMs: result.apiMs,
       parseMs: result.parseMs,
       totalMs: latencyMs,
+      hadEntityContext: !!entityContext,
+      rewriteApplied,
     })
 
     // 10. USAGE LOG — real token counts when the provider returned them,

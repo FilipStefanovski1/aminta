@@ -13,6 +13,9 @@
 // has no security implications, and doesn't need to be duplicated here. This
 // file only ever returns a ChatMessage[] for the provider call.
 
+import { classifyDraftIntent, preservationLevelFor, type PreservationLevel } from "./draftIntent"
+import type { EntityContext } from "./contextEnrichment"
+
 export type ContentPart =
   | { type: "text"; text: string }
   | { type: "image_url"; image_url: { url: string; detail?: "low" | "high" | "auto" } }
@@ -285,7 +288,7 @@ function templateBlock(templateInstruction?: string): string {
   return `TEMPLATE STRUCTURE (follow this structure/instruction — the Writing Style below still governs tone/voice, this only governs the shape/workflow):\n${templateInstruction.trim()}`
 }
 
-function voiceBlock(voice: VoiceProfile, styleProfile: StyleProfile | null, templateInstruction?: string): string {
+function voiceBlock(voice: VoiceProfile, styleProfile: StyleProfile | null, templateInstruction?: string, entityContext?: EntityContext | null): string {
   const inspiration =
     voice.voiceInspiration && voice.voiceInspiration !== "nobody"
       ? `INSPIRED BY: ${voice.voiceInspiration}`
@@ -302,6 +305,7 @@ function voiceBlock(voice: VoiceProfile, styleProfile: StyleProfile | null, temp
     STYLE_PRIORITY,
     templateBlock(templateInstruction),
     `CONTEXT (use only if relevant to the current request):\n${context}`,
+    buildContextBlock(entityContext ?? null),
     `TONE: ${voice.tone || "natural, human"}`,
     styleProfileBlock(styleProfile),
     rules,
@@ -310,19 +314,21 @@ function voiceBlock(voice: VoiceProfile, styleProfile: StyleProfile | null, temp
     .join("\n")
 }
 
-function systemX(mode: Mode, voice: VoiceProfile, styleProfile: StyleProfile | null, templateInstruction?: string): string {
+function systemX(mode: Mode, voice: VoiceProfile, styleProfile: StyleProfile | null, templateInstruction?: string, entityContext?: EntityContext | null): string {
   const planning = mode === "tweet" ? tweetPlanning(pickAngles()) : PLANNING[mode]
   return [
     "You write posts for X (Twitter) as a specific person. Match their voice precisely.",
-    voiceBlock(voice, styleProfile, templateInstruction),
+    voiceBlock(voice, styleProfile, templateInstruction, entityContext),
     planning,
     "RULES:",
     "- Write like a real person posting on X, not marketing copy — no corporate tone, no forced enthusiasm, no hedge-everything disclaimers.",
     "- Avoid worn-out openers (\"hot take\", \"unpopular opinion\", \"here's the thing\", \"let that sink in\", \"this changes everything\") and worn-out closers (\"thoughts?\", \"agree?\", generic motivational lines) — use them only if they'd genuinely fit, which is rare.",
+    "- Not every post needs a hook + lesson + call-to-action. Many good posts just make a point and stop. Only add a closing 'lesson'/takeaway line if WRITING STYLE clearly shows this person naturally writes that way — otherwise let the post end when the thought is finished.",
     "- Follow the PUNCTUATION and LINE BREAKS & SPACING instructions in WRITING STYLE above exactly. Never run two separate thoughts together with no separator, and never collapse into a compressed lowercase fragment style unless WRITING STYLE clearly says this person's own posts actually look like that — don't infer that from brevity or tone alone.",
     "- Don't default to em dashes — only if WRITING STYLE's punctuation notes show the user's own writing actually uses them.",
     "- No hashtags unless WRITING STYLE's Hashtag usage line clearly shows this person uses them; no emojis unless WRITING STYLE's Emoji usage line shows the same. Never invent either from the topic alone.",
     '- Never say "as an AI". Sound human.',
+    NEVER_INVENT_PERSONAL_EXPERIENCE,
     "- Return ONLY the finished text — never your thinking, notes, or process. No surrounding quotes, no labels like \"Tweet:\" or \"Reply:\" or \"Here's a polished version:\", no preamble, no explanation.",
   ]
     .filter(Boolean)
@@ -335,12 +341,60 @@ function systemX(mode: Mode, voice: VoiceProfile, styleProfile: StyleProfile | n
 const FINAL_OUTPUT_INSTRUCTION =
   "\n\nFINAL INSTRUCTION — this overrides everything above if there's ever a conflict: return only the finished post. Do not return writing instructions, tone descriptions, analysis, labels, quotation marks, markdown, or commentary."
 
-// SOURCE OF TRUTH: extension/lib/prompts.ts's identical constant — see
-// there for the full rationale (a sparse topic was collapsing into a
-// near-verbatim paraphrase instead of a developed post, overriding the
-// LENGTH TARGET below it).
-const PREMISE_DEVELOPMENT_RULE =
-  "The topic above is a SEED, not a complete draft — a short topic (a few words) is not an instruction to write a short post, and it is never a reason to refuse or ask for more detail. Infer a safe, subjective angle: opinion, anticipation, personal perspective, general observation, a builder's/founder's angle, a question, or a reflection. Develop that angle into a complete, substantive thought that actually reaches the LENGTH TARGET below — while still following the WRITING STYLE punctuation/formatting/cadence instructions above, not generic AI paragraph structure. Do NOT invent statistics, event details not provided, speaker names, dates, attendance numbers, announcements, or any claim presented as factual knowledge the topic didn't provide. If factual specificity isn't known, stay subjective/general — that is a feature of a good response here, not a limitation."
+// Universal, level-independent — research/context can only ever supply
+// verifiable PUBLIC facts (see buildContextBlock below); it can never stand
+// in for the user's own personal experience. This is a hard rule, not a
+// preservation-level tendency, so it's included in RULES at every level.
+// SOURCE OF TRUTH: extension/lib/prompts.ts's identical constant.
+const NEVER_INVENT_PERSONAL_EXPERIENCE =
+  "Never invent personal experience: who the user met, how they felt, what conversations they had, what surprised them, what they personally learned or enjoyed. Personal experience can ONLY come from the user's own input above — verified context (if present) may only ever supply objective public facts (what/when/where/who publicly), never fill in what the user themselves thought or did."
+
+// Draft-preservation levels — how much freedom Aminta has to construct the
+// post vs. how much it must preserve the user's own words/order/claims,
+// scaled to how much the user actually wrote (see lib/ai/draftIntent.ts).
+// SOURCE OF TRUTH: extension/lib/prompts.ts's identical function — replaces
+// the old single fixed PREMISE_DEVELOPMENT_RULE, which treated a bare topic
+// and an already-substantial draft identically (a sparse topic used to
+// collapse into a near-verbatim paraphrase instead of a developed post,
+// overriding the LENGTH TARGET below it — the fix for THAT failure mode is
+// preserved verbatim in the "low" branch below).
+const PRESERVATION_INSTRUCTIONS: Record<PreservationLevel, string> = {
+  low:
+    "The topic above is a SEED, not a complete draft — a short topic (a few words) is not an instruction to write a short post, and it is never a reason to refuse or ask for more detail. Infer a safe, subjective angle: opinion, anticipation, personal perspective, general observation, a builder's/founder's angle, a question, or a reflection. Develop that angle into a complete, substantive thought that actually reaches the LENGTH TARGET below — while still following the WRITING STYLE punctuation/formatting/cadence instructions above, not generic AI paragraph structure. If VERIFIED CONTEXT is present below, you may use it for specificity (the correct name/date/location), but it stays supporting, not the center of the post. Do NOT invent statistics, event details, speaker names, dates, attendance numbers, or announcements beyond what the topic or VERIFIED CONTEXT actually gave you. If factual specificity isn't known, stay subjective/general — that is a feature of a good response here, not a limitation.",
+  medium:
+    "The user gave a rough, short thought, not a finished draft — but it already contains their real opinion, claim, example, or emotional direction. PRESERVE that content: their stated reaction, the specific thing they mentioned, their point of view. Your job is to improve structure and expression around it, not replace it with a different, more polished idea. If VERIFIED CONTEXT is present below, you may add the correct specific name/date/location where it fits naturally, but never let it crowd out or overwrite what the user actually said. Do not invent new opinions, claims, or experiences beyond what they gave you.",
+  high:
+    "The user already wrote a real, multi-sentence draft. Retain most of their ideas and their order — this is a selective rewrite, not a from-scratch composition. Improve clarity, structure, and voice-fit where it genuinely helps; leave sections that already work alone. Do not introduce new claims, opinions, or experiences the user didn't write, and do not restructure the post into a different shape than what they gave you unless it's clearly broken.",
+  max:
+    "The user's draft already reads like a finished or near-finished post. Make minimal intervention — fix what's genuinely broken (grammar, an awkward phrase, unclear wording), and leave everything else, including their personality and any rough edges that are clearly part of their voice, untouched. Do not replace their voice with polished, generic phrasing. This is closer to a light copyedit than a rewrite.",
+}
+
+function preservationInstruction(level: PreservationLevel): string {
+  return PRESERVATION_INSTRUCTIONS[level]
+}
+
+// ─── Context enrichment — VERIFIED CONTEXT block ───────────────────────────
+// Deliberately its own labeled block, separate from CONTEXT PRIORITY/STYLE
+// PRIORITY above and from the user's own draft — see the product spec's
+// "three concepts" split (user intent / verified context / voice). Absent
+// entirely when there's no context (the common case — most generations
+// never research anything), so this never adds prompt weight for nothing.
+function buildContextBlock(context: EntityContext | null): string {
+  if (!context) return ""
+  const lines = [
+    context.entityName && `Name: ${context.entityName}`,
+    context.entityType && `Type: ${context.entityType}`,
+    context.dates.length > 0 && `Dates: ${context.dates.join(", ")}`,
+    context.people.length > 0 && `People: ${context.people.join(", ")}`,
+    context.notableTopics.length > 0 && `Notable topics: ${context.notableTopics.join(", ")}`,
+    ...context.verifiedFacts.map((f) => `- ${f}`),
+  ].filter(Boolean)
+  if (lines.length === 0) return ""
+  return [
+    "VERIFIED CONTEXT (public facts only — supporting detail, never the center of the post; see the personal-experience rule below):",
+    ...lines,
+  ].join("\n")
+}
 
 // ─── Thread Creator — SOURCE OF TRUTH: extension/lib/prompts.ts's
 // buildThreadMessages/parseThreadResponse (identical duplicate, same
@@ -441,13 +495,19 @@ export function buildMessages(
   // Polish mode only — Quick Rewrite actions (extension's OutputCard
   // Shorter/Sharper/More casual). See extension/lib/prompts.ts's matching
   // buildMessages for the full comment; kept identical here.
-  polishRevision?: string
+  polishRevision?: string,
+  // Tweet mode only — VERIFIED CONTEXT from lib/ai/contextEnrichment.ts.
+  // Not part of extension/lib/prompts.ts's identical signature: research
+  // is server-only (see contextEnrichment.ts's header), so BYOK generation
+  // (which calls the extension's copy of this function directly, never
+  // this one) never has this param at all.
+  entityContext?: EntityContext | null
 ): ChatMessage[] {
-  const premiseNote = mode === "tweet" ? `\n${PREMISE_DEVELOPMENT_RULE}` : ""
+  const premiseNote = mode === "tweet" ? `\n${preservationInstruction(preservationLevelFor(classifyDraftIntent(input)))}` : ""
   const toneNote = `\nTONE DIRECTION: ${TONE_GUIDE[tone]}${premiseNote}\n${resolveLengthGuide(mode, length, styleProfile)}`
   const trimmed = input.trim()
 
-  const system = systemX(mode, voice, styleProfile, templateInstruction) + toneNote + FINAL_OUTPUT_INSTRUCTION
+  const system = systemX(mode, voice, styleProfile, templateInstruction, mode === "tweet" ? entityContext : null) + toneNote + FINAL_OUTPUT_INSTRUCTION
   let user = ""
   if (mode === "tweet") {
     user = `Write ONE original X post about this topic:\n"""${trimmed}"""`
@@ -460,6 +520,25 @@ export function buildMessages(
   } else {
     user = `Here is my rough draft for an X post:\n"""${trimmed}"""\nFix grammar, punctuation, awkward phrasing, and spacing. Leave anything that's clearly intentional style alone. PRESERVE my meaning, personality, formality, and language exactly — no new ideas, claims, or facts, and don't let it drift into corporate or LinkedIn tone.`
   }
+  return [
+    { role: "system", content: system },
+    { role: "user", content: user },
+  ]
+}
+
+// ─── Anti-slop bounded rewrite ──────────────────────────────────────────
+// ONE corrective pass after lib/ai/antiSlop.ts's detectSlop() flags a first
+// draft. Reuses the exact system message from the original buildMessages()
+// call (same voice/style/context/rules — nothing rebuilt or redrawn) so the
+// only thing that changes is being shown its own flagged draft and asked to
+// fix specifically what was flagged. This is a single-turn ChatMessage
+// format (see the file header: role is "system" | "user" only, no
+// "assistant" — Gemini's own multi-turn isn't modeled here), so the flagged
+// draft is embedded as text within one fresh user message rather than a
+// simulated prior turn.
+export function buildAntiSlopRewriteMessages(originalMessages: ChatMessage[], draft: string, reasons: string[]): ChatMessage[] {
+  const system = originalMessages.find((m) => m.role === "system")?.content ?? ""
+  const user = `A first attempt at this same request produced the following draft:\n"""${draft}"""\nThis draft reads as generic AI-generated writing rather than this specific person's own voice — specifically: ${reasons.join("; ")}.\nRewrite it ONCE, fixing ONLY these issues. Preserve the original meaning, any specific facts or claims it makes, and its approximate length. Do not introduce new issues. Return only the finished rewrite.`
   return [
     { role: "system", content: system },
     { role: "user", content: user },
