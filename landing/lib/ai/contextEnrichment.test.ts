@@ -21,9 +21,32 @@ describe("D. entity detection — lightweight heuristic, no model call", () => {
     expect(detectResearchableEntity("Started building something new today")).toBeNull()
   })
 
-  it("a bare single-word topic ('Cursor', 'Breakpoint') IS researchable — unambiguous since it's the whole input", () => {
+  it("a bare single-word topic ('Cursor', 'Breakpoint', 'Solana') IS researchable — unambiguous since it's the whole input", () => {
     expect(detectResearchableEntity("Cursor")).toBe("Cursor")
     expect(detectResearchableEntity("Breakpoint")).toBe("Breakpoint")
+    expect(detectResearchableEntity("Solana")).toBe("Solana")
+  })
+
+  // Regression: found via eval (landing/eval/generation-quality) — a bare
+  // capitalized common noun ("Gym", "Coding") is structurally identical to
+  // a bare capitalized proper noun ("Cursor") under rule 3 above, and a
+  // real user capitalizes a one-word topic out of habit regardless of
+  // whether the word is a proper noun. Without this stoplist, every one of
+  // these silently spent a real Gemini call on nothing.
+  it("does NOT treat a bare capitalized common/generic topic word as an entity, lowercase or capitalized", () => {
+    const genericTopics = [
+      "coding", "design", "startup", "basketball", "marketing", "gym", "coffee",
+      "founders", "programming", "school",
+    ]
+    for (const word of genericTopics) {
+      expect(detectResearchableEntity(word)).toBeNull()
+      const capitalized = word[0].toUpperCase() + word.slice(1)
+      expect(detectResearchableEntity(capitalized)).toBeNull()
+    }
+  })
+
+  it("E. 'building in public' (a topic-only multi-word phrase, no caps) never triggers research", () => {
+    expect(detectResearchableEntity("building in public")).toBeNull()
   })
 
   it("returns null for empty input", () => {

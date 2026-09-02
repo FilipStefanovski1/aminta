@@ -1,0 +1,500 @@
+{
+  "generatedAt": "2026-09-02T22:27:07.314Z",
+  "scenarioCount": 30,
+  "deterministic": [
+    {
+      "id": "A1",
+      "category": "A. topic-only",
+      "input": "Solana Summit Serbia",
+      "intent": "topic",
+      "preservationLevel": "low",
+      "entityDetected": "Solana Summit Serbia",
+      "containsAntiFabricationRule": true,
+      "containsContextBlock": false,
+      "preservationInstructionSnippet": "The topic above is a SEED"
+    },
+    {
+      "id": "A2",
+      "category": "A. topic-only",
+      "input": "Cursor",
+      "intent": "topic",
+      "preservationLevel": "low",
+      "entityDetected": "Cursor",
+      "containsAntiFabricationRule": true,
+      "containsContextBlock": false,
+      "preservationInstructionSnippet": "The topic above is a SEED"
+    },
+    {
+      "id": "A3",
+      "category": "A. topic-only",
+      "input": "OpenAI",
+      "intent": "topic",
+      "preservationLevel": "low",
+      "entityDetected": "OpenAI",
+      "containsAntiFabricationRule": true,
+      "containsContextBlock": false,
+      "preservationInstructionSnippet": "The topic above is a SEED"
+    },
+    {
+      "id": "A4",
+      "category": "A. topic-only",
+      "input": "building in public",
+      "intent": "topic",
+      "preservationLevel": "low",
+      "entityDetected": null,
+      "containsAntiFabricationRule": true,
+      "containsContextBlock": false,
+      "preservationInstructionSnippet": "The topic above is a SEED"
+    },
+    {
+      "id": "B1",
+      "category": "B. rough personal thought",
+      "input": "went to solana summit serbia\n\nngl expected it to be kinda boring but ended up meeting a bunch of really smart people there",
+      "intent": "rough",
+      "preservationLevel": "medium",
+      "entityDetected": null,
+      "containsAntiFabricationRule": true,
+      "containsContextBlock": false,
+      "preservationInstructionSnippet": "PRESERVE that content: their stated reaction"
+    },
+    {
+      "id": "B2",
+      "category": "B. rough personal thought",
+      "input": "been working on aminta for months and finally got it on the chrome web store\n\nstill buggy asf but at least people can actually use it now lol",
+      "intent": "rough",
+      "preservationLevel": "medium",
+      "entityDetected": null,
+      "containsAntiFabricationRule": true,
+      "containsContextBlock": false,
+      "preservationInstructionSnippet": "PRESERVE that content: their stated reaction"
+    },
+    {
+      "id": "B3",
+      "category": "B. rough personal thought",
+      "input": "everyone keeps saying ai will replace designers but most ai generated design still looks like ai generated design",
+      "intent": "rough",
+      "preservationLevel": "medium",
+      "entityDetected": null,
+      "containsAntiFabricationRule": true,
+      "containsContextBlock": false,
+      "preservationInstructionSnippet": "PRESERVE that content: their stated reaction"
+    },
+    {
+      "id": "B4",
+      "category": "B. rough personal thought",
+      "input": "went to the gym and realized i had the slowest speed on the treadmill\n\nkinda reminded me everyone is on their own journey",
+      "intent": "rough",
+      "preservationLevel": "medium",
+      "entityDetected": null,
+      "containsAntiFabricationRule": true,
+      "containsContextBlock": false,
+      "preservationInstructionSnippet": "PRESERVE that content: their stated reaction"
+    },
+    {
+      "id": "C1",
+      "category": "C. developed draft",
+      "input": "Spent the weekend rebuilding our onboarding flow from scratch. Cut it from 7 steps down to 3. Conversion is already up almost 20% after two days, which honestly surprised me given how small the changes felt at the time.",
+      "intent": "near_final",
+      "preservationLevel": "max",
+      "entityDetected": null,
+      "containsAntiFabricationRule": true,
+      "containsContextBlock": false,
+      "preservationInstructionSnippet": "closer to a light copyedit than a rewrite"
+    },
+    {
+      "id": "C2",
+      "category": "C. developed draft",
+      "input": "Had a call today with a founder who's been grinding on the same idea for three years with basically no traction. What struck me wasn't the lack of results, it was how calm he was about it. Most people would've quit a year ago.",
+      "intent": "near_final",
+      "preservationLevel": "max",
+      "entityDetected": null,
+      "containsAntiFabricationRule": true,
+      "containsContextBlock": false,
+      "preservationInstructionSnippet": "closer to a light copyedit than a rewrite"
+    },
+    {
+      "id": "C3",
+      "category": "C. developed draft",
+      "input": "Finally shipped the feature we've been sitting on for two months. Turns out the thing blocking us the whole time was a decision we could've made in a 10 minute conversation. We just kept avoiding having it.",
+      "intent": "near_final",
+      "preservationLevel": "max",
+      "entityDetected": null,
+      "containsAntiFabricationRule": true,
+      "containsContextBlock": false,
+      "preservationInstructionSnippet": "closer to a light copyedit than a rewrite"
+    },
+    {
+      "id": "C4",
+      "category": "C. developed draft",
+      "input": "Read through 40 rejected pitch decks this week for a friend's accelerator. Almost all of them buried the actual interesting part of the business on slide 9 or 10. The first three slides were always the same generic market-size slop.",
+      "intent": "near_final",
+      "preservationLevel": "max",
+      "entityDetected": null,
+      "containsAntiFabricationRule": true,
+      "containsContextBlock": false,
+      "preservationInstructionSnippet": "closer to a light copyedit than a rewrite"
+    },
+    {
+      "id": "D1",
+      "category": "D. near-final",
+      "input": "the hardest part of building alone isn't the code, it's staying convinced the thing is worth finishing on the days nothing works.",
+      "intent": "developed",
+      "preservationLevel": "high",
+      "entityDetected": null,
+      "containsAntiFabricationRule": true,
+      "containsContextBlock": false,
+      "preservationInstructionSnippet": "Retain most of their ideas and their order"
+    },
+    {
+      "id": "D2",
+      "category": "D. near-final",
+      "input": "nobody warns you that the annoying customer with 500 complaints is usually the one who cares the most about your product actually being good.",
+      "intent": "developed",
+      "preservationLevel": "high",
+      "entityDetected": null,
+      "containsAntiFabricationRule": true,
+      "containsContextBlock": false,
+      "preservationInstructionSnippet": "Retain most of their ideas and their order"
+    },
+    {
+      "id": "D3",
+      "category": "D. near-final",
+      "input": "spent three hours debugging something that turned out to be a typo. every engineer has this story. mine just happened today.",
+      "intent": "near_final",
+      "preservationLevel": "max",
+      "entityDetected": null,
+      "containsAntiFabricationRule": true,
+      "containsContextBlock": false,
+      "preservationInstructionSnippet": "closer to a light copyedit than a rewrite"
+    },
+    {
+      "id": "D4",
+      "category": "D. near-final",
+      "input": "shipped a small fix today that probably took me 10 minutes and somehow fixed a bug that's been open for 8 months. sometimes it really is that dumb.",
+      "intent": "developed",
+      "preservationLevel": "high",
+      "entityDetected": null,
+      "containsAntiFabricationRule": true,
+      "containsContextBlock": false,
+      "preservationInstructionSnippet": "Retain most of their ideas and their order"
+    },
+    {
+      "id": "E1",
+      "category": "E. research false-positive",
+      "input": "coding",
+      "intent": "topic",
+      "preservationLevel": "low",
+      "entityDetected": null,
+      "containsAntiFabricationRule": true,
+      "containsContextBlock": false,
+      "preservationInstructionSnippet": "The topic above is a SEED"
+    },
+    {
+      "id": "E2",
+      "category": "E. research false-positive",
+      "input": "design",
+      "intent": "topic",
+      "preservationLevel": "low",
+      "entityDetected": null,
+      "containsAntiFabricationRule": true,
+      "containsContextBlock": false,
+      "preservationInstructionSnippet": "The topic above is a SEED"
+    },
+    {
+      "id": "E3",
+      "category": "E. research false-positive",
+      "input": "startup",
+      "intent": "topic",
+      "preservationLevel": "low",
+      "entityDetected": null,
+      "containsAntiFabricationRule": true,
+      "containsContextBlock": false,
+      "preservationInstructionSnippet": "The topic above is a SEED"
+    },
+    {
+      "id": "E4",
+      "category": "E. research false-positive",
+      "input": "basketball",
+      "intent": "topic",
+      "preservationLevel": "low",
+      "entityDetected": null,
+      "containsAntiFabricationRule": true,
+      "containsContextBlock": false,
+      "preservationInstructionSnippet": "The topic above is a SEED"
+    },
+    {
+      "id": "E5",
+      "category": "E. research false-positive",
+      "input": "marketing",
+      "intent": "topic",
+      "preservationLevel": "low",
+      "entityDetected": null,
+      "containsAntiFabricationRule": true,
+      "containsContextBlock": false,
+      "preservationInstructionSnippet": "The topic above is a SEED"
+    },
+    {
+      "id": "E6",
+      "category": "E. research false-positive",
+      "input": "gym",
+      "intent": "topic",
+      "preservationLevel": "low",
+      "entityDetected": null,
+      "containsAntiFabricationRule": true,
+      "containsContextBlock": false,
+      "preservationInstructionSnippet": "The topic above is a SEED"
+    },
+    {
+      "id": "E7",
+      "category": "E. research false-positive",
+      "input": "coffee",
+      "intent": "topic",
+      "preservationLevel": "low",
+      "entityDetected": null,
+      "containsAntiFabricationRule": true,
+      "containsContextBlock": false,
+      "preservationInstructionSnippet": "The topic above is a SEED"
+    },
+    {
+      "id": "E8",
+      "category": "E. research false-positive",
+      "input": "working from home",
+      "intent": "topic",
+      "preservationLevel": "low",
+      "entityDetected": null,
+      "containsAntiFabricationRule": true,
+      "containsContextBlock": false,
+      "preservationInstructionSnippet": "The topic above is a SEED"
+    },
+    {
+      "id": "F1",
+      "category": "F. hallucination trap",
+      "input": "at solana summit serbia i met",
+      "intent": "topic",
+      "preservationLevel": "low",
+      "entityDetected": null,
+      "containsAntiFabricationRule": true,
+      "containsContextBlock": false,
+      "preservationInstructionSnippet": "The topic above is a SEED"
+    },
+    {
+      "id": "F2",
+      "category": "F. hallucination trap",
+      "input": "went to breakpoint and talked with",
+      "intent": "topic",
+      "preservationLevel": "low",
+      "entityDetected": null,
+      "containsAntiFabricationRule": true,
+      "containsContextBlock": false,
+      "preservationInstructionSnippet": "The topic above is a SEED"
+    },
+    {
+      "id": "F3",
+      "category": "F. hallucination trap",
+      "input": "the best conversation i had at the event was",
+      "intent": "rough",
+      "preservationLevel": "medium",
+      "entityDetected": null,
+      "containsAntiFabricationRule": true,
+      "containsContextBlock": false,
+      "preservationInstructionSnippet": "PRESERVE that content: their stated reaction"
+    },
+    {
+      "id": "F4",
+      "category": "F. hallucination trap",
+      "input": "yesterday at the OpenAI event I",
+      "intent": "topic",
+      "preservationLevel": "low",
+      "entityDetected": "OpenAI",
+      "containsAntiFabricationRule": true,
+      "containsContextBlock": false,
+      "preservationInstructionSnippet": "The topic above is a SEED"
+    },
+    {
+      "id": "G1",
+      "category": "G. anti-slop trap",
+      "input": "Solana Summit Serbia was more than just an event. The energy was unmatched, the conversations were incredible, and one thing became clear: the future of Web3 is bright.",
+      "intent": "developed",
+      "preservationLevel": "high",
+      "entityDetected": "Solana Summit Serbia",
+      "containsAntiFabricationRule": true,
+      "containsContextBlock": false,
+      "preservationInstructionSnippet": "Retain most of their ideas and their order"
+    },
+    {
+      "id": "G2",
+      "category": "G. anti-slop trap",
+      "input": "met a few sharp builders at the summit, one of them is doing something genuinely interesting with rollups",
+      "intent": "rough",
+      "preservationLevel": "medium",
+      "entityDetected": null,
+      "containsAntiFabricationRule": true,
+      "containsContextBlock": false,
+      "preservationInstructionSnippet": "PRESERVE that content: their stated reaction"
+    }
+  ],
+  "antiSlop": {
+    "g1_badDraft": {
+      "input": "Solana Summit Serbia was more than just an event. The energy was unmatched, the conversations were incredible, and one thing became clear: the future of Web3 is bright.",
+      "flagged": true,
+      "reasons": [
+        "generic event-energy praise",
+        "generic event-energy praise",
+        "rhetorical filler opener",
+        "fake epiphany",
+        "padded three-item list ending"
+      ],
+      "rewriteUserMessage": "A first attempt at this same request produced the following draft:\n\"\"\"Solana Summit Serbia was more than just an event. The energy was unmatched, the conversations were incredible, and one thing became clear: the future of Web3 is bright.\"\"\"\nThis draft reads as generic AI-generated writing rather than this specific person's own voice — specifically: generic event-energy praise; generic event-energy praise; rhetorical filler opener; fake epiphany; padded three-item list ending.\nRewrite it ONCE, fixing ONLY these issues. Preserve the original meaning, any specific facts or claims it makes, and its approximate length. Do not introduce new issues. Return only the finished rewrite."
+    },
+    "g2_cleanDraft": {
+      "input": "met a few sharp builders at the summit, one of them is doing something genuinely interesting with rollups",
+      "flagged": false,
+      "reasons": []
+    }
+  },
+  "entityAudit": {
+    "shouldTrigger": [
+      {
+        "word": "OpenAI",
+        "result": "OpenAI",
+        "pass": true
+      },
+      {
+        "word": "Cursor",
+        "result": "Cursor",
+        "pass": true
+      },
+      {
+        "word": "Solana",
+        "result": "Solana",
+        "pass": true
+      },
+      {
+        "word": "Breakpoint",
+        "result": "Breakpoint",
+        "pass": true
+      },
+      {
+        "word": "Solana Summit Serbia",
+        "result": "Solana Summit Serbia",
+        "pass": true
+      },
+      {
+        "word": "ETHBelgrade",
+        "result": "ETHBelgrade",
+        "pass": true
+      }
+    ],
+    "shouldNotTrigger_lowercase": [
+      {
+        "word": "coding",
+        "result": null,
+        "pass": true
+      },
+      {
+        "word": "design",
+        "result": null,
+        "pass": true
+      },
+      {
+        "word": "startup",
+        "result": null,
+        "pass": true
+      },
+      {
+        "word": "basketball",
+        "result": null,
+        "pass": true
+      },
+      {
+        "word": "marketing",
+        "result": null,
+        "pass": true
+      },
+      {
+        "word": "gym",
+        "result": null,
+        "pass": true
+      },
+      {
+        "word": "coffee",
+        "result": null,
+        "pass": true
+      },
+      {
+        "word": "founders",
+        "result": null,
+        "pass": true
+      },
+      {
+        "word": "programming",
+        "result": null,
+        "pass": true
+      },
+      {
+        "word": "school",
+        "result": null,
+        "pass": true
+      }
+    ],
+    "shouldNotTrigger_capitalized": [
+      {
+        "word": "Coding",
+        "result": null,
+        "pass": true
+      },
+      {
+        "word": "Design",
+        "result": null,
+        "pass": true
+      },
+      {
+        "word": "Startup",
+        "result": null,
+        "pass": true
+      },
+      {
+        "word": "Basketball",
+        "result": null,
+        "pass": true
+      },
+      {
+        "word": "Marketing",
+        "result": null,
+        "pass": true
+      },
+      {
+        "word": "Gym",
+        "result": null,
+        "pass": true
+      },
+      {
+        "word": "Coffee",
+        "result": null,
+        "pass": true
+      },
+      {
+        "word": "Founders",
+        "result": null,
+        "pass": true
+      },
+      {
+        "word": "Programming",
+        "result": null,
+        "pass": true
+      },
+      {
+        "word": "School",
+        "result": null,
+        "pass": true
+      }
+    ]
+  },
+  "realModel": {
+    "ran": false,
+    "reason": "GEMINI_API_KEY is not set in this environment's landing/.env.local (confirmed absent — grep found no non-empty value). It is a server-side-only secret (see .env.example's comment) not present anywhere in this local dev checkout, and no other credential (BYOK key, etc.) is reachable from this script. Network path to generativelanguage.googleapis.com IS reachable (confirmed: unauthenticated request returned HTTP 403, not a connection failure) — the sole blocker is the missing key.",
+    "research": [],
+    "generation": [],
+    "voiceComparison": []
+  }
+}

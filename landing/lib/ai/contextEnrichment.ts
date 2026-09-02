@@ -50,6 +50,29 @@ const TITLE_CASE_RUN_RE = /\b([A-Z][a-zA-Z0-9]*(?:\s+[A-Z][a-zA-Z0-9]*){1,5})\b/
 //    "GitHub") — a strong proper-noun signal regardless of position.
 const INTERNAL_CAP_RE = /^[A-Z][a-zA-Z0-9]*[A-Z][a-zA-Z0-9]*$/
 
+// Found via eval (see landing/eval/generation-quality): a bare capitalized
+// single word ("Cursor", "Breakpoint") is exactly as structurally
+// indistinguishable from a bare capitalized generic noun ("Gym", "Coding",
+// "Founders") as it is from a genuine proper noun — a user typing a
+// one-word topic capitalizes it out of habit regardless of what the word
+// is. There's no dictionary/NLP signal available here without either an
+// LLM call (explicitly ruled out) or a new dependency, so this stoplist is
+// the deterministic compromise: common single-word topics people actually
+// type into Aminta (activities, hobbies, industries, roles) never trigger
+// research even when capitalized/alone, while an unrecognized single
+// capitalized word still does. Per the product requirement — "prefer false
+// negatives over wasting research on generic nouns" — err toward adding a
+// word here over leaving it out.
+const GENERIC_SINGLE_WORD_TOPICS = new Set([
+  "coding", "programming", "design", "startup", "startups", "basketball", "marketing",
+  "gym", "coffee", "founders", "founder", "school", "work", "home", "life", "food",
+  "music", "art", "books", "movies", "fitness", "health", "productivity", "sales",
+  "hiring", "recruiting", "engineering", "writing", "reading", "travel", "cooking",
+  "parenting", "relationships", "mindset", "leadership", "management", "investing",
+  "crypto", "sports", "football", "soccer", "running", "yoga", "meditation", "sleep",
+  "focus", "burnout", "networking", "branding", "content", "freelancing", "remote",
+])
+
 export function detectResearchableEntity(input: string): string | null {
   const trimmed = input.trim()
   if (!trimmed) return null
@@ -62,11 +85,18 @@ export function detectResearchableEntity(input: string): string | null {
   if (internalCap) return internalCap
 
   // 3. The ENTIRE input is exactly one capitalized word ("Cursor",
-  //    "Breakpoint") — a real sentence virtually never comes down to a
-  //    single word, so this can't be confused with ordinary
-  //    sentence-initial capitalization the way a longer capitalized phrase
-  //    could be. This is what makes a bare single-word topic researchable.
-  if (words.length === 1 && /^[A-Z][a-zA-Z]+$/.test(words[0])) return words[0]
+  //    "Breakpoint") that ISN'T a common generic topic word — a real
+  //    sentence virtually never comes down to a single word, so this can't
+  //    be confused with ordinary sentence-initial capitalization the way a
+  //    longer capitalized phrase could be. This is what makes a bare
+  //    single-word topic researchable, without also researching "Gym."
+  if (
+    words.length === 1 &&
+    /^[A-Z][a-zA-Z]+$/.test(words[0]) &&
+    !GENERIC_SINGLE_WORD_TOPICS.has(words[0].toLowerCase())
+  ) {
+    return words[0]
+  }
 
   return null
 }

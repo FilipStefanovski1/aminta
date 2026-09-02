@@ -13,15 +13,44 @@ export type PreservationLevel = "low" | "medium" | "high" | "max"
 const TOPIC_MAX_WORDS = 6
 const ROUGH_MAX_WORDS = 35
 const NEAR_FINAL_MIN_SENTENCES = 3
+// A single sentence longer than this AND ending on terminal punctuation
+// reads as one deliberate, complete statement (an aphorism-style post),
+// not an unfinished fragment — see the "single complete sentence" note
+// below for why this outranks the plain word-count check for "rough".
+const SINGLE_SENTENCE_COMPLETE_MIN_WORDS = 10
 
 /**
  * TOPIC — a bare seed ("Solana Summit Serbia"), no sentence structure.
- * ROUGH — a short, single-idea thought, rarely more than one real sentence.
- * DEVELOPED — a real draft with several ideas already laid out, but not
- * long/complete enough to read as a finished post.
- * NEAR_FINAL — several sentences, more than a rough thought's worth of
- * words, AND ends on terminal punctuation — reads like the user already
- * wrote something close to a finished post.
+ * ROUGH — a short, single-idea thought with no terminal punctuation —
+ * reads as an unfinished fragment, not a deliberate statement.
+ * DEVELOPED — a real, multi-part draft (2 sentences, or 3+ that doesn't
+ * end cleanly), OR a single sentence substantial and complete enough to
+ * read as one deliberate statement rather than a rough fragment.
+ * NEAR_FINAL — 3+ complete sentences ending on terminal punctuation —
+ * reads like the user already wrote something close to a finished post.
+ *
+ * Found via eval (see landing/eval/generation-quality), two fixes:
+ *
+ * 1. This used to also require words.length > ROUGH_MAX_WORDS for
+ * near_final, which inverted the intended signal — a short-but-complete
+ * draft (typical X-post length, e.g. "spent three hours debugging
+ * something that turned out to be a typo. every engineer has this story.
+ * mine just happened today.") was denied near_final's minimal-intervention
+ * treatment purely for being short, while a longer 3-sentence draft got it
+ * regardless of length. Completeness (sentence count + ending punctuation),
+ * not raw length, is what "reads like a finished post" means.
+ *
+ * 2. A single well-formed, punctuated sentence ("the hardest part of
+ * building alone isn't the code, it's staying convinced the thing is worth
+ * finishing on the days nothing works.") used to be treated identically to
+ * a genuinely rough, unpunctuated one-line fragment ("went to the gym and
+ * realized i had the slowest speed on the treadmill") purely because both
+ * are "one sentence" — collapsing "unfinished thought" and "deliberate
+ * single-line post" into the same medium-preservation bucket, when the
+ * whole point of that bucket is to permit MORE restructuring than a
+ * finished single-sentence post should ever get. Ending punctuation plus
+ * enough length to be a real statement (not a short quip) now routes to
+ * "developed" (more preservation) instead.
  */
 export function classifyDraftIntent(input: string): DraftIntent {
   const trimmed = input.trim()
@@ -32,10 +61,11 @@ export function classifyDraftIntent(input: string): DraftIntent {
   const endsWithTerminalPunctuation = /[.!?]\s*$/.test(trimmed)
 
   if (words.length <= TOPIC_MAX_WORDS && sentences.length <= 1) return "topic"
-  if (words.length <= ROUGH_MAX_WORDS && sentences.length <= 1) return "rough"
-  if (sentences.length >= NEAR_FINAL_MIN_SENTENCES && words.length > ROUGH_MAX_WORDS && endsWithTerminalPunctuation) {
-    return "near_final"
+  if (sentences.length <= 1 && words.length <= ROUGH_MAX_WORDS) {
+    const readsAsOneCompleteStatement = endsWithTerminalPunctuation && words.length > SINGLE_SENTENCE_COMPLETE_MIN_WORDS
+    return readsAsOneCompleteStatement ? "developed" : "rough"
   }
+  if (sentences.length >= NEAR_FINAL_MIN_SENTENCES && endsWithTerminalPunctuation) return "near_final"
   return "developed"
 }
 
