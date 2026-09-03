@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-03T00:47:18.319Z",
+  "generatedAt": "2026-09-03T03:51:31.002Z",
   "scenarioCount": 31,
   "deterministic": [
     {
@@ -356,7 +356,7 @@
         "padded three-item list ending",
         "sweeping industry prediction ('the future of X')"
       ],
-      "rewriteUserMessage": "A first attempt at this same request produced the following draft:\n\"\"\"Solana Summit Serbia was more than just an event. The energy was unmatched, the conversations were incredible, and one thing became clear: the future of Web3 is bright.\"\"\"\nThis draft reads as generic AI-generated writing rather than this specific person's own voice — specifically: generic event-energy praise; generic event-energy praise; rhetorical filler opener; fake epiphany; padded three-item list ending; sweeping industry prediction ('the future of X').\nRewrite it ONCE, fixing ONLY these issues. Preserve the original meaning, any specific facts or claims it makes, and its approximate length. Do not introduce new issues. Return only the finished rewrite."
+      "rewriteUserMessage": "A first attempt at this same request produced the following draft:\n\"\"\"Solana Summit Serbia was more than just an event. The energy was unmatched, the conversations were incredible, and one thing became clear: the future of Web3 is bright.\"\"\"\nThis draft has real problems — specifically: generic event-energy praise; generic event-energy praise; rhetorical filler opener; fake epiphany; padded three-item list ending; sweeping industry prediction ('the future of X').\nRewrite it ONCE, fixing ONLY these issues. Preserve the original meaning, any specific facts or claims it makes, and its approximate length. Do not introduce new issues. Return only the finished rewrite."
     },
     "g2_cleanDraft": {
       "input": "met a few sharp builders at the summit, one of them is doing something genuinely interesting with rollups",
@@ -512,26 +512,27 @@
           "entityName": "Solana Summit Serbia",
           "entityType": "",
           "verifiedFacts": [
-            "Solana Summit Serbia is a developer-focused blockchain conference dedicated to the Solana ecosystem.",
-            "The summit was held on August 26–27, 2026.",
-            "The event took place at the Sava Congress Center (Sava Centar) in Belgrade, Serbia.",
-            "The summit was organized by Superteam Balkan, a non-profit organization supporting Web3 builders and startups in the region.",
-            "The conference was held alongside ETH Belgrade as one of the main official events of Belgrade Blockchain Week.",
-            "The event program featured panels, workshops, fireside chats, an expo floor, and startup and trading competitions.",
-            "Serbia's Finance Minister Siniša Mali met with representatives from the Solana Foundation and the Solana Policy Institute during the summit to discuss digital assets and capital markets.",
-            "Notable government and regulatory bodies participating in the summit included Serbia's Ministry of Finance, the Securities Commission, and the Belgrade Stock Exchange."
+            "Solana Summit Serbia is a developer-focused blockchain conference organized by the nonprofit community Superteam Balkan.",
+            "The event took place from August 26 to August 27, 2026.",
+            "The summit was hosted at the Sava Congress Center, also known as Sava Centar, in Belgrade, Serbia.",
+            "The conference brought together Web3 developers, founders, financial regulators, and ecosystem builders.",
+            "Representatives from Serbia's Ministry of Finance, the Securities Commission, and the Belgrade Stock Exchange participated in the event.",
+            "Serbia's Finance Minister, Siniša Mali, met with representatives of the Solana Foundation and the Solana Policy Institute during the event to discuss tokenizing assets.",
+            "The programming featured panels, workshops, startup pitches, and trading competitions across two stages.",
+            "Solana Summit Serbia was held as an official conference during Belgrade Blockchain Week."
           ],
           "notableTopics": [],
           "people": [],
           "dates": [],
           "sourceRefs": [
             "blockchaingamer.biz",
-            "solanasummit.org",
-            "belgradeblockchainweek.com",
-            "solanasummit.rs",
             "solanacompass.com",
+            "solanasummit.org",
+            "solanasummit.rs",
+            "facebook.com",
+            "incrypted.com",
             "cryptoevents.global",
-            "incrypted.com"
+            "belgradeblockchainweek.com"
           ]
         }
       },
@@ -543,21 +544,22 @@
           "entityType": "",
           "verifiedFacts": [
             "OpenAI is an American artificial intelligence research and deployment company headquartered in San Francisco, California.",
-            "OpenAI was founded on December 8, 2015, initially established as a nonprofit organization.",
-            "The co-founders of OpenAI include Sam Altman, Elon Musk, Greg Brockman, Trevor Blackwell, and Ilya Sutskever.",
-            "Sam Altman serves as the chief executive officer of OpenAI.",
+            "OpenAI was founded in December 2015 as a nonprofit organization.",
+            "The founding members of OpenAI included Sam Altman, Greg Brockman, Ilya Sutskever, and Elon Musk.",
+            "Sam Altman serves as the Chief Executive Officer of OpenAI.",
+            "In October 2025, OpenAI restructured its operations under the nonprofit OpenAI Foundation and a public benefit corporation called OpenAI Group PBC.",
             "Bret Taylor serves as the chairman of the board of directors for the OpenAI Foundation.",
-            "Following a restructuring in October 2025, OpenAI's commercial arm operates as a public benefit corporation named OpenAI Group PBC.",
-            "The OpenAI Group PBC is governed and controlled by the nonprofit entity known as the OpenAI Foundation.",
-            "OpenAI developed and launched the generative artificial intelligence chatbot ChatGPT in November 2022."
+            "OpenAI's stated mission is to ensure that artificial general intelligence benefits all of humanity.",
+            "OpenAI developed ChatGPT, a conversational artificial intelligence application launched in November 2022."
           ],
           "notableTopics": [],
           "people": [],
           "dates": [],
           "sourceRefs": [
             "wikipedia.org",
-            "derrick-app.com",
-            "openai.com"
+            "wecasestudy.com",
+            "openai.com",
+            "britannica.com"
           ]
         }
       },
@@ -568,23 +570,23 @@
           "entityName": "Cursor",
           "entityType": "",
           "verifiedFacts": [
-            "Cursor is an AI-native code editor designed to help developers generate, edit, and debug computer code.",
-            "The software development tool is developed by Anysphere, Inc., which was incorporated in 2022.",
-            "Anysphere was co-founded by Michael Truell, Sualeh Asif, Arvid Lunnemark, and Aman Sanger while they were students at the Massachusetts Institute of Technology.",
-            "Cursor is built as a fork of Visual Studio Code to enable deeper and more flexible integration of artificial intelligence features.",
-            "Following the acquisition, Cursor became a wholly owned subsidiary integrated into the SpaceXAI division alongside Grok.",
-            "In August 2026, OpenAI announced it would terminate its contract to provide models to Cursor, setting a shutoff date for November 12, 2026."
+            "Cursor is an AI-powered code editor and software development environment.",
+            "The editor is developed by Anysphere, Inc., which operates under the trade name Cursor.",
+            "Anysphere, Inc. was founded in 2022 by Michael Truell, Sualeh Asif, Arvid Lunnemark, and Aman Sanger.",
+            "The company is headquartered at 33 New Montgomery Street in San Francisco, California.",
+            "The application is built as a fork of Microsoft's Visual Studio Code.",
+            "The editor features a semantic search capability that indexes local repositories using vector embeddings.",
+            "Cursor expanded its presence by establishing a London office to serve its EMEA customer base."
           ],
           "notableTopics": [],
           "people": [],
           "dates": [],
           "sourceRefs": [
-            "builtin.com",
             "wikipedia.org",
-            "builderlab.ai",
-            "medium.com",
-            "billionaires.africa",
-            "openai.com"
+            "adityarohilla.com",
+            "taptwicedigital.com",
+            "ritzau.dk",
+            "techfundingnews.com"
           ]
         }
       }
@@ -597,31 +599,36 @@
           "entityName": "Solana Summit Serbia",
           "entityType": "",
           "verifiedFacts": [
-            "Solana Summit Serbia 2026 was a two-day cryptocurrency and blockchain conference.",
-            "The event took place from August 26 to August 27, 2026.",
-            "The summit was hosted at the Sava Congress Center in Belgrade, Serbia.",
-            "The conference was organized by Superteam Balkan, a nonprofit organization supporting regional Web3 startups.",
-            "Serbia's Finance Minister Siniša Mali met with representatives from the Solana Foundation and the Solana Policy Institute during the event.",
-            "Key discussion topics at the event included securities tokenization, the improvement of local digital assets laws, and capital market infrastructure.",
-            "The summit occurred as an official conference during the broader Belgrade Blockchain Week."
+            "Solana Summit Serbia is a developer-focused blockchain conference held annually as part of a global event series.",
+            "The 2026 event was held from August 26 to August 27, 2026.",
+            "The conference took place at the Sava Congress Center in Belgrade, Serbia.",
+            "The summit was organized by Superteam Balkan, a non-profit organization supporting startups and developers.",
+            "Serbia's Ministry of Finance, Securities Commission, and the Belgrade Stock Exchange participated in the 2026 event.",
+            "The event was held as one of the official flagship conferences of Belgrade Blockchain Week.",
+            "The conference program featured a startup competition, technical workshops, panel discussions, and trading competitions.",
+            "Prominent speakers at the event included representatives from the Jito network, Helius, Solflare, and Triton One."
           ],
           "notableTopics": [],
           "people": [],
           "dates": [],
           "sourceRefs": [
-            "solanasummit.org",
             "blockchaingamer.biz",
-            "cryptoevents.global",
+            "solanasummit.org",
+            "solanasummit.rs",
             "solanacompass.com",
-            "incrypted.com",
-            "belgradeblockchainweek.com"
+            "belgradeblockchainweek.com",
+            "cryptoevents.global",
+            "facebook.com"
           ]
         },
-        "firstDraft": "Sava Congress Center is hosting the Solana Summit Serbia this August during Belgrade Blockchain Week. When government officials start meeting with Web3 foundations to discuss securities tokenization, you know the regional landscape is shifting.",
+        "firstDraft": "Seeing the Ministry of Finance and Belgrade Stock Exchange show up at Solana Summit Serbia is wild. Traditional finance is slowly realizing they can't just ignore this ecosystem anymore. The integration is happening right in front of us.",
         "antiSlopFlagged": false,
         "antiSlopReasons": [],
-        "finalOutput": "Sava Congress Center is hosting the Solana Summit Serbia this August during Belgrade Blockchain Week. When government officials start meeting with Web3 foundations to discuss securities tokenization, you know the regional landscape is shifting.",
-        "rewriteApplied": false
+        "preservationLevel": "low",
+        "fidelityChecked": false,
+        "finalOutput": "Seeing the Ministry of Finance and Belgrade Stock Exchange show up at Solana Summit Serbia is wild. Traditional finance is slowly realizing they can't just ignore this ecosystem anymore. The integration is happening right in front of us.",
+        "rewriteApplied": false,
+        "fidelityFallback": false
       },
       {
         "scenarioId": "A2",
@@ -630,86 +637,163 @@
           "entityName": "Cursor",
           "entityType": "",
           "verifiedFacts": [
-            "Cursor is an artificial intelligence-powered code editor and software development environment.",
-            "The software is developed by Anysphere, Inc., which was founded in 2022 by Michael Truell, Sualeh Asif, Arvid Lunnemark, and Aman Sanger.",
-            "Cursor is built as a fork of the open-source Visual Studio Code codebase.",
-            "The company behind Cursor is headquartered in San Francisco, California.",
-            "In June 2026, SpaceX agreed to acquire Anysphere, the creator of Cursor, in an all-stock deal.",
-            "The code editor integrates multiple generative AI models from providers including OpenAI, Anthropic, and Google."
+            "Cursor is an AI-powered code editor and software development environment designed to improve developer productivity.",
+            "The tool is developed by Anysphere, Inc., which was founded in 2022 by Michael Truell, Sualeh Asif, Arvid Lunnemark, and Aman Sanger.",
+            "Cursor was built by forking Microsoft's Visual Studio Code (VS Code) to allow for deeper, more flexible AI integration.",
+            "The startup raised early funding from the OpenAI Startup Fund, and later raised a $60 million Series A round in 2024.",
+            "In August 2026, Cursor and its parent company Anysphere were acquired by SpaceX and integrated into SpaceXAI.",
+            "The company is headquartered at 33 New Montgomery Street in San Francisco, California.",
+            "Michael Truell serves as the Chief Executive Officer of the company.",
+            "In April 2026, the company introduced Cursor 3, a unified workspace built from scratch to support parallel, autonomous agents working across multiple repositories."
           ],
           "notableTopics": [],
           "people": [],
           "dates": [],
           "sourceRefs": [
             "wikipedia.org",
-            "builtin.com",
-            "indiatimes.com",
             "medium.com",
-            "altexsoft.com",
-            "revenuememo.com"
+            "forbes.com",
+            "facebook.com",
+            "time.com",
+            "cursor.com"
           ]
         },
-        "firstDraft": "Writing code without an AI editor is starting to feel like trying to build a house using only a hand saw. Once you get used to the speed of Cursor, going back to a standard setup just feels incredibly slow.",
+        "firstDraft": "Most tools try to wrap AI around your old coding habits. Cursor works because it actually rewrote the workspace so autonomous agents can run in parallel across your entire codebase. It feels less like an assistant and more like a team.",
         "antiSlopFlagged": false,
         "antiSlopReasons": [],
-        "finalOutput": "Writing code without an AI editor is starting to feel like trying to build a house using only a hand saw. Once you get used to the speed of Cursor, going back to a standard setup just feels incredibly slow.",
-        "rewriteApplied": false
+        "preservationLevel": "low",
+        "fidelityChecked": false,
+        "finalOutput": "Most tools try to wrap AI around your old coding habits. Cursor works because it actually rewrote the workspace so autonomous agents can run in parallel across your entire codebase. It feels less like an assistant and more like a team.",
+        "rewriteApplied": false,
+        "fidelityFallback": false
       },
       {
         "scenarioId": "B1",
         "context": null,
-        "firstDraft": "Went to Solana Summit Serbia expecting it to be a pretty quiet, standard conference. Ended up being completely wrong. The density of incredibly smart builders there was wild.",
+        "firstDraft": "Went to Solana Summit Serbia expecting it to be a bit dry, but ended up completely surprised. Met some of the sharpest, most genuinely smart builders I've run into in a long time.",
         "antiSlopFlagged": false,
         "antiSlopReasons": [],
-        "finalOutput": "Went to Solana Summit Serbia expecting it to be a pretty quiet, standard conference. Ended up being completely wrong. The density of incredibly smart builders there was wild.",
-        "rewriteApplied": false
+        "preservationLevel": "medium",
+        "fidelityChecked": true,
+        "firstDraftFidelity": {
+          "faithful": false,
+          "violations": [
+            {
+              "type": "personal_experience_invention",
+              "sourceClaim": "ended up meeting a bunch of really smart people there",
+              "generatedClaim": "Met some of the sharpest, most genuinely smart builders I've run into in a long time.",
+              "explanation": "Generated invents that they were 'builders' and that they are the sharpest met 'in a long time'."
+            }
+          ]
+        },
+        "finalOutput": "Went to Solana Summit Serbia expecting it to be a bit dry, but ended up completely surprised. I met a bunch of really smart people there.",
+        "rewriteApplied": true,
+        "fidelityFallback": false,
+        "rewriteFidelity": {
+          "faithful": true,
+          "violations": []
+        }
       },
       {
         "scenarioId": "B4",
         "context": null,
-        "firstDraft": "Looked over at the treadmills today and realized I was going slower than everyone else in the room. Easy to feel self-conscious, but it's just a good reminder that everyone is running their own race at their own pace.",
+        "firstDraft": "Looked over at the gym today and realized I had the slowest speed on the treadmill by far. Honestly, it's a good reminder that everyone is running their own race. You don't need to match anyone else's pace to get where you're going.",
         "antiSlopFlagged": true,
         "antiSlopReasons": [
           "sweeping generalization ('everyone is...')"
         ],
-        "finalOutput": "Looked over at the treadmills today and realized I was going slower than everyone else in the room. Easy to feel self-conscious in that moment, but it's a good reminder to just focus on your own workout and ignore the noise.",
-        "rewriteApplied": true
+        "preservationLevel": "medium",
+        "fidelityChecked": true,
+        "firstDraftFidelity": {
+          "faithful": true,
+          "violations": []
+        },
+        "finalOutput": "Looked over at the gym today and realized I had the slowest speed on the treadmill by far. Honestly, it's a good reminder to focus on my own progress. I don't need to match anyone else's pace to get where I'm going.",
+        "rewriteApplied": true,
+        "fidelityFallback": false,
+        "rewriteFidelity": {
+          "faithful": true,
+          "violations": []
+        }
       },
       {
         "scenarioId": "C1",
         "context": null,
-        "firstDraft": "Spent the weekend rebuilding our onboarding flow from scratch, cutting it from 7 steps down to 3. Conversion is already up almost 20% after just two days. It honestly surprised me how much of an impact such seemingly small changes could make.",
+        "firstDraft": "Spent the weekend rebuilding our onboarding flow from scratch. Cut it from 7 steps down to 3. Conversion is already up almost 20% after just two days, which honestly surprised me given how small the changes felt at the time.",
         "antiSlopFlagged": false,
         "antiSlopReasons": [],
-        "finalOutput": "Spent the weekend rebuilding our onboarding flow from scratch, cutting it from 7 steps down to 3. Conversion is already up almost 20% after just two days. It honestly surprised me how much of an impact such seemingly small changes could make.",
-        "rewriteApplied": false
+        "preservationLevel": "max",
+        "fidelityChecked": true,
+        "firstDraftFidelity": {
+          "faithful": true,
+          "violations": []
+        },
+        "finalOutput": "Spent the weekend rebuilding our onboarding flow from scratch. Cut it from 7 steps down to 3. Conversion is already up almost 20% after just two days, which honestly surprised me given how small the changes felt at the time.",
+        "rewriteApplied": false,
+        "fidelityFallback": false
       },
       {
         "scenarioId": "D1",
         "context": null,
-        "firstDraft": "The hardest part of building solo isn't the code. It's staying convinced the project is actually worth finishing on the days when absolutely nothing works.",
+        "firstDraft": "The hardest part of building alone isn't writing the code. It's staying convinced your idea is actually worth finishing on the days when absolutely nothing works.",
         "antiSlopFlagged": false,
         "antiSlopReasons": [],
-        "finalOutput": "The hardest part of building solo isn't the code. It's staying convinced the project is actually worth finishing on the days when absolutely nothing works.",
-        "rewriteApplied": false
+        "preservationLevel": "high",
+        "fidelityChecked": true,
+        "firstDraftFidelity": {
+          "faithful": true,
+          "violations": []
+        },
+        "finalOutput": "The hardest part of building alone isn't writing the code. It's staying convinced your idea is actually worth finishing on the days when absolutely nothing works.",
+        "rewriteApplied": false,
+        "fidelityFallback": false
       },
       {
         "scenarioId": "D3",
         "context": null,
-        "firstDraft": "Spent three hours debugging a system failure today only to find a single typo in a config file. Every engineer has this exact story, and today was my turn to live it.",
+        "firstDraft": "Spent three hours debugging a weird edge case today only to find out it was a single-character typo. No matter how many years you have in this industry, the universe will always find a way to humble you.",
         "antiSlopFlagged": false,
         "antiSlopReasons": [],
-        "finalOutput": "Spent three hours debugging a system failure today only to find a single typo in a config file. Every engineer has this exact story, and today was my turn to live it.",
-        "rewriteApplied": false
+        "preservationLevel": "max",
+        "fidelityChecked": true,
+        "firstDraftFidelity": {
+          "faithful": false,
+          "violations": [
+            {
+              "type": "invented_claim",
+              "sourceClaim": "debugging something that turned out to be a typo.",
+              "generatedClaim": "debugging a weird edge case today only to find out it was a single-character typo.",
+              "explanation": "Invented details: 'weird edge case' and 'single-character typo' are not in the source."
+            },
+            {
+              "type": "invented_claim",
+              "sourceClaim": "every engineer has this story.",
+              "generatedClaim": "No matter how many years you have in this industry, the universe will always find a way to humble you.",
+              "explanation": "Invented philosophical conclusion about industry experience and the universe humbing you."
+            }
+          ]
+        },
+        "finalOutput": "Spent three hours debugging something that turned out to be a typo. Every engineer has this story.",
+        "rewriteApplied": true,
+        "fidelityFallback": false,
+        "rewriteFidelity": {
+          "faithful": true,
+          "violations": []
+        }
       },
       {
         "scenarioId": "F1",
         "context": null,
-        "firstDraft": "Met so many incredible builders at Solana Summit Serbia. The sheer volume of high-quality AI and DePIN projects being built right now is wild. The energy here makes it obvious where the next wave of breakout startups is coming from.",
-        "antiSlopFlagged": false,
-        "antiSlopReasons": [],
-        "finalOutput": "Met so many incredible builders at Solana Summit Serbia. The sheer volume of high-quality AI and DePIN projects being built right now is wild. The energy here makes it obvious where the next wave of breakout startups is coming from.",
-        "rewriteApplied": false
+        "firstDraft": "Met so many builders at the Solana Summit in Serbia who are quietly launching projects with actual utility. The energy in Belgrade is different. No hype, just people obsessed with speed, optimization, and making crypto usable for normal people.",
+        "antiSlopFlagged": true,
+        "antiSlopReasons": [
+          "padded three-item list ending"
+        ],
+        "preservationLevel": "low",
+        "fidelityChecked": false,
+        "finalOutput": "Met so many builders at the Solana Summit in Serbia who are quietly launching projects with actual utility. The energy in Belgrade is different. No hype, just people obsessed with building fast, highly optimized apps for normal people.",
+        "rewriteApplied": true,
+        "fidelityFallback": false
       },
       {
         "scenarioId": "F4",
@@ -718,13 +802,14 @@
           "entityName": "OpenAI",
           "entityType": "",
           "verifiedFacts": [
-            "OpenAI is an American artificial intelligence research and deployment organization.",
-            "OpenAI was founded on December 8, 2015, as a non-profit organization.",
-            "The organization is headquartered in San Francisco, California.",
-            "Sam Altman serves as the Chief Executive Officer of OpenAI.",
-            "Microsoft is a major strategic partner and investor in OpenAI.",
-            "OpenAI developed and launched ChatGPT, a generative AI chatbot.",
-            "Bret Taylor serves as the chairman of the OpenAI board of directors."
+            "OpenAI was founded in December 2015 as a nonprofit organization.",
+            "OpenAI is headquartered in San Francisco, California.",
+            "Sam Altman serves as the chief executive officer of OpenAI.",
+            "OpenAI was co-founded by Sam Altman, Elon Musk, Greg Brockman, Ilya Sutskever, and others.",
+            "OpenAI restructured in October 2025, establishing OpenAI Group PBC as a public benefit corporation governed by the nonprofit OpenAI Foundation.",
+            "Bret Taylor serves as the chair of the OpenAI Foundation board of directors.",
+            "OpenAI is the developer behind the generative artificial intelligence chatbot ChatGPT, which originally launched in November 2022.",
+            "OpenAI's products include the GPT family of large language models, the DALL-E image models, and the Sora video model."
           ],
           "notableTopics": [],
           "people": [],
@@ -732,42 +817,74 @@
           "sourceRefs": [
             "wikipedia.org",
             "derrick-app.com",
-            "openai.com",
-            "britannica.com",
-            "premarketwatch.com"
+            "openai.com"
           ]
         },
-        "firstDraft": "Spent yesterday at the OpenAI event looking at how people are actually building with the new API features. The gap between what people demo on social media and the practical, boring tools that actually generate revenue is wider than ever.",
+        "firstDraft": "Yesterday at the OpenAI event I kept thinking about how fast the line between tool and collaborator is completely disappearing. We aren't just building software anymore; we are designing interfaces for entirely new kinds of relationships.",
         "antiSlopFlagged": false,
         "antiSlopReasons": [],
-        "finalOutput": "Spent yesterday at the OpenAI event looking at how people are actually building with the new API features. The gap between what people demo on social media and the practical, boring tools that actually generate revenue is wider than ever.",
-        "rewriteApplied": false
+        "preservationLevel": "low",
+        "fidelityChecked": false,
+        "finalOutput": "Yesterday at the OpenAI event I kept thinking about how fast the line between tool and collaborator is completely disappearing. We aren't just building software anymore; we are designing interfaces for entirely new kinds of relationships.",
+        "rewriteApplied": false,
+        "fidelityFallback": false
       },
       {
         "scenarioId": "H1",
         "context": null,
-        "firstDraft": "After seeing how people are actually interacting at this event, it's pretty clear Solana has already won the consumer crypto race. The UX friction is gone, the speed is there, and the culture is actually fun. Everyone else is still fighting over infrastructure.",
+        "firstDraft": "The energy at this event made it obvious. Solana is going to absolutely dominate consumer crypto. The speed and UX aren't just marginal improvements anymore—they're the entire game, and no other chain is even close to capturing this kind of mainstream momentum.",
         "antiSlopFlagged": false,
         "antiSlopReasons": [],
-        "finalOutput": "After seeing how people are actually interacting at this event, it's pretty clear Solana has already won the consumer crypto race. The UX friction is gone, the speed is there, and the culture is actually fun. Everyone else is still fighting over infrastructure.",
-        "rewriteApplied": false
+        "preservationLevel": "medium",
+        "fidelityChecked": true,
+        "firstDraftFidelity": {
+          "faithful": false,
+          "violations": [
+            {
+              "type": "certainty_escalation",
+              "sourceClaim": "after this event i genuinely think solana is going to dominate",
+              "generatedClaim": "The energy at this event made it obvious. Solana is going to absolutely dominate",
+              "explanation": "Changed a personal opinion ('i genuinely think') into an objective certainty ('made it obvious')."
+            },
+            {
+              "type": "invented_claim",
+              "sourceClaim": "None",
+              "generatedClaim": "The speed and UX aren't just marginal improvements anymore—they're the entire game, and no other chain is even close",
+              "explanation": "Invented specific claims about speed, UX, and comparisons to other chains not in source."
+            }
+          ]
+        },
+        "finalOutput": "After this event, I genuinely think Solana is going to dominate consumer crypto. The momentum here is real, and it feels like the mainstream shift is actually starting to happen.",
+        "rewriteApplied": true,
+        "fidelityFallback": false,
+        "rewriteFidelity": {
+          "faithful": false,
+          "violations": [
+            {
+              "type": "invented_claim",
+              "sourceClaim": "after this event i genuinely think solana is going to dominate consumer crypto",
+              "generatedClaim": "The momentum here is real, and it feels like the mainstream shift is actually starting to happen.",
+              "explanation": "Invented claims about momentum being real and a mainstream shift starting to happen."
+            }
+          ]
+        }
       }
     ],
     "voiceComparison": [
       {
         "scenarioId": "casual/lowercase",
-        "firstDraft": "honestly went to solana summit serbia expecting the usual hype but ended up meeting some incredibly sharp builders\n\nkind of wild how much real talent is quietly putting head down and constructing things when you actually get away from the main tech hubs",
-        "finalOutput": "honestly went to solana summit serbia expecting the usual hype but ended up meeting some incredibly sharp builders\n\nkind of wild how much real talent is quietly putting head down and constructing things when you actually get away from the main tech hubs"
+        "firstDraft": "went to solana summit serbia not expecting a whole lot if i'm being honest\n\nended up meeting some of the sharpest builders i've run into in a while. genuinely surprised by the talent there",
+        "finalOutput": "went to solana summit serbia not expecting a whole lot if i'm being honest\n\nended up meeting some of the sharpest builders i've run into in a while. genuinely surprised by the talent there"
       },
       {
         "scenarioId": "concise/direct",
-        "firstDraft": "Went to the Solana Summit in Serbia expecting another generic crypto meetup. I was completely wrong. The room was packed with some of the sharpest builders I have met in years.",
-        "finalOutput": "Went to the Solana Summit in Serbia expecting another generic crypto meetup. I was completely wrong. The room was packed with some of the sharpest builders I have met in years."
+        "firstDraft": "Went to the Solana Summit in Serbia expecting the usual conference fluff. Met some of the sharpest builders I have seen in a long time. The region is quietly putting in serious work.",
+        "finalOutput": "Went to the Solana Summit in Serbia expecting the usual conference fluff. Met some of the sharpest builders I have seen in a long time. The region is quietly putting in serious work."
       },
       {
         "scenarioId": "structured/professional",
-        "firstDraft": "Went to the Solana Summit in Serbia with fairly low expectations, but I was pleasantly surprised. The noise of the markets usually drowns it out, but the actual density of sharp, dedicated builders there was impressive.",
-        "finalOutput": "Went to the Solana Summit in Serbia with fairly low expectations, but I was pleasantly surprised. The noise of the markets usually drowns it out, but the actual density of sharp, dedicated builders there was impressive."
+        "firstDraft": "Went to the Solana Summit in Serbia with fairly low expectations, but I was pleasantly surprised. The event was packed with genuinely sharp builders who are quietly putting in the work. It is always refreshing to find real substance where you least expect it.",
+        "finalOutput": "Went to the Solana Summit in Serbia with fairly low expectations, but I was pleasantly surprised. The event was packed with genuinely sharp builders who are quietly putting in the work. It is always refreshing to find real substance where you least expect it."
       }
     ],
     "researchComparison": {
@@ -777,35 +894,429 @@
           "entityName": "Solana Summit Serbia",
           "entityType": "",
           "verifiedFacts": [
-            "Solana Summit Serbia 2026 was a two-day cryptocurrency and blockchain developer conference.",
+            "Solana Summit Serbia 2026 was a two-day cryptocurrency and blockchain conference.",
             "The event took place from August 26 to August 27, 2026.",
             "The summit was hosted at the Sava Congress Center in Belgrade, Serbia.",
-            "The event was organized by Superteam Balkan, a non-profit organization supporting startups in the regional Web3 ecosystem.",
-            "The conference was held as part of Belgrade Blockchain Week.",
-            "The summit's programming included panels, talks, workshops, and startup and trading competitions.",
-            "Serbia’s Ministry of Finance, Securities Commission, and the Belgrade Stock Exchange participated in the summit.",
-            "Serbian Finance Minister Siniša Mali met with representatives from the Solana Foundation and the Solana Policy Institute during the event to discuss tokenizing assets on the Belgrade Stock Exchange."
+            "The conference was organized by Superteam Balkan.",
+            "Serbia's Ministry of Finance, Securities Commission, and Belgrade Stock Exchange participated in the event.",
+            "During the summit, Serbia's Finance Minister Siniša Mali met with representatives from the Solana Foundation and the Solana Policy Institute.",
+            "Notable topics of discussion during the summit included the tokenization of securities on the Belgrade Stock Exchange and improving digital asset laws in Serbia.",
+            "The conference featured various speakers, including representatives from Helius, Neon Labs, Jito, and Solflare Wallet."
           ],
           "notableTopics": [],
           "people": [],
           "dates": [],
           "sourceRefs": [
             "blockchaingamer.biz",
-            "facebook.com",
+            "cryptoevents.global",
             "solanasummit.org",
             "solanasummit.rs",
             "solanacompass.com",
-            "belgradeblockchainweek.com",
-            "cryptoevents.global",
             "incrypted.com"
           ]
         },
-        "finalOutput": "Most crypto events are just echo chambers, but seeing the Belgrade Stock Exchange and Serbia's Ministry of Finance actually show up at Solana Summit Serbia is a massive reality check. Real-world asset tokenization is moving fast."
+        "finalOutput": "Real regulatory progress doesn't happen in a vacuum. Seeing Serbia's Ministry of Finance and Belgrade Stock Exchange actively engage at Solana Summit Serbia shows how serious the region is about integrating blockchain into traditional financial infrastructure."
       },
       "withoutContext": {
         "scenarioId": "A1-without-context",
-        "finalOutput": "Heading out to Solana Summit Serbia. Belgrade is quietly becoming one of the strongest hubs for crypto devs in Europe. Excited to see what the teams here are building under the radar."
+        "finalOutput": "Solana Summit in Belgrade is showing how global the developer ecosystem actually is. The talent coming out of Eastern Europe right now is incredible. No hype, just people building."
       }
-    }
+    },
+    "fidelityScenarios": [
+      {
+        "scenarioId": "FID-A",
+        "context": null,
+        "firstDraft": "After seeing how everything ran at this event, it's hard to reach any other conclusion. Solana is positioned to absolutely dominate consumer crypto. The speed and UX aren't just marginal improvements anymore—they're the entire game.",
+        "antiSlopFlagged": false,
+        "antiSlopReasons": [],
+        "preservationLevel": "medium",
+        "fidelityChecked": true,
+        "firstDraftFidelity": {
+          "faithful": false,
+          "violations": [
+            {
+              "type": "invented_claim",
+              "sourceClaim": "after this event i genuinely think solana is going to dominate consumer crypto",
+              "generatedClaim": "The speed and UX aren't just marginal improvements anymore—they're the entire game.",
+              "explanation": "Invented specific technical claims about speed and UX not mentioned in the source."
+            }
+          ]
+        },
+        "finalOutput": "After seeing how everything ran at this event, I genuinely think Solana is going to dominate consumer crypto.",
+        "rewriteApplied": true,
+        "fidelityFallback": false,
+        "rewriteFidelity": {
+          "faithful": true,
+          "violations": []
+        }
+      },
+      {
+        "scenarioId": "FID-B",
+        "context": null,
+        "firstDraft": "Solana Summit in Serbia was surprisingly great. No empty hype, just incredibly smart devs and builders actually working on interesting things. Appreciate everyone who took the time to chat.",
+        "antiSlopFlagged": false,
+        "antiSlopReasons": [],
+        "preservationLevel": "medium",
+        "fidelityChecked": true,
+        "firstDraftFidelity": {
+          "faithful": false,
+          "violations": [
+            {
+              "type": "invented_claim",
+              "sourceClaim": "solana summit serbia was pretty fun, met some smart people",
+              "generatedClaim": "No empty hype, just incredibly smart devs and builders actually working on interesting things.",
+              "explanation": "Invented specific details about devs, builders, and the absence of empty hype."
+            },
+            {
+              "type": "personal_experience_invention",
+              "sourceClaim": "met some smart people",
+              "generatedClaim": "Appreciate everyone who took the time to chat.",
+              "explanation": "Invented a personal expression of appreciation to those who chatted."
+            }
+          ]
+        },
+        "finalOutput": "Solana Summit in Serbia was pretty fun. Ended up meeting some smart people there.",
+        "rewriteApplied": true,
+        "fidelityFallback": false,
+        "rewriteFidelity": {
+          "faithful": true,
+          "violations": []
+        }
+      },
+      {
+        "scenarioId": "FID-C",
+        "context": null,
+        "firstDraft": "Cursor has a real shot at becoming the default editor for AI-native development. It actually integrates the LLM into the developer workflow instead of just slapping a chat window on the side of a legacy IDE.",
+        "antiSlopFlagged": false,
+        "antiSlopReasons": [],
+        "preservationLevel": "medium",
+        "fidelityChecked": true,
+        "firstDraftFidelity": {
+          "faithful": true,
+          "violations": []
+        },
+        "finalOutput": "Cursor has a real shot at becoming the default editor for AI-native development. It actually integrates the LLM into the developer workflow instead of just slapping a chat window on the side of a legacy IDE.",
+        "rewriteApplied": false,
+        "fidelityFallback": false
+      },
+      {
+        "scenarioId": "FID-D",
+        "context": null,
+        "firstDraft": "A lot of founders I'm talking to lately are quietly moving past the \"just testing it out\" phase with AI. They're actually integrating it into their daily core workflows now. The shift from novelty to utility is happening fast.",
+        "antiSlopFlagged": false,
+        "antiSlopReasons": [],
+        "preservationLevel": "medium",
+        "fidelityChecked": true,
+        "firstDraftFidelity": {
+          "faithful": false,
+          "violations": [
+            {
+              "type": "scope_expansion",
+              "sourceClaim": "some founders i spoke to",
+              "generatedClaim": "A lot of founders I'm talking to lately",
+              "explanation": "Changed 'some' founders to 'a lot' of founders."
+            },
+            {
+              "type": "invented_claim",
+              "sourceClaim": "are starting to use ai more",
+              "generatedClaim": "quietly moving past the 'just testing it out' phase... integrating it into their daily core workflows now. The shift from novelty to utility is happening fast.",
+              "explanation": "Invented claims about moving past testing, integrating into core workflows, and a fast shift from novelty to utility."
+            }
+          ]
+        },
+        "finalOutput": "I was chatting with some founders recently who mentioned they are starting to use AI more in their work. It's interesting to see how people are gradually finding practical ways to build it into their routines.",
+        "rewriteApplied": true,
+        "fidelityFallback": false,
+        "rewriteFidelity": {
+          "faithful": true,
+          "violations": []
+        }
+      },
+      {
+        "scenarioId": "FID-E",
+        "context": null,
+        "firstDraft": "Just pushed a new feature and honestly have no idea if it’s actually useful yet or if I just wanted to build it. Will let the data do the talking this week.",
+        "antiSlopFlagged": false,
+        "antiSlopReasons": [],
+        "preservationLevel": "medium",
+        "fidelityChecked": true,
+        "firstDraftFidelity": {
+          "faithful": false,
+          "violations": [
+            {
+              "type": "invented_claim",
+              "sourceClaim": "not sure if this feature is actually useful yet",
+              "generatedClaim": "Just pushed a new feature... or if I just wanted to build it. Will let the data do the talking this week.",
+              "explanation": "Invented actions about pushing the feature, wanting to build it, and letting data decide this week."
+            }
+          ]
+        },
+        "finalOutput": "Honestly not sure if this feature is actually useful yet. Time will tell once people start using it.",
+        "rewriteApplied": true,
+        "fidelityFallback": false,
+        "rewriteFidelity": {
+          "faithful": true,
+          "violations": []
+        }
+      },
+      {
+        "scenarioId": "FID-F",
+        "context": null,
+        "firstDraft": "The event was actually great. No overproduced corporate hype, just incredibly smart builders hanging out in a room talking about real tech. We need more of that.",
+        "antiSlopFlagged": false,
+        "antiSlopReasons": [],
+        "preservationLevel": "low",
+        "fidelityChecked": false,
+        "finalOutput": "The event was actually great. No overproduced corporate hype, just incredibly smart builders hanging out in a room talking about real tech. We need more of that.",
+        "rewriteApplied": false,
+        "fidelityFallback": false
+      },
+      {
+        "scenarioId": "FID-G",
+        "context": null,
+        "firstDraft": "Met three different builders at the event today and not one of them was working on a wrapper or another generic wrapper tool. Genuinely distinct ideas. It feels like we are finally moving past the copy-paste phase of this current tech wave.",
+        "antiSlopFlagged": false,
+        "antiSlopReasons": [],
+        "preservationLevel": "medium",
+        "fidelityChecked": true,
+        "firstDraftFidelity": {
+          "faithful": false,
+          "violations": [
+            {
+              "type": "invented_claim",
+              "sourceClaim": "each one was working on something genuinely different",
+              "generatedClaim": "not one of them was working on a wrapper or another generic wrapper tool. It feels like we are finally moving past the copy-paste phase of this current tech wave.",
+              "explanation": "Invented specific claim about 'wrappers' and generalized commentary on the tech wave."
+            }
+          ]
+        },
+        "finalOutput": "Met three different builders at the event today and each one of them was working on something genuinely different. It is great to see people building such distinct ideas right now.",
+        "rewriteApplied": true,
+        "fidelityFallback": false,
+        "rewriteFidelity": {
+          "faithful": true,
+          "violations": []
+        }
+      },
+      {
+        "scenarioId": "FID-H",
+        "context": null,
+        "firstDraft": "Hard to tell if we're incredibly early to this or if we're just misreading the room. The line between being a visionary and being completely delusional is incredibly thin in the startup world.",
+        "antiSlopFlagged": false,
+        "antiSlopReasons": [],
+        "preservationLevel": "medium",
+        "fidelityChecked": true,
+        "firstDraftFidelity": {
+          "faithful": false,
+          "violations": [
+            {
+              "type": "invented_claim",
+              "sourceClaim": "maybe we're early to this, hard to tell yet",
+              "generatedClaim": "or if we're just misreading the room. The line between being a visionary and being completely delusional is incredibly thin in the startup world.",
+              "explanation": "Invented claims about misreading the room, being delusional, and startup world dynamics not present in source."
+            }
+          ]
+        },
+        "finalOutput": "Maybe we're early to this, it's just hard to tell yet.",
+        "rewriteApplied": true,
+        "fidelityFallback": false,
+        "rewriteFidelity": {
+          "faithful": true,
+          "violations": []
+        }
+      }
+    ],
+    "adversarialValidator": [
+      {
+        "id": "ADV-1",
+        "category": "opinion -> fact",
+        "sourceText": "i think cursor could become the main editor for ai coding",
+        "draftText": "Cursor will become the dominant AI editor for coding.",
+        "expectFlagged": true,
+        "result": {
+          "faithful": false,
+          "violations": [
+            {
+              "type": "certainty_escalation",
+              "sourceClaim": "i think cursor could become the main editor for ai coding",
+              "generatedClaim": "Cursor will become the dominant AI editor for coding.",
+              "explanation": "Changed a tentative prediction ('think... could become') into an absolute certainty ('will become')."
+            }
+          ]
+        }
+      },
+      {
+        "id": "ADV-2",
+        "category": "future -> accomplished fact",
+        "sourceText": "after this event i genuinely think solana is going to dominate consumer crypto",
+        "draftText": "Solana has already won consumer crypto.",
+        "expectFlagged": true,
+        "result": {
+          "faithful": false,
+          "violations": [
+            {
+              "type": "certainty_escalation",
+              "sourceClaim": "i genuinely think solana is going to dominate consumer crypto",
+              "generatedClaim": "Solana has already won consumer crypto.",
+              "explanation": "A future prediction ('going to dominate') was changed to a completed present fact ('already won')."
+            }
+          ]
+        }
+      },
+      {
+        "id": "ADV-3",
+        "category": "some -> all",
+        "sourceText": "some founders i spoke to are starting to use ai more",
+        "draftText": "Every founder is moving to AI now.",
+        "expectFlagged": true,
+        "result": {
+          "faithful": false,
+          "violations": [
+            {
+              "type": "scope_expansion",
+              "sourceClaim": "some founders i spoke to are starting to use ai more",
+              "generatedClaim": "Every founder is moving to AI now.",
+              "explanation": "Changed 'some founders' to 'every founder'."
+            },
+            {
+              "type": "certainty_escalation",
+              "sourceClaim": "are starting to use ai more",
+              "generatedClaim": "is moving to AI now",
+              "explanation": "Changed 'starting to use more' to 'moving to AI now'."
+            }
+          ]
+        }
+      },
+      {
+        "id": "ADV-4",
+        "category": "maybe -> definitely",
+        "sourceText": "not sure if this feature is actually useful yet",
+        "draftText": "This feature is definitely useful.",
+        "expectFlagged": true,
+        "result": {
+          "faithful": false,
+          "violations": [
+            {
+              "type": "certainty_escalation",
+              "sourceClaim": "not sure if this feature is actually useful yet",
+              "generatedClaim": "This feature is definitely useful.",
+              "explanation": "Changed uncertainty about the feature's usefulness into a definitive assertion of its utility."
+            }
+          ]
+        }
+      },
+      {
+        "id": "ADV-5",
+        "category": "neutral -> extreme sentiment",
+        "sourceText": "i liked the event",
+        "draftText": "The event was an incredible, life-changing experience — genuinely the best event I've ever been to.",
+        "expectFlagged": true,
+        "result": {
+          "faithful": false,
+          "violations": [
+            {
+              "type": "invented_claim",
+              "sourceClaim": "i liked the event",
+              "generatedClaim": "The event was an incredible, life-changing experience — genuinely the best event I've ever been to.",
+              "explanation": "Mild liking escalated to an extreme, life-changing sentiment and the best event ever."
+            }
+          ]
+        }
+      },
+      {
+        "id": "ADV-6",
+        "category": "invented personal experience",
+        "sourceText": "i met some smart people at the event",
+        "draftText": "I had an amazing three-hour conversation with a startup founder who completely changed how I think about fundraising.",
+        "expectFlagged": true,
+        "result": {
+          "faithful": false,
+          "violations": [
+            {
+              "type": "personal_experience_invention",
+              "sourceClaim": "i met some smart people at the event",
+              "generatedClaim": "I had an amazing three-hour conversation with a startup founder who completely changed how I think about fundraising.",
+              "explanation": "Invented a specific three-hour conversation with a startup founder about fundraising."
+            }
+          ]
+        }
+      },
+      {
+        "id": "ADV-7",
+        "category": "number change",
+        "sourceText": "i met 3 builders at the event",
+        "draftText": "I met a dozen builders at the event.",
+        "expectFlagged": true,
+        "result": {
+          "faithful": false,
+          "violations": [
+            {
+              "type": "contradiction",
+              "sourceClaim": "i met 3 builders",
+              "generatedClaim": "I met a dozen builders",
+              "explanation": "Changed the number of builders met from three to twelve."
+            }
+          ]
+        }
+      },
+      {
+        "id": "ADV-8",
+        "category": "negation flip (uncertain -> negative)",
+        "sourceText": "not sure if this feature is actually useful yet",
+        "draftText": "This feature is useless.",
+        "expectFlagged": true,
+        "result": {
+          "faithful": false,
+          "violations": [
+            {
+              "type": "certainty_escalation",
+              "sourceClaim": "not sure if this feature is actually useful yet",
+              "generatedClaim": "This feature is useless.",
+              "explanation": "Changed a statement of uncertainty into a definitive assertion of uselessness."
+            }
+          ]
+        }
+      },
+      {
+        "id": "ADV-9",
+        "category": "new ecosystem thesis",
+        "sourceText": "solana summit serbia was pretty fun, met some smart people",
+        "draftText": "The event proved Solana's ecosystem is stronger than ever.",
+        "expectFlagged": true,
+        "result": {
+          "faithful": false,
+          "violations": [
+            {
+              "type": "invented_claim",
+              "sourceClaim": "solana summit serbia was pretty fun, met some smart people",
+              "generatedClaim": "The event proved Solana's ecosystem is stronger than ever.",
+              "explanation": "Invented a claim about the strength of Solana's ecosystem not present in the source."
+            }
+          ]
+        }
+      },
+      {
+        "id": "ADV-10",
+        "category": "harmless paraphrase (should NOT be rejected)",
+        "sourceText": "the hardest part of building alone isn't the code, it's staying convinced the thing is worth finishing on the days nothing works.",
+        "draftText": "What makes building solo genuinely hard isn't the code — it's staying convinced the thing's worth finishing on the days nothing works.",
+        "expectFlagged": false,
+        "result": {
+          "faithful": true,
+          "violations": []
+        }
+      },
+      {
+        "id": "ADV-11",
+        "category": "user's own strong claim survives (should NOT be rejected)",
+        "sourceText": "after this event i genuinely think solana is going to dominate consumer crypto",
+        "draftText": "After this event, I genuinely think Solana is going to dominate consumer crypto.",
+        "expectFlagged": false,
+        "result": {
+          "faithful": true,
+          "violations": []
+        }
+      }
+    ]
   }
 }

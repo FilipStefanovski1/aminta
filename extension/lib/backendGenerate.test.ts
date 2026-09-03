@@ -590,6 +590,103 @@ describe("dispatchGenerate", () => {
       expect(mockRunAI).not.toHaveBeenCalled()
     })
   })
+
+  // v2.2 — semantic claim-fidelity (BYOK path). Only reachable when
+  // preservationLevel isn't "low" — a bare 1-2 word topic input (as every
+  // test above this describe block uses) never triggers a fidelity check at
+  // all, which is exactly why those tests' mockRunAI call counts didn't
+  // change. These tests use a real multi-word "rough thought" input to
+  // actually exercise the new path.
+  describe("K. semantic claim-fidelity corrective retry (BYOK only, tweet mode only)", () => {
+    const byokStore = { ...baseStore, apiKey: "AIzaSomeKey", plan: "pro", subscriptionStatus: "active", aiIncluded: false } as AmintaStore
+    const roughInput = "after this event i genuinely think solana is going to dominate consumer crypto"
+
+    function fidelityJson(faithful: boolean, violations: unknown[] = []) {
+      return JSON.stringify({ faithful, violations })
+    }
+
+    it("a faithful first draft runs exactly one fidelity-check call and never rewrites", async () => {
+      mockRunAI.mockReset()
+        .mockResolvedValueOnce("after solana summit serbia, i genuinely think solana is going to dominate consumer crypto")
+        .mockResolvedValueOnce(fidelityJson(true))
+
+      const text = await dispatchGenerate(byokStore, {
+        generationMode: "tweet", input: roughInput, voice: {} as any, styleProfile: null, tone: "direct", length: "medium",
+      })
+
+      expect(mockRunAI).toHaveBeenCalledTimes(2) // generate + fidelity check only, no rewrite
+      expect(text).toBe("after solana summit serbia, i genuinely think solana is going to dominate consumer crypto")
+    })
+
+    it("a certainty-escalated draft (the real 'has already won' failure) triggers a corrective rewrite, and a faithful rewrite wins", async () => {
+      mockRunAI.mockReset()
+        .mockResolvedValueOnce("Solana has already won consumer crypto now.") // 1. first draft — escalated
+        .mockResolvedValueOnce(fidelityJson(false, [{ type: "certainty_escalation", sourceClaim: "i genuinely think solana is going to dominate consumer crypto", generatedClaim: "Solana has already won consumer crypto.", explanation: "future prediction became an accomplished fact" }])) // 2. fidelity check on first draft
+        .mockResolvedValueOnce("after this event i genuinely think solana is going to dominate consumer crypto") // 3. corrective rewrite
+        .mockResolvedValueOnce(fidelityJson(true)) // 4. fidelity check on the rewrite
+
+      const text = await dispatchGenerate(byokStore, {
+        generationMode: "tweet", input: roughInput, voice: {} as any, styleProfile: null, tone: "direct", length: "medium",
+      })
+
+      expect(mockRunAI).toHaveBeenCalledTimes(4)
+      expect(text).toBe("after this event i genuinely think solana is going to dominate consumer crypto")
+
+      // The corrective rewrite's prompt must carry the certainty/tense/scope preservation rule.
+      const rewriteMessages = mockRunAI.mock.calls[2][2] as { role: string; content: string }[]
+      const system = rewriteMessages.find((m) => m.role === "system")!.content
+      expect(system).toContain("certainty escalation")
+      expect(system).toContain("do NOT change WHAT is being claimed")
+    })
+
+    it("if the rewrite fixes fidelity but the rewrite's own fidelity re-check fails to parse (fail-open), the rewrite is still kept", async () => {
+      mockRunAI.mockReset()
+        .mockResolvedValueOnce("Solana has already won consumer crypto now.")
+        .mockResolvedValueOnce(fidelityJson(false, [{ type: "certainty_escalation", sourceClaim: "a", generatedClaim: "b", explanation: "c" }]))
+        .mockResolvedValueOnce("after this event i genuinely think solana is going to dominate consumer crypto")
+        .mockResolvedValueOnce("not valid json") // fail-open
+
+      const text = await dispatchGenerate(byokStore, {
+        generationMode: "tweet", input: roughInput, voice: {} as any, styleProfile: null, tone: "direct", length: "medium",
+      })
+
+      expect(text).toBe("after this event i genuinely think solana is going to dominate consumer crypto")
+    })
+
+    it("if the rewrite BREAKS fidelity that was fine before, the original draft wins (meaning preservation beats stylistic polish)", async () => {
+      mockRunAI.mockReset()
+        .mockResolvedValueOnce("The energy was unmatched, honestly the future is bright for consumer crypto.") // 1. first draft — slop-flagged, but faithful (no certainty/tense/scope shift)
+        .mockResolvedValueOnce(fidelityJson(true)) // 2. fidelity check on first draft — faithful
+        .mockResolvedValueOnce("Solana has already won consumer crypto.") // 3. corrective rewrite fixes slop but escalates certainty
+        .mockResolvedValueOnce(fidelityJson(false, [{ type: "certainty_escalation", sourceClaim: "a", generatedClaim: "b", explanation: "c" }])) // 4. fidelity check on rewrite — now unfaithful
+
+      const text = await dispatchGenerate(byokStore, {
+        generationMode: "tweet", input: roughInput, voice: {} as any, styleProfile: null, tone: "direct", length: "medium",
+      })
+
+      expect(mockRunAI).toHaveBeenCalledTimes(4)
+      expect(text).toBe("The energy was unmatched, honestly the future is bright for consumer crypto.")
+    })
+
+    it("a bare-topic input never runs a fidelity check at all — only slop applies (preservationLevel 'low')", async () => {
+      mockRunAI.mockReset().mockResolvedValue("Cursor keeps shipping genuinely useful improvements for AI-assisted coding workflows.")
+      await dispatchGenerate(byokStore, {
+        generationMode: "tweet", input: "Cursor", voice: {} as any, styleProfile: null, tone: "direct", length: "medium",
+      })
+      expect(mockRunAI).toHaveBeenCalledTimes(1) // just the generate call — no fidelity check, no rewrite
+    })
+
+    it("never applies to reply or polish modes", async () => {
+      mockRunAI.mockReset().mockResolvedValue("some multi word rough response text here")
+      await dispatchGenerate(byokStore, {
+        generationMode: "reply", input: roughInput, voice: {} as any, styleProfile: null, tone: "direct", length: "medium",
+      })
+      await dispatchGenerate(byokStore, {
+        generationMode: "polish", input: roughInput, voice: {} as any, styleProfile: null, tone: "direct", length: "medium",
+      })
+      expect(mockRunAI).toHaveBeenCalledTimes(2) // one call each, no fidelity check for either
+    })
+  })
 })
 
 // Regression coverage for the live-QA failure: "Couldn't generate distinct

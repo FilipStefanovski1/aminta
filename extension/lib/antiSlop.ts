@@ -22,6 +22,7 @@
 // shared package between extension/ and landing/, same convention as
 // lib/prompts.ts). Diff before shipping a change to either.
 import type { StyleProfile } from "~lib/storage"
+import { describeViolation, type FidelityViolation } from "~lib/claimFidelity"
 
 export interface SlopCheckResult {
   flagged: boolean
@@ -214,11 +215,23 @@ export function detectSlop(text: string, styleProfile: StyleProfile | null, sour
 
 /**
  * Appends the corrective instruction for one bounded rewrite after
- * detectSlop flags a draft — never replaces an existing templateInstruction
- * (a News/Product preset, say), only adds to it. Mirrors
+ * detectSlop flags a draft and/or lib/claimFidelity.ts's semantic-fidelity
+ * check finds a meaning-changing violation — never replaces an existing
+ * templateInstruction (a News/Product preset, say), only adds to it. Mirrors
  * lib/lengthGuard.ts's withLengthCorrection.
+ *
+ * `fidelityViolations` (v2.2) is the harder class of problem this file's
+ * own phrase-marker checks can't catch — see claimFidelity.ts's header for
+ * the real motivating failure (a hedged future prediction silently
+ * rewritten into an unhedged present-tense claim). When present, the note
+ * adds an explicit instruction to preserve certainty/tense/scope/numbers
+ * exactly, on top of the existing style-only correction below.
  */
-export function withAntiSlopCorrection(existing: string | undefined, reasons: string[]): string {
-  const note = `The previous result read as generic AI-generated writing, not this specific person's own voice — specifically: ${reasons.join("; ")}. Rewrite it once, fixing ONLY these issues: return to the user's actual thought, remove any unsupported conclusion or generic industry narrative, keep only claims that are supported by the user's own input or the verified context, prefer specificity over grandiosity, and let the post simply end rather than forcing a bigger point — do not replace one cliché with another. Preserve the original meaning, any specific facts or claims it actually makes, and the requested length. Do not introduce new issues.`
+export function withAntiSlopCorrection(existing: string | undefined, reasons: string[], fidelityViolations: FidelityViolation[] = []): string {
+  const issues = [...reasons, ...fidelityViolations.map(describeViolation)]
+  const meaningNote = fidelityViolations.length > 0
+    ? " Most importantly: do NOT change WHAT is being claimed — keep the exact certainty (a hedge stays a hedge, a firm claim stays firm), the exact tense (a future prediction stays future, never an accomplished fact), the exact scope (some/a few/one stays that way, never everyone/the industry/the ecosystem), and any specific numbers or names exactly as given."
+    : ""
+  const note = `The previous result had real problems — specifically: ${issues.join("; ")}. Rewrite it once, fixing ONLY these issues: return to the user's actual thought, remove any unsupported conclusion or generic industry narrative, keep only claims that are supported by the user's own input or the verified context, prefer specificity over grandiosity, and let the post simply end rather than forcing a bigger point — do not replace one cliché with another.${meaningNote} Preserve the original meaning, any specific facts or claims it actually makes, and the requested length. Do not introduce new issues.`
   return existing ? `${existing}\n\n${note}` : note
 }

@@ -15,6 +15,7 @@
 
 import { classifyDraftIntent, preservationLevelFor, type PreservationLevel } from "./draftIntent"
 import type { EntityContext } from "./contextEnrichment"
+import { describeViolation, type FidelityViolation } from "./claimFidelity"
 
 export type ContentPart =
   | { type: "text"; text: string }
@@ -536,9 +537,27 @@ export function buildMessages(
 // "assistant" — Gemini's own multi-turn isn't modeled here), so the flagged
 // draft is embedded as text within one fresh user message rather than a
 // simulated prior turn.
-export function buildAntiSlopRewriteMessages(originalMessages: ChatMessage[], draft: string, reasons: string[]): ChatMessage[] {
+// `fidelityViolations` (v2.2, optional, defaults to none — existing 3-arg
+// call sites are unaffected) — findings from lib/ai/claimFidelity.ts's
+// model-assisted semantic-fidelity check, the harder class of problem this
+// project's phrase-marker anti-slop detector structurally can't catch (see
+// claimFidelity.ts's header for the real motivating failure: a hedged
+// future prediction silently rewritten into an unhedged present-tense
+// claim). When present, the rewrite instruction adds an explicit
+// certainty/tense/scope/numbers preservation rule on top of the existing
+// style-only correction.
+export function buildAntiSlopRewriteMessages(
+  originalMessages: ChatMessage[],
+  draft: string,
+  reasons: string[],
+  fidelityViolations: FidelityViolation[] = []
+): ChatMessage[] {
   const system = originalMessages.find((m) => m.role === "system")?.content ?? ""
-  const user = `A first attempt at this same request produced the following draft:\n"""${draft}"""\nThis draft reads as generic AI-generated writing rather than this specific person's own voice — specifically: ${reasons.join("; ")}.\nRewrite it ONCE, fixing ONLY these issues. Preserve the original meaning, any specific facts or claims it makes, and its approximate length. Do not introduce new issues. Return only the finished rewrite.`
+  const issues = [...reasons, ...fidelityViolations.map(describeViolation)]
+  const meaningNote = fidelityViolations.length > 0
+    ? " Most importantly: you may change HOW something is worded, but you must NOT change WHAT is being claimed — keep the exact certainty (a hedge stays a hedge, a firm claim stays firm), the exact tense (a future prediction stays future, never an accomplished fact), the exact scope (some/a few/one stays that way, never everyone/the industry/the ecosystem), and any specific numbers or names exactly as given."
+    : ""
+  const user = `A first attempt at this same request produced the following draft:\n"""${draft}"""\nThis draft has real problems — specifically: ${issues.join("; ")}.\nRewrite it ONCE, fixing ONLY these issues.${meaningNote} Preserve the original meaning, any specific facts or claims it makes, and its approximate length. Do not introduce new issues. Return only the finished rewrite.`
   return [
     { role: "system", content: system },
     { role: "user", content: user },

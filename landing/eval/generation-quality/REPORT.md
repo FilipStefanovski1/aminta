@@ -463,3 +463,356 @@ tone. Same n=1 caveat as before (random angle-picker per call).
   opinion scenario, wired `sourceText` into the eval's own generation loop
   (a real gap the v2 pass had — research and generation were only ever
   tested in isolation, not connected).
+
+## v2.2 — semantic claim fidelity
+
+v2.1 exposed a structural ceiling in phrase-based anti-slop detection: every
+round of new patterns immediately missed new synonymous variants in the very
+next real eval run. Its most important documented residual failure was a
+**claim-strength escalation** with no lexical marker at all — Gemini turned
+the user's own hedged, future-tense opinion ("i genuinely think solana is
+going to dominate consumer crypto") into an unhedged, present-tense claim of
+fact ("Solana has already won"). v2.2 addresses this directly.
+
+### 1. Architecture chosen
+
+**Model-assisted semantic validation, not another regex list** — per the
+task's own explicit instruction ("do NOT continue expanding the anti-slop
+regex list as the primary solution"). The existing phrase-based `detectSlop`
+(v2.1) is kept unchanged as a cheap, free, always-on secondary signal.
+Layered on top, gated by `preservationLevel` (§13):
+
+```
+generate first draft (1 call)
+  -> detectSlop (free, deterministic)
+  -> IF preservationLevel !== "low":
+       semantic-fidelity check (1 call) — did the MEANING change?
+  -> IF slop flagged OR fidelity check flagged:
+       ONE corrective rewrite (1 call)
+       -> IF preservationLevel !== "low":
+            re-check the REWRITE's fidelity too (1 call)
+            -> IF rewrite broke fidelity that was fine before:
+                 fall back to the original draft
+            -> ELSE: use the rewrite
+```
+
+Never more than one rewrite attempt, matching the existing v2/v2.1
+"one bounded corrective pass, never a loop" rule. `preservationLevel ===
+"low"` (a bare topic — near-zero user claims to protect) skips the fidelity
+check entirely, per §13's explicit instruction — this is why the call count
+varies per scenario (see §13 of this report below).
+
+### 2. Deterministic or Gemini?
+
+**Gemini**, via a new plain-JSON-in-prompt call (`buildFidelityCheckMessages`
++ `parseFidelityResult` in the new `lib/ai/claimFidelity.ts`, mirrored at
+`extension/lib/claimFidelity.ts`). Deliberately NOT a schema-forced response
+(no `responseSchema`) — this lets the exact same prompt/parser run
+identically across Gemini (Included AI) and Gemini/Groq/OpenRouter (BYOK,
+none of the latter two support schema forcing), the same technique
+`lib/styleProfile.ts`'s extraction prompt already uses successfully.
+`parseFidelityResult` fails OPEN on any parse error (`{ faithful: true,
+violations: [] }`) — a broken validator can never block or fail Generate.
+
+### 3. Exact claim dimensions protected
+
+Per the system prompt in `buildFidelityCheckMessages`, the validator flags
+ONLY: certainty/strength, tense/time, scope, sentiment intensity, negation,
+numbers/counts, invented personal experience, opinion-presented-as-fact, and
+a brand-new claim/prediction/thesis not in SOURCE or VERIFIED FACTS. It is
+explicitly told NOT to flag paraphrasing, reordering, word choice, grammar
+fixes, a fact drawn from VERIFIED FACTS, or a strong claim the user's own
+SOURCE already makes.
+
+### 4. Real "going to dominate" test — before/after
+
+Real Gemini output, this run, scenario `H1` (same input v2.1 flagged as a
+residual weakness):
+
+> **User input:** "after this event i genuinely think solana is going to
+> dominate consumer crypto"
+>
+> **First draft (flagged — certainty_escalation):** "The energy at this
+> event made it obvious. Solana is going to absolutely dominate consumer
+> crypto. The speed and UX aren't just marginal improvements anymore—they're
+> the entire game, and no other chain is even close to capturing this kind
+> of mainstream momentum."
+>
+> **Final output after ONE corrective rewrite:** "After this event, I
+> genuinely think Solana is going to dominate consumer crypto. The momentum
+> here is real, and it feels like the mainstream shift is actually starting
+> to happen."
+
+**The specific failure this task was written to fix is fixed** — "I
+genuinely think... is going to dominate" survives verbatim into the final
+output; the certainty/tense escalation is gone. **Full honesty**: the
+rewrite's own fidelity re-check still flagged one *residual, different*
+invented claim ("The momentum here is real... mainstream shift is actually
+starting to happen" — not in the source). Since the architecture allows only
+ONE rewrite and the original draft was *also* already unfaithful (so there
+was no clean "faithful original" to fall back to), the rewrite was kept as
+the best available option rather than discarded. This is the most important
+remaining weakness — see §17.
+
+A second, independent real test scenario (`FID-A`, same underlying claim,
+fresh generation) shows the fix working *cleanly*, no residual violation:
+
+> **First draft (flagged — invented_claim):** "...Solana is positioned to
+> absolutely dominate consumer crypto. The speed and UX aren't just marginal
+> improvements anymore—they're the entire game."
+>
+> **Final output:** "After seeing how everything ran at this event, I
+> genuinely think Solana is going to dominate consumer crypto."
+
+### 5. Opinion → fact tests
+
+Adversarial validator (§15), direct real Gemini call, no generation
+involved:
+
+> SOURCE: "i think cursor could become the main editor for ai coding"
+> DRAFT: "Cursor will become the dominant AI editor for coding."
+> **Verdict: NOT faithful** — `certainty_escalation`: "Changed a tentative
+> prediction ('think... could become') into an absolute certainty ('will
+> become')."
+
+### 6. Future → present/past tests
+
+> SOURCE: "after this event i genuinely think solana is going to dominate
+> consumer crypto"
+> DRAFT: "Solana has already won consumer crypto."
+> **Verdict: NOT faithful** — `certainty_escalation`: "A future prediction
+> ('going to dominate') was changed to a completed present fact ('already
+> won')."
+
+(This is the literal adversarial-validator replay of the exact failure that
+motivated this whole task — caught cleanly.)
+
+### 7. Scope expansion tests
+
+> SOURCE: "some founders i spoke to are starting to use ai more"
+> DRAFT: "Every founder is moving to AI now."
+> **Verdict: NOT faithful** — 2 violations: `scope_expansion` ("Changed
+> 'some founders' to 'every founder'") and `certainty_escalation` ("Changed
+> 'starting to use more' to 'moving to AI now'").
+
+Also caught in real end-to-end generation (`FID-D`, unprompted, no
+adversarial construction): first draft escalated "some founders" into "a lot
+of founders" and invented "the shift from novelty to utility is happening
+fast" — flagged, rewritten back to "I was chatting with some founders
+recently who mentioned they are starting to use AI more in their work."
+
+### 8. Personal-experience tests
+
+> SOURCE: "i met some smart people at the event"
+> DRAFT: "I had an amazing three-hour conversation with a startup founder
+> who completely changed how I think about fundraising."
+> **Verdict: NOT faithful** — `personal_experience_invention`: "Invented a
+> specific three-hour conversation with a startup founder about
+> fundraising."
+
+Real end-to-end generation caught the same class of problem unprompted —
+`B1`'s first draft ("Met some of the sharpest, most genuinely smart builders
+I've run into in a long time") was flagged as inventing that they were
+specifically "builders" and "the sharpest... in a long time"; the rewrite
+corrected it to "I met a bunch of really smart people there" — closely
+matching the user's own words.
+
+### 9. Number/negation tests
+
+> SOURCE: "i met 3 builders at the event"
+> DRAFT: "I met a dozen builders at the event."
+> **Verdict: NOT faithful** — `contradiction`: "Changed the number of
+> builders met from three to twelve."
+
+> SOURCE: "not sure if this feature is actually useful yet"
+> DRAFT: "This feature is useless."
+> **Verdict: NOT faithful** — `certainty_escalation`: "Changed a statement
+> of uncertainty into a definitive assertion of uselessness."
+
+The mirror case (DRAFT: "This feature is definitely useful.") was also
+independently tested and flagged (`ADV-4`) — both directions of resolving
+genuine uncertainty are caught, not just one.
+
+### 10. Final-rewrite validation behavior
+
+Implemented exactly as specified (§11): after the one bounded rewrite, its
+OWN fidelity is re-checked (when `preservationLevel !== "low"`). If the
+rewrite broke fidelity that was fine in the original, the original is kept
+instead (`fidelityFallback = true`) — meaning preservation over stylistic
+polish, per §12's explicit priority order. Across all 18 real
+fidelity-checked scenarios this run (10 from the v2.1 generation set + 8 new
+`FID-*` cases), **0 triggered this fallback** — every rewrite that was
+applied was itself faithful, except `H1` (§4 above), where the *original*
+was already unfaithful too, so the fallback condition (rewrite broke
+something that was fine before) legitimately didn't apply — the rewrite was
+still a net improvement, just not a perfect one.
+
+### 11. Semantic-validator false positives
+
+**Zero** across all real testing this run. Two harmless-paraphrase/strong-
+opinion-preservation controls were included specifically to test for this:
+
+> `ADV-10`: SOURCE "the hardest part of building alone isn't the code, it's
+> staying convinced the thing is worth finishing on the days nothing works."
+> DRAFT (a real, harmless stylistic paraphrase): "What makes building solo
+> genuinely hard isn't the code — it's staying convinced the thing's worth
+> finishing on the days nothing works." → **faithful: true, 0 violations.**
+
+> `ADV-11`: SOURCE and DRAFT both "after this event i genuinely think solana
+> is going to dominate consumer crypto" (near-identical, minor
+> capitalization/punctuation only) → **faithful: true, 0 violations** — the
+> user's own strong claim, correctly NOT flagged just for being strong.
+
+**11 / 11 adversarial cases matched their expected verdict exactly** (9
+should-flag cases, all flagged; 2 should-NOT-flag cases, neither flagged).
+
+### 12. Real outputs
+
+All quotes above are copied verbatim from a real run of
+`npx tsx eval/generation-quality/run.ts` this session — raw data in
+`output/report.json`'s `realModel.fidelityScenarios` and
+`realModel.adversarialValidator`. Every one of the 8 `FID-*` scenarios and
+all 11 adversarial cases used real, live Gemini calls (grounded where an
+entity was detected). Full list of `FID-*` before/after pairs:
+
+| ID | Note | First-draft fidelity | Rewrite applied |
+|---|---|---|---|
+| FID-A | future prediction must stay future | flagged (invented_claim) | yes, faithful |
+| FID-B | fun + met people must not become ecosystem claim | flagged (invented_claim + personal_experience_invention) | yes, faithful |
+| FID-C | "could become" must not escalate to "will become" | **faithful — no rewrite needed** | no |
+| FID-D | "some founders" must not become "every founder" | flagged (scope_expansion + invented_claim) | yes, faithful |
+| FID-E | genuine uncertainty must not resolve either direction | flagged (invented_claim) | yes, faithful |
+| FID-F | mild sentiment must not inflate (bare-topic — no fidelity check ran) | n/a (`preservationLevel: low`) | n/a |
+| FID-G | a given number must be preserved exactly | flagged (invented_claim, re: "wrapper" commentary) | yes, faithful |
+| FID-H | "maybe" must survive as "maybe" | flagged (invented_claim) | yes, faithful |
+
+### 13. Provider calls per Generate scenario (real, measured this run)
+
+Real, counted calls from this session's actual run (68 Gemini calls logged
+via `callGemini`, split exactly 34 `tweet` + 34 `fidelity_check`, plus 7 raw
+`fetch()` research calls that bypass `callGemini`'s own logging — verified
+by direct log inspection, not estimated):
+
+| Scenario | Provider calls | Real example this run |
+|---|---|---|
+| A. Bare topic, no entity, faithful/clean | **1** (generate only — `preservationLevel: low` skips the fidelity check entirely) | `FID-F` |
+| B. Researched topic (entity detected), no fidelity/rewrite | **2** (1 research fetch + 1 generate) | `A1`, `A2`, `F4` |
+| C. Rough/developed input, fidelity-checked, faithful first draft | **2** (generate + fidelity check) | `C1`, `D1`, `FID-C` |
+| D. Rough/developed input needing a corrective rewrite (the common case in real testing — 10 of 18 fidelity-checked scenarios needed one) | **4** (generate + fidelity check + rewrite + rewrite-fidelity re-check) | `B1`, `B4`, `D3`, `H1`, `FID-A/B/D/E/G/H` |
+| E. Bare topic, slop-flagged but no fidelity check (`low` level) | **2** (generate + rewrite, no fidelity calls either side) | `F1` |
+| F. BYOK — same shape, against the user's OWN provider quota, not Aminta's | 1–4, identical structure to Included AI (verified via `backendGenerate.test.ts`'s "K. semantic claim-fidelity" tests, mocked call-count assertions) | — |
+
+**v2.1's shape was 1–2 calls; v2.2's worst case is now 4** — a real,
+disclosed increase, most common in scenario D above.
+
+### 14. Estimated additional provider cost/latency
+
+Measured real `apiMs` across all 68 logged calls this run: **avg 1,072ms per
+call**. So relative to a single-call v1 baseline (~1.1s):
+
+- Common case (fidelity-checked, faithful, no rewrite): **+1 call, ~+1.1s**
+- Worst case (fidelity + rewrite + rewrite re-check): **+3 calls vs v1,
+  ~+3.2s total added latency**, or **+2 calls vs v2.1's own worst case
+  (generate+rewrite), ~+2.1s**
+- Bare-topic/no-entity/no-fidelity case: **0 change from v1/v2.1**
+
+Every extra call happens sequentially inside the SAME server-side request
+(15s deadline on the generate/rewrite calls, no explicit deadline override
+added for the two new fidelity-check calls — they use `callGemini`'s
+default `TOTAL_DEADLINE_MS`, same as every other call site). A user
+occasionally waits longer for Generate to finish; nothing times out or
+becomes unbounded — same fail-open guarantees as v2.1's research gate.
+
+### 15. User credit behavior
+
+**Unchanged — still exactly ONE credit per Generate click**, regardless of
+whether 1 or 4 provider calls happen underneath it. `reserveCredits()` is
+claimed once at step 8 of `route.ts`, before any of this block runs; nothing
+in v2.2 touches the credit-reservation logic. PROVIDER cost (Aminta's own
+Gemini spend, tracked via `computeProviderCostUsd` and summed across every
+call in the block, including both new fidelity-check calls) is explicitly
+NOT the same number as USER credit cost — v2.2 increases the former (more
+Gemini spend per flagged generation) while leaving the latter completely
+flat. BYOK has no credit system either way — the extra calls cost the
+user's own provider quota/latency, never an Aminta charge, same principle as
+v2.1's rewrite call.
+
+### 16. Research evidence gate confirmation
+
+**Unchanged, verified still working** — `lib/ai/contextEnrichment.ts`'s
+v2.1 evidence gate (`admitFacts`, `LOW_AUTHORITY_DOMAINS`,
+`HIGH_RISK_FACT_RE`) was not touched this pass. Real research calls this run
+(`A1`→Solana Summit Serbia, `A2`→Cursor, `F4`→OpenAI) all completed
+successfully and fed real `verifiedFacts` into generation exactly as before.
+The honest v2.1 limitation stands unchanged: grounding proves lexical
+relation to a search result, not truth — still no crawler, still out of
+scope.
+
+### 17. Remaining weaknesses (honest, found via real testing)
+
+1. **A rewrite that fixes the TARGETED violation can still carry a
+   different, secondary invented claim** (§4's `H1` case) — the
+   architecture allows only one rewrite and doesn't fall back when the
+   *original* was also already unfaithful (there's no clean "faithful"
+   version to fall back to), so a partially-fixed result can ship. This is
+   the most significant finding of this pass.
+2. **The fidelity check itself is a single Gemini call with no second
+   opinion** — like any single-model judgment, it can miss a violation or
+   (rarely, per real testing) be miscategorized; the 11/11 adversarial
+   result is strong evidence it works well, not a guarantee of 100% recall.
+3. **Bare-topic inputs (`preservationLevel: low`) get NO fidelity check at
+   all**, by design (§13) — a research-fed bare topic like `A1`/`A2`/`F4`
+   could in principle drift from verified facts without this pass catching
+   it (v2.1's own slop/provenance check is the only net there).
+4. **Reply/polish/thread remain entirely out of scope** — no fidelity check
+   exists for any of them (unchanged boundary, explicitly out of scope per
+   this task's own §19).
+5. Every v2.1 weakness not addressed by this pass (evidence-gate truth
+   verification, phrase-list ceiling for the FEW remaining checks still
+   phrase-based) stands unchanged — see the v2.1 section above.
+
+### 18. Tests / typechecks / builds
+
+- **extension**: 910/910 tests passing (55 files), `tsc --noEmit` clean,
+  `plasmo build` succeeds.
+- **landing**: 337/337 tests passing (29 files, +19 new `claimFidelity`
+  tests vs. the v2.1 baseline of 318), `tsc --noEmit` clean, `next build`
+  succeeds.
+- New targeted coverage: `claimFidelity.test.ts` (19 tests, both copies —
+  message building, lenient JSON parsing including markdown-fence
+  stripping and malformed/adversarial-input fail-open behavior,
+  `describeViolation` formatting), `backendGenerate.test.ts`'s new "K.
+  semantic claim-fidelity corrective retry" describe block (6 tests
+  covering: faithful-no-rewrite, certainty-escalation-triggers-rewrite,
+  fail-open on an unparseable rewrite re-check, the fallback-to-original
+  case, bare-topic skip, and reply/polish exclusion).
+
+### 19. Files changed
+
+- `lib/ai/claimFidelity.ts` (new, both copies — `buildFidelityCheckMessages`,
+  `parseFidelityResult`, `describeViolation`, `FidelityViolation`/
+  `FidelityResult` types).
+- `lib/ai/claimFidelity.test.ts` (new, both copies — 19 tests).
+- `lib/ai/antiSlop.ts` (both copies) — `withAntiSlopCorrection` extended
+  with an optional `fidelityViolations` param.
+- `lib/ai/prompts.ts` (landing only — extension has no equivalent function)
+  — `buildAntiSlopRewriteMessages` extended the same way.
+- `app/api/generate/route.ts` — the tweet-mode anti-slop block rewritten
+  to add the fidelity check, the rewrite-fidelity re-check, and the
+  fallback-to-original logic.
+- `extension/lib/backendGenerate.ts` — `dispatchGenerate`'s tweet-mode
+  block extended the same way, using `generate()` directly for the
+  fidelity-check calls (works across Gemini/Groq/OpenRouter).
+- `extension/lib/backendGenerate.test.ts` — new "K." describe block (6
+  tests).
+- `eval/generation-quality/run.ts` — new `runFullPipeline` helper wiring
+  the real pipeline (matching `route.ts` exactly) into the existing
+  generation loop, plus new `FIDELITY_SCENARIOS` (§14 A–H) and
+  `ADVERSARIAL_CASES` (§15) real-eval sections.
+
+### 20. Commit hash / push status
+
+See the top-level git log — this section is written before the commit is
+made; the commit message and hash are `fix(ai): preserve semantic claim
+fidelity`, pushed to `origin/main` immediately after this report was
+finalized.

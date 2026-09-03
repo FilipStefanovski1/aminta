@@ -14,6 +14,8 @@ import { isIncludedAiAvailable } from "@/lib/ai/config"
 import { callGemini } from "@/lib/ai/gemini"
 import { buildAntiSlopRewriteMessages, buildMessages, buildStyleProfileMessages, buildThreadMessages, withImages, type Mode, type OutputLength, type ThreadPostCount, type Tone, type VoiceProfile, type StyleProfile, type StyleCorpusEntry } from "@/lib/ai/prompts"
 import { detectSlop } from "@/lib/ai/antiSlop"
+import { classifyDraftIntent, preservationLevelFor } from "@/lib/ai/draftIntent"
+import { buildFidelityCheckMessages, parseFidelityResult, type FidelityResult } from "@/lib/ai/claimFidelity"
 import { maybeGetEntityContext } from "@/lib/ai/contextEnrichment"
 import { checkAndIncrementRateLimits, claimConcurrencySlot, clearInflight } from "@/lib/ai/rateLimit"
 import { loadUserEntitlement, resolveLimits, claimRequestId, completeUsageLog } from "@/lib/ai/quota"
@@ -351,39 +353,119 @@ export async function POST(request: NextRequest) {
       outputChars: outputText.length,
     }).costUsd
     let rewriteApplied = false
+    let fidelityFallback = false
 
-    // Anti-slop pass — ONE bounded corrective rewrite, tweet mode only (see
-    // lib/ai/antiSlop.ts's file header for what it looks for). Reuses the
-    // SAME already-reserved credit/requestId from step 8 above — this is
-    // the second of at most two provider calls for one user action, never a
-    // second charge (see section 16 of the spec this implements). A
-    // rewrite-call failure never fails the whole request: the original
-    // (unflagged-as-fatal) first draft is kept.
+    // Anti-slop + semantic-fidelity pass — AT MOST ONE bounded corrective
+    // rewrite, tweet mode only (see lib/ai/antiSlop.ts's and
+    // lib/ai/claimFidelity.ts's file headers for what each looks for).
+    // Every extra call in this block reuses the SAME already-reserved
+    // credit/requestId from step 8 above — this is still one billed user
+    // action regardless of how many provider calls it takes (PROVIDER cost
+    // vs USER credit cost are deliberately different things — see the v2.2
+    // final report's cost breakdown). A failure anywhere in this block
+    // never fails the whole request: the best-known-good draft so far is
+    // kept (fail-open throughout, matching contextEnrichment.ts's own
+    // "never make Generate itself fail" rule).
     if (generationMode === "tweet") {
-      // sourceText for the claim-provenance check (lib/ai/antiSlop.ts's
-      // detectOverclaim): the user's own input, plus verified-context
-      // facts when research ran — a sweeping-conclusion phrase that shares
-      // real vocabulary with either of those is a claim the user or
-      // research actually supports; one that shares almost none of it is
-      // very likely the model's own invented interpretation.
-      const sourceText = [body.input, ...(entityContext?.verifiedFacts ?? [])].filter(Boolean).join(" ")
+      // sourceText for both detectSlop's claim-provenance check and the
+      // fidelity check below: the user's own input, plus verified-context
+      // facts when research ran.
+      const verifiedFacts = entityContext?.verifiedFacts ?? []
+      const sourceText = [body.input, ...verifiedFacts].filter(Boolean).join(" ")
       const slopCheck = detectSlop(outputText, body.styleProfile ?? null, sourceText)
-      if (slopCheck.flagged) {
+
+      // Semantic-fidelity check (v2.2) — model-assisted, not another regex
+      // list (see claimFidelity.ts's header for why a phrase-marker check
+      // structurally can't catch a certainty/tense/scope shift). Skipped
+      // when preservationLevel is "low" (a bare topic): with almost no user
+      // claims supplied, generation has broad, intentional freedom there —
+      // running a validator against near-nothing would just spend a call
+      // confirming what's already true by construction (v2.2 spec §13).
+      const preservationLevel = preservationLevelFor(classifyDraftIntent(body.input ?? ""))
+      let fidelityCheck: FidelityResult = { faithful: true, violations: [] }
+      if (preservationLevel !== "low") {
         try {
-          const rewriteMessages = buildAntiSlopRewriteMessages(messages, outputText, slopCheck.reasons)
+          const fidelityMessages = buildFidelityCheckMessages(body.input!, verifiedFacts, outputText)
+          const fidelityResult = await callGemini(fidelityMessages, { generationType: "fidelity_check" })
+          fidelityCheck = parseFidelityResult(fidelityResult.text)
+          cost += computeProviderCostUsd({
+            model: fidelityResult.model,
+            inputTokens: fidelityResult.inputTokens,
+            outputTokens: fidelityResult.outputTokens,
+            inputChars: outputText.length,
+            outputChars: fidelityResult.text.length,
+          }).costUsd
+          if (!fidelityCheck.faithful) {
+            console.log("[Included AI] semantic-fidelity check flagged the first draft", { violations: fidelityCheck.violations })
+          }
+        } catch (e) {
+          console.warn("[Included AI] semantic-fidelity check failed — treating as faithful (fail-open)", {
+            reason: e instanceof Error ? e.message : String(e),
+          })
+        }
+      }
+
+      if (slopCheck.flagged || !fidelityCheck.faithful) {
+        try {
+          const rewriteMessages = buildAntiSlopRewriteMessages(messages, outputText, slopCheck.reasons, fidelityCheck.violations)
           const rewriteResult = await callGemini(rewriteMessages, { structuredText: true, generationType: generationMode })
-          outputText = cleanGenerationOutput(rewriteResult.text)
+          const rewrittenText = cleanGenerationOutput(rewriteResult.text)
           cost += computeProviderCostUsd({
             model: rewriteResult.model,
             inputTokens: rewriteResult.inputTokens,
             outputTokens: rewriteResult.outputTokens,
-            inputChars: outputText.length,
-            outputChars: outputText.length,
+            inputChars: rewrittenText.length,
+            outputChars: rewrittenText.length,
           }).costUsd
-          rewriteApplied = true
-          console.log("[Included AI] anti-slop rewrite applied", { reasons: slopCheck.reasons })
+          console.log("[Included AI] corrective rewrite applied", { slopReasons: slopCheck.reasons, fidelityViolations: fidelityCheck.violations })
+
+          // v2.2 §11 — the rewrite itself gets validated too: a rewrite that
+          // fixes slop but breaks meaning is not an improvement. Only when
+          // preservation genuinely matters (same gate as above), and only
+          // ONE more check — never another rewrite attempt (max one
+          // rewrite, full stop; see the spec's "no rewrite loops" rule).
+          if (preservationLevel !== "low") {
+            try {
+              const rewriteFidelityMessages = buildFidelityCheckMessages(body.input!, verifiedFacts, rewrittenText)
+              const rewriteFidelityResult = await callGemini(rewriteFidelityMessages, { generationType: "fidelity_check" })
+              const rewriteFidelity = parseFidelityResult(rewriteFidelityResult.text)
+              cost += computeProviderCostUsd({
+                model: rewriteFidelityResult.model,
+                inputTokens: rewriteFidelityResult.inputTokens,
+                outputTokens: rewriteFidelityResult.outputTokens,
+                inputChars: rewrittenText.length,
+                outputChars: rewriteFidelityResult.text.length,
+              }).costUsd
+
+              if (!rewriteFidelity.faithful && fidelityCheck.faithful) {
+                // The rewrite broke meaning that was fine before — meaning
+                // preservation beats stylistic polish (v2.2 §12's explicit
+                // priority order). Fall back to the original draft rather
+                // than ship a more-polished but less-true post.
+                fidelityFallback = true
+                console.warn("[Included AI] corrective rewrite broke semantic fidelity — falling back to the original draft", {
+                  rewriteViolations: rewriteFidelity.violations,
+                })
+              } else {
+                outputText = rewrittenText
+                rewriteApplied = true
+              }
+            } catch (e) {
+              // Can't validate the rewrite — keep it anyway (fail-open,
+              // consistent with every other fidelity-check failure mode
+              // here); it already fixed the known slop/fidelity issues.
+              console.warn("[Included AI] rewrite fidelity re-check failed — keeping the rewrite (fail-open)", {
+                reason: e instanceof Error ? e.message : String(e),
+              })
+              outputText = rewrittenText
+              rewriteApplied = true
+            }
+          } else {
+            outputText = rewrittenText
+            rewriteApplied = true
+          }
         } catch (e) {
-          console.warn("[Included AI] anti-slop rewrite failed — keeping the original draft", {
+          console.warn("[Included AI] corrective rewrite failed — keeping the original draft", {
             reason: e instanceof Error ? e.message : String(e),
           })
         }
@@ -402,6 +484,7 @@ export async function POST(request: NextRequest) {
       totalMs: latencyMs,
       hadEntityContext: !!entityContext,
       rewriteApplied,
+      fidelityFallback,
     })
 
     // 10. USAGE LOG — real token counts when the provider returned them,

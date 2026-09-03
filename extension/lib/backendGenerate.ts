@@ -10,6 +10,8 @@ import { getDeviceId } from "~lib/deviceId"
 import { effectiveApiKey, shouldUseIncludedAi } from "~lib/entitlements"
 import { generate as runAI, generateFromImage, type GenerateOptions } from "~lib/ai"
 import { detectSlop, withAntiSlopCorrection } from "~lib/antiSlop"
+import { buildFidelityCheckMessages, parseFidelityResult, type FidelityResult } from "~lib/claimFidelity"
+import { classifyDraftIntent, preservationLevelFor } from "~lib/draftIntent"
 import { classifyFetchError } from "~lib/generationErrors"
 import { isPathologicallyShort, withLengthCorrection } from "~lib/lengthGuard"
 import { buildMessages, buildThreadMessages, enforcePostCount, parseThreadResponse, type Mode, type OutputLength, type ThreadPostCount, type Tone, type ThreadOption } from "~lib/prompts"
@@ -316,23 +318,72 @@ export async function dispatchGenerate(
     if (!isPathologicallyShort(corrected, args.generationMode, args.length)) result = corrected
   }
 
-  // Anti-slop — tweet mode only, mirroring Included AI's scope in
-  // app/api/generate/route.ts (see lib/antiSlop.ts). Same "free to attempt,
-  // never loops" reasoning as the length correction above: at most one more
-  // call, and the best-available text is kept either way (never blocks on
-  // the corrected attempt still being flagged).
+  // Anti-slop + semantic-fidelity — tweet mode only, mirroring Included
+  // AI's scope in app/api/generate/route.ts (see lib/antiSlop.ts and
+  // lib/claimFidelity.ts). Same "free to attempt, never loops" reasoning as
+  // the length correction above: at most one more corrective generation,
+  // and the best-available text is kept either way (never blocks on the
+  // corrected attempt still being flagged). BYOK has no credit system to
+  // protect, so every extra call here is free to attempt — it costs the
+  // user's own provider quota/latency, never an Aminta charge.
   if (args.generationMode === "tweet") {
     // sourceText for the claim-provenance check — BYOK has no server-side
     // research (out of scope, see lib/antiSlop.ts), so this is just the
     // user's own input.
     const slopCheck = detectSlop(result, args.styleProfile, args.input)
-    if (slopCheck.flagged) {
+
+    // Semantic-fidelity check (v2.2) — model-assisted, not another regex
+    // list (see claimFidelity.ts's header for why a phrase-marker check
+    // structurally can't catch a certainty/tense/scope shift). Skipped for
+    // a bare-topic input (preservationLevel "low"): there's almost no user
+    // claim to protect there, so a validator call would just confirm the
+    // obvious. Runs through generate() directly (not runByokGenerate) —
+    // this is a JSON verdict, not post text, so none of the post-generation
+    // cleanup/structuredText handling applies.
+    const preservationLevel = preservationLevelFor(classifyDraftIntent(args.input))
+    let fidelityCheck: FidelityResult = { faithful: true, violations: [] }
+    if (preservationLevel !== "low") {
+      try {
+        const fidelityMessages = buildFidelityCheckMessages(args.input, [], result)
+        const fidelityRaw = await runAI(effectiveApiKey(store), store.model, fidelityMessages, { generationType: "fidelity_check" })
+        fidelityCheck = parseFidelityResult(fidelityRaw)
+      } catch (e) {
+        console.warn("[Aminta] semantic-fidelity check failed — treating as faithful (fail-open)", e instanceof Error ? e.message : String(e))
+      }
+    }
+
+    if (slopCheck.flagged || !fidelityCheck.faithful) {
       const corrected = await runByokGenerate(
         store,
-        { ...args, templateInstruction: withAntiSlopCorrection(args.templateInstruction, slopCheck.reasons) },
+        { ...args, templateInstruction: withAntiSlopCorrection(args.templateInstruction, slopCheck.reasons, fidelityCheck.violations) },
         onRetry
       )
-      if (!detectSlop(corrected, args.styleProfile, args.input).flagged) result = corrected
+      const correctedSlopFlagged = detectSlop(corrected, args.styleProfile, args.input).flagged
+
+      // v2.2 §11 — the rewrite itself gets validated too: a rewrite that
+      // fixes slop but breaks meaning is not an improvement. Only when
+      // preservation genuinely matters (same gate as above), and only ONE
+      // more check — never another corrective attempt (max one rewrite,
+      // full stop).
+      let correctedBrokeFidelity = false
+      if (preservationLevel !== "low") {
+        try {
+          const correctedFidelityMessages = buildFidelityCheckMessages(args.input, [], corrected)
+          const correctedFidelityRaw = await runAI(effectiveApiKey(store), store.model, correctedFidelityMessages, { generationType: "fidelity_check" })
+          const correctedFidelity = parseFidelityResult(correctedFidelityRaw)
+          // Meaning preservation beats stylistic polish (v2.2 §12): only a
+          // rewrite that broke fidelity that was FINE before counts against
+          // it — if the original was already unfaithful, the rewrite is
+          // still the best available text (it fixed something real).
+          correctedBrokeFidelity = !correctedFidelity.faithful && fidelityCheck.faithful
+        } catch (e) {
+          // Can't validate the rewrite — keep it anyway (fail-open,
+          // consistent with every other fidelity-check failure mode here).
+          console.warn("[Aminta] rewrite fidelity re-check failed — keeping the rewrite (fail-open)", e instanceof Error ? e.message : String(e))
+        }
+      }
+
+      if (!correctedSlopFlagged && !correctedBrokeFidelity) result = corrected
     }
   }
 
