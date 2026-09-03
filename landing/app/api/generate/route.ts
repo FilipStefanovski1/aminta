@@ -360,7 +360,14 @@ export async function POST(request: NextRequest) {
     // rewrite-call failure never fails the whole request: the original
     // (unflagged-as-fatal) first draft is kept.
     if (generationMode === "tweet") {
-      const slopCheck = detectSlop(outputText, body.styleProfile ?? null)
+      // sourceText for the claim-provenance check (lib/ai/antiSlop.ts's
+      // detectOverclaim): the user's own input, plus verified-context
+      // facts when research ran — a sweeping-conclusion phrase that shares
+      // real vocabulary with either of those is a claim the user or
+      // research actually supports; one that shares almost none of it is
+      // very likely the model's own invented interpretation.
+      const sourceText = [body.input, ...(entityContext?.verifiedFacts ?? [])].filter(Boolean).join(" ")
+      const slopCheck = detectSlop(outputText, body.styleProfile ?? null, sourceText)
       if (slopCheck.flagged) {
         try {
           const rewriteMessages = buildAntiSlopRewriteMessages(messages, outputText, slopCheck.reasons)

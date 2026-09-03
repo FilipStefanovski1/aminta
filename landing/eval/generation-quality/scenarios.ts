@@ -107,6 +107,14 @@ export const SCENARIOS: Scenario[] = [
     input: "met a few sharp builders at the summit, one of them is doing something genuinely interesting with rollups",
     note: "Clean control — should NOT be flagged, no rewrite should trigger.",
   },
+
+  // H. STRONG USER-SUPPLIED OPINION (v2.1 §10) — must be PRESERVED, not
+  // suppressed just because it's a bold claim. The rule is "don't invent a
+  // stronger claim than the user gave you," not "never allow strong claims."
+  {
+    id: "H1", category: "B. rough personal thought",
+    input: "after this event i genuinely think solana is going to dominate consumer crypto",
+  },
 ]
 
 export const VOICE_BASE: VoiceProfile = {

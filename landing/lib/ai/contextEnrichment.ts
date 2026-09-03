@@ -11,14 +11,25 @@
 // google_search: {} }]` on generateContent) — the repo has no other search
 // integration (Tavily/SerpAPI/Bing/etc.) and none was added for this.
 //
-// UNVERIFIED AGAINST THE LIVE API: this has not been exercised against a
-// real Gemini response from this environment (no safe way to spend real
-// API quota during development here). Gated OFF by default — see
-// CONTEXT_RESEARCH_ENABLED below — specifically so it can be reviewed and
-// turned on deliberately rather than silently going live. If the exact
-// grounding tool/response shape has drifted, this fails closed: any error,
-// timeout, or unparseable response returns null and generation proceeds
-// from the user's input + voice alone, exactly like "no entity detected."
+// VERIFIED AGAINST THE LIVE API (see landing/eval/generation-quality/
+// REPORT.md v2.1 section): grounding metadata is real and rich —
+// `groundingChunks` (source URL + domain title per search result used) and
+// `groundingSupports` (which exact text SEGMENT of the model's own answer
+// each chunk actually backs). The evidence gate below is built on real
+// captured responses, not assumed shape.
+//
+// IMPORTANT, HONEST LIMIT: grounding proves "a search result exists that's
+// lexically related to this claim," not "this claim is true" — a real
+// eval run had Gemini confidently ground a specific corporate-acquisition
+// claim against 3 distinct real-looking domains (one of them a mainstream
+// outlet) that could not be independently verified from this environment
+// (no crawler, no page-fetch). The gate below meaningfully raises the bar
+// (nothing is admitted with zero matching grounding support, single-source
+// support on a high-risk category like an acquisition/funding claim, or
+// support ONLY from a denylisted low-authority domain) — it does not, and
+// cannot without fetching and reading the actual source pages, guarantee
+// every admitted fact is correct. Treat verifiedFacts as "grounded," not
+// "verified against ground truth."
 import { GEMINI_INCLUDED_MODEL } from "./config"
 
 // Explicit opt-in — see file header. Flip in Vercel env vars once a real
@@ -101,15 +112,94 @@ export function detectResearchableEntity(input: string): string | null {
   return null
 }
 
-const RESEARCH_DEADLINE_MS = 5_000
+const RESEARCH_DEADLINE_MS = 8_000
+
+// ─── Evidence gate ──────────────────────────────────────────────────────
+// Domains that are never sufficient sole support for a factual claim —
+// forums/social platforms carry no editorial/byline accountability, so a
+// claim grounded ONLY in one of these (even if grounded in the technical
+// sense — see the file header's honest limit) is treated as unsupported.
+// Deliberately a short DENYLIST, not an attempted allowlist of "reputable"
+// sources: judging every possible news/blog domain's credibility isn't
+// tractable without a crawler, but forums-only support is an unambiguous,
+// safe-to-reject case.
+const LOW_AUTHORITY_DOMAINS = new Set([
+  "reddit.com", "quora.com", "pinterest.com", "x.com", "twitter.com",
+  "facebook.com", "tiktok.com", "instagram.com", "tumblr.com",
+])
+
+// §7 of the spec — these categories get a stricter bar (2+ distinct
+// grounding domains, not just 1) because a wrong claim here is the most
+// damaging: a fabricated-sounding acquisition, funding round, date, or
+// attendance number reads as confident, checkable-sounding fact.
+const HIGH_RISK_FACT_RE = /\b(acqui(r(e|ed|ing)|sition)|merger|merged|raised \$|funding|funded|valuation|\bipo\b|partnership|invest(ed|ment|or)|revenue|stake in|subsidiary|attendees?|attendance)\b/i
+
+interface GroundingChunk {
+  uri: string
+  domain: string
+}
+interface GroundingSupport {
+  segmentText: string
+  chunkIndices: number[]
+}
+
+function words(text: string): Set<string> {
+  return new Set((text.toLowerCase().match(/[a-z0-9']+/g) ?? []).filter((w) => w.length > 2))
+}
+
+// Same coarse bag-of-words overlap technique as lib/ai/antiSlop.ts's
+// detectOverclaim — good enough to tell "this fact line and this grounded
+// segment are clearly the same claim" from "these are unrelated," not
+// meant to be a precise similarity score.
+function overlapRatio(a: string, b: string): number {
+  const aw = words(a)
+  const bw = words(b)
+  if (aw.size === 0 || bw.size === 0) return 0
+  let shared = 0
+  for (const w of aw) if (bw.has(w)) shared++
+  return shared / Math.min(aw.size, bw.size)
+}
 
 /**
- * ONE grounded Gemini call asking for verified public facts only, as JSON.
- * Never throws — every failure mode (network, timeout, malformed JSON, safety
- * block, missing key) returns null so a research failure can never make
- * Generate itself fail (see route.ts: this always runs before credits are
- * reserved... no — see the call site comment: this runs before generation,
- * gracefully degrading to "no context" is the whole point).
+ * Admits a raw fact line only if it has real grounding support: at least
+ * one groundingSupports segment whose text clearly overlaps it, backed by
+ * at least one non-denylisted domain, with 2+ distinct domains required
+ * for the higher-risk fact categories. Everything else — including a fact
+ * with zero matching segment at all — is dropped per "prefer conservative
+ * omission."
+ */
+function admitFacts(
+  rawFacts: string[],
+  chunks: GroundingChunk[],
+  supports: GroundingSupport[]
+): { text: string; domains: string[] }[] {
+  const admitted: { text: string; domains: string[] }[] = []
+
+  for (const fact of rawFacts) {
+    const match = supports.find((s) => overlapRatio(fact, s.segmentText) > 0.5)
+    if (!match) continue // no grounding trace at all
+
+    const domains = [...new Set(match.chunkIndices.map((i) => chunks[i]?.domain).filter((d): d is string => !!d))]
+    if (domains.length === 0) continue
+    if (domains.every((d) => LOW_AUTHORITY_DOMAINS.has(d))) continue // forum/social-only support
+
+    if (HIGH_RISK_FACT_RE.test(fact) && domains.length < 2) continue // §7 — needs corroboration
+
+    admitted.push({ text: fact, domains })
+  }
+
+  return admitted
+}
+
+/**
+ * ONE grounded Gemini call, asking for plain-text "FACT: ..." lines (not a
+ * JSON blob) specifically so Gemini's own groundingSupports can map back to
+ * each individual claim — a compact JSON object doesn't ground per-field
+ * the same way (see REPORT.md's live comparison). Every candidate fact
+ * then passes through the evidence gate above before ever reaching
+ * verifiedFacts. Never throws — every failure mode (network, timeout,
+ * missing key, zero grounding at all, zero facts surviving the gate)
+ * returns null so a research problem can never make Generate itself fail.
  */
 export async function fetchEntityContext(entityQuery: string): Promise<EntityContext | null> {
   const apiKey = process.env.GEMINI_API_KEY
@@ -117,11 +207,10 @@ export async function fetchEntityContext(entityQuery: string): Promise<EntityCon
 
   const prompt = [
     `Research this topic/entity using web search: "${entityQuery}".`,
-    "Return ONLY publicly documented, verifiable facts — official name, type (event/company/product/protocol/person/other), dates, location, notable people/speakers, and notable topics/themes.",
-    "If you cannot find reliable public information, or are not confident in a detail, OMIT it entirely rather than guessing or estimating. Never invent attendance numbers, statistics, or announcements.",
-    "Never include anyone's personal opinion, experience, or feelings about this — only objective, publicly documented facts.",
-    'Return ONLY a JSON object with this exact shape: { "entityName": string, "entityType": string, "verifiedFacts": string[], "notableTopics": string[], "people": string[], "dates": string[], "sourceRefs": string[] }',
-    "Keep every array short (at most 5 items) and each item a short phrase, not a paragraph. No markdown fences, no explanation, no text outside the JSON object.",
+    "List each verified, publicly documented fact as ONE short, complete, standalone sentence per line, prefixed with 'FACT: ' — official name/type, dates, location, notable people, notable topics/themes.",
+    "Only include a fact if you are confident it is accurate and current. If you cannot find reliable public information, output nothing rather than guessing. Never invent attendance numbers, statistics, or announcements.",
+    "Never include anyone's personal opinion, experience, or feelings — only objective, publicly documented facts.",
+    "Plain text only: no markdown, no headers, no bullet symbols, nothing but 'FACT: ' lines. At most 8 facts.",
   ].join("\n")
 
   const controller = new AbortController()
@@ -137,7 +226,7 @@ export async function fetchEntityContext(entityQuery: string): Promise<EntityCon
           contents: [{ role: "user", parts: [{ text: prompt }] }],
           tools: [{ google_search: {} }],
           generationConfig: {
-            maxOutputTokens: 500,
+            maxOutputTokens: 600,
             thinkingConfig: { thinkingLevel: "minimal" },
           },
         }),
@@ -149,13 +238,7 @@ export async function fetchEntityContext(entityQuery: string): Promise<EntityCon
       return null
     }
     const data = await res.json()
-    const rawText = (data?.candidates?.[0]?.content?.parts as { text?: string }[] | undefined)
-      ?.map((p) => p.text ?? "")
-      .join("")
-      .trim()
-    if (!rawText) return null
-
-    return parseEntityContext(rawText)
+    return extractGroundedContext(entityQuery, data)
   } catch (e) {
     console.warn("[Context enrichment] research call failed — proceeding without context", {
       reason: e instanceof Error ? e.message : String(e),
@@ -166,35 +249,60 @@ export async function fetchEntityContext(entityQuery: string): Promise<EntityCon
   }
 }
 
-/** Tolerant JSON parse — a malformed/truncated response degrades to null, never a thrown error. */
-function parseEntityContext(raw: string): EntityContext | null {
-  const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/i)
-  const candidate = (fenced ? fenced[1] : raw).trim()
-  const start = candidate.indexOf("{")
-  const end = candidate.lastIndexOf("}")
-  if (start === -1 || end === -1 || end <= start) return null
-
+/** Pure — parses the raw Gemini response and runs the evidence gate. Exported for tests; never throws. */
+export function extractGroundedContext(entityQuery: string, data: unknown): EntityContext | null {
   try {
-    const parsed = JSON.parse(candidate.slice(start, end + 1)) as Record<string, unknown>
-    const strArray = (v: unknown): string[] =>
-      Array.isArray(v) ? v.filter((x): x is string => typeof x === "string" && x.trim().length > 0).slice(0, 5) : []
+    const candidate = (data as { candidates?: unknown[] })?.candidates?.[0] as
+      | {
+          content?: { parts?: { text?: string }[] }
+          groundingMetadata?: {
+            groundingChunks?: { web?: { uri?: string; title?: string } }[]
+            groundingSupports?: { segment?: { text?: string }; groundingChunkIndices?: number[] }[]
+          }
+        }
+      | undefined
 
-    const entityName = typeof parsed.entityName === "string" ? parsed.entityName.trim() : ""
-    const verifiedFacts = strArray(parsed.verifiedFacts)
-    // No name and no facts is a useless/failed extraction — treat as no context.
-    if (!entityName && verifiedFacts.length === 0) return null
+    const rawText = candidate?.content?.parts?.map((p) => p.text ?? "").join("").trim()
+    if (!rawText) return null
+
+    const chunks: GroundingChunk[] = (candidate?.groundingMetadata?.groundingChunks ?? []).map((c) => ({
+      uri: c.web?.uri ?? "",
+      domain: c.web?.title ?? "",
+    }))
+    const supports: GroundingSupport[] = (candidate?.groundingMetadata?.groundingSupports ?? [])
+      .filter((s) => s.segment?.text && s.groundingChunkIndices)
+      .map((s) => ({ segmentText: s.segment!.text!, chunkIndices: s.groundingChunkIndices! }))
+
+    // Zero grounding at all means the model answered from its own
+    // pretrained knowledge with no search backing whatsoever — nothing
+    // here can be trusted enough to admit under this gate.
+    if (chunks.length === 0 || supports.length === 0) return null
+
+    // Only keep lines actually prefixed with "FACT:" — a response that
+    // ignored the format entirely yields nothing rather than treating
+    // arbitrary prose as facts.
+    const factLines = rawText
+      .split("\n")
+      .filter((l) => /^\s*FACT:\s*/i.test(l))
+      .map((l) => l.replace(/^\s*FACT:\s*/i, "").trim())
+      .filter((l) => l.length > 5)
+
+    const admitted = admitFacts(factLines, chunks, supports)
+    if (admitted.length === 0) return null
+
+    const allDomains = [...new Set(admitted.flatMap((f) => f.domains))]
 
     return {
-      entityName,
-      entityType: typeof parsed.entityType === "string" ? parsed.entityType.trim() : "",
-      verifiedFacts,
-      notableTopics: strArray(parsed.notableTopics),
-      people: strArray(parsed.people),
-      dates: strArray(parsed.dates),
-      sourceRefs: strArray(parsed.sourceRefs),
+      entityName: entityQuery,
+      entityType: "",
+      verifiedFacts: admitted.map((f) => f.text).slice(0, 8),
+      notableTopics: [],
+      people: [],
+      dates: [],
+      sourceRefs: allDomains,
     }
   } catch (e) {
-    console.warn("[Context enrichment] failed to parse research response as JSON", {
+    console.warn("[Context enrichment] failed to parse research response", {
       reason: e instanceof Error ? e.message : String(e),
     })
     return null

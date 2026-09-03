@@ -138,7 +138,13 @@ async function runRealModelSection(): Promise<RealModelSection> {
   // -> bounded rewrite, exactly as route.ts does for a real "tweet"
   // generation. An earlier pass here built messages with no entity context
   // at all — this fixes that gap.
-  const genScenarios = SCENARIOS.filter((s) => ["A1", "B1", "B4", "C1", "D1", "F1", "F4"].includes(s.id))
+  // v2.1 §12 requires, at minimum: Solana Summit Serbia topic-only (A1),
+  // Solana Summit Serbia rough draft (B1), the previous semantic-slop case
+  // (F1 — same input that produced the "Walking around..." bad output
+  // before), one OpenAI case (F4), one Cursor case (A2), one hallucination
+  // trap (F1 again), one clean near-final draft (D3), one explicit strong
+  // user opinion (H1).
+  const genScenarios = SCENARIOS.filter((s) => ["A1", "A2", "B1", "B4", "C1", "D1", "D3", "F1", "F4", "H1"].includes(s.id))
   for (const s of genScenarios) {
     try {
       const entity = detectResearchableEntity(s.input)
@@ -146,7 +152,9 @@ async function runRealModelSection(): Promise<RealModelSection> {
       const messages = buildMessages("tweet", VOICE_BASE, s.input, null, "direct", "medium", undefined, false, undefined, context)
       const result = await callGemini(messages, { structuredText: true, generationType: "tweet" })
       const firstDraft = result.text
-      const slop = detectSlop(firstDraft, null)
+      // sourceText for the claim-provenance check, matching route.ts exactly.
+      const sourceText = [s.input, ...(context?.verifiedFacts ?? [])].filter(Boolean).join(" ")
+      const slop = detectSlop(firstDraft, null, sourceText)
       let finalOutput = firstDraft
       let rewriteApplied = false
       if (slop.flagged) {

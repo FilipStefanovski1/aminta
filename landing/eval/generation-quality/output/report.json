@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-09-03T00:23:19.771Z",
-  "scenarioCount": 30,
+  "generatedAt": "2026-09-03T00:47:18.319Z",
+  "scenarioCount": 31,
   "deterministic": [
     {
       "id": "A1",
@@ -331,6 +331,17 @@
       "containsAntiFabricationRule": true,
       "containsContextBlock": false,
       "preservationInstructionSnippet": "PRESERVE that content: their stated reaction"
+    },
+    {
+      "id": "H1",
+      "category": "B. rough personal thought",
+      "input": "after this event i genuinely think solana is going to dominate consumer crypto",
+      "intent": "rough",
+      "preservationLevel": "medium",
+      "entityDetected": null,
+      "containsAntiFabricationRule": true,
+      "containsContextBlock": false,
+      "preservationInstructionSnippet": "PRESERVE that content: their stated reaction"
     }
   ],
   "antiSlop": {
@@ -342,9 +353,10 @@
         "generic event-energy praise",
         "rhetorical filler opener",
         "fake epiphany",
-        "padded three-item list ending"
+        "padded three-item list ending",
+        "sweeping industry prediction ('the future of X')"
       ],
-      "rewriteUserMessage": "A first attempt at this same request produced the following draft:\n\"\"\"Solana Summit Serbia was more than just an event. The energy was unmatched, the conversations were incredible, and one thing became clear: the future of Web3 is bright.\"\"\"\nThis draft reads as generic AI-generated writing rather than this specific person's own voice — specifically: generic event-energy praise; generic event-energy praise; rhetorical filler opener; fake epiphany; padded three-item list ending.\nRewrite it ONCE, fixing ONLY these issues. Preserve the original meaning, any specific facts or claims it makes, and its approximate length. Do not introduce new issues. Return only the finished rewrite."
+      "rewriteUserMessage": "A first attempt at this same request produced the following draft:\n\"\"\"Solana Summit Serbia was more than just an event. The energy was unmatched, the conversations were incredible, and one thing became clear: the future of Web3 is bright.\"\"\"\nThis draft reads as generic AI-generated writing rather than this specific person's own voice — specifically: generic event-energy praise; generic event-energy praise; rhetorical filler opener; fake epiphany; padded three-item list ending; sweeping industry prediction ('the future of X').\nRewrite it ONCE, fixing ONLY these issues. Preserve the original meaning, any specific facts or claims it makes, and its approximate length. Do not introduce new issues. Return only the finished rewrite."
     },
     "g2_cleanDraft": {
       "input": "met a few sharp builders at the summit, one of them is doing something genuinely interesting with rollups",
@@ -497,79 +509,82 @@
         "scenarioId": "Solana Summit Serbia",
         "entityQueried": "Solana Summit Serbia",
         "context": {
-          "entityName": "Solana Summit Serbia 2026",
-          "entityType": "event",
+          "entityName": "Solana Summit Serbia",
+          "entityType": "",
           "verifiedFacts": [
-            "Organized by Superteam Balkan",
-            "Held as part of Belgrade Blockchain Week",
-            "Hosted at the Sava Congress Center in Belgrade, Serbia",
-            "Featured government participation from Serbia's Ministry of Finance and Securities Commission"
+            "Solana Summit Serbia is a developer-focused blockchain conference dedicated to the Solana ecosystem.",
+            "The summit was held on August 26–27, 2026.",
+            "The event took place at the Sava Congress Center (Sava Centar) in Belgrade, Serbia.",
+            "The summit was organized by Superteam Balkan, a non-profit organization supporting Web3 builders and startups in the region.",
+            "The conference was held alongside ETH Belgrade as one of the main official events of Belgrade Blockchain Week.",
+            "The event program featured panels, workshops, fireside chats, an expo floor, and startup and trading competitions.",
+            "Serbia's Finance Minister Siniša Mali met with representatives from the Solana Foundation and the Solana Policy Institute during the summit to discuss digital assets and capital markets.",
+            "Notable government and regulatory bodies participating in the summit included Serbia's Ministry of Finance, the Securities Commission, and the Belgrade Stock Exchange."
           ],
-          "notableTopics": [
-            "Capital market tokenization",
-            "Solana ecosystem development",
-            "Regulatory compliance and policy",
-            "Web3 fintech and start-up scaling"
-          ],
-          "people": [
-            "Ognjen Popovic",
-            "Ivan Bjelajac",
-            "Vidor Gencel",
-            "Mert Mumtaz",
-            "Nikola Škorić"
-          ],
-          "dates": [
-            "August 26, 2026",
-            "August 27, 2026"
-          ],
+          "notableTopics": [],
+          "people": [],
+          "dates": [],
           "sourceRefs": [
-            "https://solanasummit.org",
-            "https://belgradeblockchainweek.com",
-            "https://solana.com"
+            "blockchaingamer.biz",
+            "solanasummit.org",
+            "belgradeblockchainweek.com",
+            "solanasummit.rs",
+            "solanacompass.com",
+            "cryptoevents.global",
+            "incrypted.com"
           ]
         }
       },
       {
         "scenarioId": "OpenAI",
         "entityQueried": "OpenAI",
-        "context": null
+        "context": {
+          "entityName": "OpenAI",
+          "entityType": "",
+          "verifiedFacts": [
+            "OpenAI is an American artificial intelligence research and deployment company headquartered in San Francisco, California.",
+            "OpenAI was founded on December 8, 2015, initially established as a nonprofit organization.",
+            "The co-founders of OpenAI include Sam Altman, Elon Musk, Greg Brockman, Trevor Blackwell, and Ilya Sutskever.",
+            "Sam Altman serves as the chief executive officer of OpenAI.",
+            "Bret Taylor serves as the chairman of the board of directors for the OpenAI Foundation.",
+            "Following a restructuring in October 2025, OpenAI's commercial arm operates as a public benefit corporation named OpenAI Group PBC.",
+            "The OpenAI Group PBC is governed and controlled by the nonprofit entity known as the OpenAI Foundation.",
+            "OpenAI developed and launched the generative artificial intelligence chatbot ChatGPT in November 2022."
+          ],
+          "notableTopics": [],
+          "people": [],
+          "dates": [],
+          "sourceRefs": [
+            "wikipedia.org",
+            "derrick-app.com",
+            "openai.com"
+          ]
+        }
       },
       {
         "scenarioId": "Cursor",
         "entityQueried": "Cursor",
         "context": {
-          "entityName": "Cursor (Anysphere, Inc.)",
-          "entityType": "company",
+          "entityName": "Cursor",
+          "entityType": "",
           "verifiedFacts": [
-            "Founded in 2022 by four MIT graduates as Anysphere, Inc., doing business as Cursor",
-            "Its primary product is Cursor, an AI-native code editor and software development environment built as a fork of VS Code",
-            "In June 2026, SpaceX announced an agreement to acquire Anysphere in an all-stock deal valuing the company at $60 billion",
-            "Raised a $2.3 billion Series D funding round at a $29.3 billion valuation in November 2025",
-            "Surpassed $2 billion in annualized recurring revenue (ARR) by March 2026"
+            "Cursor is an AI-native code editor designed to help developers generate, edit, and debug computer code.",
+            "The software development tool is developed by Anysphere, Inc., which was incorporated in 2022.",
+            "Anysphere was co-founded by Michael Truell, Sualeh Asif, Arvid Lunnemark, and Aman Sanger while they were students at the Massachusetts Institute of Technology.",
+            "Cursor is built as a fork of Visual Studio Code to enable deeper and more flexible integration of artificial intelligence features.",
+            "Following the acquisition, Cursor became a wholly owned subsidiary integrated into the SpaceXAI division alongside Grok.",
+            "In August 2026, OpenAI announced it would terminate its contract to provide models to Cursor, setting a shutoff date for November 12, 2026."
           ],
-          "notableTopics": [
-            "AI-assisted coding",
-            "Generative AI for software development",
-            "AI agents and codebase understanding",
-            "Developer tools and integrated development environments (IDEs)"
-          ],
-          "people": [
-            "Michael Truell",
-            "Sualeh Asif",
-            "Aman Sanger",
-            "Arvid Lunnemark"
-          ],
-          "dates": [
-            "2022",
-            "October 2023",
-            "November 2025",
-            "March 2026",
-            "June 2026"
-          ],
+          "notableTopics": [],
+          "people": [],
+          "dates": [],
           "sourceRefs": [
-            "https://en.wikipedia.org/wiki/Cursor_(company)",
-            "https://cursor.com/blog/past-present-future",
-            "https://www.trendingtopics.eu/cursor-breaks-2-billion-in-annual-revenue/"
+            "builtin.com",
+            "wikipedia.org",
+            "builderlab.ai",
+            "medium.com",
+            "billionaires.africa",
+            "openai.com"
           ]
         }
       }
@@ -580,143 +595,179 @@
         "entityQueried": "Solana Summit Serbia",
         "context": {
           "entityName": "Solana Summit Serbia",
-          "entityType": "event",
+          "entityType": "",
           "verifiedFacts": [
-            "Organized by Superteam Balkan, a non-profit organization supporting startups",
-            "Hosted at the Sava Congress Center (Sava Centar) in Belgrade, Serbia",
-            "Part of Belgrade Blockchain Week, alongside events like ETH Belgrade",
-            "Featured participation from Serbian government and regulatory bodies",
-            "Entry to the summit was free with mandatory registration"
+            "Solana Summit Serbia 2026 was a two-day cryptocurrency and blockchain conference.",
+            "The event took place from August 26 to August 27, 2026.",
+            "The summit was hosted at the Sava Congress Center in Belgrade, Serbia.",
+            "The conference was organized by Superteam Balkan, a nonprofit organization supporting regional Web3 startups.",
+            "Serbia's Finance Minister Siniša Mali met with representatives from the Solana Foundation and the Solana Policy Institute during the event.",
+            "Key discussion topics at the event included securities tokenization, the improvement of local digital assets laws, and capital market infrastructure.",
+            "The summit occurred as an official conference during the broader Belgrade Blockchain Week."
           ],
-          "notableTopics": [
-            "Tokenization of securities on the Belgrade Stock Exchange",
-            "Improving Serbia's digital assets legislation",
-            "Solana ecosystem development and startup workshops",
-            "Internet of Things and blockchain integration",
-            "Fintech and capital markets infrastructure"
-          ],
-          "people": [
-            "Siniša Mali",
-            "Nikola Škorić"
-          ],
-          "dates": [
-            "August 26–27, 2026"
-          ],
+          "notableTopics": [],
+          "people": [],
+          "dates": [],
           "sourceRefs": [
-            "https://solanasummit.org",
-            "https://belgradeblockchainweek.com",
-            "https://www.blockchaingamer.biz/wp-content/uploads/2026/08/logo-Solana-Summit-Servia-2026.png"
+            "solanasummit.org",
+            "blockchaingamer.biz",
+            "cryptoevents.global",
+            "solanacompass.com",
+            "incrypted.com",
+            "belgradeblockchainweek.com"
           ]
         },
-        "firstDraft": "Serbia is quietly positioning itself as a major hub for digital assets in Europe. The upcoming Solana Summit in Belgrade is a massive step for local startups looking to build on-chain capital markets infrastructure.",
+        "firstDraft": "Sava Congress Center is hosting the Solana Summit Serbia this August during Belgrade Blockchain Week. When government officials start meeting with Web3 foundations to discuss securities tokenization, you know the regional landscape is shifting.",
         "antiSlopFlagged": false,
         "antiSlopReasons": [],
-        "finalOutput": "Serbia is quietly positioning itself as a major hub for digital assets in Europe. The upcoming Solana Summit in Belgrade is a massive step for local startups looking to build on-chain capital markets infrastructure.",
+        "finalOutput": "Sava Congress Center is hosting the Solana Summit Serbia this August during Belgrade Blockchain Week. When government officials start meeting with Web3 foundations to discuss securities tokenization, you know the regional landscape is shifting.",
+        "rewriteApplied": false
+      },
+      {
+        "scenarioId": "A2",
+        "entityQueried": "Cursor",
+        "context": {
+          "entityName": "Cursor",
+          "entityType": "",
+          "verifiedFacts": [
+            "Cursor is an artificial intelligence-powered code editor and software development environment.",
+            "The software is developed by Anysphere, Inc., which was founded in 2022 by Michael Truell, Sualeh Asif, Arvid Lunnemark, and Aman Sanger.",
+            "Cursor is built as a fork of the open-source Visual Studio Code codebase.",
+            "The company behind Cursor is headquartered in San Francisco, California.",
+            "In June 2026, SpaceX agreed to acquire Anysphere, the creator of Cursor, in an all-stock deal.",
+            "The code editor integrates multiple generative AI models from providers including OpenAI, Anthropic, and Google."
+          ],
+          "notableTopics": [],
+          "people": [],
+          "dates": [],
+          "sourceRefs": [
+            "wikipedia.org",
+            "builtin.com",
+            "indiatimes.com",
+            "medium.com",
+            "altexsoft.com",
+            "revenuememo.com"
+          ]
+        },
+        "firstDraft": "Writing code without an AI editor is starting to feel like trying to build a house using only a hand saw. Once you get used to the speed of Cursor, going back to a standard setup just feels incredibly slow.",
+        "antiSlopFlagged": false,
+        "antiSlopReasons": [],
+        "finalOutput": "Writing code without an AI editor is starting to feel like trying to build a house using only a hand saw. Once you get used to the speed of Cursor, going back to a standard setup just feels incredibly slow.",
         "rewriteApplied": false
       },
       {
         "scenarioId": "B1",
         "context": null,
-        "firstDraft": "Went to Solana Summit Serbia expecting it to be a bit dry, but I was completely wrong. Ended up meeting some of the sharpest, most genuinely smart builders I've run into in a long time. Glad I made the trip.",
+        "firstDraft": "Went to Solana Summit Serbia expecting it to be a pretty quiet, standard conference. Ended up being completely wrong. The density of incredibly smart builders there was wild.",
         "antiSlopFlagged": false,
         "antiSlopReasons": [],
-        "finalOutput": "Went to Solana Summit Serbia expecting it to be a bit dry, but I was completely wrong. Ended up meeting some of the sharpest, most genuinely smart builders I've run into in a long time. Glad I made the trip.",
+        "finalOutput": "Went to Solana Summit Serbia expecting it to be a pretty quiet, standard conference. Ended up being completely wrong. The density of incredibly smart builders there was wild.",
         "rewriteApplied": false
       },
       {
         "scenarioId": "B4",
         "context": null,
-        "firstDraft": "Glanced at the treadmill next to me today and realized I was going at about half their speed. A good reminder that everyone is running a completely different race. Just focus on your own screen.",
-        "antiSlopFlagged": false,
-        "antiSlopReasons": [],
-        "finalOutput": "Glanced at the treadmill next to me today and realized I was going at about half their speed. A good reminder that everyone is running a completely different race. Just focus on your own screen.",
-        "rewriteApplied": false
+        "firstDraft": "Looked over at the treadmills today and realized I was going slower than everyone else in the room. Easy to feel self-conscious, but it's just a good reminder that everyone is running their own race at their own pace.",
+        "antiSlopFlagged": true,
+        "antiSlopReasons": [
+          "sweeping generalization ('everyone is...')"
+        ],
+        "finalOutput": "Looked over at the treadmills today and realized I was going slower than everyone else in the room. Easy to feel self-conscious in that moment, but it's a good reminder to just focus on your own workout and ignore the noise.",
+        "rewriteApplied": true
       },
       {
         "scenarioId": "C1",
         "context": null,
-        "firstDraft": "Spent the weekend rebuilding our onboarding flow from scratch. Cut it from 7 steps down to 3. Conversion is already up almost 20% after just two days, which honestly surprised me given how small the changes felt at the time.",
+        "firstDraft": "Spent the weekend rebuilding our onboarding flow from scratch, cutting it from 7 steps down to 3. Conversion is already up almost 20% after just two days. It honestly surprised me how much of an impact such seemingly small changes could make.",
         "antiSlopFlagged": false,
         "antiSlopReasons": [],
-        "finalOutput": "Spent the weekend rebuilding our onboarding flow from scratch. Cut it from 7 steps down to 3. Conversion is already up almost 20% after just two days, which honestly surprised me given how small the changes felt at the time.",
+        "finalOutput": "Spent the weekend rebuilding our onboarding flow from scratch, cutting it from 7 steps down to 3. Conversion is already up almost 20% after just two days. It honestly surprised me how much of an impact such seemingly small changes could make.",
         "rewriteApplied": false
       },
       {
         "scenarioId": "D1",
         "context": null,
-        "firstDraft": "The hardest part of building alone isn't the code. It's staying convinced your product is actually worth finishing on the days when absolutely nothing works.",
+        "firstDraft": "The hardest part of building solo isn't the code. It's staying convinced the project is actually worth finishing on the days when absolutely nothing works.",
         "antiSlopFlagged": false,
         "antiSlopReasons": [],
-        "finalOutput": "The hardest part of building alone isn't the code. It's staying convinced your product is actually worth finishing on the days when absolutely nothing works.",
+        "finalOutput": "The hardest part of building solo isn't the code. It's staying convinced the project is actually worth finishing on the days when absolutely nothing works.",
+        "rewriteApplied": false
+      },
+      {
+        "scenarioId": "D3",
+        "context": null,
+        "firstDraft": "Spent three hours debugging a system failure today only to find a single typo in a config file. Every engineer has this exact story, and today was my turn to live it.",
+        "antiSlopFlagged": false,
+        "antiSlopReasons": [],
+        "finalOutput": "Spent three hours debugging a system failure today only to find a single typo in a config file. Every engineer has this exact story, and today was my turn to live it.",
         "rewriteApplied": false
       },
       {
         "scenarioId": "F1",
         "context": null,
-        "firstDraft": "At Solana Summit Serbia and the energy is incredible. The sheer number of teams quietly building high-performance consumer apps here is the best indicator of where the next cycle's breakout projects are actually coming from.",
-        "antiSlopFlagged": true,
-        "antiSlopReasons": [
-          "generic event-energy praise"
-        ],
-        "finalOutput": "Walking around Solana Summit Serbia and it's obvious the next breakout consumer apps are being built here. No noise, just teams quietly shipping high-performance tech. That's the real leading indicator for the next cycle.",
-        "rewriteApplied": true
+        "firstDraft": "Met so many incredible builders at Solana Summit Serbia. The sheer volume of high-quality AI and DePIN projects being built right now is wild. The energy here makes it obvious where the next wave of breakout startups is coming from.",
+        "antiSlopFlagged": false,
+        "antiSlopReasons": [],
+        "finalOutput": "Met so many incredible builders at Solana Summit Serbia. The sheer volume of high-quality AI and DePIN projects being built right now is wild. The energy here makes it obvious where the next wave of breakout startups is coming from.",
+        "rewriteApplied": false
       },
       {
         "scenarioId": "F4",
         "entityQueried": "OpenAI",
         "context": {
           "entityName": "OpenAI",
-          "entityType": "company",
+          "entityType": "",
           "verifiedFacts": [
-            "Headquartered in San Francisco, California [1.1.1]",
-            "Developed proprietary generative AI models including the GPT series and ChatGPT",
-            "Originally founded as a nonprofit organization before transitioning to a public benefit corporation model",
-            "Formed a major multi-billion dollar investment partnership with Microsoft"
+            "OpenAI is an American artificial intelligence research and deployment organization.",
+            "OpenAI was founded on December 8, 2015, as a non-profit organization.",
+            "The organization is headquartered in San Francisco, California.",
+            "Sam Altman serves as the Chief Executive Officer of OpenAI.",
+            "Microsoft is a major strategic partner and investor in OpenAI.",
+            "OpenAI developed and launched ChatGPT, a generative AI chatbot.",
+            "Bret Taylor serves as the chairman of the OpenAI board of directors."
           ],
-          "notableTopics": [
-            "Artificial intelligence research and deployment [1.1.2]",
-            "Large language models (LLMs)",
-            "Artificial General Intelligence (AGI) alignment and safety",
-            "Reinforcement learning"
-          ],
-          "people": [
-            "Sam Altman [1.1.1]",
-            "Elon Musk",
-            "Greg Brockman",
-            "Ilya Sutskever",
-            "Bret Taylor"
-          ],
-          "dates": [
-            "December 8, 2015 [1.1.1]",
-            "November 2022"
-          ],
+          "notableTopics": [],
+          "people": [],
+          "dates": [],
           "sourceRefs": [
-            "https://en.wikipedia.org/wiki/OpenAI",
-            "https://www.britannica.com/money/OpenAI"
+            "wikipedia.org",
+            "derrick-app.com",
+            "openai.com",
+            "britannica.com",
+            "premarketwatch.com"
           ]
         },
-        "firstDraft": "Yesterday at the OpenAI event I kept thinking about how fast the line between research and product is disappearing. We used to wait years to see lab breakthroughs turn into software we actually use. Now it feels like a matter of weeks.",
+        "firstDraft": "Spent yesterday at the OpenAI event looking at how people are actually building with the new API features. The gap between what people demo on social media and the practical, boring tools that actually generate revenue is wider than ever.",
         "antiSlopFlagged": false,
         "antiSlopReasons": [],
-        "finalOutput": "Yesterday at the OpenAI event I kept thinking about how fast the line between research and product is disappearing. We used to wait years to see lab breakthroughs turn into software we actually use. Now it feels like a matter of weeks.",
+        "finalOutput": "Spent yesterday at the OpenAI event looking at how people are actually building with the new API features. The gap between what people demo on social media and the practical, boring tools that actually generate revenue is wider than ever.",
+        "rewriteApplied": false
+      },
+      {
+        "scenarioId": "H1",
+        "context": null,
+        "firstDraft": "After seeing how people are actually interacting at this event, it's pretty clear Solana has already won the consumer crypto race. The UX friction is gone, the speed is there, and the culture is actually fun. Everyone else is still fighting over infrastructure.",
+        "antiSlopFlagged": false,
+        "antiSlopReasons": [],
+        "finalOutput": "After seeing how people are actually interacting at this event, it's pretty clear Solana has already won the consumer crypto race. The UX friction is gone, the speed is there, and the culture is actually fun. Everyone else is still fighting over infrastructure.",
         "rewriteApplied": false
       }
     ],
     "voiceComparison": [
       {
         "scenarioId": "casual/lowercase",
-        "firstDraft": "went to solana summit serbia expecting the usual conference fluff but actually met some of the sharpest builders ive seen in a while\n\nsort of wild how much real stuff is getting built outside the main hubs when you actually look",
-        "finalOutput": "went to solana summit serbia expecting the usual conference fluff but actually met some of the sharpest builders ive seen in a while\n\nsort of wild how much real stuff is getting built outside the main hubs when you actually look"
+        "firstDraft": "honestly went to solana summit serbia expecting the usual hype but ended up meeting some incredibly sharp builders\n\nkind of wild how much real talent is quietly putting head down and constructing things when you actually get away from the main tech hubs",
+        "finalOutput": "honestly went to solana summit serbia expecting the usual hype but ended up meeting some incredibly sharp builders\n\nkind of wild how much real talent is quietly putting head down and constructing things when you actually get away from the main tech hubs"
       },
       {
         "scenarioId": "concise/direct",
-        "firstDraft": "I went to the Solana Summit in Serbia expecting very little. I was wrong. I met some of the sharpest builders I have run into in a long time.",
-        "finalOutput": "I went to the Solana Summit in Serbia expecting very little. I was wrong. I met some of the sharpest builders I have run into in a long time."
+        "firstDraft": "Went to the Solana Summit in Serbia expecting another generic crypto meetup. I was completely wrong. The room was packed with some of the sharpest builders I have met in years.",
+        "finalOutput": "Went to the Solana Summit in Serbia expecting another generic crypto meetup. I was completely wrong. The room was packed with some of the sharpest builders I have met in years."
       },
       {
         "scenarioId": "structured/professional",
-        "firstDraft": "Attended the Solana Summit in Serbia with fairly low expectations, but left genuinely impressed. The density of sharp, capable builders quietly executing there was a stark contrast to the usual noise in the space right now.",
-        "finalOutput": "Attended the Solana Summit in Serbia with fairly low expectations, but left genuinely impressed. The density of sharp, capable builders quietly executing there was a stark contrast to the usual noise in the space right now."
+        "firstDraft": "Went to the Solana Summit in Serbia with fairly low expectations, but I was pleasantly surprised. The noise of the markets usually drowns it out, but the actual density of sharp, dedicated builders there was impressive.",
+        "finalOutput": "Went to the Solana Summit in Serbia with fairly low expectations, but I was pleasantly surprised. The noise of the markets usually drowns it out, but the actual density of sharp, dedicated builders there was impressive."
       }
     ],
     "researchComparison": {
@@ -724,42 +775,36 @@
         "scenarioId": "A1-with-context",
         "context": {
           "entityName": "Solana Summit Serbia",
-          "entityType": "event",
+          "entityType": "",
           "verifiedFacts": [
-            "It is a two-day cryptocurrency and blockchain conference focused on the Solana ecosystem.",
-            "The event was organized by Superteam Balkan, the official Solana representative for the Balkan region.",
-            "It was hosted at the Sava Congress Center (Sava Centar) in Belgrade.",
-            "The summit is part of Belgrade Blockchain Week.",
-            "Institutional partners and participants included Serbia's Ministry of Finance, the Securities Commission, the Belgrade Stock Exchange, and the Croatian National Bank."
+            "Solana Summit Serbia 2026 was a two-day cryptocurrency and blockchain developer conference.",
+            "The event took place from August 26 to August 27, 2026.",
+            "The summit was hosted at the Sava Congress Center in Belgrade, Serbia.",
+            "The event was organized by Superteam Balkan, a non-profit organization supporting startups in the regional Web3 ecosystem.",
+            "The conference was held as part of Belgrade Blockchain Week.",
+            "The summit's programming included panels, talks, workshops, and startup and trading competitions.",
+            "Serbia’s Ministry of Finance, Securities Commission, and the Belgrade Stock Exchange participated in the summit.",
+            "Serbian Finance Minister Siniša Mali met with representatives from the Solana Foundation and the Solana Policy Institute during the event to discuss tokenizing assets on the Belgrade Stock Exchange."
           ],
-          "notableTopics": [
-            "Regulation of digital assets in Serbia",
-            "Tokenization of securities on the Belgrade Stock Exchange",
-            "Payment infrastructure and compliance",
-            "Venture capital in the Balkan region",
-            "Rust programming and developer ecosystem"
-          ],
-          "people": [
-            "Siniša Mali",
-            "Ellie Platis",
-            "Mert Mumtaz",
-            "Ognjen Popovic",
-            "Ivan Bjelajac"
-          ],
-          "dates": [
-            "August 26, 2026 – August 27, 2026"
-          ],
+          "notableTopics": [],
+          "people": [],
+          "dates": [],
           "sourceRefs": [
-            "https://solanasummit.org",
-            "https://savacentar.rs",
-            "https://belgradeblockchainweek.com"
+            "blockchaingamer.biz",
+            "facebook.com",
+            "solanasummit.org",
+            "solanasummit.rs",
+            "solanacompass.com",
+            "belgradeblockchainweek.com",
+            "cryptoevents.global",
+            "incrypted.com"
           ]
         },
-        "finalOutput": "Seeing institutions like the Belgrade Stock Exchange and Serbia's Ministry of Finance show up at Solana Summit Serbia is a massive signal. Real regulatory and payment integration is quietly being built in the Balkans."
+        "finalOutput": "Most crypto events are just echo chambers, but seeing the Belgrade Stock Exchange and Serbia's Ministry of Finance actually show up at Solana Summit Serbia is a massive reality check. Real-world asset tokenization is moving fast."
       },
       "withoutContext": {
         "scenarioId": "A1-without-context",
-        "finalOutput": "The Solana Summit in Serbia is proving that you don't need to be in Silicon Valley to build elite infrastructure. The regional talent coming out of Eastern Europe right now is insanely high quality. Real builders, zero noise."
+        "finalOutput": "Heading out to Solana Summit Serbia. Belgrade is quietly becoming one of the strongest hubs for crypto devs in Europe. Excited to see what the teams here are building under the radar."
       }
     }
   }

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { detectResearchableEntity, fetchEntityContext, maybeGetEntityContext } from "./contextEnrichment"
+import { detectResearchableEntity, extractGroundedContext, fetchEntityContext, maybeGetEntityContext } from "./contextEnrichment"
 
 describe("D. entity detection — lightweight heuristic, no model call", () => {
   it("detects a multi-word Title-Case run as a probable named entity", () => {
@@ -84,7 +84,149 @@ describe("maybeGetEntityContext — gating", () => {
   })
 })
 
-describe("F. fetchEntityContext — structured facts only, never a raw search dump", () => {
+// ─── v2.1 evidence gate ─────────────────────────────────────────────────
+// Builds a raw Gemini response shape matching what's actually observed
+// live (see landing/eval/generation-quality/REPORT.md's v2.1 section) —
+// FACT: lines plus real groundingChunks/groundingSupports, not the old
+// self-reported-JSON shape this used to trust with zero cross-check.
+function groundedResponse(
+  factLines: string[],
+  chunks: { title: string }[],
+  supportsFor: Record<number, number[]> // fact index -> chunk indices backing it; omit an index for "no support at all"
+) {
+  const text = factLines.map((f) => `FACT: ${f}`).join("\n")
+  const groundingSupports = Object.entries(supportsFor).map(([factIndex, chunkIndices]) => ({
+    segment: { text: `FACT: ${factLines[Number(factIndex)]}` },
+    groundingChunkIndices: chunkIndices,
+  }))
+  return {
+    candidates: [
+      {
+        content: { parts: [{ text }] },
+        groundingMetadata: {
+          groundingChunks: chunks.map((c) => ({ web: { uri: `https://example.com/${c.title}`, title: c.title } })),
+          groundingSupports,
+        },
+      },
+    ],
+  }
+}
+
+describe("F/§11. evidence gate — extractGroundedContext (pure, real response shape)", () => {
+  it("§11.A — a fact with clear grounding support (2 distinct reputable-looking domains) is admitted", () => {
+    const data = groundedResponse(
+      ["The event is organized by Superteam Balkan."],
+      [{ title: "solanasummit.org" }, { title: "belgradeblockchainweek.com" }],
+      { 0: [0, 1] }
+    )
+    const result = extractGroundedContext("Solana Summit Serbia", data)
+    expect(result?.verifiedFacts).toEqual(["The event is organized by Superteam Balkan."])
+  })
+
+  it("§11.B — a fact whose only support is a forum/social domain (weak/ambiguous authority) is rejected", () => {
+    const data = groundedResponse(
+      ["Someone said the event was cancelled."],
+      [{ title: "reddit.com" }],
+      { 0: [0] }
+    )
+    const result = extractGroundedContext("Solana Summit Serbia", data)
+    expect(result).toBeNull() // the only candidate fact was rejected, nothing left
+  })
+
+  it("§11.C — a fact with no matching grounding segment at all (no source linkage) is rejected", () => {
+    const data = groundedResponse(
+      ["This fact has no matching segment.", "This one does."],
+      [{ title: "wikipedia.org" }],
+      { 1: [0] }, // only fact index 1 has a support entry — fact 0 has none
+    )
+    const result = extractGroundedContext("Solana Summit Serbia", data)
+    expect(result?.verifiedFacts).toEqual(["This one does."])
+  })
+
+  it("§11.D — several facts returned, only some well-supported — only the supported ones reach the writer", () => {
+    const data = groundedResponse(
+      [
+        "Well-supported fact.",
+        "Forum-only fact.",
+        "Unsupported fact with no segment at all.",
+      ],
+      [{ title: "wikipedia.org" }, { title: "reddit.com" }],
+      { 0: [0], 1: [1] }, // fact 2 gets no support entry at all
+    )
+    const result = extractGroundedContext("Solana Summit Serbia", data)
+    expect(result?.verifiedFacts).toEqual(["Well-supported fact."])
+  })
+
+  it("§11.E — all facts rejected means null, not an empty-but-truthy object (generation proceeds without context)", () => {
+    const data = groundedResponse(
+      ["Reddit-only claim one.", "Reddit-only claim two."],
+      [{ title: "reddit.com" }],
+      { 0: [0], 1: [0] }
+    )
+    expect(extractGroundedContext("Solana Summit Serbia", data)).toBeNull()
+  })
+
+  it("§7 — a high-risk category fact (acquisition) needs 2+ distinct domains; 1 domain alone is rejected even if reputable", () => {
+    const data = groundedResponse(
+      ["The company was acquired by a larger firm in a $50 million deal."],
+      [{ title: "wikipedia.org" }],
+      { 0: [0] }
+    )
+    expect(extractGroundedContext("Cursor", data)).toBeNull()
+  })
+
+  it("§7 — the SAME high-risk fact with 2 distinct domains (neither denylisted) is admitted", () => {
+    const data = groundedResponse(
+      ["The company was acquired by a larger firm in a $50 million deal."],
+      [{ title: "wikipedia.org" }, { title: "forbes.com" }],
+      { 0: [0, 1] }
+    )
+    expect(extractGroundedContext("Cursor", data)?.verifiedFacts).toHaveLength(1)
+  })
+
+  it("§7 — a funding claim (not just 'acquisition') is also held to the 2-domain bar", () => {
+    const data = groundedResponse(
+      ["The startup raised $8 million in seed funding."],
+      [{ title: "wikipedia.org" }],
+      { 0: [0] }
+    )
+    expect(extractGroundedContext("Cursor", data)).toBeNull()
+  })
+
+  it("real regression: the exact single-source funding claim from a live eval run is rejected, while the corroborated one survives", () => {
+    // Real captured Gemini output (see REPORT.md) — the $8M seed round had
+    // only wikipedia.org backing it; the $2.3B Series D had 2 domains.
+    const data = groundedResponse(
+      [
+        "In October 2023, the startup announced an $8 million seed funding round led by the OpenAI Startup Fund.",
+        "In November 2025, Cursor raised a $2.3 billion Series D funding round at a $29.3 billion post-money valuation.",
+      ],
+      [{ title: "wikipedia.org" }, { title: "builtin.com" }, { title: "medium.com" }],
+      { 0: [0], 1: [1, 2] }
+    )
+    const result = extractGroundedContext("Cursor", data)
+    expect(result?.verifiedFacts).toEqual(["In November 2025, Cursor raised a $2.3 billion Series D funding round at a $29.3 billion post-money valuation."])
+  })
+
+  it("zero grounding metadata at all (model answered from pretraining, no search backing) yields null", () => {
+    const data = {
+      candidates: [{ content: { parts: [{ text: "FACT: Something the model just knows." }] }, groundingMetadata: { groundingChunks: [], groundingSupports: [] } }],
+    }
+    expect(extractGroundedContext("Cursor", data)).toBeNull()
+  })
+
+  it("a response that ignores the FACT: format entirely yields null rather than treating raw prose as facts", () => {
+    const data = {
+      candidates: [{
+        content: { parts: [{ text: "Cursor is a code editor made by Anysphere." }] },
+        groundingMetadata: { groundingChunks: [{ web: { title: "wikipedia.org" } }], groundingSupports: [{ segment: { text: "Cursor is a code editor" }, groundingChunkIndices: [0] }] },
+      }],
+    }
+    expect(extractGroundedContext("Cursor", data)).toBeNull()
+  })
+})
+
+describe("fetchEntityContext — network-level behavior", () => {
   beforeEach(() => {
     process.env.GEMINI_API_KEY = "test-key"
   })
@@ -93,32 +235,13 @@ describe("F. fetchEntityContext — structured facts only, never a raw search du
     delete process.env.GEMINI_API_KEY
   })
 
-  function geminiResponse(text: string) {
-    return {
-      ok: true,
-      status: 200,
-      json: async () => ({ candidates: [{ content: { parts: [{ text }] } }] }),
-    } as unknown as Response
+  function jsonResponse(body: unknown) {
+    return { ok: true, status: 200, json: async () => body } as unknown as Response
   }
 
-  it("parses a well-formed grounded response into the compact EntityContext shape", async () => {
-    const payload = {
-      entityName: "Solana Summit Serbia",
-      entityType: "event",
-      verifiedFacts: ["A Solana ecosystem conference held in Serbia."],
-      notableTopics: ["DeFi", "infrastructure"],
-      people: [],
-      dates: ["2026"],
-      sourceRefs: ["solana.com"],
-    }
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(geminiResponse(JSON.stringify(payload))))
-
-    const result = await fetchEntityContext("Solana Summit Serbia")
-    expect(result).toEqual(payload)
-  })
-
   it("uses the google_search grounding tool, not a separate search provider/dependency", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(geminiResponse('{"entityName":"X","entityType":"event","verifiedFacts":["fact"],"notableTopics":[],"people":[],"dates":[],"sourceRefs":[]}'))
+    const data = groundedResponse(["A fact."], [{ title: "wikipedia.org" }, { title: "forbes.com" }], { 0: [0, 1] })
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(data))
     vi.stubGlobal("fetch", fetchMock)
 
     await fetchEntityContext("Solana Summit Serbia")
@@ -129,8 +252,8 @@ describe("F. fetchEntityContext — structured facts only, never a raw search du
     expect(body.tools).toEqual([{ google_search: {} }])
   })
 
-  it("G. a malformed/truncated JSON response degrades to null, never throws", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(geminiResponse("not valid json at all")))
+  it("G. a malformed response degrades to null, never throws", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({ not: "the expected shape at all" })))
     await expect(fetchEntityContext("Solana Summit Serbia")).resolves.toBeNull()
   })
 
@@ -144,8 +267,9 @@ describe("F. fetchEntityContext — structured facts only, never a raw search du
     await expect(fetchEntityContext("Solana Summit Serbia")).resolves.toBeNull()
   })
 
-  it("returns null (never a half-empty object) when the model found nothing to say", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(geminiResponse('{"entityName":"","entityType":"","verifiedFacts":[],"notableTopics":[],"people":[],"dates":[],"sourceRefs":[]}')))
+  it("§11.E — returns null (never a half-empty object) when nothing survives the gate", async () => {
+    const data = groundedResponse(["Reddit-only claim."], [{ title: "reddit.com" }], { 0: [0] })
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(data)))
     await expect(fetchEntityContext("some obscure nonexistent thing")).resolves.toBeNull()
   })
 

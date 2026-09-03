@@ -322,14 +322,17 @@ export async function dispatchGenerate(
   // call, and the best-available text is kept either way (never blocks on
   // the corrected attempt still being flagged).
   if (args.generationMode === "tweet") {
-    const slopCheck = detectSlop(result, args.styleProfile)
+    // sourceText for the claim-provenance check — BYOK has no server-side
+    // research (out of scope, see lib/antiSlop.ts), so this is just the
+    // user's own input.
+    const slopCheck = detectSlop(result, args.styleProfile, args.input)
     if (slopCheck.flagged) {
       const corrected = await runByokGenerate(
         store,
         { ...args, templateInstruction: withAntiSlopCorrection(args.templateInstruction, slopCheck.reasons) },
         onRetry
       )
-      if (!detectSlop(corrected, args.styleProfile).flagged) result = corrected
+      if (!detectSlop(corrected, args.styleProfile, args.input).flagged) result = corrected
     }
   }
 
