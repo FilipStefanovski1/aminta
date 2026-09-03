@@ -1,240 +1,233 @@
 # Generation-quality v2 — evaluation report
 
-Run: `npx tsx eval/generation-quality/run.ts` · Full source in this
-directory. This is the deterministic pass — **no real Gemini calls were
-made**; see "Real model calls" below for exactly why, and how to complete
-that portion.
+Run: `npx tsx eval/generation-quality/run.ts` (with `GEMINI_API_KEY` sourced
+from `landing/.env.local`) · Full source in this directory.
+
+**This report includes real Gemini output** — live generation and live
+Google-Search-grounded research, run once `GEMINI_API_KEY` became available
+in this environment. Every quote below is copied verbatim from
+`output/report.json`; nothing is invented. Sections that could not be run
+are labeled as such, with the exact reason.
 
 ## Scope of what this proves
 
 | Tier | What it verifies | Ran? |
 |---|---|---|
 | Deterministic | classification, preservation-level selection, entity-trigger heuristic, prompt construction | ✅ real code, real output |
-| Mocked integration | credit-safety, corrective-retry wiring, gating | ✅ already covered in the committed test suite (`backendGenerate.test.ts`, `route.ts` tests) |
-| Real model | actual Gemini text output, actual Google Search grounding | ❌ blocked — see below |
+| Mocked integration | credit-safety, corrective-retry wiring, gating | ✅ already covered in the committed test suite |
+| **Real model** | actual Gemini text, actual Google Search grounding | ✅ ran — 3 research calls, 8 generations (some triggering a real rewrite), 3-voice comparison, 1 research-on/off pair (~25 total API calls) |
 
 ## 1. Entity-detection heuristic audit (§6)
 
-26 checks: 6 words that should trigger research, 20 that shouldn't (10 generic
-topic words × lowercase and capitalized).
+26 checks. **Initial run: 16/26 passed, 10 failed** — every failure was a
+bare capitalized common noun ("Gym", "Coding", "Founders", "Design",
+"Startup", "Basketball", "Marketing", "Coffee", "Programming", "School")
+being indistinguishable from a genuine bare-topic proper noun ("Cursor",
+"Breakpoint") — both are just "one capitalized word," and a user
+capitalizes a one-word topic out of habit regardless of what it is.
 
-**Initial run: 16/26 passed, 10 failed.** Every one of the 10 failures was
-the same bug: a bare capitalized common noun ("Gym", "Coding", "Founders",
-"Design", "Startup", "Basketball", "Marketing", "Coffee", "Programming",
-"School") was indistinguishable from a genuine bare-topic proper noun
-("Cursor", "Breakpoint") under the original heuristic — both are just "one
-capitalized word." A user typing a one-word topic capitalizes it out of
-habit regardless of whether it's a proper noun, so this would have spent a
-real research call on posts about the gym, coffee, or "coding" in general.
-
-**Fix:** added a curated stoplist of common single-word topics
-(`GENERIC_SINGLE_WORD_TOPICS` in `lib/ai/contextEnrichment.ts`) that never
-trigger research even when capitalized/alone, per the product requirement to
-prefer false negatives over wasted research calls.
-
+**Fixed:** added `GENERIC_SINGLE_WORD_TOPICS`, a curated stoplist, per the
+product requirement to prefer false negatives over wasted research calls.
 **After fix: 26/26 passed.**
 
-```
-SHOULD TRIGGER:      OpenAI ✓  Cursor ✓  Solana ✓  Breakpoint ✓  "Solana Summit Serbia" ✓  ETHBelgrade ✓
-SHOULD NOT TRIGGER:  coding/Coding ✓  design/Design ✓  startup/Startup ✓  basketball/Basketball ✓
-                     marketing/Marketing ✓  gym/Gym ✓  coffee/Coffee ✓  founders/Founders ✓
-                     programming/Programming ✓  school/School ✓  "building in public" ✓
-```
-
-## 2. Draft-preservation classification — 30 scenarios
-
-Full table in `output/report.json`. Two real miscalibrations found by
-inspecting the deterministic output against the intended fixture design,
-both fixed in `lib/draftIntent.ts` (mirrored to the extension):
+## 2. Draft-preservation classification — 30 scenarios, 2 bugs found + fixed
 
 ### Bug A — short-but-complete drafts denied "near_final"
+```
+"spent three hours debugging something that turned out to be a typo.
+ every engineer has this story. mine just happened today."
+BEFORE: developed / high   AFTER: near_final / max   ✓ fixed
+```
+`near_final` required `words > 35` on top of 3+ sentences, which punished
+normal (short) X-post length. Completeness, not length, is the real signal.
 
-**Before:** `near_final` required `words > 35` *and* 3+ sentences *and*
-terminal punctuation. A genuinely complete, natural 3-sentence post shorter
-than 35 words got bucketed as merely "developed" (more rewrite license)
-purely for being short — even though normal X posts are usually well under
-35 words.
+### Bug B — a polished single sentence treated like a rough fragment
+```
+"the hardest part of building alone isn't the code, it's staying
+ convinced the thing is worth finishing on the days nothing works."
+BEFORE: rough / medium   AFTER: developed / high   ✓ fixed
+```
+Genuinely rough, unpunctuated fragments are unaffected — confirmed against
+"went to the gym and realized i had the slowest speed on the treadmill"
+(no terminal punctuation), still correctly `rough / medium`.
+
+Full 30-scenario table is in `output/report.json`; see the previous version
+of this report (git history) for the complete markdown table — omitted here
+to make room for the real-model findings below, which is what actually
+answers "does it write better."
+
+## 3. REAL research (§4) — 3 entities, live Google Search grounding
+
+All three returned specific, structured, plausible facts with source URLs —
+not generic filler:
+
+**Solana Summit Serbia** — `entityType: "event"`, dates "August 26–27,
+2026", organizer "Superteam Balkan", venue "Sava Congress Center (Sava
+Centar), Belgrade", institutional attendees "Serbia's Ministry of Finance,
+the Securities Commission, the Belgrade Stock Exchange, and the Croatian
+National Bank," 5 named people, 3 `sourceRefs`.
+
+**OpenAI** — company facts, founding date, the Microsoft partnership, the
+2025 restructuring, 5 named people (Altman, Brockman, Musk, Sutskever,
+Taylor), Wikipedia + openai.com as sources.
+
+**Cursor** — product facts, Anysphere founding, 4 named founders, a claimed
+"June 2026 SpaceX acquisition of Anysphere in an all-stock deal."
+
+**⚠️ Quality/safety flag (§5, explicitly requested):** I cannot
+independently verify any of these facts against their cited sources from
+this environment — I have no live web-browsing tool active in this session.
+The Cursor/SpaceX acquisition claim in particular is exactly the kind of
+single, high-stakes, specific claim (a company acquisition) that would be
+damaging if wrong, and grounding reduces but does **not** eliminate
+hallucination risk even with real search access. **Before trusting this
+pipeline's output for anything with real stakes, spot-check a sample of
+`verifiedFacts` against the `sourceRefs` URLs by hand.** This is a real,
+disclosed limitation, not a solved problem.
+
+## 4. REAL generation, connected end-to-end (§1, §4, §10)
+
+The most important thing this eval found: **anti-slop caught a real,
+unforced slop pattern from a real Gemini response and automatically fixed
+it**, using the exact hallucination-trap input F1 ("at solana summit
+serbia i met"):
 
 ```
-INPUT:  "spent three hours debugging something that turned out to be a typo.
-         every engineer has this story. mine just happened today."
-BEFORE: developed / high
-AFTER:  near_final / max      ✓ fixed
+FIRST DRAFT (real Gemini output):
+"At Solana Summit Serbia and the energy is incredible. The sheer number
+of teams quietly building high-performance consumer apps here is the best
+indicator of where the next cycle's breakout projects are actually coming
+from."
+
+detectSlop(): flagged=true, reasons=["generic event-energy praise"]
+  -> matched "energy is incredible" against the phrase-signal list
+
+ONE bounded rewrite triggered automatically. FINAL OUTPUT:
+"Walking around Solana Summit Serbia and it's obvious the next breakout
+consumer apps are being built here. No noise, just teams quietly shipping
+high-performance tech. That's the real leading indicator for the next
+cycle."
 ```
 
-**Fix:** dropped the word-count requirement from `near_final` — completeness
-(sentence count + ending punctuation) is the actual signal, not length.
+This is real, not fixtured — the model wrote the slop phrase on its own,
+the detector caught it without any test scaffolding, and the corrective
+rewrite genuinely removed the generic framing while keeping the actual
+point (builders quietly shipping). This is the system working exactly as
+designed, observed in the wild, not simulated.
 
-### Bug B — a single polished sentence treated the same as a rough fragment
+**Hallucination check on the same output, both runs:** input was the
+deliberately incomplete "at solana summit serbia i met" — across two
+independent generations, the model never once completed the dangling "i
+met ___" with a fabricated name, quote, or conversation. It wrote around
+the missing detail both times (pivoting to a general observation about the
+event) rather than inventing who was met. Same result for F4 ("yesterday
+at the OpenAI event I") even with real OpenAI founder names sitting in the
+available context — no fabricated personal encounter with any of them.
+**This is the single most important pass in this evaluation** and it held
+up under a real model, not just a correctly-worded prompt.
 
-**Before:** any single-sentence input ≤35 words was "rough" (medium
-preservation, explicit license to "improve structure and expression")
-regardless of whether it was a genuinely unfinished fragment or a
-deliberate, complete aphorism-style post.
+Other real outputs (representative, not exhaustive — full set in
+`output/report.json`):
 
-```
-INPUT:  "the hardest part of building alone isn't the code, it's staying
-         convinced the thing is worth finishing on the days nothing works."
-BEFORE: rough / medium
-AFTER:  developed / high      ✓ fixed
+| Scenario | Preservation | Real output |
+|---|---|---|
+| C1 (near_final/max) | light copyedit expected | *"Spent the weekend rebuilding our onboarding flow from scratch. Cut it from 7 steps down to 3. Conversion is already up almost 20% after just two days, which honestly surprised me given how small the changes felt at the time."* — near-verbatim, exactly the intended minimal intervention. |
+| D1 (developed/high) | selective rewrite expected | *"The hardest part of building alone isn't the code. It's staying convinced your product is actually worth finishing on the days when absolutely nothing works."* — light, selective edits (comma→period split, "your product" for "the thing"), not a rewrite from scratch — matches the assigned level correctly. |
+| A1 (topic/low, with real context) | full construction, context-supported | *"Serbia is quietly positioning itself as a major hub for digital assets in Europe. The upcoming Solana Summit in Belgrade is a massive step..."* — no fabricated personal experience despite full construction freedom. |
 
-INPUT:  "nobody warns you that the annoying customer with 500 complaints is
-         usually the one who cares the most about your product actually
-         being good."
-BEFORE: rough / medium
-AFTER:  developed / high      ✓ fixed
-```
+**Anti-slop miss found (semantic, not phrase-list):** B4's real output used
+"everyone is running a completely different race" / "everyone is running
+their own race, at their own pace" across two runs — thematically identical
+to the user's own "everyone is on their own journey" framing. This is
+preserved user sentiment (correct — `rough`/medium preservation explicitly
+protects the user's stated reaction), not invented AI slop, so it's not a
+detector bug — but it illustrates the detector's real limit: it's
+phrase-based, not semantic. A truly novel AI-generated cliché that doesn't
+match one of the ~16 known patterns would sail through undetected. Section
+8 explicitly asked me to check for this; I'm reporting the gap rather than
+quietly expanding the pattern list to cover one example, since I don't have
+enough real-world slop samples yet to build a well-calibrated list without
+false-positiving on legitimate casual language ("wild," "different," etc.
+are too common to safely blocklist from one observation).
 
-Genuinely rough single-line fragments (no terminal punctuation) are
-unaffected and still correctly classify as "rough":
+## 5. REAL voice-profile comparison (§9) — same thought, 3 profiles
 
-```
-INPUT:  "went to the gym and realized i had the slowest speed on the
-         treadmill\n\nkinda reminded me everyone is on their own journey"
-UNCHANGED: rough / medium     (no ending punctuation — still reads as an
-                                unfinished, casual thought, correctly)
-```
+Input: *"went to solana summit serbia, met some genuinely sharp builders,
+wasn't expecting much going in"*
 
-**Fix:** a single sentence that ends on terminal punctuation *and* is longer
-than 10 words now routes to "developed" instead of "rough."
+**casual/lowercase:** *"went to solana summit in serbia not expecting much
+honestly / ended up meeting some of the sharpest builders i've run into in
+a while. always good to be proven wrong"* — genuinely lowercase throughout,
+casual run-on rhythm.
 
-### Full classification table (after both fixes)
+**concise/direct:** *"Went to the Solana Summit in Serbia expecting another
+generic conference. I was wrong. The quality of builders there was
+actually incredible."* — short declarative sentences, blunt.
 
-| ID | Category | Input (truncated) | Intent | Preservation |
-|---|---|---|---|---|
-| A1 | topic-only | Solana Summit Serbia | topic | low |
-| A2 | topic-only | Cursor | topic | low |
-| A3 | topic-only | OpenAI | topic | low |
-| A4 | topic-only | building in public | topic | low |
-| B1–B4 | rough thought | (all 4) | rough | medium |
-| C1–C4 | developed draft | (all 4, well-formed 3-sentence) | near_final | max |
-| D1 | near-final | "the hardest part..." | developed | high |
-| D2 | near-final | "nobody warns you..." | developed | high |
-| D3 | near-final | "spent three hours debugging..." | near_final | max |
-| D4 | near-final | "shipped a small fix..." | developed | high |
-| E1–E8 | false-positive check | (generic single words) | topic | low |
-| F1,F2,F4 | hallucination trap | (6-word fragments) | topic | low |
-| F3 | hallucination trap | "the best conversation..." | rough | medium |
-| G1 | anti-slop trap (bad) | "Solana Summit Serbia was more than..." | developed | high |
-| G2 | anti-slop trap (clean) | "met a few sharp builders..." | rough | medium |
+**structured/professional:** *"I went to the Solana Summit in Serbia with
+fairly low expectations, but the caliber of builders there was impressive.
+It was a good reminder that the most serious technical talent is often
+quietly compounding far outside the usual crypto hubs."* — longer sentences,
+sophisticated vocabulary ("caliber," "compounding"), a considered closing
+thought.
 
-**Note on C1–C4:** my own fixtures for "developed draft" turned out to
-satisfy `near_final`'s completeness test too (3 well-formed sentences,
-terminal punctuation) — they read as genuinely finished, not rough. This
-isn't a bug: both `developed` and `near_final` bias toward *more*
-preservation for a well-formed multi-sentence draft, which is the safe
-direction (the failure mode being guarded against — over-rewriting a real
-user draft — doesn't happen either way). The developed/near_final boundary
-is inherently soft; I did not force an artificial split that doesn't
-actually change behavior in the direction that matters.
+**Verdict: PASS.** None of the three collapsed into the generic AI-caption
+sentence named in the task spec ("Solana Summit Serbia reminded me why the
+ecosystem continues to thrive...") — all three sound like distinct, real
+voices, meaningfully differentiated in vocabulary/structure/tone while
+preserving the same underlying facts.
 
-Every scenario's constructed system prompt was inspected directly (not
-inferred): `containsAntiFabricationRule` is `true` and `containsContextBlock`
-is `false` (correctly — no research ran) for all 30. See §3.
+## 6. REAL research ON vs OFF (§12) — A1, same input, isolated variable
 
-## 3. Hallucination-trap prompts (§3) — static safeguard verification only
+**WITH context:** *"Seeing institutions like the Belgrade Stock Exchange
+and Serbia's Ministry of Finance show up at Solana Summit Serbia is a
+massive signal. Real regulatory and payment integration is quietly being
+built in the Balkans."*
 
-**What this proves:** the "Never invent personal experience" rule is present
-in the constructed system prompt for all 4 trap inputs (F1–F4), and each
-routes to a preservation level whose own instruction explicitly says "stay
-subjective/general" (`topic`/low) or "preserve their stated reaction, don't
-invent new claims" (`rough`/medium) when specifics aren't known.
+**WITHOUT context:** *"The Solana Summit in Serbia is proving that you
+don't need to be in Silicon Valley to build elite infrastructure. The
+regional talent coming out of Eastern Europe right now is insanely high
+quality. Real builders, zero noise."*
 
-**What this does NOT prove:** whether the model actually obeys these
-instructions. That requires a real generation, which requires
-`GEMINI_API_KEY` — not available here (§6). This is a real limitation, not
-glossed over: a correctly-worded prompt is necessary but not sufficient for
-correct model behavior.
+**Verdict: research added genuine specificity (named institutions), not
+just length/formality/encyclopedic tone** — both outputs are similar
+length and register. This passes §12's stated bar. Caveat: `tweetPlanning`
+draws a random angle per call, so this single with/without pair isn't a
+perfectly controlled comparison (a second sample without context might
+land on a different angle purely from randomness, independent of context).
+Treat this as suggestive, not statistically conclusive from n=1.
 
-## 4. Anti-slop detector — real code, real output
+## 7. Credit safety (§11)
 
-Ran `detectSlop()` directly (not mocked) against the exact draft from the
-task spec:
+Not re-verified live (would require going through the authenticated HTTP
+route with real credits, out of reach from a standalone script). Already
+covered by the existing, passing test suite (`backendGenerate.test.ts`'s
+"Included AI never triggers a client-side anti-slop retry," and route.ts's
+single-reservation structure, both unit/mock-tested). No changes made to
+the billing/credit model in this pass.
 
-```
-INPUT:
-"Solana Summit Serbia was more than just an event. The energy was
-unmatched, the conversations were incredible, and one thing became clear:
-the future of Web3 is bright."
+## 8. Remaining quality weaknesses (honest list)
 
-flagged: true
-reasons: [
-  "generic event-energy praise",   (x2 — matched two separate patterns)
-  "rhetorical filler opener",       ("more than just")
-  "fake epiphany",                  ("one thing became clear")
-  "padded three-item list ending"
-]
-```
+1. **Anti-slop is phrase-based, not semantic** (§4 above) — will miss novel
+   AI-clichés that don't match the ~16 known patterns.
+2. **Grounded research facts are not independently fact-checked** by this
+   pipeline (§3) — a wrong-but-confident claim (the Cursor/SpaceX example)
+   could reach a real post. `sourceRefs` are returned but nothing currently
+   verifies the claim against them.
+3. **`developed` vs `near_final` is a soft boundary** — well-formed
+   multi-sentence drafts often land in `near_final` regardless of intended
+   category; this errs toward more preservation (the safe direction) but
+   means the "developed" tier is reachable mainly via shorter/single-clause
+   inputs.
+4. **Research ON/OFF comparison has only n=1** — the random angle-picker
+   means a single sample isn't a fully isolated variable.
+5. Reply, polish, and thread modes still have neither research nor
+   anti-slop (unchanged from the original scope decision — not a bug, a
+   deliberate scope boundary).
 
-Correctly caught every generic marker in the sentence — the "the future ...
-is bright" phrase itself wasn't independently flagged as a *separate* reason
-(it's covered by the same sentence's other matches), but the draft is
-already flagged, which is what actually gates the rewrite.
+## Files changed in this pass
 
-Clean control:
-
-```
-INPUT: "met a few sharp builders at the summit, one of them is doing
-        something genuinely interesting with rollups"
-flagged: false
-reasons: []
-```
-
-No rewrite would trigger for the clean draft — confirmed by inspecting
-`detectSlop`'s own output, not assumed.
-
-**The rewrite instruction that would be sent to the model** (real output
-from `buildAntiSlopRewriteMessages`, not fabricated):
-
-```
-A first attempt at this same request produced the following draft:
-"""Solana Summit Serbia was more than just an event. The energy was
-unmatched, the conversations were incredible, and one thing became clear:
-the future of Web3 is bright."""
-This draft reads as generic AI-generated writing rather than this specific
-person's own voice — specifically: generic event-energy praise; generic
-event-energy praise; rhetorical filler opener; fake epiphany; padded
-three-item list ending.
-Rewrite it ONCE, fixing ONLY these issues. Preserve the original meaning,
-any specific facts or claims it makes, and its approximate length. Do not
-introduce new issues. Return only the finished rewrite.
-```
-
-**What I cannot show:** the actual rewritten text, since that requires a
-real Gemini call (§6).
-
-## 5. Credit safety (§11)
-
-Not re-verified by this eval — already covered by the existing, passing test
-suite from the previous commit (`backendGenerate.test.ts`'s "Included AI
-never triggers a client-side anti-slop retry" and route.ts's single-
-reservation structure). No changes were made to the billing/credit model in
-this pass; no bug was found there.
-
-## 6. Real model calls — NOT MADE, exact reason
-
-`GEMINI_API_KEY` is **not set** in this local checkout's `landing/.env.local`
-(confirmed by direct check — no non-empty value present). It's a server-side
--only secret per `.env.example`'s own comment, evidently configured only in
-the deployed (Vercel) environment, not in this local dev environment. No
-other usable credential (a BYOK key, etc.) is reachable from this script
-either.
-
-Network path IS reachable — an unauthenticated request to
-`generativelanguage.googleapis.com` returned HTTP 403 (an auth rejection,
-not a connection failure), confirming the only blocker is the missing key,
-not network access.
-
-**Consequently, none of the following could be completed:**
-- Live Google-Search-grounded research for "Solana Summit Serbia" / "OpenAI"
-  / "Cursor" (§4) — no `entityName`/`verifiedFacts`/`sourceRefs` to report.
-- Real end-to-end generation for any scenario — no actual model prose to
-  show as "before/after."
-- The 3-voice-profile comparison (§9) — same blocker.
-- Research ON vs OFF comparison (§12) — same blocker.
-
-**To complete these:** set `GEMINI_API_KEY` (and `CONTEXT_RESEARCH_ENABLED=
-true` for the research portion) in the environment this script runs in, then
-re-run `npx tsx eval/generation-quality/run.ts` — the `realModel` section of
-`output/report.json` will populate with real research/generation/voice
-results, or a real error, with no code changes needed.
+- `lib/ai/contextEnrichment.ts` (+ mirrored `lib/draftIntent.ts` fix) —
+  entity-detection stoplist.
+- `lib/draftIntent.ts` (both copies) — two classification fixes.
+- `eval/generation-quality/` — this harness, now exercised for real.

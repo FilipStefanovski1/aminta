@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-02T22:27:07.314Z",
+  "generatedAt": "2026-09-03T00:23:19.771Z",
   "scenarioCount": 30,
   "deterministic": [
     {
@@ -491,10 +491,276 @@
     ]
   },
   "realModel": {
-    "ran": false,
-    "reason": "GEMINI_API_KEY is not set in this environment's landing/.env.local (confirmed absent — grep found no non-empty value). It is a server-side-only secret (see .env.example's comment) not present anywhere in this local dev checkout, and no other credential (BYOK key, etc.) is reachable from this script. Network path to generativelanguage.googleapis.com IS reachable (confirmed: unauthenticated request returned HTTP 403, not a connection failure) — the sole blocker is the missing key.",
-    "research": [],
-    "generation": [],
-    "voiceComparison": []
+    "ran": true,
+    "research": [
+      {
+        "scenarioId": "Solana Summit Serbia",
+        "entityQueried": "Solana Summit Serbia",
+        "context": {
+          "entityName": "Solana Summit Serbia 2026",
+          "entityType": "event",
+          "verifiedFacts": [
+            "Organized by Superteam Balkan",
+            "Held as part of Belgrade Blockchain Week",
+            "Hosted at the Sava Congress Center in Belgrade, Serbia",
+            "Featured government participation from Serbia's Ministry of Finance and Securities Commission"
+          ],
+          "notableTopics": [
+            "Capital market tokenization",
+            "Solana ecosystem development",
+            "Regulatory compliance and policy",
+            "Web3 fintech and start-up scaling"
+          ],
+          "people": [
+            "Ognjen Popovic",
+            "Ivan Bjelajac",
+            "Vidor Gencel",
+            "Mert Mumtaz",
+            "Nikola Škorić"
+          ],
+          "dates": [
+            "August 26, 2026",
+            "August 27, 2026"
+          ],
+          "sourceRefs": [
+            "https://solanasummit.org",
+            "https://belgradeblockchainweek.com",
+            "https://solana.com"
+          ]
+        }
+      },
+      {
+        "scenarioId": "OpenAI",
+        "entityQueried": "OpenAI",
+        "context": null
+      },
+      {
+        "scenarioId": "Cursor",
+        "entityQueried": "Cursor",
+        "context": {
+          "entityName": "Cursor (Anysphere, Inc.)",
+          "entityType": "company",
+          "verifiedFacts": [
+            "Founded in 2022 by four MIT graduates as Anysphere, Inc., doing business as Cursor",
+            "Its primary product is Cursor, an AI-native code editor and software development environment built as a fork of VS Code",
+            "In June 2026, SpaceX announced an agreement to acquire Anysphere in an all-stock deal valuing the company at $60 billion",
+            "Raised a $2.3 billion Series D funding round at a $29.3 billion valuation in November 2025",
+            "Surpassed $2 billion in annualized recurring revenue (ARR) by March 2026"
+          ],
+          "notableTopics": [
+            "AI-assisted coding",
+            "Generative AI for software development",
+            "AI agents and codebase understanding",
+            "Developer tools and integrated development environments (IDEs)"
+          ],
+          "people": [
+            "Michael Truell",
+            "Sualeh Asif",
+            "Aman Sanger",
+            "Arvid Lunnemark"
+          ],
+          "dates": [
+            "2022",
+            "October 2023",
+            "November 2025",
+            "March 2026",
+            "June 2026"
+          ],
+          "sourceRefs": [
+            "https://en.wikipedia.org/wiki/Cursor_(company)",
+            "https://cursor.com/blog/past-present-future",
+            "https://www.trendingtopics.eu/cursor-breaks-2-billion-in-annual-revenue/"
+          ]
+        }
+      }
+    ],
+    "generation": [
+      {
+        "scenarioId": "A1",
+        "entityQueried": "Solana Summit Serbia",
+        "context": {
+          "entityName": "Solana Summit Serbia",
+          "entityType": "event",
+          "verifiedFacts": [
+            "Organized by Superteam Balkan, a non-profit organization supporting startups",
+            "Hosted at the Sava Congress Center (Sava Centar) in Belgrade, Serbia",
+            "Part of Belgrade Blockchain Week, alongside events like ETH Belgrade",
+            "Featured participation from Serbian government and regulatory bodies",
+            "Entry to the summit was free with mandatory registration"
+          ],
+          "notableTopics": [
+            "Tokenization of securities on the Belgrade Stock Exchange",
+            "Improving Serbia's digital assets legislation",
+            "Solana ecosystem development and startup workshops",
+            "Internet of Things and blockchain integration",
+            "Fintech and capital markets infrastructure"
+          ],
+          "people": [
+            "Siniša Mali",
+            "Nikola Škorić"
+          ],
+          "dates": [
+            "August 26–27, 2026"
+          ],
+          "sourceRefs": [
+            "https://solanasummit.org",
+            "https://belgradeblockchainweek.com",
+            "https://www.blockchaingamer.biz/wp-content/uploads/2026/08/logo-Solana-Summit-Servia-2026.png"
+          ]
+        },
+        "firstDraft": "Serbia is quietly positioning itself as a major hub for digital assets in Europe. The upcoming Solana Summit in Belgrade is a massive step for local startups looking to build on-chain capital markets infrastructure.",
+        "antiSlopFlagged": false,
+        "antiSlopReasons": [],
+        "finalOutput": "Serbia is quietly positioning itself as a major hub for digital assets in Europe. The upcoming Solana Summit in Belgrade is a massive step for local startups looking to build on-chain capital markets infrastructure.",
+        "rewriteApplied": false
+      },
+      {
+        "scenarioId": "B1",
+        "context": null,
+        "firstDraft": "Went to Solana Summit Serbia expecting it to be a bit dry, but I was completely wrong. Ended up meeting some of the sharpest, most genuinely smart builders I've run into in a long time. Glad I made the trip.",
+        "antiSlopFlagged": false,
+        "antiSlopReasons": [],
+        "finalOutput": "Went to Solana Summit Serbia expecting it to be a bit dry, but I was completely wrong. Ended up meeting some of the sharpest, most genuinely smart builders I've run into in a long time. Glad I made the trip.",
+        "rewriteApplied": false
+      },
+      {
+        "scenarioId": "B4",
+        "context": null,
+        "firstDraft": "Glanced at the treadmill next to me today and realized I was going at about half their speed. A good reminder that everyone is running a completely different race. Just focus on your own screen.",
+        "antiSlopFlagged": false,
+        "antiSlopReasons": [],
+        "finalOutput": "Glanced at the treadmill next to me today and realized I was going at about half their speed. A good reminder that everyone is running a completely different race. Just focus on your own screen.",
+        "rewriteApplied": false
+      },
+      {
+        "scenarioId": "C1",
+        "context": null,
+        "firstDraft": "Spent the weekend rebuilding our onboarding flow from scratch. Cut it from 7 steps down to 3. Conversion is already up almost 20% after just two days, which honestly surprised me given how small the changes felt at the time.",
+        "antiSlopFlagged": false,
+        "antiSlopReasons": [],
+        "finalOutput": "Spent the weekend rebuilding our onboarding flow from scratch. Cut it from 7 steps down to 3. Conversion is already up almost 20% after just two days, which honestly surprised me given how small the changes felt at the time.",
+        "rewriteApplied": false
+      },
+      {
+        "scenarioId": "D1",
+        "context": null,
+        "firstDraft": "The hardest part of building alone isn't the code. It's staying convinced your product is actually worth finishing on the days when absolutely nothing works.",
+        "antiSlopFlagged": false,
+        "antiSlopReasons": [],
+        "finalOutput": "The hardest part of building alone isn't the code. It's staying convinced your product is actually worth finishing on the days when absolutely nothing works.",
+        "rewriteApplied": false
+      },
+      {
+        "scenarioId": "F1",
+        "context": null,
+        "firstDraft": "At Solana Summit Serbia and the energy is incredible. The sheer number of teams quietly building high-performance consumer apps here is the best indicator of where the next cycle's breakout projects are actually coming from.",
+        "antiSlopFlagged": true,
+        "antiSlopReasons": [
+          "generic event-energy praise"
+        ],
+        "finalOutput": "Walking around Solana Summit Serbia and it's obvious the next breakout consumer apps are being built here. No noise, just teams quietly shipping high-performance tech. That's the real leading indicator for the next cycle.",
+        "rewriteApplied": true
+      },
+      {
+        "scenarioId": "F4",
+        "entityQueried": "OpenAI",
+        "context": {
+          "entityName": "OpenAI",
+          "entityType": "company",
+          "verifiedFacts": [
+            "Headquartered in San Francisco, California [1.1.1]",
+            "Developed proprietary generative AI models including the GPT series and ChatGPT",
+            "Originally founded as a nonprofit organization before transitioning to a public benefit corporation model",
+            "Formed a major multi-billion dollar investment partnership with Microsoft"
+          ],
+          "notableTopics": [
+            "Artificial intelligence research and deployment [1.1.2]",
+            "Large language models (LLMs)",
+            "Artificial General Intelligence (AGI) alignment and safety",
+            "Reinforcement learning"
+          ],
+          "people": [
+            "Sam Altman [1.1.1]",
+            "Elon Musk",
+            "Greg Brockman",
+            "Ilya Sutskever",
+            "Bret Taylor"
+          ],
+          "dates": [
+            "December 8, 2015 [1.1.1]",
+            "November 2022"
+          ],
+          "sourceRefs": [
+            "https://en.wikipedia.org/wiki/OpenAI",
+            "https://www.britannica.com/money/OpenAI"
+          ]
+        },
+        "firstDraft": "Yesterday at the OpenAI event I kept thinking about how fast the line between research and product is disappearing. We used to wait years to see lab breakthroughs turn into software we actually use. Now it feels like a matter of weeks.",
+        "antiSlopFlagged": false,
+        "antiSlopReasons": [],
+        "finalOutput": "Yesterday at the OpenAI event I kept thinking about how fast the line between research and product is disappearing. We used to wait years to see lab breakthroughs turn into software we actually use. Now it feels like a matter of weeks.",
+        "rewriteApplied": false
+      }
+    ],
+    "voiceComparison": [
+      {
+        "scenarioId": "casual/lowercase",
+        "firstDraft": "went to solana summit serbia expecting the usual conference fluff but actually met some of the sharpest builders ive seen in a while\n\nsort of wild how much real stuff is getting built outside the main hubs when you actually look",
+        "finalOutput": "went to solana summit serbia expecting the usual conference fluff but actually met some of the sharpest builders ive seen in a while\n\nsort of wild how much real stuff is getting built outside the main hubs when you actually look"
+      },
+      {
+        "scenarioId": "concise/direct",
+        "firstDraft": "I went to the Solana Summit in Serbia expecting very little. I was wrong. I met some of the sharpest builders I have run into in a long time.",
+        "finalOutput": "I went to the Solana Summit in Serbia expecting very little. I was wrong. I met some of the sharpest builders I have run into in a long time."
+      },
+      {
+        "scenarioId": "structured/professional",
+        "firstDraft": "Attended the Solana Summit in Serbia with fairly low expectations, but left genuinely impressed. The density of sharp, capable builders quietly executing there was a stark contrast to the usual noise in the space right now.",
+        "finalOutput": "Attended the Solana Summit in Serbia with fairly low expectations, but left genuinely impressed. The density of sharp, capable builders quietly executing there was a stark contrast to the usual noise in the space right now."
+      }
+    ],
+    "researchComparison": {
+      "withContext": {
+        "scenarioId": "A1-with-context",
+        "context": {
+          "entityName": "Solana Summit Serbia",
+          "entityType": "event",
+          "verifiedFacts": [
+            "It is a two-day cryptocurrency and blockchain conference focused on the Solana ecosystem.",
+            "The event was organized by Superteam Balkan, the official Solana representative for the Balkan region.",
+            "It was hosted at the Sava Congress Center (Sava Centar) in Belgrade.",
+            "The summit is part of Belgrade Blockchain Week.",
+            "Institutional partners and participants included Serbia's Ministry of Finance, the Securities Commission, the Belgrade Stock Exchange, and the Croatian National Bank."
+          ],
+          "notableTopics": [
+            "Regulation of digital assets in Serbia",
+            "Tokenization of securities on the Belgrade Stock Exchange",
+            "Payment infrastructure and compliance",
+            "Venture capital in the Balkan region",
+            "Rust programming and developer ecosystem"
+          ],
+          "people": [
+            "Siniša Mali",
+            "Ellie Platis",
+            "Mert Mumtaz",
+            "Ognjen Popovic",
+            "Ivan Bjelajac"
+          ],
+          "dates": [
+            "August 26, 2026 – August 27, 2026"
+          ],
+          "sourceRefs": [
+            "https://solanasummit.org",
+            "https://savacentar.rs",
+            "https://belgradeblockchainweek.com"
+          ]
+        },
+        "finalOutput": "Seeing institutions like the Belgrade Stock Exchange and Serbia's Ministry of Finance show up at Solana Summit Serbia is a massive signal. Real regulatory and payment integration is quietly being built in the Balkans."
+      },
+      "withoutContext": {
+        "scenarioId": "A1-without-context",
+        "finalOutput": "The Solana Summit in Serbia is proving that you don't need to be in Silicon Valley to build elite infrastructure. The regional talent coming out of Eastern Europe right now is insanely high quality. Real builders, zero noise."
+      }
+    }
   }
 }

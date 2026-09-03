@@ -100,7 +100,16 @@ interface RealCallResult {
   error?: string
 }
 
-async function runRealModelSection(): Promise<{ ran: boolean; reason?: string; research: RealCallResult[]; generation: RealCallResult[]; voiceComparison: RealCallResult[] }> {
+interface RealModelSection {
+  ran: boolean
+  reason?: string
+  research: RealCallResult[]
+  generation: RealCallResult[]
+  voiceComparison: RealCallResult[]
+  researchComparison: { withContext: RealCallResult; withoutContext: RealCallResult } | null
+}
+
+async function runRealModelSection(): Promise<RealModelSection> {
   if (!HAS_GEMINI_KEY) {
     return {
       ran: false,
@@ -108,6 +117,7 @@ async function runRealModelSection(): Promise<{ ran: boolean; reason?: string; r
       research: [],
       generation: [],
       voiceComparison: [],
+      researchComparison: null,
     }
   }
 
@@ -122,11 +132,18 @@ async function runRealModelSection(): Promise<{ ran: boolean; reason?: string; r
   }
 
   const generation: RealCallResult[] = []
-  // A representative subset, not all 30 — real API spend/time.
+  // A representative subset, not all 30 — real API spend/time. Wires the
+  // ACTUAL connected pipeline: research (when the scenario names an
+  // entity) -> context-enriched buildMessages -> generation -> anti-slop
+  // -> bounded rewrite, exactly as route.ts does for a real "tweet"
+  // generation. An earlier pass here built messages with no entity context
+  // at all — this fixes that gap.
   const genScenarios = SCENARIOS.filter((s) => ["A1", "B1", "B4", "C1", "D1", "F1", "F4"].includes(s.id))
   for (const s of genScenarios) {
     try {
-      const messages = buildMessages("tweet", VOICE_BASE, s.input, null)
+      const entity = detectResearchableEntity(s.input)
+      const context = entity ? await fetchEntityContext(entity) : null
+      const messages = buildMessages("tweet", VOICE_BASE, s.input, null, "direct", "medium", undefined, false, undefined, context)
       const result = await callGemini(messages, { structuredText: true, generationType: "tweet" })
       const firstDraft = result.text
       const slop = detectSlop(firstDraft, null)
@@ -138,7 +155,7 @@ async function runRealModelSection(): Promise<{ ran: boolean; reason?: string; r
         finalOutput = rewritten.text
         rewriteApplied = true
       }
-      generation.push({ scenarioId: s.id, firstDraft, antiSlopFlagged: slop.flagged, antiSlopReasons: slop.reasons, finalOutput, rewriteApplied })
+      generation.push({ scenarioId: s.id, entityQueried: entity ?? undefined, context, firstDraft, antiSlopFlagged: slop.flagged, antiSlopReasons: slop.reasons, finalOutput, rewriteApplied })
     } catch (e) {
       generation.push({ scenarioId: s.id, error: e instanceof Error ? e.message : String(e) })
     }
@@ -159,7 +176,30 @@ async function runRealModelSection(): Promise<{ ran: boolean; reason?: string; r
     }
   }
 
-  return { ran: true, research, generation, voiceComparison }
+  // §12 — research ON vs OFF, same input, same everything else. A1
+  // ("Solana Summit Serbia") specifically because it's a real, researchable
+  // entity where context could plausibly help.
+  const researchComparison: { withContext: RealCallResult; withoutContext: RealCallResult } | null = await (async () => {
+    const a1 = SCENARIOS.find((s) => s.id === "A1")!
+    try {
+      const context = await fetchEntityContext("Solana Summit Serbia")
+      const withCtxMessages = buildMessages("tweet", VOICE_BASE, a1.input, null, "direct", "medium", undefined, false, undefined, context)
+      const withCtx = await callGemini(withCtxMessages, { structuredText: true, generationType: "tweet" })
+
+      const withoutCtxMessages = buildMessages("tweet", VOICE_BASE, a1.input, null, "direct", "medium", undefined, false, undefined, null)
+      const withoutCtx = await callGemini(withoutCtxMessages, { structuredText: true, generationType: "tweet" })
+
+      return {
+        withContext: { scenarioId: "A1-with-context", context, finalOutput: withCtx.text },
+        withoutContext: { scenarioId: "A1-without-context", finalOutput: withoutCtx.text },
+      }
+    } catch (e) {
+      const err = e instanceof Error ? e.message : String(e)
+      return { withContext: { scenarioId: "A1-with-context", error: err }, withoutContext: { scenarioId: "A1-without-context", error: err } }
+    }
+  })()
+
+  return { ran: true, research, generation, voiceComparison, researchComparison }
 }
 
 async function main() {
