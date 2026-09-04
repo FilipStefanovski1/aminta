@@ -16,11 +16,11 @@ import { buildAntiSlopRewriteMessages, buildMessages, buildStyleProfileMessages,
 import { detectSlop } from "@/lib/ai/antiSlop"
 import { classifyDraftIntent, preservationLevelFor } from "@/lib/ai/draftIntent"
 import { buildFidelityCheckMessages, parseFidelityResult, type FidelityResult } from "@/lib/ai/claimFidelity"
-import { maybeGetEntityContext } from "@/lib/ai/contextEnrichment"
+import { maybeGetEntityContextWithDebug, CONTEXT_RESEARCH_ENABLED } from "@/lib/ai/contextEnrichment"
 import { checkAndIncrementRateLimits, claimConcurrencySlot, clearInflight } from "@/lib/ai/rateLimit"
 import { loadUserEntitlement, resolveLimits, claimRequestId, completeUsageLog } from "@/lib/ai/quota"
 import { reserveCredits, refundCredits } from "@/lib/ai/creditService"
-import { resolvePlanKey } from "@/lib/ai/credits"
+import { resolvePlanKey, creditCostFor } from "@/lib/ai/credits"
 import { computeProviderCostUsd } from "@/lib/ai/pricing"
 import { validateImages, validateCorpus, hashedClientIp, isAllowedOrigin, MAX_REQUEST_BODY_BYTES } from "@/lib/ai/security"
 import { cleanGenerationOutput } from "@/lib/ai/textCleanup"
@@ -34,6 +34,13 @@ const TONES = new Set<Tone>(["direct", "witty", "analytical", "inspiring"])
 const LENGTHS = new Set<OutputLength>(["short", "medium", "long"])
 const POST_COUNTS = new Set<ThreadPostCount>([2, 3, 4, 5, "6+"])
 const MAX_TEMPLATE_INSTRUCTION_CHARS = 1_000
+
+// Observability only — see the debug-log block below. Independent of
+// CONTEXT_RESEARCH_ENABLED (which controls the actual feature): this flag
+// only controls whether the existing pipeline's own intermediate values get
+// logged, never what those values are or how generation behaves. Off by
+// default so production logs stay quiet unless explicitly turned on.
+const AI_DEBUG = process.env.AMINTA_AI_DEBUG === "true"
 
 interface GenerateBody {
   requestId?: string
@@ -292,8 +299,16 @@ export async function POST(request: NextRequest) {
   // failure (network, timeout, malformed response) degrades to null so a
   // research problem can never make Generate itself fail.
   const startedAt = Date.now()
+  // Observability only (AI_DEBUG) — real call count for this request, tweet
+  // mode only (every other mode is always exactly 1 call, not worth
+  // tracking). Incremented right before each callGemini/research call so a
+  // call that later throws is still counted — it was still a real request
+  // to the provider regardless of what happened to the response.
+  let providerCalls = 0
   try {
-    const entityContext = generationMode === "tweet" ? await maybeGetEntityContext(body.input!) : null
+    const researchResult = generationMode === "tweet" ? await maybeGetEntityContextWithDebug(body.input!) : null
+    const entityContext = researchResult?.context ?? null
+    if (researchResult?.debug.triggered) providerCalls++
 
     const prepStartedAt = Date.now()
     const messages = isStyleProfile
@@ -331,6 +346,7 @@ export async function POST(request: NextRequest) {
     // Server-decided, never client-supplied — same rule as model/provider
     // choice above. 30s (vs the 15s default) because ~2000 tokens
     // legitimately takes longer to generate than ~400.
+    providerCalls++
     const result = await callGemini(messages, {
       structuredText: !isStyleProfile && !isThread,
       generationType: generationMode,
@@ -383,9 +399,11 @@ export async function POST(request: NextRequest) {
       // confirming what's already true by construction (v2.2 spec §13).
       const preservationLevel = preservationLevelFor(classifyDraftIntent(body.input ?? ""))
       let fidelityCheck: FidelityResult = { faithful: true, violations: [] }
-      if (preservationLevel !== "low") {
+      const fidelityChecked = preservationLevel !== "low"
+      if (fidelityChecked) {
         try {
           const fidelityMessages = buildFidelityCheckMessages(body.input!, verifiedFacts, outputText)
+          providerCalls++
           const fidelityResult = await callGemini(fidelityMessages, { generationType: "fidelity_check" })
           fidelityCheck = parseFidelityResult(fidelityResult.text)
           cost += computeProviderCostUsd({
@@ -405,9 +423,12 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      let rewriteFidelityChecked = false
+      let rewriteFidelityViolation = false
       if (slopCheck.flagged || !fidelityCheck.faithful) {
         try {
           const rewriteMessages = buildAntiSlopRewriteMessages(messages, outputText, slopCheck.reasons, fidelityCheck.violations)
+          providerCalls++
           const rewriteResult = await callGemini(rewriteMessages, { structuredText: true, generationType: generationMode })
           const rewrittenText = cleanGenerationOutput(rewriteResult.text)
           cost += computeProviderCostUsd({
@@ -425,10 +446,13 @@ export async function POST(request: NextRequest) {
           // ONE more check — never another rewrite attempt (max one
           // rewrite, full stop; see the spec's "no rewrite loops" rule).
           if (preservationLevel !== "low") {
+            rewriteFidelityChecked = true
             try {
               const rewriteFidelityMessages = buildFidelityCheckMessages(body.input!, verifiedFacts, rewrittenText)
+              providerCalls++
               const rewriteFidelityResult = await callGemini(rewriteFidelityMessages, { generationType: "fidelity_check" })
               const rewriteFidelity = parseFidelityResult(rewriteFidelityResult.text)
+              rewriteFidelityViolation = !rewriteFidelity.faithful
               cost += computeProviderCostUsd({
                 model: rewriteFidelityResult.model,
                 inputTokens: rewriteFidelityResult.inputTokens,
@@ -469,6 +493,38 @@ export async function POST(request: NextRequest) {
             reason: e instanceof Error ? e.message : String(e),
           })
         }
+      }
+
+      // Debug observability only (AMINTA_AI_DEBUG) — every value below is
+      // read from state the pipeline above already computed for real
+      // decisions; nothing here is inferred or faked after the fact, and
+      // nothing here can change what was decided. No prompt text, provider
+      // request/response bodies, grounding sources, or credentials —
+      // counts and booleans only (see contextEnrichment.ts's
+      // ResearchDebugInfo and claimFidelity.ts's FidelityResult for what
+      // backs each field).
+      if (AI_DEBUG) {
+        console.log("[Aminta Research Debug]", {
+          researchEnabled: CONTEXT_RESEARCH_ENABLED,
+          researchTriggered: researchResult?.debug.triggered ?? false,
+          detectedEntity: researchResult?.debug.detectedEntity ?? null,
+          candidateFacts: researchResult?.debug.candidateFacts ?? 0,
+          acceptedFacts: researchResult?.debug.acceptedFacts ?? 0,
+          rejectedFacts: researchResult?.debug.rejectedFacts ?? 0,
+          contextUsed: researchResult?.debug.contextUsed ?? false,
+          researchFallback: researchResult?.debug.fallback ?? false,
+          researchFallbackReason: researchResult?.debug.fallbackReason ?? null,
+          preservationLevel,
+          slopDetected: slopCheck.flagged,
+          fidelityChecked,
+          fidelityViolationDetected: fidelityChecked && !fidelityCheck.faithful,
+          rewritePerformed: rewriteApplied,
+          rewriteFidelityChecked,
+          rewriteFidelityViolation,
+          fidelityFallback,
+          userCreditCost: creditCostFor(generationMode, "user"),
+          providerCalls,
+        })
       }
     }
     const outputChars = outputText.length

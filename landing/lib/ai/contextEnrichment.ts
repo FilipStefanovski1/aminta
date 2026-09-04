@@ -49,6 +49,29 @@ export interface EntityContext {
   sourceRefs: string[]
 }
 
+// ─── Debug observability (instrumentation only — see route.ts's AI_DEBUG
+// gate) ──────────────────────────────────────────────────────────────────
+// A coarse, safe-to-log reason why `triggered=true` didn't end in
+// `contextUsed=true`. Deliberately a closed enum, never the raw exception —
+// see route.ts's debug-log header comment for why.
+export type ResearchFallbackReason =
+  | "no_grounding"
+  | "no_supported_facts"
+  | "provider_error"
+  | "invalid_response"
+  | "timeout"
+
+export interface ResearchDebugInfo {
+  detectedEntity: string | null
+  triggered: boolean
+  candidateFacts: number
+  acceptedFacts: number
+  rejectedFacts: number
+  contextUsed: boolean
+  fallback: boolean
+  fallbackReason: ResearchFallbackReason | null
+}
+
 // Three deliberately simple, deterministic signals — no model call spent
 // just deciding whether research is worth attempting (per the product
 // requirement), and none of them fire on ordinary sentence-initial
@@ -191,6 +214,98 @@ function admitFacts(
   return admitted
 }
 
+// Internal shape shared by extractGroundedContext/fetchEntityContext and
+// their debug-returning counterparts below — one place computes both the
+// real context AND the counts/fallback reason behind it, so the debug
+// numbers can never drift from what generation actually received.
+interface RawResearchResult {
+  context: EntityContext | null
+  candidateFacts: number
+  acceptedFacts: number
+  fallbackReason: ResearchFallbackReason | null
+}
+
+/** Pure — parses the raw Gemini response and runs the evidence gate. Never throws. */
+function computeResearchResult(entityQuery: string, data: unknown): RawResearchResult {
+  try {
+    const candidate = (data as { candidates?: unknown[] })?.candidates?.[0] as
+      | {
+          content?: { parts?: { text?: string }[] }
+          groundingMetadata?: {
+            groundingChunks?: { web?: { uri?: string; title?: string } }[]
+            groundingSupports?: { segment?: { text?: string }; groundingChunkIndices?: number[] }[]
+          }
+        }
+      | undefined
+
+    const rawText = candidate?.content?.parts?.map((p) => p.text ?? "").join("").trim()
+    if (!rawText) return { context: null, candidateFacts: 0, acceptedFacts: 0, fallbackReason: "invalid_response" }
+
+    const chunks: GroundingChunk[] = (candidate?.groundingMetadata?.groundingChunks ?? []).map((c) => ({
+      uri: c.web?.uri ?? "",
+      domain: c.web?.title ?? "",
+    }))
+    const supports: GroundingSupport[] = (candidate?.groundingMetadata?.groundingSupports ?? [])
+      .filter((s) => s.segment?.text && s.groundingChunkIndices)
+      .map((s) => ({ segmentText: s.segment!.text!, chunkIndices: s.groundingChunkIndices! }))
+
+    // Zero grounding at all means the model answered from its own
+    // pretrained knowledge with no search backing whatsoever — nothing
+    // here can be trusted enough to admit under this gate.
+    if (chunks.length === 0 || supports.length === 0) {
+      return { context: null, candidateFacts: 0, acceptedFacts: 0, fallbackReason: "no_grounding" }
+    }
+
+    // Only keep lines actually prefixed with "FACT:" — a response that
+    // ignored the format entirely yields nothing rather than treating
+    // arbitrary prose as facts.
+    const factLines = rawText
+      .split("\n")
+      .filter((l) => /^\s*FACT:\s*/i.test(l))
+      .map((l) => l.replace(/^\s*FACT:\s*/i, "").trim())
+      .filter((l) => l.length > 5)
+
+    const admitted = admitFacts(factLines, chunks, supports)
+    if (admitted.length === 0) {
+      return {
+        context: null,
+        candidateFacts: factLines.length,
+        acceptedFacts: 0,
+        fallbackReason: factLines.length === 0 ? "invalid_response" : "no_supported_facts",
+      }
+    }
+
+    const allDomains = [...new Set(admitted.flatMap((f) => f.domains))]
+
+    return {
+      context: {
+        entityName: entityQuery,
+        entityType: "",
+        verifiedFacts: admitted.map((f) => f.text).slice(0, 8),
+        notableTopics: [],
+        people: [],
+        dates: [],
+        sourceRefs: allDomains,
+      },
+      candidateFacts: factLines.length,
+      acceptedFacts: admitted.length,
+      fallbackReason: null,
+    }
+  } catch (e) {
+    console.warn("[Context enrichment] failed to parse research response", {
+      reason: e instanceof Error ? e.message : String(e),
+    })
+    return { context: null, candidateFacts: 0, acceptedFacts: 0, fallbackReason: "invalid_response" }
+  }
+}
+
+/** Pure — parses the raw Gemini response and runs the evidence gate. Exported for tests; never throws. */
+export function extractGroundedContext(entityQuery: string, data: unknown): EntityContext | null {
+  return computeResearchResult(entityQuery, data).context
+}
+
+export type ResearchFetchResult = RawResearchResult
+
 /**
  * ONE grounded Gemini call, asking for plain-text "FACT: ..." lines (not a
  * JSON blob) specifically so Gemini's own groundingSupports can map back to
@@ -199,11 +314,12 @@ function admitFacts(
  * then passes through the evidence gate above before ever reaching
  * verifiedFacts. Never throws — every failure mode (network, timeout,
  * missing key, zero grounding at all, zero facts surviving the gate)
- * returns null so a research problem can never make Generate itself fail.
+ * returns null (candidateFacts/acceptedFacts: 0) so a research problem can
+ * never make Generate itself fail.
  */
-export async function fetchEntityContext(entityQuery: string): Promise<EntityContext | null> {
+export async function fetchEntityContextWithDebug(entityQuery: string): Promise<ResearchFetchResult> {
   const apiKey = process.env.GEMINI_API_KEY
-  if (!apiKey) return null
+  if (!apiKey) return { context: null, candidateFacts: 0, acceptedFacts: 0, fallbackReason: "provider_error" }
 
   const prompt = [
     `Research this topic/entity using web search: "${entityQuery}".`,
@@ -235,77 +351,72 @@ export async function fetchEntityContext(entityQuery: string): Promise<EntityCon
     )
     if (!res.ok) {
       console.warn("[Context enrichment] provider returned non-OK status", { status: res.status })
-      return null
+      return { context: null, candidateFacts: 0, acceptedFacts: 0, fallbackReason: "provider_error" }
     }
     const data = await res.json()
-    return extractGroundedContext(entityQuery, data)
+    return computeResearchResult(entityQuery, data)
   } catch (e) {
+    // AbortError only ever fires here from the deadline timer above, never
+    // from a caller-supplied signal — safe to report as "timeout" rather
+    // than the generic provider_error bucket.
+    const timedOut = e instanceof DOMException && e.name === "AbortError"
     console.warn("[Context enrichment] research call failed — proceeding without context", {
       reason: e instanceof Error ? e.message : String(e),
     })
-    return null
+    return { context: null, candidateFacts: 0, acceptedFacts: 0, fallbackReason: timedOut ? "timeout" : "provider_error" }
   } finally {
     clearTimeout(timer)
   }
 }
 
-/** Pure — parses the raw Gemini response and runs the evidence gate. Exported for tests; never throws. */
-export function extractGroundedContext(entityQuery: string, data: unknown): EntityContext | null {
-  try {
-    const candidate = (data as { candidates?: unknown[] })?.candidates?.[0] as
-      | {
-          content?: { parts?: { text?: string }[] }
-          groundingMetadata?: {
-            groundingChunks?: { web?: { uri?: string; title?: string } }[]
-            groundingSupports?: { segment?: { text?: string }; groundingChunkIndices?: number[] }[]
-          }
-        }
-      | undefined
+/** Thin wrapper over fetchEntityContextWithDebug — unchanged external behavior/signature. */
+export async function fetchEntityContext(entityQuery: string): Promise<EntityContext | null> {
+  return (await fetchEntityContextWithDebug(entityQuery)).context
+}
 
-    const rawText = candidate?.content?.parts?.map((p) => p.text ?? "").join("").trim()
-    if (!rawText) return null
+export interface MaybeResearchDebugResult {
+  context: EntityContext | null
+  debug: ResearchDebugInfo
+}
 
-    const chunks: GroundingChunk[] = (candidate?.groundingMetadata?.groundingChunks ?? []).map((c) => ({
-      uri: c.web?.uri ?? "",
-      domain: c.web?.title ?? "",
-    }))
-    const supports: GroundingSupport[] = (candidate?.groundingMetadata?.groundingSupports ?? [])
-      .filter((s) => s.segment?.text && s.groundingChunkIndices)
-      .map((s) => ({ segmentText: s.segment!.text!, chunkIndices: s.groundingChunkIndices! }))
+const NOT_TRIGGERED_DEBUG: ResearchDebugInfo = {
+  detectedEntity: null,
+  triggered: false,
+  candidateFacts: 0,
+  acceptedFacts: 0,
+  rejectedFacts: 0,
+  contextUsed: false,
+  fallback: false,
+  fallbackReason: null,
+}
 
-    // Zero grounding at all means the model answered from its own
-    // pretrained knowledge with no search backing whatsoever — nothing
-    // here can be trusted enough to admit under this gate.
-    if (chunks.length === 0 || supports.length === 0) return null
+/**
+ * Debug-returning counterpart of maybeGetEntityContext (below) — same
+ * gating, same network call, zero extra provider calls. Exists purely so
+ * route.ts can log observability counts without route.ts (or any other
+ * caller) needing to re-derive them from EntityContext, which by design
+ * throws away candidate/rejected counts once facts are admitted.
+ */
+export async function maybeGetEntityContextWithDebug(input: string): Promise<MaybeResearchDebugResult> {
+  if (!CONTEXT_RESEARCH_ENABLED) return { context: null, debug: NOT_TRIGGERED_DEBUG }
 
-    // Only keep lines actually prefixed with "FACT:" — a response that
-    // ignored the format entirely yields nothing rather than treating
-    // arbitrary prose as facts.
-    const factLines = rawText
-      .split("\n")
-      .filter((l) => /^\s*FACT:\s*/i.test(l))
-      .map((l) => l.replace(/^\s*FACT:\s*/i, "").trim())
-      .filter((l) => l.length > 5)
+  const entity = detectResearchableEntity(input)
+  if (!entity) return { context: null, debug: NOT_TRIGGERED_DEBUG }
 
-    const admitted = admitFacts(factLines, chunks, supports)
-    if (admitted.length === 0) return null
-
-    const allDomains = [...new Set(admitted.flatMap((f) => f.domains))]
-
-    return {
-      entityName: entityQuery,
-      entityType: "",
-      verifiedFacts: admitted.map((f) => f.text).slice(0, 8),
-      notableTopics: [],
-      people: [],
-      dates: [],
-      sourceRefs: allDomains,
-    }
-  } catch (e) {
-    console.warn("[Context enrichment] failed to parse research response", {
-      reason: e instanceof Error ? e.message : String(e),
-    })
-    return null
+  const { context, candidateFacts, acceptedFacts, fallbackReason } = await fetchEntityContextWithDebug(entity)
+  const contextUsed = context !== null
+  return {
+    context,
+    debug: {
+      detectedEntity: entity,
+      triggered: true,
+      candidateFacts,
+      acceptedFacts,
+      rejectedFacts: Math.max(0, candidateFacts - acceptedFacts),
+      contextUsed,
+      fallback: !contextUsed,
+      fallbackReason: contextUsed ? null : fallbackReason,
+    },
   }
 }
 
@@ -314,8 +425,5 @@ export function extractGroundedContext(entityQuery: string, data: unknown): Enti
  * on there being a plausible entity to research at all. Never throws.
  */
 export async function maybeGetEntityContext(input: string): Promise<EntityContext | null> {
-  if (!CONTEXT_RESEARCH_ENABLED) return null
-  const entity = detectResearchableEntity(input)
-  if (!entity) return null
-  return fetchEntityContext(entity)
+  return (await maybeGetEntityContextWithDebug(input)).context
 }
