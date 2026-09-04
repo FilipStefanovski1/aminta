@@ -4,6 +4,7 @@ import { redirect } from "next/navigation"
 import Navbar from "@/components/Navbar"
 import Footer from "@/components/Footer"
 import AdminTable from "./AdminTable"
+import NewSignupsPopup from "./NewSignupsPopup"
 
 export const dynamic = "force-dynamic"
 
@@ -162,6 +163,7 @@ export default async function AdminPage({
   return (
     <>
       <Navbar alwaysVisible />
+      <NewSignupsPopup rows={rows} />
       <main className="flex-1">
         <div className="mx-auto max-w-7xl px-5 pt-32 pb-20">
           <div className="mb-8">
