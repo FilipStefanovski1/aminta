@@ -79,7 +79,38 @@ export interface ResearchDebugInfo {
 //
 // 1. A run of 2+ Title-Case words ("Solana Summit Serbia") — highest
 //    confidence, matches anywhere in the input, not just at the start.
-const TITLE_CASE_RUN_RE = /\b([A-Z][a-zA-Z0-9]*(?:\s+[A-Z][a-zA-Z0-9]*){1,5})\b/
+//
+// A single token allows one internal "/" or "&" continuation ("I/O" as in
+// "Google I/O", "AT&T") — without this, the plain [a-zA-Z0-9]* class ends a
+// token at the "/", so "Google I/O" used to match as only "Google I",
+// silently dropping "/O" from the researched entity.
+const TITLE_CASE_TOKEN_SRC = "[A-Z][a-zA-Z0-9]*(?:[/&][A-Za-z0-9]+)*"
+const TITLE_CASE_RUN_RE = new RegExp(`\\b(${TITLE_CASE_TOKEN_SRC}(?:\\s+${TITLE_CASE_TOKEN_SRC}){1,5})\\b`)
+
+// Found via a real production report: a run of Title-Case words is exactly
+// as likely to be an ordinary phrase someone capitalized out of habit (a
+// heading-style sentence fragment — "Working From Home") as it is to be a
+// genuine proper noun (an event/entity name — "Solana Summit Serbia"). A
+// real multi-word name essentially never contains a bare grammatical
+// connector (preposition/article/conjunction) capitalized in the middle —
+// "Working FROM Home" reads as a sentence fragment, not a name — so a
+// candidate run containing one of these mid-phrase is rejected as NOT a
+// proper-noun run. This is a structural filter, not a topic whitelist: it
+// never looks at what the words actually are, only whether the run's shape
+// looks like grammar rather than a name. A genuine entity with an internal
+// preposition ("Bank of America") is a rare, accepted false negative —
+// consistent with this heuristic's existing "prefer false negatives over
+// wasting research on generic nouns" rule (see GENERIC_SINGLE_WORD_TOPICS
+// below for the single-word equivalent of that same tradeoff).
+const CONNECTOR_WORDS = new Set([
+  "a", "an", "the", "of", "in", "on", "at", "to", "for", "from", "with",
+  "and", "or", "nor", "but", "as", "by", "is", "are", "your", "my", "our",
+])
+
+function looksLikeOrdinaryPhrase(run: string): boolean {
+  return run.split(/\s+/).some((w) => CONNECTOR_WORDS.has(w.toLowerCase()))
+}
+
 // 2. A single word with an internal capital ("OpenAI", "ETHBelgrade",
 //    "GitHub") — a strong proper-noun signal regardless of position.
 const INTERNAL_CAP_RE = /^[A-Z][a-zA-Z0-9]*[A-Z][a-zA-Z0-9]*$/
@@ -112,7 +143,7 @@ export function detectResearchableEntity(input: string): string | null {
   if (!trimmed) return null
 
   const multiWord = trimmed.match(TITLE_CASE_RUN_RE)
-  if (multiWord) return multiWord[1].trim()
+  if (multiWord && !looksLikeOrdinaryPhrase(multiWord[1])) return multiWord[1].trim()
 
   const words = trimmed.split(/\s+/).filter(Boolean)
   const internalCap = words.find((w) => INTERNAL_CAP_RE.test(w))

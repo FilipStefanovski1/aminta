@@ -77,8 +77,19 @@ const g1RewriteMessages = g1Slop.flagged
   : null
 
 // ─── Deterministic: entity-trigger audit (the exact §6 requirement) ───────
-const shouldTrigger = ["OpenAI", "Cursor", "Solana", "Breakpoint", "Solana Summit Serbia", "ETHBelgrade"]
-const shouldNotTrigger = ["coding", "design", "startup", "basketball", "marketing", "gym", "coffee", "founders", "programming", "school"]
+const shouldTrigger = [
+  "OpenAI", "Cursor", "Solana", "Breakpoint", "Solana Summit Serbia", "ETHBelgrade",
+  // Real production bug report fixtures — see contextEnrichment.test.ts's
+  // "real multi-word event/entity names all trigger research".
+  "Solana Breakpoint", "OpenAI DevDay", "ETHCC Paris", "Token2049 Singapore",
+  "Apple WWDC", "Google I/O", "Paris Blockchain Week",
+]
+const shouldNotTrigger = [
+  "coding", "design", "startup", "basketball", "marketing", "gym", "coffee", "founders", "programming", "school",
+  // Same bug report's explicit new false-positive requirement — an
+  // ordinary Title-Case phrase, not a real name.
+  "Working From Home",
+]
 const entityAudit = {
   shouldTrigger: shouldTrigger.map((w) => ({ word: w, result: detectResearchableEntity(w), pass: !!detectResearchableEntity(w) })),
   shouldNotTrigger_lowercase: shouldNotTrigger.map((w) => ({ word: w, result: detectResearchableEntity(w), pass: detectResearchableEntity(w) === null })),

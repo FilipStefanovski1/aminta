@@ -52,6 +52,45 @@ describe("D. entity detection — lightweight heuristic, no model call", () => {
     expect(detectResearchableEntity("building in public")).toBeNull()
   })
 
+  // Real production bug report: "Solana Summit Serbia" was reported not
+  // triggering research. It DOES match this heuristic (verified above) —
+  // this block hardens the surrounding cases the report's fix asked for:
+  // every listed real multi-word event/entity name must trigger, and the
+  // one genuinely-missing case (a Title-Case run whose token contains "/",
+  // like "Google I/O") is now captured whole instead of silently truncated.
+  it("real multi-word event/entity names all trigger research", () => {
+    const realEntities = [
+      "Solana Summit Serbia",
+      "Solana Breakpoint",
+      "OpenAI DevDay",
+      "ETHCC Paris",
+      "Token2049 Singapore",
+      "Apple WWDC",
+      "Paris Blockchain Week",
+    ]
+    for (const name of realEntities) {
+      expect(detectResearchableEntity(name)).toBe(name)
+    }
+  })
+
+  it("a Title-Case token containing an internal '/' is captured whole, not truncated ('Google I/O', not 'Google I')", () => {
+    expect(detectResearchableEntity("Google I/O")).toBe("Google I/O")
+  })
+
+  // Found via the same real bug report's own follow-up requirement: a run
+  // of Title-Case words that reads as an ordinary phrase someone
+  // capitalized out of habit (a heading-style fragment), not a real name,
+  // must NOT trigger just because every word happens to be capitalized.
+  it("a Title-Case run that reads as an ordinary phrase, not a name, does not trigger ('Working From Home')", () => {
+    expect(detectResearchableEntity("Working From Home")).toBeNull()
+  })
+
+  it("still does not treat other plain generic single-word/short topics as entities (audit re-run)", () => {
+    for (const word of ["Gym", "Coding", "Startup", "Founders", "Marketing", "Basketball", "Coffee", "Design"]) {
+      expect(detectResearchableEntity(word)).toBeNull()
+    }
+  })
+
   it("returns null for empty input", () => {
     expect(detectResearchableEntity("")).toBeNull()
     expect(detectResearchableEntity("   ")).toBeNull()
