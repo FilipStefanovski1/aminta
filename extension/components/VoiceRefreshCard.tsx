@@ -10,6 +10,7 @@
 import { useEffect, useState } from "react"
 
 import { C } from "~lib/theme"
+import { T, TP } from "~lib/typography"
 import { getStageTint } from "~lib/evolution"
 import type { AmintaStore } from "~lib/storage"
 import { disconnectX, fetchConnectionState, runVoiceRefresh, startXConnect } from "~lib/voiceRefresh"
@@ -71,7 +72,7 @@ function CardButton({
     <button
       onClick={onClick}
       disabled={disabled}
-      className="w-full rounded-lg py-3 text-[11px] font-semibold text-black transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+      className={`w-full rounded-lg py-3 text-black transition-opacity disabled:opacity-40 disabled:cursor-not-allowed ${T.button}`}
       style={{ backgroundColor: tint }}>
       {children}
     </button>
@@ -110,7 +111,7 @@ export default function VoiceRefreshCard({ store, onRefreshed, variant = "train"
   const learned = summarizeStyleProfile(store.styleProfile)
   const affordance = summaryAffordanceFor(store, justRefreshed)
 
-  const label = "text-[9px] uppercase tracking-[0.06em]"
+  const label = T.eyebrow
 
   async function act(kind: "connect" | "refresh" | "disconnect", fn: () => Promise<unknown>) {
     // Guard against a second click starting a concurrent refresh. The backend
@@ -133,7 +134,7 @@ export default function VoiceRefreshCard({ store, onRefreshed, variant = "train"
     <>
       <button
         onClick={() => setShowLearned((v) => !v)}
-        className="text-[10px] mt-2 leading-none block"
+        className={`${T.buttonSm} mt-2 leading-none block`}
         style={{ color: tint }}>
         {showLearned ? "Hide details" : "View what Aminta learned"}
       </button>
@@ -143,12 +144,12 @@ export default function VoiceRefreshCard({ store, onRefreshed, variant = "train"
           <div className="space-y-2.5">
             {learned.map((s) => (
               <div key={s.title}>
-                <p className="text-[10px] leading-none mb-1" style={{ color: C.textFaint }}>{s.title}</p>
+                <p className={`${T.meta} leading-none mb-1`} style={{ color: C.textFaint }}>{s.title}</p>
                 {s.inline && (
-                  <p className="text-[10px] leading-snug" style={{ color: C.textFaint }}>{s.inline}</p>
+                  <p className={T.bodySm} style={{ color: C.textFaint }}>{s.inline}</p>
                 )}
                 {s.lines.map((line) => (
-                  <p key={line} className="text-[10px] leading-snug" style={{ color: C.textFaint }}>
+                  <p key={line} className={T.bodySm} style={{ color: C.textFaint }}>
                     {s.lines.length > 1 ? `• ${line}` : line}
                   </p>
                 ))}
@@ -178,7 +179,7 @@ export default function VoiceRefreshCard({ store, onRefreshed, variant = "train"
     <div className="rounded-xl overflow-hidden" style={{ backgroundColor: "#262628", border: "1px solid #404048" }}>
       <div className="px-4 py-4">
         <div className="flex items-center gap-2">
-          <p className="font-pixel text-[10px] uppercase tracking-widest" style={{ color: C.text }}>Learn from your X</p>
+          <p className={T.sectionTitle} style={{ color: C.text }}>Learn from your X</p>
           <ProBadge />
         </div>
 
@@ -191,17 +192,17 @@ export default function VoiceRefreshCard({ store, onRefreshed, variant = "train"
             fewer than 20 may actually be used. */}
         {!entitled && (
           <>
-            <p className="text-[11px] leading-snug mt-2 font-medium" style={{ color: C.text }}>
+            <p className={`${T.body} mt-2 font-medium`} style={{ color: C.text }}>
               Learn your style from up to your last 20 X posts.
             </p>
-            <p className="text-[10px] leading-snug mt-1" style={{ color: C.textFaint }}>
+            <p className={`${T.bodySm} mt-1`} style={{ color: C.textFaint }}>
               Voice Refresh analyzes your recent posts and updates how Aminta writes like you.
             </p>
             <a
               href={PRICING_URL}
               target="_blank"
               rel="noreferrer"
-              className="inline-block mt-3 text-[10px] font-medium"
+              className={`inline-block mt-3 ${T.buttonSm}`}
               style={{ color: tint }}>
               Unlock with Pro →
             </a>
@@ -211,10 +212,10 @@ export default function VoiceRefreshCard({ store, onRefreshed, variant = "train"
         {/* ── Pro, not connected ── */}
         {entitled && !store.xConnected && (
           <>
-            <p className="text-[11px] leading-snug mt-2 font-medium" style={{ color: C.text }}>
+            <p className={`${T.body} mt-2 font-medium`} style={{ color: C.text }}>
               Learn your style from up to your last 20 X posts.
             </p>
-            <p className="text-[10px] leading-snug mt-1 mb-3" style={{ color: C.textFaint }}>
+            <p className={`${T.bodySm} mt-1 mb-3`} style={{ color: C.textFaint }}>
               Voice Refresh analyzes your recent posts and updates how Aminta writes like you.
             </p>
             <CardButton
@@ -223,7 +224,7 @@ export default function VoiceRefreshCard({ store, onRefreshed, variant = "train"
               disabled={!!busy}>
               {busy === "connect" ? "Opening X…" : "Connect X"}
             </CardButton>
-            <p className="text-[10px] mt-2 leading-snug" style={{ color: C.textGhost }}>
+            <p className={`${T.meta} mt-2`} style={{ color: C.textGhost }}>
               Read-only. Aminta never posts, likes, or follows for you.
             </p>
           </>
@@ -235,23 +236,23 @@ export default function VoiceRefreshCard({ store, onRefreshed, variant = "train"
             metadata + Disconnect on a single footer row. */}
         {entitled && store.xConnected && (
           <div>
-            <p className="text-[11px] leading-snug mt-2" style={{ color: C.textFaint }}>
+            <p className={`${T.bodySm} mt-2`} style={{ color: C.textFaint }}>
               Connected as{" "}
               <span className="font-medium" style={{ color: C.text }}>@{store.xUsername}</span>
             </p>
-            <p className="text-[10px] leading-snug mt-1 mb-3" style={{ color: C.textFaint }}>
+            <p className={`${T.bodySm} mt-1 mb-3`} style={{ color: C.textFaint }}>
               Keep Aminta in sync with how you actually write.
             </p>
 
             {busy === "refresh" ? (
               // ── REFRESHING ──
-              <p className="text-[10px] leading-snug" style={{ color: C.textFaint }}>
+              <p className={T.bodySm} style={{ color: C.textFaint }}>
                 Analyzing your recent posts…
               </p>
             ) : affordance.kind === "fresh" && !error ? (
               // ── SUCCESS ──
               <div>
-                <p className="text-[10px] leading-snug" style={{ color: C.text }}>
+                <p className={T.bodySm} style={{ color: C.text }}>
                   Voice updated — learned from {affordance.postsAnalyzed} recent posts.
                 </p>
                 {learnedToggle}
@@ -271,7 +272,7 @@ export default function VoiceRefreshCard({ store, onRefreshed, variant = "train"
             ) : (
               // ── LOCKED ──
               <div>
-                <p className="text-[10px] leading-snug" style={{ color: C.text }}>Your voice is up to date.</p>
+                <p className={T.bodySm} style={{ color: C.text }}>Your voice is up to date.</p>
                 {learnedToggle}
               </div>
             )}
@@ -280,7 +281,7 @@ export default function VoiceRefreshCard({ store, onRefreshed, variant = "train"
                 account actions. Disconnect is destructive, so it stays a
                 quiet text button here rather than competing with Refresh. */}
             <div className="flex items-center justify-between gap-3 mt-3">
-              <span className="text-[10px] leading-none" style={{ color: C.textGhost }}>{statusMeta}</span>
+              <span className={`${T.meta} leading-none`} style={{ color: C.textGhost }}>{statusMeta}</span>
               <button
                 onClick={busy ? undefined : () => act("disconnect", async () => {
                   await disconnectX()
@@ -291,7 +292,7 @@ export default function VoiceRefreshCard({ store, onRefreshed, variant = "train"
                   // Disconnect button doesn't work."
                   onRefreshed()
                 })}
-                className="text-[10px] leading-none shrink-0"
+                className={`${T.buttonSm} leading-none shrink-0`}
                 style={{ color: C.textGhost }}>
                 {busy === "disconnect" ? "Disconnecting…" : "Disconnect"}
               </button>
@@ -300,13 +301,13 @@ export default function VoiceRefreshCard({ store, onRefreshed, variant = "train"
             {(affordance.kind !== "none") && (
               <button
                 onClick={() => setShowHow((v) => !v)}
-                className="text-[10px] leading-none mt-2 block"
+                className={`${T.buttonSm} leading-none mt-2 block`}
                 style={{ color: C.textGhost }}>
                 How posts are chosen
               </button>
             )}
             {showHow && (
-              <p className="text-[10px] mt-1.5 leading-snug" style={{ color: C.textGhost }}>
+              <p className={`${T.meta} mt-1.5`} style={{ color: C.textGhost }}>
                 Aminta analyzes your recent original posts and automatically chooses the
                 strongest examples of your writing. Replies and reposts aren't used.
               </p>
@@ -316,11 +317,11 @@ export default function VoiceRefreshCard({ store, onRefreshed, variant = "train"
 
         {error && (
           <div className="mt-3">
-            <p className="text-[10px] leading-snug text-red-400">{error}</p>
+            <p className={`${T.bodySm} text-red-400`}>{error}</p>
             {needsReconnect && (
               <button
                 onClick={busy ? undefined : () => act("connect", async () => { setNeedsReconnect(false); await startXConnect() })}
-                className="text-[10px] mt-1.5 block"
+                className={`${T.buttonSm} mt-1.5 block`}
                 style={{ color: tint }}>
                 Reconnect X
               </button>

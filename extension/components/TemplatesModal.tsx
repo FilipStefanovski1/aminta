@@ -355,7 +355,7 @@ export default function TemplatesModal({ store, onClose, onChanged, getRunContex
           <select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value as TemplateCategory | "all")}
-            className="input-pixel w-full rounded-xl px-3 py-2 text-[11px]">
+            className="input-pixel w-full rounded-xl px-3 py-2 text-[12px]">
             <option value="all">All categories</option>
             {TEMPLATE_CATEGORIES.map((c) => (
               <option key={c.id} value={c.id}>{c.label}</option>
@@ -364,12 +364,12 @@ export default function TemplatesModal({ store, onClose, onChanged, getRunContex
         )}
 
         {templates.length === 0 && (
-          <p className="text-[11px] text-center py-6" style={{ color: C.textFaint }}>
+          <p className="text-[12px] text-center py-6" style={{ color: C.textFaint }}>
             No templates yet. Save a draft as a template, or create one from scratch.
           </p>
         )}
         {templates.length > 0 && favorites.length === 0 && recent.length === 0 && all.length === 0 && (
-          <p className="text-[11px] text-center py-6" style={{ color: C.textFaint }}>
+          <p className="text-[12px] text-center py-6" style={{ color: C.textFaint }}>
             No templates in this category.
           </p>
         )}
@@ -432,12 +432,12 @@ export default function TemplatesModal({ store, onClose, onChanged, getRunContex
       <Card className="space-y-2" pad>
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
-            <p className="text-[12px] font-semibold truncate" style={{ color: C.text }}>{t.name}</p>
-            <p className="text-[10px] mt-0.5" style={{ color: C.textFaint }}>
+            <p className="text-[13px] font-semibold truncate" style={{ color: C.text }}>{t.name}</p>
+            <p className="text-[11px] mt-0.5" style={{ color: C.textFaint }}>
               {categoryLabel}{isThread && ` · Thread · ${t.threadPosts?.length ?? 0} posts`}
             </p>
-            {t.description && <p className="text-[10px] mt-0.5" style={{ color: C.textFaint }}>{t.description}</p>}
-            {preview && <p className="text-[10px] mt-0.5 truncate" style={{ color: C.textGhost }}>{preview}</p>}
+            {t.description && <p className="text-[11px] mt-0.5" style={{ color: C.textFaint }}>{t.description}</p>}
+            {preview && <p className="text-[11px] mt-0.5 truncate" style={{ color: C.textGhost }}>{preview}</p>}
           </div>
           <button onClick={onToggleFavorite} className="text-[13px] shrink-0" style={{ color: t.favorite ? tint : C.textGhost }}>
             {t.favorite ? "★" : "☆"}
@@ -448,8 +448,8 @@ export default function TemplatesModal({ store, onClose, onChanged, getRunContex
             {badge(isThread ? "Thread" : MODE_LABEL[t.mode], tint)}
           </div>
           <div className="flex items-center gap-3 flex-wrap justify-end ml-auto">
-            <button onClick={onEdit} className="text-[10px]" style={{ color: C.textFaint }}>Edit</button>
-            <button onClick={onDelete} className="text-[10px]" style={{ color: "#f87171" }}>Delete</button>
+            <button onClick={onEdit} className="text-[11px]" style={{ color: C.textFaint }}>Edit</button>
+            <button onClick={onDelete} className="text-[11px]" style={{ color: "#f87171" }}>Delete</button>
             <button
               onClick={onUseTemplate}
               disabled={inserting}
@@ -570,7 +570,7 @@ function TemplateEditor({
   return (
     <div className="space-y-4">
       <div className="space-y-1.5">
-        <p className="text-[11px] font-medium" style={{ color: C.textFaint }}>Name</p>
+        <p className="text-[12px] font-medium" style={{ color: C.textFaint }}>Name</p>
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
@@ -580,7 +580,7 @@ function TemplateEditor({
       </div>
 
       <div className="space-y-1.5">
-        <p className="text-[11px] font-medium" style={{ color: C.textFaint }}>
+        <p className="text-[12px] font-medium" style={{ color: C.textFaint }}>
           Description <span style={{ color: C.textGhost, fontWeight: 400 }}>(optional)</span>
         </p>
         <input
@@ -592,7 +592,7 @@ function TemplateEditor({
       </div>
 
       <div className="space-y-1.5">
-        <p className="text-[11px] font-medium" style={{ color: C.textFaint }}>Category</p>
+        <p className="text-[12px] font-medium" style={{ color: C.textFaint }}>Category</p>
         <div className="grid grid-cols-2 gap-1.5">
           {TEMPLATE_CATEGORIES.map((c) => {
             const active = category === c.id
@@ -600,7 +600,7 @@ function TemplateEditor({
               <button
                 key={c.id}
                 onClick={() => setCategory(c.id)}
-                className="rounded-lg py-2 text-[10px] font-medium transition-all"
+                className="rounded-lg py-2 text-[12px] font-medium transition-all"
                 style={{
                   backgroundColor: active ? tint + "18" : C.card,
                   border: `1px solid ${active ? tint : C.border}`,
@@ -615,16 +615,16 @@ function TemplateEditor({
 
       {isThread ? (
         <div className="space-y-1.5">
-          <p className="text-[11px] font-medium" style={{ color: C.textFaint }}>
+          <p className="text-[12px] font-medium" style={{ color: C.textFaint }}>
             Thread structure <span style={{ color: C.textGhost, fontWeight: 400 }}>(edit into a reusable pattern, e.g. [HOOK], [PAYOFF])</span>
           </p>
           <div className="space-y-2">
             {threadPosts.map((post, i) => (
               <div key={i} className="space-y-1">
                 <div className="flex items-center justify-between">
-                  <p className="text-[9px]" style={{ color: C.textGhost }}>Post {i + 1}</p>
+                  <p className="text-[11px]" style={{ color: C.textGhost }}>Post {i + 1}</p>
                   {threadPosts.length > 2 && (
-                    <button onClick={() => removeThreadPost(i)} className="text-[10px]" style={{ color: "#f87171" }}>Remove</button>
+                    <button onClick={() => removeThreadPost(i)} className="text-[11px]" style={{ color: "#f87171" }}>Remove</button>
                   )}
                 </div>
                 <textarea
@@ -636,12 +636,12 @@ function TemplateEditor({
               </div>
             ))}
           </div>
-          <button onClick={addThreadPost} className="text-[10px]" style={{ color: tint }}>+ Add post</button>
+          <button onClick={addThreadPost} className="text-[11px]" style={{ color: tint }}>+ Add post</button>
         </div>
       ) : (
         <>
           <div className="space-y-1.5">
-            <p className="text-[11px] font-medium" style={{ color: C.textFaint }}>Type</p>
+            <p className="text-[12px] font-medium" style={{ color: C.textFaint }}>Type</p>
             <div className="grid grid-cols-3 gap-1.5">
               {(["exact", "fill", "generate"] as TemplateMode[]).map((m) => {
                 const active = mode === m
@@ -649,7 +649,7 @@ function TemplateEditor({
                   <button
                     key={m}
                     onClick={() => setMode(m)}
-                    className="rounded-xl py-2.5 text-[10px] font-semibold transition-all"
+                    className="rounded-xl py-2.5 text-[12px] font-semibold transition-all"
                     style={{
                       backgroundColor: active ? tint + "18" : C.card,
                       border: `1.5px solid ${active ? tint : C.border}`,
@@ -660,7 +660,7 @@ function TemplateEditor({
                 )
               })}
             </div>
-            <p className="text-[9px]" style={{ color: C.textGhost }}>
+            <p className="text-[11px]" style={{ color: C.textGhost }}>
               {mode === "exact" && "Inserted exactly as written, no AI rewriting."}
               {mode === "fill" && "Fill in {{variables}} to complete the post, no AI rewriting."}
               {mode === "generate" && "An instruction. Aminta writes a fresh version using your Style Profile every time."}
@@ -669,11 +669,11 @@ function TemplateEditor({
 
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <p className="text-[11px] font-medium" style={{ color: C.textFaint }}>
+              <p className="text-[12px] font-medium" style={{ color: C.textFaint }}>
                 {mode === "generate" ? "Instruction" : "Content"}
               </p>
               {supportsVariables && (
-                <button onClick={convertSelection} className="text-[10px]" style={{ color: tint }}>
+                <button onClick={convertSelection} className="text-[11px]" style={{ color: tint }}>
                   Convert selection to variable
                 </button>
               )}
@@ -693,7 +693,7 @@ function TemplateEditor({
               className="input-pixel w-full rounded-xl px-3 py-2.5 text-sm resize-none"
             />
             {supportsVariables && (
-              <p className="text-[9px]" style={{ color: C.textGhost }}>
+              <p className="text-[11px]" style={{ color: C.textGhost }}>
                 Type <code>{"{{variable}}"}</code> directly, or highlight text above and convert it.
               </p>
             )}
@@ -703,7 +703,7 @@ function TemplateEditor({
 
       {supportsVariables && variables.length > 0 && (
         <div className="space-y-1.5">
-          <p className="text-[11px] font-medium" style={{ color: C.textFaint }}>Variables</p>
+          <p className="text-[12px] font-medium" style={{ color: C.textFaint }}>Variables</p>
           <div className="space-y-2">
             {variables.map((v, i) => (
               <Card key={v.key} pad className="space-y-2">
@@ -711,12 +711,12 @@ function TemplateEditor({
                   <input
                     value={v.label}
                     onChange={(e) => updateVariable(v.key, { label: e.target.value })}
-                    className="input-pixel flex-1 rounded-lg px-2 py-1 text-[11px]"
+                    className="input-pixel flex-1 rounded-lg px-2 py-1 text-[12px]"
                   />
                   <div className="flex items-center gap-1 shrink-0">
-                    <button onClick={() => moveVariable(i, -1)} disabled={i === 0} className="text-[10px] disabled:opacity-30" style={{ color: C.textFaint }}>↑</button>
-                    <button onClick={() => moveVariable(i, 1)} disabled={i === variables.length - 1} className="text-[10px] disabled:opacity-30" style={{ color: C.textFaint }}>↓</button>
-                    <button onClick={() => removeVariable(v.key)} className="text-[10px]" style={{ color: "#f87171" }}>✕</button>
+                    <button onClick={() => moveVariable(i, -1)} disabled={i === 0} className="text-[11px] disabled:opacity-30" style={{ color: C.textFaint }}>↑</button>
+                    <button onClick={() => moveVariable(i, 1)} disabled={i === variables.length - 1} className="text-[11px] disabled:opacity-30" style={{ color: C.textFaint }}>↓</button>
+                    <button onClick={() => removeVariable(v.key)} className="text-[11px]" style={{ color: "#f87171" }}>✕</button>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -724,21 +724,21 @@ function TemplateEditor({
                     value={v.defaultValue ?? ""}
                     onChange={(e) => updateVariable(v.key, { defaultValue: e.target.value })}
                     placeholder="Default value (optional)"
-                    className="input-pixel flex-1 rounded-lg px-2 py-1 text-[10px]"
+                    className="input-pixel flex-1 rounded-lg px-2 py-1 text-[11px]"
                   />
-                  <label className="flex items-center gap-1 text-[9px] shrink-0" style={{ color: C.textFaint }}>
+                  <label className="flex items-center gap-1 text-[11px] shrink-0" style={{ color: C.textFaint }}>
                     <input type="checkbox" checked={v.required} onChange={(e) => updateVariable(v.key, { required: e.target.checked })} />
                     Required
                   </label>
                 </div>
-                <p className="text-[8px] font-mono" style={{ color: C.textGhost }}>{"{{" + v.key + "}}"}</p>
+                <p className="text-[11px] font-mono" style={{ color: C.textGhost }}>{"{{" + v.key + "}}"}</p>
               </Card>
             ))}
           </div>
         </div>
       )}
 
-      {error && <p className="text-[11px] text-red-400">{error}</p>}
+      {error && <p className="text-[12px] text-red-400">{error}</p>}
 
       <div className="flex gap-2 pt-1">
         <GhostButton onClick={onCancel} className="flex-1">Cancel</GhostButton>
@@ -773,18 +773,18 @@ function TemplateUseForm({
     <div className="space-y-4">
       <div>
         <p className="text-[13px] font-semibold" style={{ color: C.text }}>{template.name}</p>
-        {template.description && <p className="text-[11px] mt-1" style={{ color: C.textFaint }}>{template.description}</p>}
+        {template.description && <p className="text-[12px] mt-1" style={{ color: C.textFaint }}>{template.description}</p>}
       </div>
 
       {template.variables.length === 0 ? (
-        <p className="text-[11px]" style={{ color: C.textFaint }}>
+        <p className="text-[12px]" style={{ color: C.textFaint }}>
           {template.mode === "exact" ? "This will be inserted exactly as written." : "Aminta will generate a fresh post from this template."}
         </p>
       ) : (
         <div className="space-y-3">
           {template.variables.map((v) => (
             <div key={v.key} className="space-y-1">
-              <p className="text-[11px] font-medium" style={{ color: C.textFaint }}>
+              <p className="text-[12px] font-medium" style={{ color: C.textFaint }}>
                 {v.label}{v.required && <span style={{ color: "#f87171" }}> *</span>}
               </p>
               <input
@@ -798,7 +798,7 @@ function TemplateUseForm({
         </div>
       )}
 
-      {error && <p className="text-[11px] text-red-400">{error}</p>}
+      {error && <p className="text-[12px] text-red-400">{error}</p>}
 
       <div className="flex gap-2 pt-1">
         <GhostButton onClick={onCancel} className="flex-1">Cancel</GhostButton>

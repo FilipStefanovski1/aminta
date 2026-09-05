@@ -29,10 +29,10 @@ export default function AiKeyInput({ value, onChange, tint, belowInput, labelSuf
   return (
     <div>
       <div className="flex items-center justify-between mb-1.5">
-        <label className="text-[9px] uppercase tracking-[0.06em]" style={{ color: "#888896" }}>
+        <label className="text-[11px] uppercase tracking-[0.06em]" style={{ color: "#888896" }}>
           API Key {labelSuffix}
         </label>
-        <span className="text-[9px]" style={{ color: "#888896" }}>
+        <span className="text-[11px]" style={{ color: "#888896" }}>
           <span style={{ color: provider.dot }}>●</span>{" "}{provider.name}
         </span>
       </div>
@@ -42,7 +42,7 @@ export default function AiKeyInput({ value, onChange, tint, belowInput, labelSuf
         onChange={e => onChange(e.target.value)}
         autoFocus={autoFocus}
         placeholder="gsk_…  ·  AIza…  ·  sk-or-…"
-        className="input-pixel w-full rounded-lg px-3 py-2 text-[12px]"
+        className="input-pixel w-full rounded-lg px-3 py-2 text-[13px]"
       />
 
       {belowInput}
@@ -50,7 +50,7 @@ export default function AiKeyInput({ value, onChange, tint, belowInput, labelSuf
       {/* Get an API Key — Groq/OpenRouter first (short chips), Google AI
           Studio wraps to its own line. See lib/providers.ts for why the
           array's own order can't be reused directly here. */}
-      <p className="text-[9px] mt-2.5" style={{ color: "#55555f" }}>Get a key:</p>
+      <p className="text-[11px] mt-2.5" style={{ color: "#55555f" }}>Get a key:</p>
       <div className="flex items-center flex-wrap gap-1.5 mt-1">
         {(["groq", "openrouter", "google"] as const).map((id) => {
           const p = PROVIDERS.find((x) => x.id === id)!
@@ -71,14 +71,14 @@ export default function AiKeyInput({ value, onChange, tint, belowInput, labelSuf
             >
               {p.name}
               {p.free && (
-                <span className="text-[7px]" style={{ color: active ? "#00000099" : "#8a8a92" }}>free</span>
+                <span className="text-[11px]" style={{ color: active ? "#00000099" : "#8a8a92" }}>free</span>
               )}
             </a>
           )
         })}
       </div>
 
-      <p className="text-[10px] mt-1.5 leading-none" style={{ color: "#666672" }}>
+      <p className="text-[11px] mt-1.5 leading-none" style={{ color: "#666672" }}>
         Stored locally only.
       </p>
     </div>

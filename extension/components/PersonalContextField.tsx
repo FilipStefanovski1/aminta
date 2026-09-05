@@ -7,6 +7,7 @@ import {
   appendTranscript,
 } from "~lib/personalContext"
 import { C } from "~lib/theme"
+import { T } from "~lib/typography"
 
 // One shared implementation for both places this field appears — the
 // onboarding step and Train's "About you" section — so the textarea, the
@@ -81,7 +82,7 @@ export default function PersonalContextField({
           autoFocus={autoFocus}
           placeholder={placeholder}
           aria-label="About you"
-          className="w-full bg-transparent resize-none outline-none text-[12px] leading-relaxed px-3 py-3"
+          className={`w-full bg-transparent resize-none outline-none px-3 py-3 ${T.control}`}
           style={{ color: C.text }}
         />
 
@@ -104,7 +105,7 @@ export default function PersonalContextField({
                 color: speech.listening ? tint : C.textDim,
               }}>
               <MicIcon color={speech.listening ? tint : C.textDim} />
-              <span className="font-pixel text-[7px] uppercase tracking-widest">
+              <span className={T.buttonSm}>
                 {speech.listening ? "Stop" : "Speak"}
               </span>
             </button>
@@ -113,12 +114,12 @@ export default function PersonalContextField({
           <button
             type="button"
             onClick={() => setHelperOpen((v) => !v)}
-            className="rounded-lg px-2 py-1.5 font-pixel text-[7px] uppercase tracking-widest transition-colors"
+            className={`rounded-lg px-2 py-1.5 transition-colors whitespace-nowrap ${T.buttonSm}`}
             style={{ border: `1px solid ${C.border}`, color: C.textDim }}>
             Help me answer
           </button>
 
-          <span className="ml-auto text-[10px] tabular-nums" style={{ color: remaining < 120 ? tint : C.textGhost }}>
+          <span className={`ml-auto tabular-nums ${T.meta}`} style={{ color: remaining < 120 ? tint : C.textGhost }}>
             {value.length > 0 ? `${remaining}` : ""}
           </span>
         </div>
@@ -127,7 +128,7 @@ export default function PersonalContextField({
       {/* Listening / error state — one line, never a layout shift that
           pushes the textarea around. */}
       {speech.listening && (
-        <p className="text-[10px] mt-2 flex items-center gap-1.5" style={{ color: tint }}>
+        <p className={`${T.meta} mt-2 flex items-center gap-1.5`} style={{ color: tint }}>
           <span
             className="inline-block rounded-full animate-pulse"
             style={{ width: 6, height: 6, backgroundColor: tint }}
@@ -136,7 +137,7 @@ export default function PersonalContextField({
         </p>
       )}
       {!speech.listening && speech.error && (
-        <p className="text-[10px] mt-2 leading-relaxed" style={{ color: C.textFaint }}>{speech.error}</p>
+        <p className={`${T.bodySm} mt-2`} style={{ color: C.textFaint }}>{speech.error}</p>
       )}
 
       {/* Helper prompt — pure local text. No AI call, no credits. */}
@@ -144,12 +145,12 @@ export default function PersonalContextField({
         <div
           className="mt-2 rounded-xl p-3"
           style={{ backgroundColor: C.cardInner, border: `1px solid ${C.border}` }}>
-          <p className="text-[10px] leading-relaxed mb-2" style={{ color: C.textFaint }}>
+          <p className={`${T.bodySm} mb-2`} style={{ color: C.textFaint }}>
             Not sure what to write? Copy this into ChatGPT, Claude or whichever AI you use,
             answer its questions, then paste the paragraph it gives you back here.
           </p>
           <pre
-            className="text-[10px] leading-relaxed whitespace-pre-wrap break-words max-h-40 overflow-y-auto rounded-lg p-2.5 m-0"
+            className={`whitespace-pre-wrap break-words max-h-40 overflow-y-auto rounded-lg p-2.5 m-0 ${T.bodySm}`}
             style={{ backgroundColor: C.bg, color: C.textDim, fontFamily: "inherit" }}>
             {HELPER_PROMPT}
           </pre>
@@ -157,19 +158,19 @@ export default function PersonalContextField({
             <button
               type="button"
               onClick={copyHelperPrompt}
-              className="font-pixel text-[8px] transition-colors"
+              className={`${T.buttonSm} transition-colors`}
               style={{ color: copied ? tint : C.text }}>
               {copied ? "Copied ✓" : "Copy prompt"}
             </button>
             <button
               type="button"
               onClick={() => setHelperOpen(false)}
-              className="font-pixel text-[8px]"
+              className={T.buttonSm}
               style={{ color: C.textDim }}>
               Close
             </button>
             {copyFailed && (
-              <span className="text-[10px]" style={{ color: C.textFaint }}>
+              <span className={T.meta} style={{ color: C.textFaint }}>
                 Couldn&apos;t copy — select the text above instead.
               </span>
             )}

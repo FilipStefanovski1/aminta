@@ -86,12 +86,12 @@ export default function LoginScreen({ onSignedIn: _onSignedIn }: Props) {
       {showEntry && (
         <div className="w-full flex flex-col items-center gap-3">
           {state === "stalled" && (
-            <p className="text-[10px] text-center" style={{ color: C.textFaint }}>
+            <p className="text-[11px] text-center" style={{ color: C.textFaint }}>
               Couldn&apos;t connect your X account. Try again.
             </p>
           )}
           {state === "cancelled" && (
-            <p className="text-[10px] text-center" style={{ color: C.textFaint }}>
+            <p className="text-[11px] text-center" style={{ color: C.textFaint }}>
               Connection cancelled.
             </p>
           )}
@@ -112,7 +112,7 @@ export default function LoginScreen({ onSignedIn: _onSignedIn }: Props) {
               flow, just a second entry point into the same one. */}
           <button
             onClick={openLoginPage}
-            className="text-[10px] transition-colors"
+            className="text-[11px] transition-colors"
             style={{ color: C.textGhost }}
           >
             Already use Google or email? Use another sign-in method.
@@ -130,7 +130,7 @@ export default function LoginScreen({ onSignedIn: _onSignedIn }: Props) {
             <p className="font-pixel text-[8px] tracking-widest" style={{ color: "#74f7b5" }}>
               Connecting to X…
             </p>
-            <p className="text-[10px]" style={{ color: C.textFaint }}>
+            <p className="text-[11px]" style={{ color: C.textFaint }}>
               Complete sign-in on the tab that just opened
             </p>
           </div>

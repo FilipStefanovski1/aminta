@@ -4,6 +4,7 @@ import { insertImage, insertText } from "~lib/messaging"
 import type { Mode, Platform, QuickRewriteAction } from "~lib/prompts"
 import { cooldownSecondsRemaining } from "~lib/publishCooldown"
 import { C } from "~lib/theme"
+import { T, TP } from "~lib/typography"
 import { hashText, queuePendingXP, XP_PER_MODE } from "~lib/xp"
 
 const X_CHAR_LIMIT = 280
@@ -129,7 +130,7 @@ export default function OutputCard({ text, mode, platform, imageDataUrl, onRegen
       {/* Character count + how many active Instincts fed this generation */}
       <div className="flex items-center justify-between">
         {instinctCount ? (
-          <span className="text-[10px]" style={{ color: C.textFaint }}>
+          <span className={T.meta} style={{ color: C.textFaint }}>
             Following {instinctCount} instinct{instinctCount === 1 ? "" : "s"}
           </span>
         ) : <span />}
@@ -141,14 +142,14 @@ export default function OutputCard({ text, mode, platform, imageDataUrl, onRegen
       <div className="flex gap-2">
         <button
           onClick={copy}
-          className="flex-1 border border-[#1e2028] rounded py-2 text-[10px] hover:border-[#333] transition-colors active:scale-[0.97]"
+          className={`flex-1 border border-[#1e2028] rounded py-2 hover:border-[#333] transition-colors active:scale-[0.97] ${T.button}`}
           style={{ color: C.textFaint }}>
           {copied ? "Copied ✓" : "Copy"}
         </button>
         <button
           onClick={cooldownSecs > 0 ? undefined : insert}
           disabled={cooldownSecs > 0}
-          className="btn-pixel flex-1 bg-mint text-black rounded py-2 font-pixel text-[8px] active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed"
+          className={`btn-pixel flex-1 bg-mint text-black rounded py-2 active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed ${TP.buttonSm}`}
           title={cooldownSecs > 0 ? "Anti-spam protection — avoids accidental duplicate posts." : undefined}>
           {cooldownSecs > 0 ? `Post again in ${cooldownSecs}s` : "Insert into X"}
         </button>
@@ -163,7 +164,7 @@ export default function OutputCard({ text, mode, platform, imageDataUrl, onRegen
           <div className="flex items-center gap-2 flex-wrap">
             {[
               ...(onRegenerate ? [{ key: "regenerate", node: (
-                <button onClick={onRegenerate} className="text-[10px]" style={{ color: C.textFaint }}>
+                <button onClick={onRegenerate} className={T.buttonSm} style={{ color: C.textFaint }}>
                   Try again
                 </button>
               ) }] : []),
@@ -173,14 +174,14 @@ export default function OutputCard({ text, mode, platform, imageDataUrl, onRegen
                   <button
                     onClick={() => onQuickRewrite(a.id)}
                     disabled={!!quickRewriteBusy}
-                    className="text-[10px] disabled:opacity-50 disabled:cursor-wait"
+                    className={`${T.buttonSm} disabled:opacity-50 disabled:cursor-wait`}
                     style={{ color: quickRewriteBusy === a.id ? C.text : C.textFaint }}>
                     {quickRewriteBusy === a.id ? "…" : a.label}
                   </button>
                 ),
               })) : []),
               ...(onSaveAsTemplate ? [{ key: "save-template", node: (
-                <button onClick={() => onSaveAsTemplate(text)} className="text-[10px]" style={{ color: C.textFaint }}>
+                <button onClick={() => onSaveAsTemplate(text)} className={T.buttonSm} style={{ color: C.textFaint }}>
                   Save as template
                 </button>
               ) }] : []),
@@ -192,19 +193,19 @@ export default function OutputCard({ text, mode, platform, imageDataUrl, onRegen
             ))}
           </div>
           {canUndoRewrite && onUndoRewrite && (
-            <button onClick={onUndoRewrite} className="text-[10px]" style={{ color: C.textFaint }}>
+            <button onClick={onUndoRewrite} className={T.buttonSm} style={{ color: C.textFaint }}>
               Undo
             </button>
           )}
         </div>
       )}
       {quickRewriteError && (
-        <p className="text-[11px] text-red-400 animate-fade-in">{quickRewriteError}</p>
+        <p className={`${T.bodySm} text-red-400 animate-fade-in`}>{quickRewriteError}</p>
       )}
 
       <div className="space-y-0.5">
         {insertStatus && (
-          <p className="text-[10px] animate-fade-in" style={{ color: C.textFaint }}>{insertStatus}</p>
+          <p className={`${T.meta} animate-fade-in`} style={{ color: C.textFaint }}>{insertStatus}</p>
         )}
       </div>
     </div>

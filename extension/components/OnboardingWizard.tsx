@@ -526,8 +526,8 @@ export default function OnboardingWizard({ store, onDone }: Props) {
                         borderColor: active ? C.mint : C.border,
                         backgroundColor: active ? C.mint + "16" : "transparent",
                       }}>
-                      <p className="text-[12px] font-medium" style={{ color: active ? C.mint : C.text }}>{opt.label}</p>
-                      <p className="text-[11px] mt-0.5" style={{ color: active ? C.mint : C.textDim }}>{opt.desc}</p>
+                      <p className="text-[13px] font-medium" style={{ color: active ? C.mint : C.text }}>{opt.label}</p>
+                      <p className="text-[12px] mt-0.5" style={{ color: active ? C.mint : C.textDim }}>{opt.desc}</p>
                     </button>
                   )
                 })}
@@ -549,12 +549,12 @@ export default function OnboardingWizard({ store, onDone }: Props) {
                   <h2 className="font-pixel text-[11px] leading-relaxed" style={{ color: C.text }}>
                     You&apos;re ready.
                   </h2>
-                  <p className="text-[12px] mt-3 leading-relaxed" style={{ color: C.textDim }}>
+                  <p className="text-[13px] mt-3 leading-relaxed" style={{ color: C.textDim }}>
                     AI generation is already included.<br /><br />Let&apos;s write something.
                   </p>
                 </div>
                 <Card>
-                  <p className="text-[12px] leading-relaxed font-medium" style={{ color: C.mint }}>
+                  <p className="text-[13px] leading-relaxed font-medium" style={{ color: C.mint }}>
                     ✓ AI generation included on your plan
                   </p>
                 </Card>
@@ -571,12 +571,12 @@ export default function OnboardingWizard({ store, onDone }: Props) {
                   <h2 className="font-pixel text-[11px] leading-relaxed" style={{ color: C.text }}>
                     You&apos;re ready.
                   </h2>
-                  <p className="text-[12px] mt-3 leading-relaxed" style={{ color: C.textDim }}>
+                  <p className="text-[13px] mt-3 leading-relaxed" style={{ color: C.textDim }}>
                     AI generation is already included.<br /><br />Let&apos;s write something.
                   </p>
                 </div>
                 <Card>
-                  <p className="text-[12px] leading-relaxed font-medium" style={{ color: C.mint }}>
+                  <p className="text-[13px] leading-relaxed font-medium" style={{ color: C.mint }}>
                     ✓ AI generation included on your plan
                   </p>
                 </Card>
@@ -587,14 +587,14 @@ export default function OnboardingWizard({ store, onDone }: Props) {
                   <h2 className="font-pixel text-[11px] leading-relaxed" style={{ color: C.text }}>
                     Before we start...
                   </h2>
-                  <p className="text-[12px] mt-3 leading-relaxed" style={{ color: C.textDim }}>
+                  <p className="text-[13px] mt-3 leading-relaxed" style={{ color: C.textDim }}>
                     Pick the AI model you&apos;d like me to use. It&apos;s free, takes 30 seconds, and keeps your prompts completely private. You can use:
                   </p>
                   <ul className="mt-2 space-y-1">
-                    <li className="text-[11px] leading-relaxed" style={{ color: C.textDim }}>• <span style={{ color: C.text }}>Groq</span>: recommended, free, fastest</li>
-                    <li className="text-[11px] leading-relaxed" style={{ color: C.textDim }}>• <span style={{ color: C.text }}>Google Gemini</span>: free tier</li>
-                    <li className="text-[11px] leading-relaxed" style={{ color: C.textDim }}>• <span style={{ color: C.text }}>OpenRouter</span>: hundreds of models</li>
-                    <li className="text-[11px] leading-relaxed" style={{ color: C.textDim }}>• Your existing API key, if you already have one</li>
+                    <li className="text-[12px] leading-relaxed" style={{ color: C.textDim }}>• <span style={{ color: C.text }}>Groq</span>: recommended, free, fastest</li>
+                    <li className="text-[12px] leading-relaxed" style={{ color: C.textDim }}>• <span style={{ color: C.text }}>Google Gemini</span>: free tier</li>
+                    <li className="text-[12px] leading-relaxed" style={{ color: C.textDim }}>• <span style={{ color: C.text }}>OpenRouter</span>: hundreds of models</li>
+                    <li className="text-[12px] leading-relaxed" style={{ color: C.textDim }}>• Your existing API key, if you already have one</li>
                   </ul>
                 </div>
 
@@ -608,7 +608,7 @@ export default function OnboardingWizard({ store, onDone }: Props) {
                       tint={C.mint}
                       autoFocus
                       belowInput={malformed && (
-                        <p className="text-[11px] mt-2 leading-relaxed" style={{ color: "#f5b50a" }}>
+                        <p className="text-[12px] mt-2 leading-relaxed" style={{ color: "#f5b50a" }}>
                           That doesn't look like a complete API key. Double check you copied the whole thing.
                         </p>
                       )}
@@ -618,19 +618,19 @@ export default function OnboardingWizard({ store, onDone }: Props) {
                   {/* Collapsible FAQ — its own quiet section at the bottom */}
                   <div className="mt-6 pt-4" style={{ borderTop: `1px solid ${C.borderSoft}` }}>
                     <button onClick={() => setFaqOpen(v => !v)}
-                      className="w-full flex items-center justify-between text-[11px] font-medium" style={{ color: C.textDim }}>
+                      className="w-full flex items-center justify-between text-[12px] font-medium" style={{ color: C.textDim }}>
                       <span>Why do I need my own API key?</span>
                       <span style={{ transform: faqOpen ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}>▾</span>
                     </button>
                     {faqOpen && (
-                      <p className="text-[11px] mt-2 leading-relaxed" style={{ color: C.textDim }}>
+                      <p className="text-[12px] mt-2 leading-relaxed" style={{ color: C.textDim }}>
                         It keeps your prompts private, lets you choose your favorite model, and avoids monthly AI costs built into subscriptions.
                       </p>
                     )}
                   </div>
                 </Card>
 
-                <p className="text-[11px] leading-relaxed" style={{ color: C.textDim }}>
+                <p className="text-[12px] leading-relaxed" style={{ color: C.textDim }}>
                   You can always add or change your AI model in Settings.
                 </p>
               </>
@@ -653,7 +653,7 @@ export default function OnboardingWizard({ store, onDone }: Props) {
                   Your first post.
                 </h2>
                 <Card className="w-full text-left mt-5">
-                  <p className="text-[12px] leading-relaxed" style={{ color: C.textDim }}>
+                  <p className="text-[13px] leading-relaxed" style={{ color: C.textDim }}>
                     You skipped adding an AI model, so I don&apos;t have anything to write with yet.
                     Add one anytime in Settings, then come find me in the panel.
                   </p>
@@ -674,9 +674,9 @@ export default function OnboardingWizard({ store, onDone }: Props) {
                   Your first post.
                 </h2>
                 <Card className="w-full text-left mt-5">
-                  <p className="text-[12px] leading-relaxed" style={{ color: "#f5b50a" }}>{generateError}</p>
+                  <p className="text-[13px] leading-relaxed" style={{ color: "#f5b50a" }}>{generateError}</p>
                   <button onClick={generateFirstPost}
-                    className="mt-3 text-[11px] underline font-medium" style={{ color: C.mint }}>
+                    className="mt-3 text-[12px] underline font-medium" style={{ color: C.mint }}>
                     Try again
                   </button>
                 </Card>
@@ -691,7 +691,7 @@ export default function OnboardingWizard({ store, onDone }: Props) {
                 <Card className="w-full text-left mt-5">
                   <p className="text-[13px] leading-relaxed" style={{ color: C.text }}>{firstPost}</p>
                   <button onClick={copyFirstPost}
-                    className="w-full rounded-xl py-2.5 mt-3 text-[11px] font-semibold transition-colors"
+                    className="w-full rounded-xl py-2.5 mt-3 text-[12px] font-semibold transition-colors"
                     style={{ border: `1px dashed ${C.mint}88`, color: C.mint }}>
                     {copied ? "Copied ✓" : "Copy"}
                   </button>
@@ -711,7 +711,7 @@ export default function OnboardingWizard({ store, onDone }: Props) {
             <h2 className="font-pixel text-[11px] mt-8 leading-relaxed" style={{ color: C.text }}>
               Now make Aminta<br />sound more like you.
             </h2>
-            <p className="text-[12px] mt-3 leading-relaxed" style={{ color: C.textDim }}>
+            <p className="text-[13px] mt-3 leading-relaxed" style={{ color: C.textDim }}>
               A few quick questions, and I&apos;ll sound just like you.
             </p>
           </div>
@@ -730,7 +730,7 @@ export default function OnboardingWizard({ store, onDone }: Props) {
                 <div className="flex flex-wrap gap-2 mb-3">
                   {topics.map((topic, i) => (
                     <span key={i}
-                      className="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1.5 rounded-lg text-[11px] font-medium"
+                      className="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1.5 rounded-lg text-[12px] font-medium"
                       style={{ backgroundColor: C.mint + "16", border: `1px solid ${C.mint}55`, color: C.mint }}>
                       {topic}
                       <button
@@ -756,7 +756,7 @@ export default function OnboardingWizard({ store, onDone }: Props) {
                 className={`${inputCls} disabled:opacity-50`}
               />
 
-              <p className="text-[9px] uppercase tracking-widest mt-3 mb-2" style={{ color: C.textDim }}>Suggested</p>
+              <p className="text-[11px] uppercase tracking-widest mt-3 mb-2" style={{ color: C.textDim }}>Suggested</p>
               <div className="flex flex-wrap gap-1.5">
                 {SUGGESTED_TOPICS.map((topic) => {
                   const key = topic.toLowerCase()
@@ -768,7 +768,7 @@ export default function OnboardingWizard({ store, onDone }: Props) {
                       type="button"
                       onClick={() => toggleSuggestedTopic(topic)}
                       disabled={atCap}
-                      className="px-2.5 py-1.5 rounded-lg text-[11px] transition-all disabled:opacity-35 disabled:cursor-not-allowed"
+                      className="px-2.5 py-1.5 rounded-lg text-[12px] transition-all disabled:opacity-35 disabled:cursor-not-allowed"
                       style={{
                         border: `1px solid ${active ? C.mint : C.border}`,
                         backgroundColor: active ? C.mint + "16" : "transparent",
@@ -780,7 +780,7 @@ export default function OnboardingWizard({ store, onDone }: Props) {
                 })}
               </div>
 
-              <p className="text-[11px] mt-3 leading-relaxed" style={{ color: C.textDim }}>
+              <p className="text-[12px] mt-3 leading-relaxed" style={{ color: C.textDim }}>
                 Pick a few or type your own, up to {MAX_TOPICS}.
               </p>
             </Card>
@@ -796,7 +796,7 @@ export default function OnboardingWizard({ store, onDone }: Props) {
             <Card>
               <div className="flex items-center justify-between mb-2">
                 <SectionLabel>Your tone</SectionLabel>
-                <span className="text-[11px]" style={{ color: tones.length >= MAX_TONES ? C.mint : C.textDim }}>
+                <span className="text-[12px]" style={{ color: tones.length >= MAX_TONES ? C.mint : C.textDim }}>
                   {tones.length}/{MAX_TONES}
                 </span>
               </div>
@@ -806,7 +806,7 @@ export default function OnboardingWizard({ store, onDone }: Props) {
                   const atCap  = !active && tones.length >= MAX_TONES
                   return (
                     <button key={id} onClick={() => toggleTone(id)} disabled={atCap}
-                      className="px-2.5 py-1.5 rounded-lg border text-[11px] font-medium transition-all active:scale-[0.96] disabled:opacity-35 disabled:cursor-not-allowed"
+                      className="px-2.5 py-1.5 rounded-lg border text-[12px] font-medium transition-all active:scale-[0.96] disabled:opacity-35 disabled:cursor-not-allowed"
                       style={{
                         borderColor: active ? C.mint : C.border,
                         backgroundColor: active ? C.mint + "16" : "transparent",
@@ -818,7 +818,7 @@ export default function OnboardingWizard({ store, onDone }: Props) {
               {tones.length > 0 && (
                 <div className="mt-3 pt-2.5 space-y-1" style={{ borderTop: `1px solid ${C.border}` }}>
                   {tones.map(t => (
-                    <p key={t} className="text-[11px] leading-relaxed" style={{ color: C.textDim }}>
+                    <p key={t} className="text-[12px] leading-relaxed" style={{ color: C.textDim }}>
                       <span style={{ color: C.mint }}>{t}</span>: {TONE_DESC[t] ?? ""}
                     </p>
                   ))}
@@ -843,7 +843,7 @@ export default function OnboardingWizard({ store, onDone }: Props) {
               <h2 className="font-pixel text-[11px] leading-relaxed" style={{ color: C.text }}>
                 Teach Aminta<br />about you.
               </h2>
-              <p className="text-[12px] mt-3 leading-relaxed" style={{ color: C.textDim }}>
+              <p className="text-[13px] mt-3 leading-relaxed" style={{ color: C.textDim }}>
                 Anything that helps me understand you — what you do, what you&apos;re
                 working on, what you care about, what you like talking about.
               </p>
@@ -855,7 +855,7 @@ export default function OnboardingWizard({ store, onDone }: Props) {
                 onChange={setPersonalContext}
                 autoFocus
               />
-              <p className="text-[11px] mt-3 leading-relaxed" style={{ color: C.textDim }}>
+              <p className="text-[12px] mt-3 leading-relaxed" style={{ color: C.textDim }}>
                 I&apos;ll only use this when it&apos;s actually relevant to what you&apos;re writing.
               </p>
             </Card>
@@ -875,14 +875,14 @@ export default function OnboardingWizard({ store, onDone }: Props) {
               <h2 className="font-pixel text-[11px] leading-relaxed" style={{ color: C.text }}>
                 How should I learn<br />how you write?
               </h2>
-              <p className="text-[12px] mt-3" style={{ color: C.textDim }}>Two ways — use either, or both. Add more anytime after onboarding.</p>
+              <p className="text-[13px] mt-3" style={{ color: C.textDim }}>Two ways — use either, or both. Add more anytime after onboarding.</p>
             </div>
 
             <VoiceRefreshCard store={voiceStore} onRefreshed={refetchVoiceStore} variant="onboarding" />
 
             <div className="flex items-center gap-3">
               <div className="flex-1 h-px" style={{ backgroundColor: C.border }} />
-              <span className="text-[9px] uppercase tracking-widest" style={{ color: C.textDim }}>Or add it yourself</span>
+              <span className="text-[11px] uppercase tracking-widest" style={{ color: C.textDim }}>Or add it yourself</span>
               <div className="flex-1 h-px" style={{ backgroundColor: C.border }} />
             </div>
 
@@ -892,7 +892,7 @@ export default function OnboardingWizard({ store, onDone }: Props) {
                 picker below, independent of Voice Refresh's own paid gate. */}
             {!voiceStore.xConnected && !voiceStore.aiIncludedPaid && (
               <Card>
-                <p className="text-[11px] leading-snug" style={{ color: C.text }}>
+                <p className="text-[12px] leading-snug" style={{ color: C.text }}>
                   Connect X to quickly add a few of your own recent posts.
                 </p>
                 <button
@@ -901,7 +901,7 @@ export default function OnboardingWizard({ store, onDone }: Props) {
                     startXConnect().finally(() => setConnectingX(false))
                   }}
                   disabled={connectingX}
-                  className="w-full rounded-lg py-2.5 mt-3 text-[11px] font-semibold text-black transition-opacity disabled:opacity-40"
+                  className="w-full rounded-lg py-2.5 mt-3 text-[12px] font-semibold text-black transition-opacity disabled:opacity-40"
                   style={{ backgroundColor: C.mint }}>
                   {connectingX ? "Opening X…" : "Connect X"}
                 </button>
@@ -917,10 +917,10 @@ export default function OnboardingWizard({ store, onDone }: Props) {
               <Card>
                 <SectionLabel>Recent posts from your X</SectionLabel>
                 {recentXLoading && (
-                  <p className="text-[10px] mt-2" style={{ color: C.textDim }}>Loading your recent posts…</p>
+                  <p className="text-[11px] mt-2" style={{ color: C.textDim }}>Loading your recent posts…</p>
                 )}
                 {!recentXLoading && recentXError && (
-                  <p className="text-[10px] mt-2" style={{ color: C.textDim }}>{recentXError}</p>
+                  <p className="text-[11px] mt-2" style={{ color: C.textDim }}>{recentXError}</p>
                 )}
                 {!recentXLoading && recentXPosts.length > 0 && (
                   <div className="space-y-2 mt-2">
@@ -928,13 +928,13 @@ export default function OnboardingWizard({ store, onDone }: Props) {
                       const added = examples.includes(post.text)
                       return (
                         <div key={post.id} className="flex items-start gap-2.5 rounded-xl p-2.5" style={{ backgroundColor: C.cardInner, border: `1px solid ${C.border}` }}>
-                          <p className="flex-1 text-[11px] leading-relaxed break-words min-w-0 whitespace-pre-line" style={{ color: C.text }}>
+                          <p className="flex-1 text-[12px] leading-relaxed break-words min-w-0 whitespace-pre-line" style={{ color: C.text }}>
                             {post.text}
                           </p>
                           <button
                             onClick={() => addRecentPost(post)}
                             disabled={added}
-                            className="shrink-0 text-[10px] font-semibold disabled:opacity-60"
+                            className="shrink-0 text-[12px] font-semibold disabled:opacity-60"
                             style={{ color: added ? C.textDim : C.mint }}>
                             {added ? "Added ✓" : "+ Add"}
                           </button>
@@ -949,12 +949,12 @@ export default function OnboardingWizard({ store, onDone }: Props) {
             <Card>
               <div className="flex items-center justify-between mb-2">
                 <SectionLabel>Your posts</SectionLabel>
-                <span className="text-[11px] font-medium" style={{ color: examples.length >= 1 ? C.mint : C.textDim }}>{examples.length} added</span>
+                <span className="text-[12px] font-medium" style={{ color: examples.length >= 1 ? C.mint : C.textDim }}>{examples.length} added</span>
               </div>
               <div className="space-y-2">
                 {examples.map((p, i) => (
                   <div key={i} className="group flex gap-2 rounded-xl p-2.5" style={{ backgroundColor: C.cardInner, border: `1px solid ${C.border}` }}>
-                    <p className="flex-1 text-[11px] leading-relaxed break-words min-w-0" style={{ color: C.text }}>{p}</p>
+                    <p className="flex-1 text-[12px] leading-relaxed break-words min-w-0" style={{ color: C.text }}>{p}</p>
                     <button onClick={() => setExamples(prev => prev.filter((_, j) => j !== i))}
                       aria-label="Remove post"
                       className="shrink-0 text-xs opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: C.textDim }}>✕</button>
@@ -964,7 +964,7 @@ export default function OnboardingWizard({ store, onDone }: Props) {
                   placeholder="Paste a post, then press Add…" className={`${inputCls} resize-none`}
                   onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) addExample() }} />
                 <button onClick={addExample} disabled={!draft.trim()}
-                  className="w-full rounded-xl py-2.5 text-[11px] font-semibold disabled:opacity-50 transition-colors"
+                  className="w-full rounded-xl py-2.5 text-[12px] font-semibold disabled:opacity-50 transition-colors"
                   style={{ border: `1px dashed ${C.mint}88`, color: C.mint }}>+ Add post</button>
               </div>
             </Card>
@@ -978,7 +978,7 @@ export default function OnboardingWizard({ store, onDone }: Props) {
             <div className="mt-4">
               <Sprite xp={0} size={96} animClass="sprite-react aminta-glow" />
             </div>
-            <p className="text-[12px] mt-8" style={{ color: C.textDim }}>Getting ready to write with you.</p>
+            <p className="text-[13px] mt-8" style={{ color: C.textDim }}>Getting ready to write with you.</p>
           </div>
         )}
 
@@ -1017,7 +1017,7 @@ export default function OnboardingWizard({ store, onDone }: Props) {
               You&apos;re ready.
             </h3>
 
-            <p className="text-[12px] mt-3 leading-relaxed max-w-[260px]" style={{ color: C.textDim }}>
+            <p className="text-[13px] mt-3 leading-relaxed max-w-[260px]" style={{ color: C.textDim }}>
               Open X and start writing. Aminta will appear right inside the composer.
             </p>
           </div>
@@ -1035,7 +1035,7 @@ export default function OnboardingWizard({ store, onDone }: Props) {
           ) : (
             <>
               <PrimaryButton onClick={next} disabled={!apiKey.trim()}>Continue</PrimaryButton>
-              <button onClick={next} className="w-full text-center text-[11px] py-1 transition-colors"
+              <button onClick={next} className="w-full text-center text-[12px] py-1 transition-colors"
                 style={{ color: C.textDim }}>I'll add it later</button>
             </>
           )
@@ -1053,7 +1053,7 @@ export default function OnboardingWizard({ store, onDone }: Props) {
             {/* Never a gate — an empty personal context is a completely
                 normal state (and the default for every existing user). */}
             <PrimaryButton onClick={next}>Continue</PrimaryButton>
-            <button onClick={next} className="w-full text-center text-[11px] py-1 transition-colors"
+            <button onClick={next} className="w-full text-center text-[12px] py-1 transition-colors"
               style={{ color: C.textDim }}>Skip for now</button>
           </>
         )}
@@ -1064,7 +1064,7 @@ export default function OnboardingWizard({ store, onDone }: Props) {
                 manually added example, so a Pro/Founder user who used the
                 card above never has to also paste a post just to proceed. */}
             <PrimaryButton onClick={next} disabled={examples.length < 1 && !voiceStore.styleProfile}>Continue</PrimaryButton>
-            <button onClick={next} className="w-full text-center text-[11px] py-1 transition-colors"
+            <button onClick={next} className="w-full text-center text-[12px] py-1 transition-colors"
               style={{ color: C.textDim }}>Skip for now</button>
           </>
         )}
@@ -1078,7 +1078,7 @@ export default function OnboardingWizard({ store, onDone }: Props) {
               className="hover:shadow-[0_0_24px_rgba(116,247,181,0.45)]">
               {finishing ? "Saving…" : "Open X"}
             </PrimaryButton>
-            <p className="text-[11px] text-center py-1.5" style={{ color: C.textGhost }}>
+            <p className="text-[12px] text-center py-1.5" style={{ color: C.textGhost }}>
               You can keep teaching Aminta from Train anytime.
             </p>
           </>

@@ -4,6 +4,7 @@ import { createPortal } from "react-dom"
 import { creationPreview, creationTypeLabel, deleteRecentCreation, joinThreadForCopy, relativeTimeLabel } from "~lib/recentCreations"
 import type { RecentCreation } from "~lib/storage"
 import { C } from "~lib/theme"
+import { T, TP } from "~lib/typography"
 import { SectionTitle } from "~components/ui"
 
 interface Props {
@@ -30,7 +31,7 @@ export default function RecentCreations({ creations, tint, onReuse, onUpdate, on
     return (
       <div className="px-1 animate-card-in" style={{ animationDelay: "170ms" }}>
         <div className="mb-1"><SectionTitle>Recent creations</SectionTitle></div>
-        <p className="text-[11px]" style={{ color: C.textFaint }}>Your generated posts will appear here.</p>
+        <p className={T.bodySm} style={{ color: C.textFaint }}>Your generated posts will appear here.</p>
       </div>
     )
   }
@@ -59,7 +60,7 @@ export default function RecentCreations({ creations, tint, onReuse, onUpdate, on
         <div className="flex items-center justify-between px-4 py-2.5" style={{ borderBottom: `1px solid ${C.border}` }}>
           <SectionTitle>Recent creations</SectionTitle>
           {creations.length > 3 && (
-            <button onClick={() => setShowAll((v) => !v)} className="text-[10px]" style={{ color: tint }}>
+            <button onClick={() => setShowAll((v) => !v)} className={T.buttonSm} style={{ color: tint }}>
               {showAll ? "Show less" : "View all"}
             </button>
           )}
@@ -73,10 +74,10 @@ export default function RecentCreations({ creations, tint, onReuse, onUpdate, on
               style={{ borderTop: i > 0 ? `1px solid ${C.borderSoft}` : undefined }}>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-semibold" style={{ color: tint }}>{creationTypeLabel(c)}</span>
-                  <span className="text-[9px]" style={{ color: C.textGhost }}>{relativeTimeLabel(c.createdAt)}</span>
+                  <span className={T.buttonSm} style={{ color: tint }}>{creationTypeLabel(c)}</span>
+                  <span className={T.meta} style={{ color: C.textGhost }}>{relativeTimeLabel(c.createdAt)}</span>
                 </div>
-                <p className="text-[11px] mt-0.5 truncate" style={{ color: C.textFaint }}>{creationPreview(c)}</p>
+                <p className={`${T.bodySm} mt-0.5 truncate`} style={{ color: C.textFaint }}>{creationPreview(c)}</p>
               </div>
             </button>
           ))}
@@ -93,20 +94,20 @@ export default function RecentCreations({ creations, tint, onReuse, onUpdate, on
             style={{ background: C.card, border: `1px solid ${C.border}`, maxHeight: "80vh", overflowY: "auto" }}
             onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-semibold" style={{ color: tint }}>{creationTypeLabel(detail)}</span>
-              <span className="text-[9px]" style={{ color: C.textGhost }}>{relativeTimeLabel(detail.createdAt)}</span>
+              <span className={T.buttonSm} style={{ color: tint }}>{creationTypeLabel(detail)}</span>
+              <span className={T.meta} style={{ color: C.textGhost }}>{relativeTimeLabel(detail.createdAt)}</span>
             </div>
 
             {detail.type === "thread" ? (
               <div className="space-y-2">
                 {(detail.posts ?? []).map((post, i) => (
                   <div key={i} className="rounded-xl p-3" style={{ backgroundColor: C.cardInner, border: `1px solid ${C.borderSoft}` }}>
-                    <p className="text-[12px] leading-relaxed whitespace-pre-wrap" style={{ color: C.text }}>{post}</p>
+                    <p className={`${T.body} whitespace-pre-wrap`} style={{ color: C.text }}>{post}</p>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-[12px] leading-relaxed whitespace-pre-wrap" style={{ color: C.text }}>{detail.text}</p>
+              <p className={`${T.body} whitespace-pre-wrap`} style={{ color: C.text }}>{detail.text}</p>
             )}
 
             <div className="flex gap-2 pt-1">
@@ -125,13 +126,13 @@ export default function RecentCreations({ creations, tint, onReuse, onUpdate, on
             </div>
             <button
               onClick={() => { onSaveAsTemplate(detail); setDetail(null) }}
-              className="w-full rounded-lg py-2 text-[10px] font-medium"
+              className={`w-full rounded-lg py-2 ${T.button}`}
               style={{ border: `1px solid ${C.border}`, color: C.textFaint }}>
               Save as template
             </button>
             <button
               onClick={() => remove(detail.id)}
-              className="w-full text-[10px] py-1"
+              className={`w-full py-1 ${T.buttonSm}`}
               style={{ color: C.textGhost }}>
               Delete
             </button>

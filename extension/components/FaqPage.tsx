@@ -37,11 +37,11 @@ export default function FaqPage({ tint, onClose }: Props) {
               <button
                 onClick={() => setOpenIdx(open ? null : i)}
                 className="w-full flex items-center justify-between gap-2 px-3.5 py-3 text-left">
-                <span className="text-[12px] font-medium" style={{ color: C.text }}>{item.q}</span>
-                <span className="shrink-0 text-[11px]" style={{ color: open ? tint : C.textDim }}>{open ? "−" : "+"}</span>
+                <span className="text-[13px] font-medium" style={{ color: C.text }}>{item.q}</span>
+                <span className="shrink-0 text-[12px]" style={{ color: open ? tint : C.textDim }}>{open ? "−" : "+"}</span>
               </button>
               {open && (
-                <p className="px-3.5 pb-3.5 text-[11px] leading-relaxed" style={{ color: C.textDim }}>
+                <p className="px-3.5 pb-3.5 text-[12px] leading-relaxed" style={{ color: C.textDim }}>
                   {item.a}
                 </p>
               )}

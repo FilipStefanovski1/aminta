@@ -18,6 +18,7 @@ import { getOrBuildStyleProfile } from "~lib/styleProfile"
 import { summarizeStyleProfile } from "~lib/styleProfileSummary"
 import { parseExamples, serializeExamples } from "~lib/trainingExamples"
 import { C } from "~lib/theme"
+import { T, TP } from "~lib/typography"
 import { normalizePersonalContext } from "~lib/personalContext"
 import PersonalContextField from "~components/PersonalContextField"
 import { Card, Sprite } from "~components/ui"
@@ -88,7 +89,7 @@ function InfoTip({ tip }: { tip: string }) {
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
           <div
-            className="fixed z-20 rounded-xl p-3 text-[11px] leading-relaxed w-56"
+            className={`fixed z-20 rounded-xl p-3 w-56 ${T.bodySm}`}
             style={{ top: pos.top, left: pos.left, backgroundColor: "#252528", border: `1px solid ${C.border}`, color: C.text, boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }}>
             {tip}
           </div>
@@ -103,13 +104,13 @@ function SectionHead({ label, tipKey, desc, meta }: { label: string; tipKey: str
     <div className="mb-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center">
-          <p className="font-pixel text-[10px] uppercase tracking-widest" style={{ color: C.text }}>{label}</p>
+          <p className={T.sectionTitle} style={{ color: C.text }}>{label}</p>
           <InfoTip tip={INFO_TIPS[tipKey]} />
         </div>
         {meta}
       </div>
       {desc && (
-        <p className="text-[10px] mt-1.5 leading-relaxed" style={{ color: C.textFaint }}>{desc}</p>
+        <p className={`${T.bodySm} mt-1.5`} style={{ color: C.textFaint }}>{desc}</p>
       )}
     </div>
   )
@@ -362,14 +363,14 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
       {/* ── Aminta DNA status — one honest sentence, no checklist, no fake
           confidence score. Answers "how does Aminta learn how I write." ── */}
       <Card glow={tint} className="animate-card-in">
-        <p className="font-pixel text-[10px] uppercase tracking-widest mb-3" style={{ color: C.text }}>Voice status</p>
+        <p className={`${T.sectionTitle} mb-3`} style={{ color: C.text }}>Voice status</p>
         <div className="flex items-center gap-4">
           <Sprite xp={store.xp ?? 0} size={56} animClass={animCls} />
 
           <div className="flex-1 min-w-0">
             <p
               key={displayMessage}
-              className="text-[13px] font-medium leading-snug animate-fade-in"
+              className={`${T.body} font-medium animate-fade-in`}
               style={{ color: speech ? tint : C.text }}>
               {displayMessage}
             </p>
@@ -377,7 +378,7 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
             {learned.length > 0 && (
               <button
                 onClick={() => setShowLearned(v => !v)}
-                className="text-[11px] mt-1.5 leading-none block"
+                className={`${T.buttonSm} mt-1.5 leading-none block`}
                 style={{ color: tint }}>
                 {showLearned ? "Hide details" : "View what Aminta learned"}
               </button>
@@ -390,12 +391,12 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
             <div className="space-y-2.5">
               {learned.map((s) => (
                 <div key={s.title}>
-                  <p className="text-[10px] leading-none mb-1" style={{ color: C.textFaint }}>{s.title}</p>
+                  <p className={`${T.meta} leading-none mb-1`} style={{ color: C.textFaint }}>{s.title}</p>
                   {s.inline && (
-                    <p className="text-[10px] leading-snug" style={{ color: C.textDim }}>{s.inline}</p>
+                    <p className={T.bodySm} style={{ color: C.textDim }}>{s.inline}</p>
                   )}
                   {s.lines.map((line) => (
-                    <p key={line} className="text-[10px] leading-snug" style={{ color: C.textDim }}>
+                    <p key={line} className={T.bodySm} style={{ color: C.textDim }}>
                       {s.lines.length > 1 ? `• ${line}` : line}
                     </p>
                   ))}
@@ -434,8 +435,8 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
                     transform:       active ? "scale(1.015)" : "scale(1)",
                     boxShadow:       active ? `0 0 20px ${tint}20` : "none",
                   }}>
-                  <p className="font-pixel text-[7px] mb-1" style={{ color: active ? tint : C.text }}>{id}</p>
-                  <p className="text-[9px] leading-snug" style={{ color: active ? tint + "bb" : C.textDim }}>{desc}</p>
+                  <p className={`${T.cardTitle} mb-1`} style={{ color: active ? tint : C.text }}>{id}</p>
+                  <p className={T.meta} style={{ color: active ? tint + "bb" : C.textDim }}>{desc}</p>
                 </button>
               )
             })}
@@ -492,7 +493,7 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
                 className="group rounded-xl p-3"
                 style={{ backgroundColor: C.cardInner }}>
                 <div className="flex items-start gap-2.5">
-                  <p className="flex-1 text-[11px] leading-relaxed break-words min-w-0" style={{ color: C.text }}>
+                  <p className={`flex-1 ${T.bodySm} break-words min-w-0`} style={{ color: C.text }}>
                     {post}
                   </p>
                   <button
@@ -513,7 +514,7 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
                   rows={2}
                   placeholder="Paste a post you've actually written…"
                   autoFocus
-                  className="w-full text-[12px] bg-transparent resize-none outline-none leading-relaxed"
+                  className={`w-full bg-transparent resize-none outline-none ${T.control}`}
                   style={{ color: C.text }}
                   onKeyDown={e => {
                     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) addExample()
@@ -579,7 +580,7 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
                 return (
                   <span
                     key={i}
-                    className="group/chip inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px]"
+                    className={`group/chip inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg ${T.meta}`}
                     style={{
                       backgroundColor: C.cardInner,
                       border: `1px solid ${editing ? tint : C.border}`,
@@ -625,8 +626,8 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
                     and Enter/Save replaces it in place instead of adding. */}
                 {editingRuleIndex !== null && (
                   <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[10px]" style={{ color: C.textFaint }}>Editing instinct</span>
-                    <button onClick={cancelEditRule} className="text-[10px]" style={{ color: C.textDim }}>
+                    <span className={T.meta} style={{ color: C.textFaint }}>Editing instinct</span>
+                    <button onClick={cancelEditRule} className={T.buttonSm} style={{ color: C.textDim }}>
                       Cancel
                     </button>
                   </div>
@@ -638,7 +639,7 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
                     value={instinctQuery}
                     onChange={e => setInstinctQuery(e.target.value)}
                     placeholder="Search or create an instinct…"
-                    className="flex-1 bg-transparent text-[11px] outline-none min-w-0"
+                    className={`flex-1 bg-transparent outline-none min-w-0 ${T.control}`}
                     style={{ color: C.text }}
                     onKeyDown={e => {
                       if (e.key === "Enter") { e.preventDefault(); submitInstinctQuery() }
@@ -669,14 +670,14 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
                           key={preset.id}
                           type="button"
                           onClick={() => addPreset(preset)}
-                          className="px-2.5 py-1.5 rounded-lg text-[10px] transition-all"
+                          className={`px-2.5 py-1.5 rounded-lg transition-all ${T.meta}`}
                           style={{ border: `1px solid ${C.border}`, color: C.textDim }}>
                           {preset.label}
                         </button>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-[10px] leading-relaxed" style={{ color: C.textDim }}>
+                    <p className={T.bodySm} style={{ color: C.textDim }}>
                       No matching instinct — press Enter to add "{query}" as a custom instinct.
                     </p>
                   )
@@ -685,14 +686,14 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
                     {/* 3. Popular — quick-add chips only, 8 curated defaults */}
                     {popular.length > 0 && (
                       <>
-                        <p className="text-[9px] uppercase tracking-widest mb-1.5" style={{ color: C.textDim }}>Popular</p>
+                        <p className={`${TP.eyebrow} mb-1.5`} style={{ color: C.textDim }}>Popular</p>
                         <div className="flex flex-wrap gap-1.5 mb-2.5">
                           {popular.map(preset => (
                             <button
                               key={preset.id}
                               type="button"
                               onClick={() => addPreset(preset)}
-                              className="px-2.5 py-1.5 rounded-lg text-[10px] transition-all"
+                              className={`px-2.5 py-1.5 rounded-lg transition-all ${T.meta}`}
                               style={{ border: `1px solid ${C.border}`, color: C.textDim }}>
                               {preset.label}
                             </button>
@@ -707,7 +708,7 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
                     <button
                       type="button"
                       onClick={() => setBrowseAllOpen(v => !v)}
-                      className="text-[10px] underline-offset-2 hover:underline"
+                      className={`${T.buttonSm} underline-offset-2 hover:underline`}
                       style={{ color: C.textDim }}>
                       {browseAllOpen ? "Hide full library" : "Browse all instincts"}
                     </button>
@@ -721,7 +722,7 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
                           if (inCategory.length === 0) return null
                           return (
                             <div key={category}>
-                              <p className="text-[9px] uppercase tracking-widest mb-1.5" style={{ color: C.textGhost }}>
+                              <p className={`${TP.eyebrow} mb-1.5`} style={{ color: C.textGhost }}>
                                 {category}
                               </p>
                               <div className="flex flex-wrap gap-1.5">
@@ -730,7 +731,7 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
                                     key={preset.id}
                                     type="button"
                                     onClick={() => addPreset(preset)}
-                                    className="px-2.5 py-1.5 rounded-lg text-[10px] transition-all"
+                                    className={`px-2.5 py-1.5 rounded-lg transition-all ${T.meta}`}
                                     style={{ border: `1px solid ${C.border}`, color: C.textDim }}>
                                     {preset.label}
                                   </button>
@@ -748,7 +749,7 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
           })()}
 
           {rules.length > 0 && (
-            <p className="text-[10px] mt-2" style={{ color: C.textDim }}>
+            <p className={`${T.bodySm} mt-2`} style={{ color: C.textDim }}>
               I'll follow {rules.length === 1 ? "this instinct" : `these ${rules.length} instincts`} in every generation.
             </p>
           )}
@@ -763,7 +764,7 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
             {topics.map((topic, i) => (
               <span
                 key={i}
-                className="group/chip inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px]"
+                className={`group/chip inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg ${T.meta}`}
                 style={{ backgroundColor: C.cardInner, border: `1px solid ${C.border}`, color: C.text }}>
                 {topic}
                 <button
@@ -782,7 +783,7 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
                   value={newTopic}
                   onChange={e => setNewTopic(e.target.value)}
                   placeholder={topics.length === 0 ? "e.g. indie hacking, AI tools, B2B SaaS…" : "Add another…"}
-                  className="bg-transparent text-[10px] outline-none min-w-[90px]"
+                  className={`bg-transparent outline-none min-w-[90px] ${T.control}`}
                   style={{ color: C.text }}
                   onKeyDown={e => {
                     if (e.key === "Enter") { e.preventDefault(); addTopic() }
@@ -814,7 +815,7 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
       {(isDirty || saved) && (
         <div className="space-y-2 pt-1 animate-fade-in">
           {error && (
-            <p className="text-[11px] text-center animate-fade-in" style={{ color: "#f87171" }}>{error}</p>
+            <p className={`${T.bodySm} text-center animate-fade-in`} style={{ color: "#f87171" }}>{error}</p>
           )}
           {saved && (
             <p className="font-pixel text-[8px] text-center animate-toast-up" style={{ color: tint }}>
@@ -823,7 +824,7 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
           )}
           <button
             onClick={save}
-            className="btn-pixel w-full py-3.5 rounded-xl font-pixel text-[9px] text-black active:scale-[0.98] transition-all duration-150"
+            className={`btn-pixel w-full py-3.5 rounded-xl ${TP.button} text-black active:scale-[0.98] transition-all duration-150`}
             style={{
               backgroundColor: tint,
               boxShadow: saved ? `0 0 28px ${tint}55` : `0 2px 14px ${tint}30`,
@@ -838,7 +839,7 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
             }
           </button>
           {learnedCount < 4 && !saved && (
-            <p className="text-[10px] text-center leading-relaxed" style={{ color: C.textDim }}>
+            <p className={`${T.bodySm} text-center`} style={{ color: C.textDim }}>
               {learnedCount === 0 && "Start with your topics and a writing tone."}
               {learnedCount === 1 && "One section done. Each one sharpens my voice."}
               {learnedCount === 2 && "Writing examples will make the biggest difference."}

@@ -14,6 +14,7 @@ import { parseCustomRules } from "~lib/instinctPresets"
 import { getMissionProgress, tryCompleteDailyMissions } from "~lib/missions"
 import type { AmintaStore, RecentCreation } from "~lib/storage"
 import { C } from "~lib/theme"
+import { T, TP } from "~lib/typography"
 import { countExamples as countExamplesCanonical } from "~lib/trainingExamples"
 import { DISCORD_INVITE_URL } from "~lib/webUrl"
 import { openXComposer } from "~lib/xTab"
@@ -175,7 +176,7 @@ export default function HomeTab({ store, onCreate, onReuse, onSaveCreationAsTemp
           }}
         >
           <span style={{ fontSize: 10 }}>✦</span>
-          <span className="text-[8px]" style={{ color: tint }}>Daily missions complete!</span>
+          <span className={T.meta} style={{ color: tint }}>Daily missions complete!</span>
         </div>
       )}
 
@@ -273,7 +274,7 @@ export default function HomeTab({ store, onCreate, onReuse, onSaveCreationAsTemp
           <SectionTitle>Today</SectionTitle>
           {allDone
             ? <span className="font-pixel text-[6px]" style={{ color: tint }}>All done ✓</span>
-            : <span className="text-[10px]" style={{ color: "#8a8a96" }}>{tasks.filter(t => t.done).length}/{tasks.length}</span>}
+            : <span className={T.meta} style={{ color: C.textGhost }}>{tasks.filter(t => t.done).length}/{tasks.length}</span>}
         </div>
         <div>
           {tasks.map((t, i) => (
@@ -286,7 +287,7 @@ export default function HomeTab({ store, onCreate, onReuse, onSaveCreationAsTemp
                 style={{ borderColor: t.done ? tint : C.borderHover, backgroundColor: t.done ? tint + "20" : "transparent" }}>
                 {t.done && <span style={{ color: tint, fontSize: 8, lineHeight: 1 }}>✓</span>}
               </div>
-              <span className="text-[12px]" style={{ color: t.done ? C.textGhost : C.text, textDecoration: t.done ? "line-through" : "none" }}>
+              <span className={T.body} style={{ color: t.done ? C.textGhost : C.text, textDecoration: t.done ? "line-through" : "none" }}>
                 {t.label}
               </span>
             </button>
@@ -311,7 +312,7 @@ export default function HomeTab({ store, onCreate, onReuse, onSaveCreationAsTemp
         ] as { label: string; value: string }[]).map(({ label, value }, i, arr) => (
           <div key={label} className="flex-1 text-center py-3" style={{ borderRight: i < arr.length - 1 ? `1px solid ${C.border}` : undefined }}>
             <p className="font-pixel text-[9px]" style={{ color: C.text }}>{value}</p>
-            <p className="text-[10px] mt-1.5 uppercase tracking-[0.06em]" style={{ color: "#8a8a96" }}>{label}</p>
+            <p className={`${T.meta} mt-1.5 uppercase tracking-[0.06em]`} style={{ color: C.textGhost }}>{label}</p>
           </div>
         ))}
       </div>
@@ -327,7 +328,7 @@ export default function HomeTab({ store, onCreate, onReuse, onSaveCreationAsTemp
             <button
               key={m.id}
               onClick={() => onCreate(m.id)}
-              className="rounded-xl py-3 text-[12px] font-medium transition-colors hover:bg-white/[0.03]"
+              className={`rounded-xl py-3 transition-colors hover:bg-white/[0.03] ${T.button}`}
               style={{ border: `1px solid ${C.border}`, color: C.text, backgroundColor: C.cardInner }}>
               {m.label}
             </button>
@@ -341,7 +342,7 @@ export default function HomeTab({ store, onCreate, onReuse, onSaveCreationAsTemp
           for Pro's billing-cycle or Founder's monthly rolling allowance. ── */}
       {showCredits && (
         <div className="flex items-center justify-between px-4 py-2.5 rounded-xl animate-card-in" style={{ animationDelay: "110ms", backgroundColor: C.card, border: `1px solid ${C.border}` }}>
-          <span className="text-[11px]" style={{ color: C.textFaint }}>
+          <span className={T.bodySm} style={{ color: C.textFaint }}>
             {CREDIT_RESET_LABEL[store.creditsPeriodKind] ?? "Resets each period"}
           </span>
           <span className="font-pixel text-[8px]" style={{ color: tint }}>
@@ -356,7 +357,7 @@ export default function HomeTab({ store, onCreate, onReuse, onSaveCreationAsTemp
           <SectionTitle>Your voice</SectionTitle>
         </div>
         <div className="px-4 py-3">
-          <p className="text-[12px]" style={{ color: C.text }}>
+          <p className={T.body} style={{ color: C.text }}>
             {voice ?? "Not started"}
             {(examplesCount > 0 || instinctsCount > 0) && (
               <span style={{ color: C.textFaint }}>
@@ -369,7 +370,7 @@ export default function HomeTab({ store, onCreate, onReuse, onSaveCreationAsTemp
           </p>
           <button
             onClick={onOpenTrain}
-            className="text-[11px] mt-2"
+            className={`${T.buttonSm} mt-2`}
             style={{ color: tint }}>
             Improve voice →
           </button>
@@ -388,14 +389,14 @@ export default function HomeTab({ store, onCreate, onReuse, onSaveCreationAsTemp
       {/* ── COMMUNITY ── */}
       <div className="rounded-xl p-3 animate-card-in" style={{ animationDelay: "150ms", backgroundColor: C.card, border: `1px solid ${C.border}` }}>
         <div className="mb-1.5"><SectionTitle>Aminta community</SectionTitle></div>
-        <p className="text-[11px] leading-relaxed mb-2.5" style={{ color: C.textFaint }}>
+        <p className={`${T.bodySm} mb-2.5`} style={{ color: C.textFaint }}>
           Share your posts, get feedback, and meet other people building on X.
         </p>
         <a
           href={DISCORD_INVITE_URL}
           target="_blank"
           rel="noreferrer"
-          className="text-[11px]"
+          className={T.buttonSm}
           style={{ color: tint }}>
           Join Discord →
         </a>

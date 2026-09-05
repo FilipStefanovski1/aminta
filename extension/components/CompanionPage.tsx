@@ -89,7 +89,7 @@ export default function CompanionPage({ store, animClass, animKey, onClose, newl
               </div>
             </div>
             {currentForm.blurb && (
-              <p className="text-[12px] leading-relaxed" style={{ color: C.textDim }}>
+              <p className="text-[13px] leading-relaxed" style={{ color: C.textDim }}>
                 {currentForm.blurb}
               </p>
             )}
@@ -131,7 +131,7 @@ export default function CompanionPage({ store, animClass, animKey, onClose, newl
                       {show ? form.name : "???"}
                     </p>
                     {show && (
-                      <p className="text-[9px] mt-0.5 uppercase tracking-[0.04em]" style={{ color: RARITY_COLOR[form.rarity] + "88" }}>
+                      <p className="text-[11px] mt-0.5 uppercase tracking-[0.04em]" style={{ color: RARITY_COLOR[form.rarity] + "88" }}>
                         {form.rarity}
                       </p>
                     )}
@@ -170,7 +170,7 @@ export default function CompanionPage({ store, animClass, animKey, onClose, newl
                 key={label}
                 className="flex items-center justify-between px-4 py-2.5"
                 style={{ borderTop: i > 0 ? `1px solid ${C.borderSoft}` : undefined }}>
-                <span className="text-[11px]" style={{ color: C.textDim }}>{label}</span>
+                <span className="text-[12px]" style={{ color: C.textDim }}>{label}</span>
                 <span className="font-pixel text-[9px]" style={{ color: C.text }}>{value}</span>
               </div>
             ))}
@@ -191,7 +191,7 @@ export default function CompanionPage({ store, animClass, animKey, onClose, newl
                 </div>
               ))}
             </div>
-            <p className="text-[10px] mt-3 text-center" style={{ color: C.textGhost }}>Coming soon</p>
+            <p className="text-[11px] mt-3 text-center" style={{ color: C.textGhost }}>Coming soon</p>
           </div>
 
           <div className="h-2" />

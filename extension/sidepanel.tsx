@@ -19,6 +19,7 @@ import { CREDIT_RESET_LABEL, canUseByok, planLabel as computePlanLabel, provider
 import { isGoogleKey, isGroqKey, GEMINI_DEFAULT, GROQ_DEFAULT, SUPPORTED_GEMINI_MODELS, SUPPORTED_GROQ_MODELS } from "~lib/ai"
 import { PROVIDERS, detectProvider } from "~lib/providers"
 import { C } from "~lib/theme"
+import { T, TP } from "~lib/typography"
 import { clearAllLocalUserData, getStore, setStore, type AmintaStore, type RecentCreation } from "~lib/storage"
 import { getAuthSession, clearAuthSession, signOutEverywhere, type AuthSession } from "~lib/auth"
 import { pushToCloud } from "~lib/sync"
@@ -145,7 +146,7 @@ function LevelUpModal({ data, onDismiss }: { data: LevelUpData; onDismiss: () =>
         <div>
           <p className="font-pixel text-2xl text-white">{big}</p>
           <p className="font-pixel text-[8px] mt-1" style={{ color: tint }}>{sub}</p>
-          <p className="text-[11px] text-[#666] mt-2 italic" style={{ minHeight: "1.4em" }}>
+          <p className={`${T.bodySm} mt-2 italic`} style={{ minHeight: "1.4em", color: C.textGhost }}>
             {typed ? `"${typed}"` : " "}
           </p>
         </div>
@@ -219,7 +220,7 @@ function DangerZone({ onSignOut }: { onSignOut: () => void }) {
 
   return (
     <section className="space-y-1.5">
-      <p className="text-[9px] uppercase tracking-[0.1em]" style={{ color: "#f87171" }}>Danger Zone</p>
+      <p className={T.eyebrow} style={{ color: "#f87171" }}>Danger Zone</p>
       <div className="rounded-xl p-3" style={{ backgroundColor: "#1a1214", border: "1px solid #3a1f22" }}>
         {!open ? (
           <button
@@ -230,7 +231,7 @@ function DangerZone({ onSignOut }: { onSignOut: () => void }) {
           </button>
         ) : (
           <div className="space-y-2.5">
-            <p className="text-[11px] leading-relaxed" style={{ color: "#e7c7c7" }}>
+            <p className={T.bodySm} style={{ color: "#e7c7c7" }}>
               This permanently deletes your Aminta account — X connection, Voice Refresh data, credits,
               XP, and everything synced to your account. This cannot be undone.
             </p>
@@ -238,10 +239,10 @@ function DangerZone({ onSignOut }: { onSignOut: () => void }) {
               value={confirmText}
               onChange={(e) => setConfirmText(e.target.value)}
               placeholder='Type "DELETE" to confirm'
-              className="w-full rounded-lg px-3 py-2 text-[12px] bg-transparent outline-none"
+              className={`w-full rounded-lg px-3 py-2 bg-transparent outline-none ${T.control}`}
               style={{ border: "1px solid #4a2226", color: "#e7e7ef" }}
             />
-            {error && <p className="text-[10px]" style={{ color: "#f87171" }}>{error}</p>}
+            {error && <p className={T.meta} style={{ color: "#f87171" }}>{error}</p>}
             <div className="flex gap-2">
               <button
                 onClick={() => { setOpen(false); setConfirmText(""); setError("") }}
@@ -416,7 +417,7 @@ function SettingsOverlay({
   }
 
   // Shared section label style — system font, readable, non-competing
-  const sectionLabel = "text-[9px] uppercase tracking-[0.1em]"
+  const sectionLabel = T.eyebrow
 
   return (
     <div className="absolute inset-0 z-40 flex flex-col animate-slide-up" style={{ backgroundColor: C.bg }}>
@@ -501,7 +502,7 @@ function SettingsOverlay({
                         lib/xIdentity.ts's getProductIdentity(), the one
                         normalized identity this and the X-account mismatch
                         guard both read from. */}
-                    <p className="text-[12px] truncate leading-none" style={{ color: C.text }}>
+                    <p className={`${T.cardTitle} truncate`} style={{ color: C.text }}>
                       {identity.displayName}
                     </p>
                     <span className="font-pixel text-[6px] px-1.5 py-0.5 rounded shrink-0"
@@ -510,12 +511,12 @@ function SettingsOverlay({
                     </span>
                   </div>
                   {identity.handle && identity.handle !== identity.displayName && (
-                    <p className="text-[10px] mt-0.5 truncate" style={{ color: "#8a8a96" }}>
+                    <p className={`${T.meta} mt-0.5 truncate`} style={{ color: C.textGhost }}>
                       {identity.handle}
                     </p>
                   )}
                   {syncLine && (
-                    <p className="text-[10px] mt-1" style={{ color: syncLine.color }}>{syncLine.text}</p>
+                    <p className={`${T.meta} mt-1`} style={{ color: syncLine.color }}>{syncLine.text}</p>
                   )}
                 </div>
               </div>
@@ -530,7 +531,7 @@ function SettingsOverlay({
               </button>
             </div>
           ) : (
-            <p className="text-[12px] px-0.5" style={{ color: C.textFaint }}>Not signed in</p>
+            <p className={`${T.bodySm} px-0.5`} style={{ color: C.textFaint }}>Not signed in</p>
           )}
         </section>
 
@@ -562,7 +563,7 @@ function SettingsOverlay({
             {(planLabel !== "FREE" || includedActive) && (
               <div className="px-3.5 pt-3.5 pb-3" style={{ borderBottom: `1px solid ${C.borderSoft}` }}>
                 {planLabel === "FOUNDER" ? (
-                  <p className="text-[10px] leading-snug" style={{ color: C.textFaint }}>Lifetime Pro access</p>
+                  <p className={T.meta} style={{ color: C.textFaint }}>Lifetime Pro access</p>
                 ) : (
                   <a
                     href={PRICING_URL}
@@ -593,7 +594,7 @@ function SettingsOverlay({
                 setup is exactly as they left it if they switch back. */}
             {store.aiIncluded && (
               <div className="px-3.5 pt-3.5 pb-3" style={includedActive ? undefined : { borderBottom: `1px solid ${C.borderSoft}` }}>
-                <label className="text-[9px] uppercase tracking-[0.06em] block mb-1.5" style={{ color: "#888896" }}>
+                <label className={`${T.eyebrow} block mb-1.5`} style={{ color: C.textGhost }}>
                   AI Provider
                 </label>
                 <div className="flex rounded-lg overflow-hidden" style={{ border: `1.5px solid ${C.border}` }}>
@@ -616,7 +617,7 @@ function SettingsOverlay({
                     My API Key
                   </button>
                 </div>
-                <p className="text-[10px] mt-1.5 leading-snug" style={{ color: C.textGhost }}>
+                <p className={`${T.meta} mt-1.5`} style={{ color: C.textGhost }}>
                   {includedActive
                     ? "Included in your plan — no API key needed."
                     : "Using your own API key below."}
@@ -632,10 +633,10 @@ function SettingsOverlay({
                     own provider, so their credit balance is irrelevant. */}
                 {includedActive && store.creditsAllowance > 0 && (
                   <div className="mt-2.5 pt-2.5" style={{ borderTop: `1px solid ${C.borderSoft}` }}>
-                    <p className="text-[11px] leading-none" style={{ color: "#ccccd2" }}>
+                    <p className={T.bodySm} style={{ color: C.textDim }}>
                       {store.creditsBalance.toLocaleString()} / {store.creditsAllowance.toLocaleString()} credits
                     </p>
-                    <p className="text-[9px] mt-1 leading-none" style={{ color: C.textGhost }}>
+                    <p className={`${T.meta} mt-1`} style={{ color: C.textGhost }}>
                       {CREDIT_RESET_LABEL[store.creditsPeriodKind] ?? "Resets each period"}
                     </p>
                   </div>
@@ -655,10 +656,10 @@ function SettingsOverlay({
                 <p className="font-pixel text-[8px]" style={{ color: avatarTint }}>
                   USE YOUR OWN AI KEY
                 </p>
-                <p className="text-[9px] uppercase tracking-[0.06em]" style={{ color: "#888896" }}>
+                <p className={T.eyebrow} style={{ color: C.textGhost }}>
                   Available with Pro
                 </p>
-                <p className="text-[11px] leading-snug" style={{ color: "#a0a0aa" }}>
+                <p className={T.bodySm} style={{ color: C.textFaint }}>
                   Connect your own Gemini, Groq, or OpenRouter API key and use Aminta with your own provider.
                 </p>
                 <a
@@ -687,7 +688,7 @@ function SettingsOverlay({
 
                 {/* Model */}
                 <div className="px-3.5 pt-3 pb-3.5">
-                  <label className="text-[9px] uppercase tracking-[0.06em] block mb-1.5" style={{ color: "#888896" }}>
+                  <label className={`${T.eyebrow} block mb-1.5`} style={{ color: C.textGhost }}>
                     Model
                   </label>
                   <select
@@ -764,7 +765,7 @@ function SettingsOverlay({
         </a>
         <button
           onClick={onOpenFaq}
-          className="text-[10px] text-[#666672] hover:text-white transition-colors">Help &amp; FAQ</button>
+          className={`${T.buttonSm} hover:text-white transition-colors`} style={{ color: C.textGhost }}>Help &amp; FAQ</button>
       </div>
 
     </div>
@@ -823,7 +824,7 @@ function BottomNav({ active, onChange, tint }: { active: Tab; onChange: (t: Tab)
             className="flex-1 flex flex-col items-center justify-center gap-1 py-2.5 transition-colors"
             style={{ color: isActive ? tint : "#3a3a4a" }}>
             {icon()}
-            <span className="font-pixel text-[8px] uppercase tracking-widest">{label}</span>
+            <span className={TP.nav}>{label}</span>
           </button>
         )
       })}

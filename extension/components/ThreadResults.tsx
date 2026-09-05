@@ -135,10 +135,10 @@ export default function ThreadResults({ threads, tint, onSaveAsTemplate }: Props
                 border: `1.5px solid ${isActive ? tint : C.border}`,
               }}>
               <p className="font-pixel text-[7px]" style={{ color: isActive ? tint : C.textDim }}>Thread {i + 1}</p>
-              <p className="text-[9px] mt-1 leading-snug line-clamp-2" style={{ color: isActive ? C.text : C.textFaint }}>
+              <p className="text-[11px] mt-1 leading-snug line-clamp-2" style={{ color: isActive ? C.text : C.textFaint }}>
                 {t.angle}
               </p>
-              <p className="text-[8px] mt-1" style={{ color: C.textGhost }}>{posts[i].length} posts</p>
+              <p className="text-[11px] mt-1" style={{ color: C.textGhost }}>{posts[i].length} posts</p>
             </button>
           )
         })}
@@ -159,7 +159,7 @@ export default function ThreadResults({ threads, tint, onSaveAsTemplate }: Props
                   {i === 0 ? "HOOK" : `${i + 1}/${activePosts.length}`}
                   {isDone && " ✓"}
                 </span>
-                <span className="text-[9px]" style={{ color: post.length > 280 ? "#fbbf24" : C.textGhost }}>
+                <span className="text-[11px]" style={{ color: post.length > 280 ? "#fbbf24" : C.textGhost }}>
                   {post.length}/280
                 </span>
               </div>
@@ -168,12 +168,12 @@ export default function ThreadResults({ threads, tint, onSaveAsTemplate }: Props
                 onChange={(e) => editPost(i, e.target.value)}
                 readOnly={!canEditFreely}
                 rows={Math.min(6, Math.max(2, Math.ceil(post.length / 45)))}
-                className="w-full bg-transparent text-[12px] leading-relaxed resize-none outline-none"
+                className="w-full bg-transparent text-[13px] leading-relaxed resize-none outline-none"
                 style={{ color: C.text }}
               />
               <button
                 onClick={() => copyPost(i)}
-                className="mt-1.5 text-[10px]"
+                className="mt-1.5 text-[11px]"
                 style={{ color: copiedIdx === i ? tint : C.textFaint }}>
                 {copiedIdx === i ? "Copied ✓" : "Copy"}
               </button>
@@ -189,7 +189,7 @@ export default function ThreadResults({ threads, tint, onSaveAsTemplate }: Props
             <span className="font-pixel text-[8px]" style={{ color: tint }}>
               {buildState.status === "ready" ? "READY" : buildState.status === "failed" || buildState.status === "stopped" ? "STOPPED" : "BUILDING THREAD IN X"}
             </span>
-            <span className="text-[10px]" style={{ color: C.textDim }}>{buildState.builtCount} of {buildState.total} added</span>
+            <span className="text-[11px]" style={{ color: C.textDim }}>{buildState.builtCount} of {buildState.total} added</span>
           </div>
           <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: "#1e2028" }}>
             <div className="h-full transition-all" style={{
@@ -197,23 +197,23 @@ export default function ThreadResults({ threads, tint, onSaveAsTemplate }: Props
               backgroundColor: tint,
             }} />
           </div>
-          <p className="text-[10px]" style={{ color: C.textDim }}>{progressLabel(buildState)}</p>
+          <p className="text-[11px]" style={{ color: C.textDim }}>{progressLabel(buildState)}</p>
           {(buildState.status === "failed" || buildState.status === "stopped") && buildState.error && (
-            <p className="text-[10px]" style={{ color: "#f87171" }}>{buildState.error}</p>
+            <p className="text-[11px]" style={{ color: "#f87171" }}>{buildState.error}</p>
           )}
           {buildState.status === "ready" && (
-            <p className="text-[10px]" style={{ color: C.textDim }}>
+            <p className="text-[11px]" style={{ color: C.textDim }}>
               Review your thread, then post when you're ready.
             </p>
           )}
           <div className="flex gap-2">
             {running && (
-              <button onClick={stopBuild} className="text-[10px] rounded px-2 py-1" style={{ border: `1px solid ${C.border}`, color: C.textDim }}>
+              <button onClick={stopBuild} className="text-[11px] rounded px-2 py-1" style={{ border: `1px solid ${C.border}`, color: C.textDim }}>
                 Stop
               </button>
             )}
             {buildState.status === "failed" && !running && (
-              <button onClick={retryBuild} className="text-[10px] rounded px-2 py-1" style={{ border: `1px solid ${tint}`, color: tint }}>
+              <button onClick={retryBuild} className="text-[11px] rounded px-2 py-1" style={{ border: `1px solid ${tint}`, color: tint }}>
                 Retry from {buildState.currentIndex + 1}
               </button>
             )}
@@ -221,7 +221,7 @@ export default function ThreadResults({ threads, tint, onSaveAsTemplate }: Props
         </div>
       )}
 
-      {buildError && <p className="text-[10px]" style={{ color: "#f87171" }}>{buildError}</p>}
+      {buildError && <p className="text-[11px]" style={{ color: "#f87171" }}>{buildError}</p>}
 
       {/* ── Primary action: build the full thread draft in X — same height
           as OutputCard's Insert button, its single-post equivalent. ── */}
@@ -232,25 +232,25 @@ export default function ThreadResults({ threads, tint, onSaveAsTemplate }: Props
         Build thread in X
       </button>
       {validation.ok === false && !running && (
-        <p className="text-[10px]" style={{ color: C.textFaint }}>{validation.reason}</p>
+        <p className="text-[11px]" style={{ color: C.textFaint }}>{validation.reason}</p>
       )}
 
       {/* ── Manual fallback — always available ── */}
       <button
         onClick={insertFirst}
         disabled={running}
-        className="w-full rounded py-2 text-[9px] disabled:opacity-40"
+        className="w-full rounded py-2 text-[11px] disabled:opacity-40"
         style={{ border: `1px solid ${C.border}`, color: C.textDim }}>
         Insert post 1 into X (manual)
       </button>
       {insertStatus && (
-        <p className="text-[10px]" style={{ color: C.textDim }}>{insertStatus}</p>
+        <p className="text-[11px]" style={{ color: C.textDim }}>{insertStatus}</p>
       )}
 
       {onSaveAsTemplate && (
         <button
           onClick={() => onSaveAsTemplate(activePosts)}
-          className="w-full rounded py-2 text-[9px]"
+          className="w-full rounded py-2 text-[11px]"
           style={{ border: `1px solid ${C.border}`, color: C.textDim }}>
           Save as template
         </button>

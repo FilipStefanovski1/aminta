@@ -30,6 +30,7 @@ import { getOrBuildStyleProfile } from "~lib/styleProfile"
 import type { AmintaStore, AmintaTemplate, TemplateMode } from "~lib/storage"
 import { buildThreadTemplateInstruction, type RunTemplateContext } from "~lib/templates"
 import { C } from "~lib/theme"
+import { T, TP } from "~lib/typography"
 import { PRICING_URL } from "~lib/webUrl"
 import { incrementGenerations } from "~lib/xp"
 
@@ -813,7 +814,7 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
       {/* ── Image upload ── (hidden for Groq keys — Groq has no vision support) */}
       {mode === "tweet" && !isGroqKey(effectiveApiKey(store)) && (
         <div className="space-y-1.5">
-          <p className="text-[11px] font-medium" style={{ color: C.textFaint }}>
+          <p className={T.label} style={{ color: C.textFaint }}>
             Photo{" "}
             <span style={{ color: C.textGhost, fontWeight: 400 }}>(optional, AI will write about it)</span>
           </p>
@@ -830,7 +831,7 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
           ) : (
             <button
               onClick={() => imageInputRef.current?.click()}
-              className="w-full rounded-xl py-3 text-[11px] font-medium border-dashed transition-colors flex items-center justify-center gap-2"
+              className={`w-full rounded-xl py-3 border-dashed transition-colors flex items-center justify-center gap-2 ${T.button}`}
               style={{ border: `1.5px dashed ${C.border}`, color: C.textFaint }}
               onDragOver={(e) => e.preventDefault()}
               onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleImageFile(f) }}>
@@ -854,7 +855,7 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
 
       {/* ── Topic input ── */}
       <div className="space-y-1.5">
-        <label htmlFor="topic-input" className="block text-[11px] font-medium" style={{ color: C.textFaint }}>{topicLabel}</label>
+        <label htmlFor="topic-input" className={`block ${T.label}`} style={{ color: C.textFaint }}>{topicLabel}</label>
         <div className="relative">
           <textarea
             id="topic-input"
@@ -867,14 +868,14 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
             className={`input-pixel topic-placeholder w-full rounded-xl px-3 py-2.5 text-sm resize-none${mode === "tweet" && placeholderDim ? " placeholder-dim" : ""}`}
             style={{ paddingBottom: "22px" }}
           />
-          <span className="absolute bottom-2 right-3 text-[9px]" style={{ color: C.textGhost }}>
+          <span className={`absolute bottom-2 right-3 ${T.meta}`} style={{ color: C.textGhost }}>
             {topic.length} / 120
           </span>
         </div>
         {mode === "reply" && (
           <button
             onClick={pull}
-            className="w-full rounded-lg py-2 text-[11px] font-medium transition-colors"
+            className={`w-full rounded-lg py-2 transition-colors ${T.button}`}
             style={{ border: `1px solid ${C.border}`, color: C.textFaint }}>
             ↑ Pull from page
           </button>
@@ -883,18 +884,18 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
           <button
             onClick={jumpToNextReplyTarget}
             disabled={jumping}
-            className="w-full rounded-lg py-2 text-[11px] font-medium transition-colors disabled:opacity-60"
+            className={`w-full rounded-lg py-2 transition-colors disabled:opacity-60 ${T.button}`}
             style={{ border: `1px solid ${C.border}`, color: C.textFaint }}>
             {jumping ? "Looking for a reply opportunity…" : "Find a post worth replying to"}
           </button>
         )}
         {mode === "reply" && postImageUrls.length > 0 && (
-          <p className="text-[10px] animate-fade-in" style={{ color: tint }}>
+          <p className={`${T.meta} animate-fade-in`} style={{ color: tint }}>
             {postImageUrls.length} image{postImageUrls.length > 1 ? "s" : ""} found on this post — Aminta will look at {postImageUrls.length > 1 ? "them" : "it"} too.
           </p>
         )}
         {mode === "reply" && replyReason && (
-          <p className="text-[10px] animate-fade-in" style={{ color: tint }}>
+          <p className={`${T.meta} animate-fade-in`} style={{ color: tint }}>
             {replyReason}
           </p>
         )}
@@ -902,7 +903,7 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
 
       {/* ── Context input ── */}
       <div className="space-y-1.5">
-        <p className="text-[11px] font-medium" style={{ color: C.textFaint }}>
+        <p className={T.label} style={{ color: C.textFaint }}>
           {mode === "polish" ? "Polishing instructions" : "Additional context"}{" "}
           <span style={{ color: C.textGhost, fontWeight: 400 }}>(optional)</span>
         </p>
@@ -915,7 +916,7 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
             className="input-pixel w-full rounded-xl px-3 py-2.5 text-sm resize-none"
             style={{ paddingBottom: "22px" }}
           />
-          <span className="absolute bottom-2 right-3 text-[9px]" style={{ color: C.textGhost }}>
+          <span className={`absolute bottom-2 right-3 ${T.meta}`} style={{ color: C.textGhost }}>
             {context.length} / 300
           </span>
         </div>
@@ -923,7 +924,7 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
 
       {/* ── Tone — same segmented-control family as Length/Posts below. ── */}
       <div className="space-y-1.5">
-        <p className="text-[11px] font-medium" style={{ color: C.textFaint }}>Tone</p>
+        <p className={T.label} style={{ color: C.textFaint }}>Tone</p>
         <div className="flex rounded-xl overflow-hidden" style={{ border: `1.5px solid ${C.border}` }}>
           {TONE_CONFIG.map((t, i) => {
             const active = tone === t.id
@@ -938,7 +939,7 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
                   borderRight: i < TONE_CONFIG.length - 1 ? `1px solid ${C.border}` : undefined,
                   color: active ? tint : C.textGhost,
                 }}>
-                <span className="text-[10px] font-semibold" style={{ color: active ? tint : C.textDim }}>
+                <span className={T.button} style={{ color: active ? tint : C.textDim }}>
                   {t.label}
                 </span>
               </button>
@@ -950,9 +951,9 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
       {/* ── Length ── */}
       <div className="space-y-1.5">
         <div className="flex items-center gap-1.5">
-          <p className="text-[11px] font-medium" style={{ color: C.textFaint }}>Length</p>
+          <p className={T.label} style={{ color: C.textFaint }}>Length</p>
           {mode === "tweet" && store.styleProfile?.lengthProfile && (
-            <span className="text-[9px]" style={{ color: C.textGhost }}>· based on how you normally write</span>
+            <span className={T.meta} style={{ color: C.textGhost }}>· based on how you normally write</span>
           )}
         </div>
         <div className="flex rounded-xl overflow-hidden" style={{ border: `1.5px solid ${C.border}` }}>
@@ -968,7 +969,7 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
                   borderRight: i < LENGTH_CONFIG.length - 1 ? `1px solid ${C.border}` : undefined,
                   color: active ? tint : C.textGhost,
                 }}>
-                <span className="text-[10px] font-semibold" style={{ color: active ? tint : C.textDim }}>
+                <span className={T.button} style={{ color: active ? tint : C.textDim }}>
                   {l.label}
                 </span>
               </button>
@@ -981,7 +982,7 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
           Length above (per-post depth). ── */}
       {mode === "thread" && (
         <div className="space-y-1.5">
-          <p className="text-[11px] font-medium" style={{ color: C.textFaint }}>Posts</p>
+          <p className={T.label} style={{ color: C.textFaint }}>Posts</p>
           <div className="flex rounded-xl overflow-hidden" style={{ border: `1.5px solid ${C.border}` }}>
             {POST_COUNT_CONFIG.map((p, i) => {
               const active = postCount === p.id
@@ -995,7 +996,7 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
                     borderRight: i < POST_COUNT_CONFIG.length - 1 ? `1px solid ${C.border}` : undefined,
                     color: active ? tint : C.textGhost,
                   }}>
-                  <span className="text-[10px] font-semibold" style={{ color: active ? tint : C.textDim }}>
+                  <span className={T.button} style={{ color: active ? tint : C.textDim }}>
                     {p.label}
                   </span>
                 </button>
@@ -1009,12 +1010,12 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
           generation; the Posts selector above always wins on count. */}
       {mode === "thread" && threadTemplateInstruction && (
         <div className="flex items-center justify-between px-3 py-2 rounded-lg" style={{ border: `1px solid ${C.border}`, backgroundColor: C.card }}>
-          <span className="text-[10px] truncate" style={{ color: C.textFaint }}>
+          <span className={`${T.meta} truncate`} style={{ color: C.textFaint }}>
             Using template: {threadTemplateName || "Untitled"}
           </span>
           <button
             onClick={() => { setThreadTemplateInstruction(""); setThreadTemplateName(""); setThreadTemplateId("") }}
-            className="text-[10px] shrink-0 ml-2"
+            className={`${T.buttonSm} shrink-0 ml-2`}
             style={{ color: C.textGhost }}>
             Clear
           </button>
@@ -1025,7 +1026,7 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
       <button
         onClick={generate}
         disabled={loading || !canGenerate}
-        className={`btn-pixel w-full rounded-xl py-3.5 font-pixel text-[10px] text-black transition-opacity ${
+        className={`btn-pixel w-full rounded-xl py-3.5 ${TP.button} text-black transition-opacity ${
           loading ? "cursor-wait opacity-80" : !canGenerate ? "opacity-40 cursor-not-allowed" : ""
         }`}
         style={{ backgroundColor: tint }}>
@@ -1043,7 +1044,7 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
           the user is actually generating through Included AI; on BYOK their own
           provider is paying, so credits are irrelevant. */}
       {!loading && usingIncluded && creditsExhausted === false && !!store.voice && (
-        <p className="text-[10px] text-center animate-fade-in" style={{ color: C.textGhost }}>
+        <p className={`${T.meta} text-center animate-fade-in`} style={{ color: C.textGhost }}>
           {store.creditsBalance} / {store.creditsAllowance} credits remaining{creditResetLabel}
         </p>
       )}
@@ -1059,7 +1060,7 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
               ? "You're out of free credits for today."
               : `You've used your ${store.creditsAllowance.toLocaleString()} Included AI credits for this period.`}
           </p>
-          <p className="text-[11px] leading-snug" style={{ color: C.textFaint }}>
+          <p className={T.bodySm} style={{ color: C.textFaint }}>
             {store.creditsPeriodKind === "day"
               ? "Credits reset tomorrow."
               : store.creditsPeriodKind === "billing"
@@ -1072,7 +1073,7 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
                 href={PRICING_URL}
                 target="_blank"
                 rel="noreferrer"
-                className="btn-pixel w-full py-1.5 rounded-lg font-pixel text-[8px] text-center"
+                className={`btn-pixel w-full py-1.5 rounded-lg text-center ${TP.buttonSm}`}
                 style={{ backgroundColor: tint, color: "#000", border: "2px solid #000", boxShadow: "2px 2px 0 #000" }}>
                 Upgrade to Pro
               </a>
@@ -1080,7 +1081,7 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
             {canUseByok(store) && (
               <button
                 onClick={onOpenSettings}
-                className="w-full py-1.5 rounded-lg font-pixel text-[8px]"
+                className={`w-full py-1.5 rounded-lg ${TP.buttonSm}`}
                 style={{ backgroundColor: "transparent", color: C.textFaint, border: `1px solid ${C.border}` }}>
                 Use my API key
               </button>
@@ -1089,7 +1090,7 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
         </div>
       )}
       {!loading && !creditsExhausted && !effectiveApiKey(store) && !shouldUseIncludedAi(store) && (
-        <p className="text-[11px] animate-fade-in px-1" style={{ color: C.textFaint }}>
+        <p className={`${T.bodySm} animate-fade-in px-1`} style={{ color: C.textFaint }}>
           {canUseByok(store) ? (
             <>
               Add your AI key in{" "}
@@ -1108,7 +1109,7 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
         </p>
       )}
       {!loading && !creditsExhausted && (!!effectiveApiKey(store) || shouldUseIncludedAi(store)) && !store.voice && (
-        <p className="text-[11px] animate-fade-in px-1" style={{ color: C.textFaint }}>
+        <p className={`${T.bodySm} animate-fade-in px-1`} style={{ color: C.textFaint }}>
           Go to{" "}
           <button onClick={onTeach} className="underline" style={{ color: C.text }}>Train</button>
           {" "}to teach Aminta your voice first.
@@ -1119,7 +1120,7 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
           retrying a transient failure (429/500/502/503/504) in the
           background — error stays empty until every retry is exhausted. */}
       {retrying && !error && (
-        <p className="text-[11px] animate-fade-in px-1" style={{ color: C.textFaint }}>
+        <p className={`${T.bodySm} animate-fade-in px-1`} style={{ color: C.textFaint }}>
           AI is experiencing high demand. Retrying automatically…
         </p>
       )}
@@ -1130,14 +1131,14 @@ export default function GeneratorPanel({ store, onTeach, onOpenSettings, onConte
           exact same thing again" so the user isn't left reading an error
           with no obvious next step. */}
       {error && (
-        <p className="text-[11px] text-red-400 animate-fade-in px-1">
+        <p className={`${T.bodySm} text-red-400 animate-fade-in px-1`}>
           {error}{" "}
           <button onClick={generate} className="underline" style={{ color: "inherit" }}>Try again</button>
         </p>
       )}
 
       {threadError && (
-        <p className="text-[11px] text-red-400 animate-fade-in px-1">
+        <p className={`${T.bodySm} text-red-400 animate-fade-in px-1`}>
           {threadError}{" "}
           <button onClick={generate} className="underline" style={{ color: "inherit" }}>Try again</button>
         </p>

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react"
 
 import { getForm, getLevel, getStageTint } from "~lib/evolution"
 import { C } from "~lib/theme"
+import { T, TP } from "~lib/typography"
 import DemonMascot from "~components/DemonMascot"
 
 // ─── Card ──────────────────────────────────────────────────────────────────
@@ -38,7 +39,7 @@ export function Card({
 
 export function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="font-pixel text-[7px] uppercase tracking-widest mb-2" style={{ color: C.textDim }}>
+    <p className={`${TP.eyebrow} mb-2`} style={{ color: C.textDim }}>
       {children}
     </p>
   )
@@ -55,7 +56,7 @@ export function SectionLabel({ children }: { children: React.ReactNode }) {
 // semibold high-contrast text reads as an immediate, scannable title instead.
 export function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-[14px] font-semibold" style={{ color: C.text }}>
+    <p className={T.sectionTitle} style={{ color: C.text }}>
       {children}
     </p>
   )
@@ -80,7 +81,7 @@ export function PrimaryButton({
     <button
       onClick={onClick}
       disabled={disabled}
-      className={`btn-pixel w-full py-3 rounded-xl font-pixel text-[9px] text-black disabled:opacity-40 disabled:cursor-not-allowed transition-opacity ${className}`}
+      className={`btn-pixel w-full py-3 rounded-xl ${TP.button} text-black disabled:opacity-40 disabled:cursor-not-allowed transition-opacity ${className}`}
       style={{ backgroundColor: tint }}>
       {children}
     </button>
@@ -101,7 +102,7 @@ export function GhostButton({
   return (
     <button
       onClick={onClick}
-      className={`w-full py-2.5 rounded-xl font-pixel text-[7px] transition-all ${className}`}
+      className={`w-full py-2.5 rounded-xl ${TP.buttonSm} transition-all ${className}`}
       style={{ border: `1px solid ${C.border}`, color: C.textFaint }}
       onMouseEnter={(e) => { e.currentTarget.style.borderColor = C.borderHover; e.currentTarget.style.color = C.textDim }}
       onMouseLeave={(e) => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.textFaint }}>
