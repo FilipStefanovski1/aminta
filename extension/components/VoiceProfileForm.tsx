@@ -18,6 +18,8 @@ import { getOrBuildStyleProfile } from "~lib/styleProfile"
 import { summarizeStyleProfile } from "~lib/styleProfileSummary"
 import { parseExamples, serializeExamples } from "~lib/trainingExamples"
 import { C } from "~lib/theme"
+import { normalizePersonalContext } from "~lib/personalContext"
+import PersonalContextField from "~components/PersonalContextField"
 import { Card, Sprite } from "~components/ui"
 import VoiceRefreshCard from "~components/VoiceRefreshCard"
 
@@ -51,6 +53,7 @@ const INFO_TIPS: Record<string, string> = {
   voice:       "Pick the style closest to how you actually write, not how you want to write. Aminta mimics your current voice, not an ideal one.",
   examples:    "Paste 3–5 real posts you've written. The more authentic, the better Aminta learns your patterns.",
   rules:       "Things Aminta must never do. Examples: 'no hashtags', 'keep under 200 chars', 'never say leverage'.",
+  about:       "Background about you — what you do, what you're building, what you're into. Aminta only uses it when it's relevant to what you're writing, and never invents anything beyond what you write here.",
 }
 
 function InfoTip({ tip }: { tip: string }) {
@@ -132,6 +135,10 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
     (initial?.voiceInspiration ?? "").split(",").map(s => s.trim()).filter(Boolean)
   )
   const [examples,         setExamples]         = useState<string[]>(() => parseExamples(initial?.examples))
+  // Personal Context — background about WHO the user is, editable here
+  // after onboarding. Same canonical field the onboarding step writes
+  // (voice.personalContext), never a second copy.
+  const [personalContext,  setPersonalContext]  = useState(() => normalizePersonalContext(initial?.personalContext))
   const [newPost,  setNewPost]  = useState("")
   const [adding,   setAdding]   = useState(false)
   const [rules,    setRules]    = useState<string[]>(() => parseCustomRules(initial?.customRules))
@@ -151,10 +158,10 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
   // decide whether the Save/Update button should be visible. Only updates on
   // mount and right after a successful save — never on every keystroke — so
   // it stays a stable "what's actually persisted" baseline to diff against.
-  const snapshot = (t: string[], vs: string, vi: string[], ex: string[], r: string[]) =>
-    JSON.stringify({ t, vs, vi, ex, r })
-  const baselineRef = useRef(snapshot(topics, voiceStyle, voiceInspiration, examples, rules))
-  const isDirty = baselineRef.current !== snapshot(topics, voiceStyle, voiceInspiration, examples, rules)
+  const snapshot = (t: string[], vs: string, vi: string[], ex: string[], r: string[], pc: string) =>
+    JSON.stringify({ t, vs, vi, ex, r, pc })
+  const baselineRef = useRef(snapshot(topics, voiceStyle, voiceInspiration, examples, rules, personalContext))
+  const isDirty = baselineRef.current !== snapshot(topics, voiceStyle, voiceInspiration, examples, rules, personalContext)
 
   // Companion reaction system — drives Sprite animation + transient speech
   const [animCls,  setAnimCls]  = useState("sprite-float aminta-glow")
@@ -233,8 +240,9 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
         voiceInspiration: voiceInspiration.join(", "),
         examples:         serializeExamples(next),
         customRules:      rules.join("\n"),
+        personalContext:  normalizePersonalContext(personalContext),
       })
-      baselineRef.current = snapshot(topics, voiceStyle, voiceInspiration, next, rules)
+      baselineRef.current = snapshot(topics, voiceStyle, voiceInspiration, next, rules, personalContext)
       const freshStore = await getStore()
       await getOrBuildStyleProfile(freshStore)
       onRefreshed?.()
@@ -340,8 +348,9 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
       voiceInspiration: voiceInspiration.join(", "),
       examples:         serializeExamples(examples),
       customRules:      rules.join("\n"),
+      personalContext:  normalizePersonalContext(personalContext),
     })
-    baselineRef.current = snapshot(topics, voiceStyle, voiceInspiration, examples, rules)
+    baselineRef.current = snapshot(topics, voiceStyle, voiceInspiration, examples, rules, personalContext)
     setSaved(true)
     react("I feel more like you now.", "sprite-celebrate aminta-sparkle")
     setTimeout(() => setSaved(false), 2500)
@@ -431,6 +440,27 @@ export default function VoiceProfileForm({ store, initial, onSave, dnaCount = 0,
               )
             })}
           </div>
+        </div>
+
+        <Divider />
+
+        {/* About you — Personal Context. Background knowledge (who they are,
+            what they're building), NOT writing style: it sits alongside the
+            other teaching sections rather than inside Writing examples,
+            because it never feeds StyleProfile extraction. Same field the
+            onboarding step writes. */}
+        <div className="p-5">
+          <SectionHead
+            label="About you"
+            tipKey="about"
+            desc="Background Aminta can draw on — what you do, what you're building, what you care about. Used only when it's relevant."
+          />
+          <PersonalContextField
+            value={personalContext}
+            onChange={setPersonalContext}
+            tint={tint}
+            rows={5}
+          />
         </div>
 
         <Divider />

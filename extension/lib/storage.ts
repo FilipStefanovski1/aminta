@@ -17,6 +17,16 @@ export interface VoiceProfile {
   voiceStyle: string
   voiceInspiration: string
   customRules: string
+  // Free-text background about WHO this person is — what they do, what
+  // they're building, what they care about. Distinct from every field
+  // above: niche is what they post about, voiceStyle/examples are how they
+  // write, customRules are explicit instructions. See lib/personalContext.ts.
+  //
+  // Optional on purpose: every profile saved before this field existed
+  // simply doesn't have the key, and must keep parsing/round-tripping
+  // untouched (an existing user's voice data is never reset or migrated).
+  // Always read it through normalizePersonalContext().
+  personalContext?: string
 }
 
 // ─── Style Profile ──────────────────────────────────────────────────────

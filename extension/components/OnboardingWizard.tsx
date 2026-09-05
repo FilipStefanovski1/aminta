@@ -10,8 +10,10 @@ import { FORMS } from "~lib/evolution"
 import { parseExamples, serializeExamples } from "~lib/trainingExamples"
 import { fetchRecentXPosts, startXConnect, type RecentXPost } from "~lib/voiceRefresh"
 import { focusOrCreateXTab } from "~lib/xTab"
+import { normalizePersonalContext } from "~lib/personalContext"
 import AiKeyInput from "~components/AiKeyInput"
 import DemonMascot from "~components/DemonMascot"
+import PersonalContextField from "~components/PersonalContextField"
 import { Card, PrimaryButton, SectionLabel, Sprite, SpeechBubble } from "~components/ui"
 import VoiceRefreshCard from "~components/VoiceRefreshCard"
 
@@ -163,11 +165,15 @@ function looksMalformed(key: string): boolean {
 //   4 "Now make Aminta sound more like you" (transition into customization)
 //   5 Topics
 //   6 Tone
-//   7 Examples ("what sounds exactly like you")
-//   8 Learning (auto-advancing transition — now makes sense: real voice data exists)
-//   9 Payoff — confirms progress, no XP/progression framing (that's an
+//   7 Teach Aminta about you (Personal Context — WHO they are, placed after
+//     the two quick chip pickers and before the writing-sample step, so the
+//     two text-heavy steps sit together and the whole "about me" half of
+//     the flow reads as one idea. Skippable, never blocks.)
+//   8 Examples ("what sounds exactly like you")
+//   9 Learning (auto-advancing transition — now makes sense: real voice data exists)
+//  10 Payoff — confirms progress, no XP/progression framing (that's an
 //     in-product mechanic users discover later, not an onboarding concept)
-const TOTAL = 10
+const TOTAL = 11
 
 function Dots({ current }: { current: number }) {
   return (
@@ -208,6 +214,13 @@ export default function OnboardingWizard({ store, onDone }: Props) {
 
   const [examples, setExamples] = useState<string[]>(() => parseExamples(store.voice?.examples))
 
+  // ── Personal context (step 7) ──
+  // Seeded from any already-saved value so re-running onboarding (or going
+  // Back) never silently wipes what the user previously wrote.
+  const [personalContext, setPersonalContext] = useState(() =>
+    normalizePersonalContext(store.voice?.personalContext)
+  )
+
   // Local, refetchable copy of the store for VoiceRefreshCard (step 7) —
   // startXConnect()/runVoiceRefresh() write straight to chrome.storage.local
   // via lib/voiceRefresh.ts's own setStore() calls, entirely outside this
@@ -230,7 +243,7 @@ export default function OnboardingWizard({ store, onDone }: Props) {
   const recentXFetchedFor = useRef<string | null>(null)
 
   useEffect(() => {
-    if (step !== 7 || !voiceStore.xConnected) return
+    if (step !== 8 || !voiceStore.xConnected) return
     if (recentXFetchedFor.current === voiceStore.xUsername) return // already fetched for this connection
     recentXFetchedFor.current = voiceStore.xUsername
     setRecentXLoading(true)
@@ -281,7 +294,7 @@ export default function OnboardingWizard({ store, onDone }: Props) {
   // the auto-advance effect below would immediately forward past it again.
   const next = () => setStep(s => (s === 1 && includedAi ? 3 : s + 1))
   const back = () => setStep(current => {
-    if (current === 9) return 7
+    if (current === 10) return 8
     if (current === 3 && includedAi) return 1
     return Math.max(0, current - 1)
   })
@@ -354,8 +367,8 @@ export default function OnboardingWizard({ store, onDone }: Props) {
 
   // Auto-advance the "learning" screen into the payoff step
   useEffect(() => {
-    if (step !== 8) return
-    const t = setTimeout(() => setStep(9), 2200)
+    if (step !== 9) return
+    const t = setTimeout(() => setStep(10), 2200)
     return () => clearTimeout(t)
   }, [step])
 
@@ -440,6 +453,10 @@ export default function OnboardingWizard({ store, onDone }: Props) {
       examples: serializeExamples(examples),
       voiceInspiration: store.voice?.voiceInspiration || "",
       customRules: store.voice?.customRules || "",
+      // Skipped (or left empty) resolves to "" — a normal, valid state, not
+      // a missing field. Multiline text is stored exactly as typed; only
+      // trimmed and capped (see normalizePersonalContext).
+      personalContext: normalizePersonalContext(personalContext),
     }
     if (openX) focusOrCreateXTab()
     await onDone({ interests: topics.join(", "), voice, apiKey, onboardingDone: true })
@@ -811,14 +828,48 @@ export default function OnboardingWizard({ store, onDone }: Props) {
           </div>
         )}
 
-        {/* ── 7 · Examples ──
+        {/* ── 7 · Teach Aminta about you (Personal Context) ──
+            Background knowledge that usually isn't visible in someone's
+            posts — what they do, what they're building, what they care
+            about. Deliberately ONE conversational field rather than a form
+            of required sub-questions: people describe themselves in
+            paragraphs, not in labelled boxes. Never blocks (see the Skip
+            action in the footer) and costs 0 credits — nothing here calls
+            a model, including the mic (browser speech API) and the helper
+            prompt (local text + clipboard). */}
+        {step === 7 && (
+          <div className="animate-slide-up space-y-5">
+            <div>
+              <h2 className="font-pixel text-[11px] leading-relaxed" style={{ color: C.text }}>
+                Teach Aminta<br />about you.
+              </h2>
+              <p className="text-[12px] mt-3 leading-relaxed" style={{ color: C.textDim }}>
+                Anything that helps me understand you — what you do, what you&apos;re
+                working on, what you care about, what you like talking about.
+              </p>
+            </div>
+            <Card>
+              <SectionLabel>About you</SectionLabel>
+              <PersonalContextField
+                value={personalContext}
+                onChange={setPersonalContext}
+                autoFocus
+              />
+              <p className="text-[11px] mt-3 leading-relaxed" style={{ color: C.textDim }}>
+                I&apos;ll only use this when it&apos;s actually relevant to what you&apos;re writing.
+              </p>
+            </Card>
+          </div>
+        )}
+
+        {/* ── 8 · Examples ──
             Two paths, both leading to the same StyleProfile: teach Aminta
             by pasting posts yourself (below), or let it learn from recent X
             posts via the existing Voice Refresh card (same component, same
             entitlement/eligibility logic Train already uses — see
             components/VoiceRefreshCard.tsx). Free users see its own inline
             upsell there, never a block on finishing onboarding. */}
-        {step === 7 && (
+        {step === 8 && (
           <div className="animate-slide-up space-y-5">
             <div>
               <h2 className="font-pixel text-[11px] leading-relaxed" style={{ color: C.text }}>
@@ -921,7 +972,7 @@ export default function OnboardingWizard({ store, onDone }: Props) {
         )}
 
         {/* ── 8 · Learning ── */}
-        {step === 8 && (
+        {step === 9 && (
           <div className="animate-slide-up flex flex-col items-center text-center pt-10">
             <SpeechBubble text="learning your voice…" />
             <div className="mt-4">
@@ -936,7 +987,7 @@ export default function OnboardingWizard({ store, onDone }: Props) {
             box ("Generate appears under the composer" / "Polish improves
             your draft") looked unfinished and explained nothing visually —
             removed rather than replaced with a different list. */}
-        {step === 9 && (
+        {step === 10 && (
           <div className="animate-slide-up flex flex-col items-center justify-center text-center min-h-full">
 
             <h2 className="font-pixel text-[11px] leading-relaxed" style={{ color: C.text }}>
@@ -999,6 +1050,15 @@ export default function OnboardingWizard({ store, onDone }: Props) {
         {step === 6 && <PrimaryButton onClick={next} disabled={tones.length === 0}>Continue</PrimaryButton>}
         {step === 7 && (
           <>
+            {/* Never a gate — an empty personal context is a completely
+                normal state (and the default for every existing user). */}
+            <PrimaryButton onClick={next}>Continue</PrimaryButton>
+            <button onClick={next} className="w-full text-center text-[11px] py-1 transition-colors"
+              style={{ color: C.textDim }}>Skip for now</button>
+          </>
+        )}
+        {step === 8 && (
+          <>
             {/* Either path satisfies this step — a completed Voice Refresh
                 (voiceStore.styleProfile) counts exactly the same as a
                 manually added example, so a Pro/Founder user who used the
@@ -1008,7 +1068,7 @@ export default function OnboardingWizard({ store, onDone }: Props) {
               style={{ color: C.textDim }}>Skip for now</button>
           </>
         )}
-        {step === 9 && (
+        {step === 10 && (
           <>
             {/* One clear primary action — finish(true) both completes
                 onboarding AND opens X (focusOrCreateXTab, the existing

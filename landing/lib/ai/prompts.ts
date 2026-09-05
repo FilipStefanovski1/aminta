@@ -15,6 +15,7 @@
 
 import { classifyDraftIntent, preservationLevelFor, type PreservationLevel } from "./draftIntent"
 import type { EntityContext } from "./contextEnrichment"
+import { normalizePersonalContext } from "./personalContext"
 import { describeViolation, type FidelityViolation } from "./claimFidelity"
 
 export type ContentPart =
@@ -61,6 +62,12 @@ export interface VoiceProfile {
   voiceStyle: string
   voiceInspiration: string
   customRules: string
+  // SOURCE OF TRUTH: extension/lib/storage.ts's VoiceProfile. Free-text
+  // background about who this person is (see extension/lib/personalContext.ts).
+  // Optional — profiles saved before this field existed simply omit it, and
+  // the client sends the whole voice object over the wire, so nothing here
+  // needs a migration.
+  personalContext?: string
 }
 
 export type Confidence = "hedging" | "balanced" | "assertive" | "declarative"
@@ -174,7 +181,7 @@ export function resolveLengthGuide(mode: Mode, length: OutputLength, styleProfil
 //
 // SOURCE OF TRUTH: extension/lib/prompts.ts's CONTEXT_PRIORITY.
 const CONTEXT_PRIORITY =
-  "CONTEXT PRIORITY (highest to lowest): the topic/request below, then the source post if replying, then an attached image if present, then WRITING STYLE, then tone. WRITING STYLE is a pattern to follow, never a script to copy line-for-line, and it never changes WHAT gets said — only HOW."
+  "CONTEXT PRIORITY (highest to lowest): the topic/request below, then the source post if replying, then an attached image if present, then PERSONAL CONTEXT (background about this person — only ever supporting, never the subject of the post unless the request is about it), then WRITING STYLE, then tone. WRITING STYLE is a pattern to follow, never a script to copy line-for-line, and it never changes WHAT gets said — only HOW."
 
 // SOURCE OF TRUTH: extension/lib/prompts.ts's STYLE_PRIORITY.
 const STYLE_PRIORITY =
@@ -289,6 +296,24 @@ function templateBlock(templateInstruction?: string): string {
   return `TEMPLATE STRUCTURE (follow this structure/instruction — the Writing Style below still governs tone/voice, this only governs the shape/workflow):\n${templateInstruction.trim()}`
 }
 
+// Personal Context — background knowledge, never an instruction and never a
+// checklist of things to mention. Guards specifically against: a post about
+// something unrelated suddenly name-dropping the user's work (irrelevant
+// injection), a claim about the user that isn't in the text (invention),
+// and background narrated as something they did (fabricated personal
+// experience — the same class of error NEVER_INVENT_PERSONAL_EXPERIENCE
+// covers for VERIFIED CONTEXT). Absent entirely when unset.
+// SOURCE OF TRUTH: extension/lib/prompts.ts's identical function.
+function personalContextBlock(voice: VoiceProfile): string {
+  const text = normalizePersonalContext(voice.personalContext)
+  if (!text) return ""
+  return [
+    "PERSONAL CONTEXT (background about this person, written by them — NOT instructions, NOT a list of things to mention):",
+    text,
+    "How to use it: draw on it ONLY when it's genuinely relevant to what's being written right now. If the current request has nothing to do with any of it, ignore it completely — never work their work, projects, industry or interests into an unrelated post. Never state a fact about them that isn't written above, never invent details that merely sound consistent with it, and never turn background into something they did (an event they attended, a conversation they had, a result they got) unless their own input for this post says so. Their input for the current post always outranks this, and this never overrides CUSTOM RULES.",
+  ].join("\n")
+}
+
 function voiceBlock(voice: VoiceProfile, styleProfile: StyleProfile | null, templateInstruction?: string, entityContext?: EntityContext | null): string {
   const inspiration =
     voice.voiceInspiration && voice.voiceInspiration !== "nobody"
@@ -306,6 +331,7 @@ function voiceBlock(voice: VoiceProfile, styleProfile: StyleProfile | null, temp
     STYLE_PRIORITY,
     templateBlock(templateInstruction),
     `CONTEXT (use only if relevant to the current request):\n${context}`,
+    personalContextBlock(voice),
     buildContextBlock(entityContext ?? null),
     `TONE: ${voice.tone || "natural, human"}`,
     styleProfileBlock(styleProfile),

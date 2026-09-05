@@ -82,8 +82,8 @@ function textShown(text: string): boolean {
   return container.textContent?.includes(text) ?? false
 }
 
-/** Drives the wizard to step 7 (Examples/Voice Refresh) via its own Continue flow. */
-async function goToExamplesStep(store: AmintaStore) {
+/** Drives the wizard to step 7 ("Teach Aminta about you") via its own Continue flow. */
+async function goToAboutYouStep(store: AmintaStore) {
   render(store)
   click("Meet Aminta")           // 0 -> 1
   click("Write posts")           // select intent
@@ -94,7 +94,22 @@ async function goToExamplesStep(store: AmintaStore) {
   click("AI")                    // pick a suggested topic
   click("Continue")              // 5 -> 6 (tone)
   click("Direct")                // pick a tone
-  click("Continue")              // 6 -> 7 (examples / voice refresh)
+  click("Continue")              // 6 -> 7 (teach Aminta about you)
+}
+
+/** Drives the wizard to step 8 (Examples/Voice Refresh) via its own Continue flow. */
+async function goToExamplesStep(store: AmintaStore) {
+  await goToAboutYouStep(store)
+  click("Continue")              // 7 -> 8 (examples / voice refresh)
+}
+
+/** Types into a textarea the way React's controlled inputs require. */
+function typeInto(textarea: HTMLTextAreaElement, value: string) {
+  act(() => {
+    const setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value")!.set!
+    setter.call(textarea, value)
+    textarea.dispatchEvent(new Event("input", { bubbles: true }))
+  })
 }
 
 beforeEach(() => {
@@ -114,7 +129,7 @@ afterEach(() => {
   container.remove()
 })
 
-describe("step 7 — Voice Refresh discoverability", () => {
+describe("step 8 — Voice Refresh discoverability", () => {
   it("Free user: sees the manual path and Voice Refresh's own inline upsell — never a block on continuing", async () => {
     await goToExamplesStep(baseStore({ plan: "free", aiIncluded: true, aiIncludedPaid: false }))
     expect(textShown("Learn from your X")).toBe(true)
@@ -135,10 +150,10 @@ describe("step 7 — Voice Refresh discoverability", () => {
       textarea.dispatchEvent(new Event("input", { bubbles: true }))
     })
     click("+ Add post")
-    click("Continue") // no longer disabled once an example exists — lands on step 8 (auto-advancing "learning" transition)
+    click("Continue") // no longer disabled once an example exists — lands on step 9 (auto-advancing "learning" transition)
     expect(textShown("learning your voice")).toBe(true)
-    await act(async () => { await new Promise((r) => setTimeout(r, 2300)) }) // step 8's real 2.2s auto-advance into the payoff step
-    expect(textShown("Nice.")).toBe(true) // landed on the payoff step (9)
+    await act(async () => { await new Promise((r) => setTimeout(r, 2300)) }) // step 9's real 2.2s auto-advance into the payoff step
+    expect(textShown("Nice.")).toBe(true) // landed on the payoff step (10)
   })
 
   it("Pro/Founder, X not connected: Voice Refresh is discoverable via a Connect X action, not blocking", async () => {
@@ -178,8 +193,8 @@ describe("step 7 — Voice Refresh discoverability", () => {
 
   it("onboarding never grants paid functionality — the finish() patch never touches plan/entitlement fields", async () => {
     await goToExamplesStep(baseStore({ plan: "free", aiIncluded: true, aiIncludedPaid: false }))
-    click("Skip for now") // step 7 -> 8 (learning transition)
-    await act(async () => { await new Promise((r) => setTimeout(r, 2300)) }) // step 8's real 2.2s auto-advance -> 9
+    click("Skip for now") // step 8 -> 9 (learning transition)
+    await act(async () => { await new Promise((r) => setTimeout(r, 2300)) }) // step 9's real 2.2s auto-advance -> 10
     click("Open X")
     await act(async () => { await Promise.resolve() })
     expect(onDoneCalls).toHaveLength(1)
@@ -188,6 +203,109 @@ describe("step 7 — Voice Refresh discoverability", () => {
     expect(patch).not.toHaveProperty("aiIncludedPaid")
     expect(patch).not.toHaveProperty("subscriptionStatus")
     expect(patch.onboardingDone).toBe(true)
+  })
+})
+
+describe("step 7 — Teach Aminta about you (Personal Context)", () => {
+  const freeStore = () => baseStore({ plan: "free", aiIncluded: true, aiIncludedPaid: false })
+
+  /** Walks from the About-you step all the way to a completed onboarding. */
+  async function finishFrom(aboutYouAlreadyOnScreen = true) {
+    if (!aboutYouAlreadyOnScreen) throw new Error("call goToAboutYouStep first")
+    click("Continue")   // 7 -> 8 (examples)
+    click("Skip for now") // 8 -> 9 (learning transition)
+    await act(async () => { await new Promise((r) => setTimeout(r, 2300)) })
+    click("Open X")
+    await act(async () => { await Promise.resolve() })
+  }
+
+  it("shows the step with its own heading, a large textarea and the helper action", async () => {
+    await goToAboutYouStep(freeStore())
+    expect(textShown("Teach Aminta")).toBe(true)
+    expect(textShown("about you")).toBe(true)
+    const textarea = container.querySelector("textarea")!
+    expect(textarea).toBeTruthy()
+    expect(textarea.getAttribute("placeholder")).toContain("Tell Aminta about yourself")
+    // A real paragraph is invited, not a one-liner.
+    expect(Number(textarea.getAttribute("rows"))).toBeGreaterThanOrEqual(5)
+    expect(textShown("Help me answer")).toBe(true)
+  })
+
+  it("saves what the user wrote onto the canonical voice.personalContext field", async () => {
+    await goToAboutYouStep(freeStore())
+    typeInto(container.querySelector("textarea")!, "I'm a developer building an AI writing tool. I post about shipping.")
+    await finishFrom()
+    expect(onDoneCalls).toHaveLength(1)
+    expect(onDoneCalls[0].voice?.personalContext)
+      .toBe("I'm a developer building an AI writing tool. I post about shipping.")
+  })
+
+  it("preserves a multi-paragraph answer exactly as typed", async () => {
+    const paragraph = "I'm Filip. I work around AI, Web3 and product design.\n\nI'm building Aminta, an AI companion for X.\nI usually post about what I'm building."
+    await goToAboutYouStep(freeStore())
+    typeInto(container.querySelector("textarea")!, paragraph)
+    await finishFrom()
+    expect(onDoneCalls[0].voice?.personalContext).toBe(paragraph)
+  })
+
+  it("skipping still completes onboarding, with personal context saved as empty", async () => {
+    await goToAboutYouStep(freeStore())
+    click("Skip for now") // 7 -> 8, nothing typed
+    click("Skip for now") // 8 -> 9 (examples skipped too)
+    await act(async () => { await new Promise((r) => setTimeout(r, 2300)) })
+    click("Open X")
+    await act(async () => { await Promise.resolve() })
+    expect(onDoneCalls).toHaveLength(1)
+    expect(onDoneCalls[0].onboardingDone).toBe(true)
+    expect(onDoneCalls[0].voice?.personalContext).toBe("")
+  })
+
+  it("never blocks — Continue is enabled with an empty field", async () => {
+    await goToAboutYouStep(freeStore())
+    const continueBtn = Array.from(container.querySelectorAll("button")).find((b) => b.textContent === "Continue")!
+    expect(continueBtn.hasAttribute("disabled")).toBe(false)
+  })
+
+  it("seeds from an already-saved personal context instead of wiping it", async () => {
+    await goToAboutYouStep(baseStore({
+      plan: "free", aiIncluded: true, aiIncludedPaid: false,
+      voice: { niche: "", tone: "", examples: "", voiceStyle: "", voiceInspiration: "", customRules: "", personalContext: "previously written background" },
+    }))
+    expect(container.querySelector("textarea")!.value).toBe("previously written background")
+  })
+
+  it("an existing user with no personal context at all still reaches the field cleanly (empty, not undefined)", async () => {
+    await goToAboutYouStep(baseStore({
+      plan: "free", aiIncluded: true, aiIncludedPaid: false,
+      // A voice profile saved before this field existed. (Uses a topic the
+      // walkthrough doesn't click, so seeding can't toggle it back off.)
+      voice: { niche: "Startups", tone: "Casual", examples: "", voiceStyle: "Casual", voiceInspiration: "", customRules: "" } as never,
+    }))
+    expect(container.querySelector("textarea")!.value).toBe("")
+  })
+
+  it("Help me answer reveals a copyable prompt and copies it without any AI call", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText }, language: "en-US" })
+    await goToAboutYouStep(freeStore())
+
+    click("Help me answer")
+    expect(textShown("turn my answers into one detailed first-person paragraph")).toBe(true)
+
+    await act(async () => { click("Copy prompt"); await Promise.resolve() })
+    expect(writeText).toHaveBeenCalledTimes(1)
+    expect(writeText.mock.calls[0][0]).toContain("Ask me questions one at a time")
+
+    // Zero generation calls — the helper is local text, never a model call.
+    const { backendGenerate } = await import("~lib/backendGenerate")
+    expect(vi.mocked(backendGenerate).mock.calls.filter((c) => c[0]?.generationMode !== "onboarding_demo")).toHaveLength(0)
+  })
+
+  it("hides the mic entirely when the browser has no speech recognition — typing still works", async () => {
+    await goToAboutYouStep(freeStore()) // jsdom has no SpeechRecognition
+    expect(textShown("Speak")).toBe(false)
+    typeInto(container.querySelector("textarea")!, "typed instead")
+    expect(container.querySelector("textarea")!.value).toBe("typed instead")
   })
 })
 
